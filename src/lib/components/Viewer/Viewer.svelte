@@ -8,8 +8,26 @@
 
   let { content }: Props = $props();
 
-  let html = $derived(renderMarkdown(content));
+  let html = $state('');
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
+  let renderTimeout: ReturnType<typeof setTimeout> | undefined;
+
+  $effect(() => {
+    if (renderTimeout) {
+      clearTimeout(renderTimeout);
+    }
+
+    const currentContent = content;
+    renderTimeout = setTimeout(async () => {
+      html = await renderMarkdown(currentContent);
+    }, 150);
+
+    return () => {
+      if (renderTimeout) {
+        clearTimeout(renderTimeout);
+      }
+    };
+  });
 
   function handleScroll() {
     if (viewerElement) {
@@ -25,6 +43,7 @@
   onscroll={handleScroll}
 >
   <div class="viewer-content">
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
     {@html html}
   </div>
 </div>

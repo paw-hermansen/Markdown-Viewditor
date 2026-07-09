@@ -85,7 +85,7 @@ Border:        #d1d5db
 
 ### Editor Only Mode
 
-```
+````
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
 │  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
@@ -122,7 +122,7 @@ Border:        #d1d5db
 │   Ln 19, Col 1       156 words       ~1 min read        Markdown  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
-```
+````
 
 ### Viewer Only Mode (Live Preview with Outline)
 
@@ -206,14 +206,14 @@ The reload button reloads the file from disk, discarding any local edits.
 
 **When is the button active?**
 
-| Situation | State | On click |
-|-----------|-------|----------|
-| No file loaded (untitled) | Hidden | — |
-| File loaded, no changes anywhere | Inactive | — |
-| External change detected by file watcher | Active | Reload |
-| External change + local unsaved edits | Active | Confirm dialog then reload |
-| User dismissed external change notification | Active | Reload (confirm if local edits) |
-| Local unsaved edits only, no external change | Active | Confirm dialog then reload |
+| Situation                                    | State    | On click                        |
+| -------------------------------------------- | -------- | ------------------------------- |
+| No file loaded (untitled)                    | Hidden   | —                               |
+| File loaded, no changes anywhere             | Inactive | —                               |
+| External change detected by file watcher     | Active   | Reload                          |
+| External change + local unsaved edits        | Active   | Confirm dialog then reload      |
+| User dismissed external change notification  | Active   | Reload (confirm if local edits) |
+| Local unsaved edits only, no external change | Active   | Confirm dialog then reload      |
 
 The button is active whenever there is something to reload — either an external change exists, or the user has unsaved edits they may want to discard.
 
@@ -269,22 +269,22 @@ When the file changes on disk while the editor is open, a banner appears:
 
 **Formatting Buttons (Lucide Icons):**
 
-| Action       | Icon          | Shortcut     | Tooltip |
-| ------------ | ------------- | ------------ | ------- |
-| Bold         | `bold`        | Ctrl+B       | Select text and click to bold, or click to start typing bold |
-| Italic       | `italic`      | Ctrl+I       | Select text and click to italicize, or click to start typing italic |
-| Strikethrough| `strikethrough`| —           | Select text and click to strike through |
-| Heading      | `heading`     | Ctrl+H       | Adds `##` at line start. Click again to cycle H1 → H2 → H3 |
-| Link         | `link`        | Ctrl+K       | Select text first to use as link text, then click |
-| Image        | `image`       | —            | Inserts `![alt](url)` placeholder |
-| Inline Code  | `code`        | —            | Wraps selection in backticks |
-| Code Block   | `terminal`    | —            | Inserts fenced code block with language hint |
-| Bullet List  | `list`        | —            | Adds `-` prefix. Select lines to convert to list |
-| Numbered List| `list-ordered`| —            | Adds `1.` prefix. Select lines to convert to list |
-| Task List    | `list-checks` | —            | Adds `- [ ]` checkbox |
-| Blockquote   | `quote`       | —            | Adds `>` prefix to selection |
-| Horizontal   | `minus`       | —            | Inserts `---` divider on new line |
-| Table        | `table`       | —            | Inserts a 3×3 markdown table template |
+| Action        | Icon            | Shortcut | Tooltip                                                             |
+| ------------- | --------------- | -------- | ------------------------------------------------------------------- |
+| Bold          | `bold`          | Ctrl+B   | Select text and click to bold, or click to start typing bold        |
+| Italic        | `italic`        | Ctrl+I   | Select text and click to italicize, or click to start typing italic |
+| Strikethrough | `strikethrough` | —        | Select text and click to strike through                             |
+| Heading       | `heading`       | Ctrl+H   | Adds `##` at line start. Click again to cycle H1 → H2 → H3          |
+| Link          | `link`          | Ctrl+K   | Select text first to use as link text, then click                   |
+| Image         | `image`         | —        | Inserts `![alt](url)` placeholder                                   |
+| Inline Code   | `code`          | —        | Wraps selection in backticks                                        |
+| Code Block    | `terminal`      | —        | Inserts fenced code block with language hint                        |
+| Bullet List   | `list`          | —        | Adds `-` prefix. Select lines to convert to list                    |
+| Numbered List | `list-ordered`  | —        | Adds `1.` prefix. Select lines to convert to list                   |
+| Task List     | `list-checks`   | —        | Adds `- [ ]` checkbox                                               |
+| Blockquote    | `quote`         | —        | Adds `>` prefix to selection                                        |
+| Horizontal    | `minus`         | —        | Inserts `---` divider on new line                                   |
+| Table         | `table`         | —        | Inserts a 3×3 markdown table template                               |
 
 ### Tooltips
 
@@ -317,7 +317,7 @@ Every toolbar button shows a tooltip on interaction. The tooltip explains the bu
 - Long-press (500ms) on a button shows tooltip
 - Haptic feedback on trigger (if supported)
 - Tap anywhere to dismiss
-- First-use hint shown on app launch: *"Select text, then tap a format button to apply it"*
+- First-use hint shown on app launch: _"Select text, then tap a format button to apply it"_
 
 **Tooltip style:**
 
@@ -505,16 +505,16 @@ Card: shadow increase
 
 All toolbar and UI icons use Lucide. No emoji characters in the UI.
 
-| Context       | Icon           |
-| ------------- | -------------- |
-| Menu          | `menu`         |
-| Settings      | `settings`     |
-| File          | `file`         |
-| Save          | `save`         |
-| Search        | `search`       |
-| Close         | `x`            |
-| Expand        | `chevron-down` |
-| Collapse      | `chevron-up`   |
+| Context  | Icon           |
+| -------- | -------------- |
+| Menu     | `menu`         |
+| Settings | `settings`     |
+| File     | `file`         |
+| Save     | `save`         |
+| Search   | `search`       |
+| Close    | `x`            |
+| Expand   | `chevron-down` |
+| Collapse | `chevron-up`   |
 
 ---
 
@@ -528,23 +528,23 @@ All toolbar and UI icons use Lucide. No emoji characters in the UI.
 
 ### Keyboard Shortcuts
 
-| Action              | Shortcut          |
-| ------------------- | ----------------- |
-| New File            | Ctrl+N            |
-| Open File           | Ctrl+O            |
-| Save                | Ctrl+S            |
-| Save As             | Ctrl+Shift+S      |
-| Reload from Disk    | F5                |
-| Find                | Ctrl+F            |
-| Find & Replace      | Ctrl+H            |
-| Command Palette     | Ctrl+Shift+P      |
-| Toggle Bold         | Ctrl+B            |
-| Toggle Italic       | Ctrl+I            |
-| Insert Link         | Ctrl+K            |
-| Toggle Split View   | Ctrl+\            |
-| Toggle Sidebar      | Ctrl+B (viewer)   |
-| Zoom In             | Ctrl+=            |
-| Zoom Out            | Ctrl+-            |
+| Action            | Shortcut        |
+| ----------------- | --------------- |
+| New File          | Ctrl+N          |
+| Open File         | Ctrl+O          |
+| Save              | Ctrl+S          |
+| Save As           | Ctrl+Shift+S    |
+| Reload from Disk  | F5              |
+| Find              | Ctrl+F          |
+| Find & Replace    | Ctrl+H          |
+| Command Palette   | Ctrl+Shift+P    |
+| Toggle Bold       | Ctrl+B          |
+| Toggle Italic     | Ctrl+I          |
+| Insert Link       | Ctrl+K          |
+| Toggle Split View | Ctrl+\          |
+| Toggle Sidebar    | Ctrl+B (viewer) |
+| Zoom In           | Ctrl+=          |
+| Zoom Out          | Ctrl+-          |
 
 ---
 

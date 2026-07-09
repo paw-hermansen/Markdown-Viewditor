@@ -338,14 +338,14 @@ $effect(() => {
 - [x] Integrate markdown-it
   - Configure with HTML, linkify, typographer options
   - Add plugins for tables, task lists, footnotes
-- [ ] Add Shiki syntax highlighting
+- [x] Add Shiki syntax highlighting
   - Configure for code blocks
   - Support multiple themes
 - [x] Implement **real-time rendering**
   - Use `$derived()` for reactive preview
   - Debounce parsing (150ms) for performance
   - Update preview on content change
-- [ ] Create theme selector
+- [x] Create theme selector
   - Create `ThemeSelector.svelte`
   - Load themes from `utils/themes.ts`
   - Persist selection in settings
@@ -778,7 +778,7 @@ enum AppError {
 
 ## Implementation Status
 
-**Current Phase: Phase 3 - Live Preview** (markdown-it integrated, Shiki & themes pending)
+**Current Phase: Phase 3 - Live Preview** (markdown-it integrated, Shiki integrated, themes implemented)
 
 ### What Has Been Implemented
 
@@ -798,12 +798,15 @@ markediviewer/
 │       │   │   ├── Editor.svelte     # CodeMirror wrapper ✅
 │       │   │   └── EditorToolbar.svelte # Formatting buttons ✅
 │       │   └── Viewer/
-│       │       └── Viewer.svelte     # Live preview ✅
+│       │       ├── Viewer.svelte     # Live preview ✅
+│       │       ├── ViewerToolbar.svelte # Viewer toolbar ✅
+│       │       └── ThemeSelector.svelte # Theme picker ✅
 │       ├── stores/
 │       │   ├── editor.svelte.ts      # Editor state ✅
 │       │   └── viewer.svelte.ts      # Viewer state ✅
 │       ├── utils/
-│       │   └── markdown.ts           # markdown-it integration ✅
+│       │   ├── markdown.ts           # markdown-it + Shiki integration ✅
+│       │   └── themes.ts             # Theme definitions ✅
 │       └── types/
 │           └── index.ts              # TypeScript types
 ├── src-tauri/                        # Rust backend
@@ -863,15 +866,28 @@ markediviewer/
 - **Viewer Store** (Phase 2 - DONE):
   - Theme state management
   - Scroll position tracking
-- **Markdown Utility** (Phase 2 - DONE):
+- **Markdown Utility** (Phase 2 & 3 - DONE):
   - markdown-it integration with HTML, linkify, typographer options
+  - Shiki syntax highlighting integration
+  - Theme loading support
   - Error handling for parse failures
+- **Themes Utility** (Phase 3 - DONE):
+  - 15 built-in themes (dark and light)
+  - Theme metadata with labels and types
+- **Viewer Toolbar** (Phase 3 - DONE):
+  - Theme selector dropdown
+  - Copy HTML button
+  - Print preview button
+- **Theme Selector** (Phase 3 - DONE):
+  - Dropdown with all available themes
+  - Theme type indicators (light/dark)
+  - Active theme highlighting
 
-#### NOT YET IMPLEMENTED (Phase 3 remaining):
+#### NOT YET IMPLEMENTED (Phase 4+):
 
-- **Shiki syntax highlighting** - Code block highlighting
-- **ThemeSelector** - Theme picker for viewer
 - **Scroll synchronization** - Editor ↔ preview scroll sync (Phase 5)
+- **File operations** - Open/save/save-as dialogs (Phase 4)
+- **Settings persistence** - User preferences (Phase 6)
 
 #### Build System
 
@@ -888,7 +904,8 @@ markediviewer/
 - codemirror (v6.0.2)
 - markdown-it (v14) - **integrated** ✅
 - @types/markdown-it - **installed** ✅
-- shiki (v1) - **installed but NOT yet integrated**
+- shiki (v1) - **integrated** ✅
+- markdown-it-shiki - **installed & integrated** ✅
 
 #### Need to Install
 
@@ -897,11 +914,12 @@ markediviewer/
 - mermaid (diagrams)
 - dompurify (HTML sanitization)
 
-### Next Steps (to complete Phase 3)
+### Next Steps (to complete Phase 4)
 
-1. **Add Shiki syntax highlighting** - Code block highlighting with multiple themes
-2. **Create ThemeSelector.svelte** - Theme picker UI
-3. **Add scroll synchronization** - Phase 5 feature
+1. **Implement three-pane layout** - AppLayout with CSS Grid
+2. **Add view mode toggle** - ViewToggle component
+3. **Implement file operations** - Open/save/save-as dialogs
+4. **Add scroll synchronization** - Phase 5 feature
 
 ---
 
@@ -927,7 +945,7 @@ markediviewer/
 
 **Current**: Editor and Viewer components exist
 
-**Remaining**: Create Viewer toolbar hierarchy:
+**Completed**: Create Viewer toolbar hierarchy:
 
 ```
 src/lib/components/
@@ -937,8 +955,8 @@ src/lib/components/
 │   └── EditorStatus.svelte    # Cursor position, word count (optional)
 ├── Viewer/
 │   ├── Viewer.svelte          # Live preview ✅ DONE
-│   ├── ViewerToolbar.svelte   # Theme selector ❌ TODO
-│   └── ThemeSelector.svelte   # Style picker ❌ TODO
+│   ├── ViewerToolbar.svelte   # Theme selector ✅ DONE
+│   └── ThemeSelector.svelte   # Style picker ✅ DONE
 └── Layout/
     ├── AppLayout.svelte       # Main layout
     ├── StatusBar.svelte       # Bottom status
@@ -950,6 +968,7 @@ src/lib/components/
 **Previous Issue**: Local `$state()` in `+page.svelte`
 
 **Resolution**: Created proper stores:
+
 - `stores/editor.svelte.ts` - Editor state with Svelte 5 runes
 - `stores/viewer.svelte.ts` - Viewer state for theme and scroll
 
@@ -996,8 +1015,8 @@ export function showError(message: string) {
 
 #### 🟡 Important (Phase 3-4) - IN PROGRESS
 
-1. **Add Shiki syntax highlighting** - Code block highlighting
-2. **Create theme selector** - Theme picker UI
+1. ~~**Add Shiki syntax highlighting**~~ ✅ DONE - Code block highlighting with 15 themes
+2. ~~**Create theme selector**~~ ✅ DONE - Theme picker UI with dropdown
 3. **Implement scroll synchronization** - Phase 5 feature
 4. **Add file dialog integration** - Open/save files
 5. **Create settings persistence** - User preferences

@@ -3,6 +3,7 @@
   import Editor from '$lib/components/Editor/Editor.svelte';
   import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
   import Viewer from '$lib/components/Viewer/Viewer.svelte';
+  import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
   import { editorState, markSaved } from '$lib/stores/editor.svelte';
 
   let viewMode = $state<'split' | 'editor' | 'viewer'>('split');
@@ -22,6 +23,17 @@
     } catch (error) {
       console.error('Failed to save:', error);
     }
+  }
+
+  function handleCopyHtml() {
+    const viewerContent = document.querySelector('.viewer-content');
+    if (viewerContent) {
+      navigator.clipboard.writeText(viewerContent.innerHTML);
+    }
+  }
+
+  function handlePrint() {
+    window.print();
   }
 </script>
 
@@ -72,6 +84,7 @@
 
     {#if viewMode === 'split' || viewMode === 'viewer'}
       <div class="viewer-pane">
+        <ViewerToolbar onCopyHtml={handleCopyHtml} onPrint={handlePrint} />
         <Viewer content={editorState.content} />
       </div>
     {/if}
@@ -141,10 +154,16 @@
     overflow: hidden;
   }
 
-  .editor-pane,
-  .viewer-pane {
+  .editor-pane {
     flex: 1;
     overflow: auto;
+  }
+
+  .viewer-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .content.split .editor-pane,

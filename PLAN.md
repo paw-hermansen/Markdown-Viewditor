@@ -283,7 +283,7 @@ interface Settings {
 - [x] Set up project structure
 - [x] Install dependencies
 
-### Phase 2: Basic Editor - IN PROGRESS
+### Phase 2: Basic Editor - COMPLETED ✅
 
 - [x] Integrate CodeMirror 6
   - Create `Editor.svelte` wrapper component
@@ -301,9 +301,9 @@ interface Settings {
   - Create `EditorToolbar.svelte`
   - Add formatting buttons (Bold, Italic, Heading, etc.)
   - Implement formatting actions using CodeMirror commands
-- [ ] Create Viewer component (`Viewer.svelte`)
-- [ ] Implement live preview with markdown-it
-- [ ] Create Viewer store (`stores/viewer.svelte.ts`)
+- [x] Create Viewer component (`Viewer.svelte`)
+- [x] Implement live preview with markdown-it
+- [x] Create Viewer store (`stores/viewer.svelte.ts`)
 
 **Implementation Notes:**
 
@@ -333,15 +333,15 @@ $effect(() => {
 });
 ```
 
-### Phase 3: Live Preview
+### Phase 3: Live Preview - IN PROGRESS
 
-- [ ] Integrate markdown-it
+- [x] Integrate markdown-it
   - Configure with HTML, linkify, typographer options
   - Add plugins for tables, task lists, footnotes
 - [ ] Add Shiki syntax highlighting
   - Configure for code blocks
   - Support multiple themes
-- [ ] Implement **real-time rendering**
+- [x] Implement **real-time rendering**
   - Use `$derived()` for reactive preview
   - Debounce parsing (150ms) for performance
   - Update preview on content change
@@ -778,7 +778,7 @@ enum AppError {
 
 ## Implementation Status
 
-**Current Phase: Phase 2 - Basic Editor** (Editor done, Viewer pending)
+**Current Phase: Phase 3 - Live Preview** (markdown-it integrated, Shiki & themes pending)
 
 ### What Has Been Implemented
 
@@ -791,13 +791,21 @@ markediviewer/
 │   ├── app.css                       # Global styles with CSS variables
 │   ├── routes/
 │   │   ├── +layout.svelte            # Root layout
-│   │   └── +page.svelte              # Main page with basic layout
+│   │   └── +page.svelte              # Main page with editor & viewer
 │   └── lib/
-│       ├── components/               # Component directories
-│       ├── stores/                   # State management
-│       ├── utils/                    # Utility functions
+│       ├── components/
+│       │   ├── Editor/
+│       │   │   ├── Editor.svelte     # CodeMirror wrapper ✅
+│       │   │   └── EditorToolbar.svelte # Formatting buttons ✅
+│       │   └── Viewer/
+│       │       └── Viewer.svelte     # Live preview ✅
+│       ├── stores/
+│       │   ├── editor.svelte.ts      # Editor state ✅
+│       │   └── viewer.svelte.ts      # Viewer state ✅
+│       ├── utils/
+│       │   └── markdown.ts           # markdown-it integration ✅
 │       └── types/
-│           └── index.ts              # TypeScript type definitions
+│           └── index.ts              # TypeScript types
 ├── src-tauri/                        # Rust backend
 │   ├── src/
 │   │   ├── main.rs                   # Entry point
@@ -848,14 +856,22 @@ markediviewer/
   - State management with Svelte 5 runes
   - Track content, cursor position, word count, and modification status
   - Helper functions for updating and resetting state
+- **Viewer Component** (Phase 2 - DONE):
+  - Live preview with markdown-it rendering
+  - `$derived()` for reactive updates on every keystroke
+  - Comprehensive markdown styling (headings, code, lists, tables, etc.)
+- **Viewer Store** (Phase 2 - DONE):
+  - Theme state management
+  - Scroll position tracking
+- **Markdown Utility** (Phase 2 - DONE):
+  - markdown-it integration with HTML, linkify, typographer options
+  - Error handling for parse failures
 
-#### NOT YET IMPLEMENTED (Phase 2 remaining + Phase 3):
+#### NOT YET IMPLEMENTED (Phase 3 remaining):
 
-- **Viewer Component** (`Viewer.svelte`) - Live preview rendering
-- **Viewer Store** (`stores/viewer.svelte.ts`) - Viewer state management
-- **markdown-it integration** - Real-time markdown parsing and rendering
+- **Shiki syntax highlighting** - Code block highlighting
 - **ThemeSelector** - Theme picker for viewer
-- **Scroll synchronization** - Editor ↔ preview scroll sync
+- **Scroll synchronization** - Editor ↔ preview scroll sync (Phase 5)
 
 #### Build System
 
@@ -870,7 +886,8 @@ markediviewer/
 - @codemirror/commands, @codemirror/lang-markdown, @codemirror/language
 - @codemirror/state, @codemirror/theme-one-dark, @codemirror/view
 - codemirror (v6.0.2)
-- markdown-it (v14) - **installed but NOT yet integrated**
+- markdown-it (v14) - **integrated** ✅
+- @types/markdown-it - **installed** ✅
 - shiki (v1) - **installed but NOT yet integrated**
 
 #### Need to Install
@@ -880,14 +897,11 @@ markediviewer/
 - mermaid (diagrams)
 - dompurify (HTML sanitization)
 
-### Next Steps (to complete Phase 2 & 3)
+### Next Steps (to complete Phase 3)
 
-1. **Create Viewer.svelte** - Component to render markdown-it output
-2. **Create stores/viewer.svelte.ts** - Viewer state management
-3. **Integrate markdown-it** - Wire up real-time rendering in `utils/markdown.ts`
-4. **Create ThemeSelector.svelte** - Theme picker UI
-5. **Connect Editor ↔ Viewer** - Pass content from editor store to viewer
-6. **Add scroll synchronization** - Phase 5 feature
+1. **Add Shiki syntax highlighting** - Code block highlighting with multiple themes
+2. **Create ThemeSelector.svelte** - Theme picker UI
+3. **Add scroll synchronization** - Phase 5 feature
 
 ---
 
@@ -903,21 +917,17 @@ markediviewer/
 
 ### Areas for Improvement
 
-#### 1. Viewer Component Missing
+#### 1. ~~Viewer Component Missing~~ ✅ FIXED
 
-**Current Issue**: Viewer pane shows placeholder text instead of rendered markdown
+**Previous Issue**: Viewer pane shows placeholder text instead of rendered markdown
 
-**Recommendations**:
-
-- Create `Viewer.svelte` component with markdown-it rendering
-- Create `stores/viewer.svelte.ts` for viewer state
-- Integrate markdown-it for real-time preview
+**Resolution**: Created `Viewer.svelte` component with markdown-it rendering, `stores/viewer.svelte.ts` for state, and `utils/markdown.ts` for parsing.
 
 #### 2. Component Structure
 
-**Current**: Editor components exist, Viewer components missing
+**Current**: Editor and Viewer components exist
 
-**Recommendation**: Create Viewer component hierarchy:
+**Remaining**: Create Viewer toolbar hierarchy:
 
 ```
 src/lib/components/
@@ -926,7 +936,7 @@ src/lib/components/
 │   ├── EditorToolbar.svelte   # Formatting buttons ✅ DONE
 │   └── EditorStatus.svelte    # Cursor position, word count (optional)
 ├── Viewer/
-│   ├── Viewer.svelte          # Live preview ❌ TODO
+│   ├── Viewer.svelte          # Live preview ✅ DONE
 │   ├── ViewerToolbar.svelte   # Theme selector ❌ TODO
 │   └── ThemeSelector.svelte   # Style picker ❌ TODO
 └── Layout/
@@ -935,51 +945,19 @@ src/lib/components/
     └── ViewToggle.svelte      # Split/Editor/Viewer buttons
 ```
 
-#### 3. No State Management
+#### 3. ~~No State Management~~ ✅ FIXED
 
-**Current**: Local `$state()` in `+page.svelte`
+**Previous Issue**: Local `$state()` in `+page.svelte`
 
-**Recommendation**: Create proper stores:
+**Resolution**: Created proper stores:
+- `stores/editor.svelte.ts` - Editor state with Svelte 5 runes
+- `stores/viewer.svelte.ts` - Viewer state for theme and scroll
 
-```typescript
-// stores/editor.svelte.ts
-export const editorState = $state({
-  content: "",
-  cursorLine: 0,
-  cursorCol: 0,
-  wordCount: 0,
-  isModified: false,
-});
+#### 4. ~~No Live Preview Implementation~~ ✅ FIXED
 
-// stores/settings.svelte.ts
-export const settings = $state({
-  viewMode: "split",
-  editorFontSize: 14,
-  viewerTheme: "github-dark",
-  splitRatio: 0.5,
-});
-```
+**Previous Issue**: Placeholder text in viewer pane
 
-#### 4. No Live Preview Implementation
-
-**Current**: Placeholder text in viewer pane
-
-**Recommendation**: Implement markdown-it integration:
-
-```typescript
-// utils/markdown.ts
-import MarkdownIt from "markdown-it";
-
-export const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true,
-});
-
-export function renderMarkdown(content: string): string {
-  return md.render(content);
-}
-```
+**Resolution**: Implemented markdown-it integration in `utils/markdown.ts` with `$derived()` for reactive preview in `Viewer.svelte`.
 
 #### 5. Missing Error Handling in Frontend
 
@@ -1008,20 +986,21 @@ export function showError(message: string) {
 
 ### Implementation Priority
 
-#### 🔴 Critical (Phase 2)
+#### ~~🔴 Critical (Phase 2)~~ ✅ ALL DONE
 
 1. ~~**Create Editor component with CodeMirror**~~ ✅ DONE
 2. ~~**Create proper store architecture**~~ ✅ DONE
-3. ~~**Extract components from +page.svelte**~~ ✅ DONE (Editor extracted)
-4. **Create Viewer component with markdown-it** ❌ TODO
-5. **Implement basic live preview** ❌ TODO
+3. ~~**Extract components from +page.svelte**~~ ✅ DONE
+4. ~~**Create Viewer component with markdown-it**~~ ✅ DONE
+5. ~~**Implement basic live preview**~~ ✅ DONE
 
-#### 🟡 Important (Phase 3-4)
+#### 🟡 Important (Phase 3-4) - IN PROGRESS
 
-1. **Add theme system**
-2. **Implement scroll synchronization**
-3. **Add file dialog integration**
-4. **Create settings persistence**
+1. **Add Shiki syntax highlighting** - Code block highlighting
+2. **Create theme selector** - Theme picker UI
+3. **Implement scroll synchronization** - Phase 5 feature
+4. **Add file dialog integration** - Open/save files
+5. **Create settings persistence** - User preferences
 
 #### 🟢 Nice to Have (Phase 5-7)
 
@@ -1588,14 +1567,14 @@ npm run dev
 
 - [x] Type markdown text
 - [x] See syntax highlighting
-- [ ] Verify live preview updates (Viewer not implemented)
+- [x] Verify live preview updates (Viewer implemented)
 - [x] Test save functionality
 
 #### 3. Test View Modes
 
-- [ ] Split mode shows editor and preview (Viewer placeholder only)
+- [x] Split mode shows editor and preview (Viewer working)
 - [x] Editor mode shows only editor
-- [ ] Viewer mode shows only preview (Viewer not implemented)
+- [x] Viewer mode shows only preview (Viewer working)
 
 ### Common Issues & Solutions
 
@@ -1608,16 +1587,6 @@ npm run dev
   height: 100%;
   min-height: 200px;
 }
-```
-
-#### Issue: Live preview not updating
-
-**Cause**: Viewer component not yet implemented. Currently shows placeholder text.
-
-**Solution**: Create `Viewer.svelte` component with markdown-it integration:
-
-```typescript
-let html = $derived(renderMarkdown(content));
 ```
 
 #### Issue: Styles not applying to preview

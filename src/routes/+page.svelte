@@ -2,6 +2,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import Editor from '$lib/components/Editor/Editor.svelte';
   import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
+  import Viewer from '$lib/components/Viewer/Viewer.svelte';
   import { editorState, markSaved } from '$lib/stores/editor.svelte';
 
   let viewMode = $state<'split' | 'editor' | 'viewer'>('split');
@@ -71,9 +72,7 @@
 
     {#if viewMode === 'split' || viewMode === 'viewer'}
       <div class="viewer-pane">
-        <div class="preview">
-          <p class="placeholder">Live preview will appear here</p>
-        </div>
+        <Viewer content={editorState.content} />
       </div>
     {/if}
   </main>
@@ -159,16 +158,6 @@
 
   .content.viewer-only .viewer-pane {
     width: 100%;
-  }
-
-  .preview {
-    padding: 16px;
-    height: 100%;
-  }
-
-  .placeholder {
-    color: var(--text-muted);
-    font-style: italic;
   }
 
   .statusbar {

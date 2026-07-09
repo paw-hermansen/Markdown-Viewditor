@@ -2,6 +2,16 @@
 
 A clean, simple, and modern markdown editor and viewer with **live preview** built with Tauri v2 + Svelte 5.
 
+## Overview
+
+**MarkEdiViewer** is a cross-platform markdown editor that provides:
+
+- **Three use cases**: Create, Edit, View markdown files
+- **Live preview**: See rendered markdown as you type
+- **Linked editor/viewer**: Synchronized scrolling
+- **Multiple themes**: 8 built-in themes + custom CSS
+- **Persistent settings**: View mode, theme, preferences saved
+
 ## Features
 
 - **Live Preview:** See your markdown rendered in real-time as you type
@@ -63,9 +73,12 @@ npm run check
 ├── src/                    # Svelte frontend
 ├── src-tauri/              # Rust backend
 ├── .opencode/skills/       # AI skill files
+├── README.md               # This file
+├── PLAN.md                 # Development plan & progress
+├── GUI-DESIGN.md           # Design specifications
+├── AGENTS.md               # AI agent guide
 ├── LICENSE                 # MIT License
-├── THIRD-PARTY-LICENSES.md # Dependency licenses
-└── GUI-DESIGN.md           # Design specifications
+└── THIRD-PARTY-LICENSES.md # Dependency licenses
 ```
 
 ## License

@@ -8,30 +8,6 @@
 - **Frontend**: Svelte 5 + SvelteKit
 - **Platforms**: Linux, macOS, Windows, Android, iOS
 
-## Project Structure
-
-```
-tauri2_markdown/
-├── .opencode/skills/           # AI skill files
-│   ├── tauri2-skill.md        # Tauri v2 patterns
-│   ├── svelte5-skill.md       # Svelte 5 runes
-│   ├── markdown-skill.md      # Markdown editing
-│   └── ui-design-skill.md     # UI/UX patterns
-├── src/                        # Svelte frontend
-│   ├── lib/components/        # Components
-│   ├── lib/stores/            # State
-│   └── routes/                # SvelteKit routes
-├── src-tauri/                  # Rust backend
-│   ├── src/lib.rs             # IPC commands
-│   ├── src/main.rs            # Entry point
-│   ├── capabilities/          # Security permissions
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── LICENSE                     # MIT License
-├── THIRD-PARTY-LICENSES.md    # Dependency licenses
-└── package.json
-```
-
 ## Key Commands
 
 ```bash
@@ -53,27 +29,6 @@ npm run lint
 npm run check
 cargo clippy
 ```
-
-## Architecture
-
-### Why Tauri v2?
-
-- Small binary (~10MB vs ~100MB+ Electron)
-- Native performance, system webview
-- Cross-platform (desktop + mobile)
-- Rust backend for security
-
-### Why Svelte 5?
-
-- Compiler-based, no runtime overhead
-- Runes for fine-grained reactivity
-- Small bundle, great TypeScript support
-
-### Why Live Preview?
-
-- Instant feedback as you write
-- Reduces errors and improves workflow
-- Core feature of modern markdown editors
 
 ## Coding Conventions
 
@@ -184,3 +139,5 @@ fn main() {
 - Svelte: https://svelte.dev
 - SvelteKit: https://kit.svelte.dev
 - Skill files: `.opencode/skills/`
+- Development plan: `PLAN.md`
+- Design specs: `GUI-DESIGN.md`

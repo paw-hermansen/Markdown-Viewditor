@@ -770,3 +770,849 @@ enum AppError {
 - [ ] Error handling for all operations
 - [ ] Performance: < 100ms for preview update
 - [ ] Memory: < 200MB for 10MB file
+
+---
+
+## Implementation Status
+
+**Current Phase: Phase 2 - Basic Editor** ✅ COMPLETED
+
+### What Has Been Implemented
+
+#### Project Structure
+
+```
+markediviewer/
+├── src/                              # Svelte frontend
+│   ├── app.html                      # HTML shell
+│   ├── app.css                       # Global styles with CSS variables
+│   ├── routes/
+│   │   ├── +layout.svelte            # Root layout
+│   │   └── +page.svelte              # Main page with basic layout
+│   └── lib/
+│       ├── components/               # Component directories
+│       ├── stores/                   # State management
+│       ├── utils/                    # Utility functions
+│       └── types/
+│           └── index.ts              # TypeScript type definitions
+├── src-tauri/                        # Rust backend
+│   ├── src/
+│   │   ├── main.rs                   # Entry point
+│   │   └── lib.rs                    # IPC commands & app setup
+│   ├── capabilities/
+│   │   └── default.json              # Security permissions
+│   ├── tauri.conf.json               # Tauri configuration
+│   ├── Cargo.toml                    # Rust dependencies
+│   └── build.rs                      # Build script
+├── package.json                      # NPM dependencies
+├── svelte.config.js                  # SvelteKit configuration
+├── vite.config.ts                    # Vite configuration
+├── tsconfig.json                     # TypeScript configuration
+└── .gitignore                        # Git ignore rules
+```
+
+#### Backend (Rust/Tauri v2)
+
+- IPC commands implemented:
+  - `read_file(path)` - Read file content
+  - `write_file(path, content)` - Write file content
+  - `list_files(dir)` - List directory contents
+  - `create_file(path)` - Create empty file
+  - `delete_file(path)` - Delete file or directory
+  - `greet(name)` - Test command
+- Plugins configured:
+  - tauri-plugin-fs
+  - tauri-plugin-dialog
+  - tauri-plugin-clipboard-manager
+  - tauri-plugin-store
+- Security capabilities set up
+
+#### Frontend (Svelte 5 + SvelteKit)
+
+- Basic layout with toolbar, content area, and status bar
+- View mode toggle (Split/Edit/View)
+- CSS design system with dark/light theme variables
+- TypeScript types for ViewMode, FileInfo, Settings, EditorState, ViewerState
+- **Editor Component** (Phase 2):
+  - CodeMirror 6 integration with markdown language support
+  - Syntax highlighting and line numbers
+  - Real-time content tracking with cursor position
+  - Keyboard shortcuts (Ctrl+B for bold, Ctrl+I for italic, Ctrl+K for link)
+- **Editor Toolbar** (Phase 2):
+  - Formatting buttons for bold, italic, heading, link, image, code, lists, etc.
+  - Visual feedback with hover and active states
+- **Editor Store** (Phase 2):
+  - State management with Svelte 5 runes
+  - Track content, cursor position, word count, and modification status
+  - Helper functions for updating and resetting state
+
+#### Build System
+
+- Vite configured for Tauri development
+- SvelteKit with static adapter
+- TypeScript strict mode enabled
+
+### Dependencies Status
+
+#### Installed ✅
+
+- @codemirror/commands
+- @codemirror/lang-markdown
+- @codemirror/language
+- @codemirror/state
+- @codemirror/theme-one-dark
+- @codemirror/view
+- markdown-it
+- shiki
+
+#### Need to Install
+
+- gray-matter (frontmatter parsing)
+- katex (math equations)
+- mermaid (diagrams)
+- dompurify (HTML sanitization)
+
+---
+
+## Code Review & Recommendations
+
+### What's Working Well
+
+1. **Project Structure**: Clean, well-organized directory structure
+2. **Backend**: Tauri commands implemented correctly with proper error handling
+3. **TypeScript Types**: Well-defined interfaces in `types/index.ts`
+4. **CSS Design System**: Good use of CSS variables for theming
+5. **Configuration**: Tauri config and capabilities properly set up
+
+### Areas for Improvement
+
+#### 1. Frontend Implementation Issues
+
+**Current Issue**: `+page.svelte` may still use plain textarea instead of CodeMirror
+
+**Recommendations**:
+
+- Replace textarea with CodeMirror wrapper component
+- Implement proper component architecture
+- Use stores for state management instead of local state
+
+#### 2. Missing Component Structure
+
+**Current**: All code in single `+page.svelte` file
+
+**Recommendation**: Create proper component hierarchy:
+
+```
+src/lib/components/
+├── Editor/
+│   ├── Editor.svelte          # CodeMirror wrapper
+│   ├── EditorToolbar.svelte   # Formatting buttons
+│   └── EditorStatus.svelte    # Cursor position, word count
+├── Viewer/
+│   ├── Viewer.svelte          # Live preview
+│   ├── ViewerToolbar.svelte   # Theme selector
+│   └── ThemeSelector.svelte   # Style picker
+└── Layout/
+    ├── AppLayout.svelte       # Main layout
+    ├── StatusBar.svelte       # Bottom status
+    └── ViewToggle.svelte      # Split/Editor/Viewer buttons
+```
+
+#### 3. No State Management
+
+**Current**: Local `$state()` in `+page.svelte`
+
+**Recommendation**: Create proper stores:
+
+```typescript
+// stores/editor.svelte.ts
+export const editorState = $state({
+  content: "",
+  cursorLine: 0,
+  cursorCol: 0,
+  wordCount: 0,
+  isModified: false,
+});
+
+// stores/settings.svelte.ts
+export const settings = $state({
+  viewMode: "split",
+  editorFontSize: 14,
+  viewerTheme: "github-dark",
+  splitRatio: 0.5,
+});
+```
+
+#### 4. No Live Preview Implementation
+
+**Current**: Placeholder text in viewer pane
+
+**Recommendation**: Implement markdown-it integration:
+
+```typescript
+// utils/markdown.ts
+import MarkdownIt from "markdown-it";
+
+export const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+});
+
+export function renderMarkdown(content: string): string {
+  return md.render(content);
+}
+```
+
+#### 5. Missing Error Handling in Frontend
+
+**Current**: Basic try-catch in saveFile function
+
+**Recommendation**: Create error handling utility:
+
+```typescript
+// utils/errors.ts
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public details?: unknown,
+  ) {
+    super(message);
+    this.name = "AppError";
+  }
+}
+
+export function showError(message: string) {
+  // Show toast notification
+  console.error(message);
+}
+```
+
+### Implementation Priority
+
+#### 🔴 Critical (Phase 2)
+
+1. **Create Editor component with CodeMirror**
+2. **Implement basic live preview with markdown-it**
+3. **Create proper store architecture**
+4. **Extract components from +page.svelte**
+
+#### 🟡 Important (Phase 3-4)
+
+1. **Add theme system**
+2. **Implement scroll synchronization**
+3. **Add file dialog integration**
+4. **Create settings persistence**
+
+#### 🟢 Nice to Have (Phase 5-7)
+
+1. **Keyboard shortcuts**
+2. **Command palette**
+3. **Mobile support**
+4. **Advanced features**
+
+### Code Quality Improvements
+
+#### 1. Type Safety
+
+**Current**: Some `any` types possible
+
+**Recommendation**: Strict TypeScript:
+
+```typescript
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  }
+}
+```
+
+#### 2. Component Props
+
+**Current**: No props validation
+
+**Recommendation**: Use Svelte 5 props:
+
+```svelte
+<script lang="ts">
+  interface Props {
+    content: string;
+    viewMode: 'split' | 'editor' | 'viewer';
+    onContentChange?: (content: string) => void;
+  }
+
+  let { content = $bindable(''), viewMode = 'split', onContentChange }: Props = $props();
+</script>
+```
+
+#### 3. Event Handling
+
+**Current**: Inline event handlers
+
+**Recommendation**: Extract to named functions:
+
+```svelte
+<script>
+  function handleSave() {
+    // Save logic
+  }
+
+  function handleViewModeChange(mode: ViewMode) {
+    viewMode = mode;
+  }
+</script>
+
+<button onclick={handleSave}>Save</button>
+```
+
+#### 4. CSS Organization
+
+**Current**: Styles in component file
+
+**Recommendation**: Consider CSS modules or utility classes:
+
+```svelte
+<style>
+  /* Use CSS custom properties consistently */
+  .button {
+    background: var(--accent);
+    color: white;
+    border-radius: var(--radius-sm);
+    transition: all 150ms ease-in-out;
+  }
+
+  .button:hover {
+    opacity: 0.9;
+  }
+</style>
+```
+
+### Performance Considerations
+
+#### 1. Markdown Parsing
+
+**Issue**: Parsing on every keystroke is expensive
+
+**Solution**: Debounce parsing:
+
+```typescript
+import { debounce } from "lodash-es";
+
+const debouncedParse = debounce((content: string) => {
+  html = md.render(content);
+}, 150);
+
+$effect(() => {
+  debouncedParse(content);
+});
+```
+
+#### 2. CodeMirror Initialization
+
+**Issue**: Re-initializing editor on every render
+
+**Solution**: Use `$effect()` with proper cleanup:
+
+```typescript
+let editorView: EditorView;
+
+$effect(() => {
+  editorView = new EditorView({
+    doc: content,
+    extensions: [/* ... */],
+    parent: editorElement,
+  });
+
+  return () => {
+    editorView.destroy();
+  };
+});
+```
+
+#### 3. Memory Management
+
+**Issue**: Potential memory leaks
+
+**Solution**: Proper cleanup in components:
+
+```svelte
+<script>
+  import { onMount, onDestroy } from 'svelte';
+
+  let editorView: EditorView;
+
+  onDestroy(() => {
+    editorView?.destroy();
+  });
+</script>
+```
+
+### Security Improvements
+
+#### 1. Path Validation
+
+**Current**: Direct file path usage
+
+**Recommendation**: Validate paths:
+
+```typescript
+function validatePath(path: string): boolean {
+  // Prevent path traversal
+  if (path.includes("..")) return false;
+  // Ensure path is within allowed directories
+  return true;
+}
+```
+
+#### 2. Content Sanitization
+
+**Current**: Rendering raw HTML from markdown
+
+**Recommendation**: Sanitize HTML:
+
+```typescript
+import DOMPurify from "dompurify";
+
+export function renderMarkdown(content: string): string {
+  const rawHtml = md.render(content);
+  return DOMPurify.sanitize(rawHtml);
+}
+```
+
+---
+
+## Implementation Examples
+
+### Editor Component
+
+Create file: `src/lib/components/Editor/Editor.svelte`
+
+```svelte
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+  import { EditorView, basicSetup } from 'codemirror';
+  import { markdown } from '@codemirror/lang-markdown';
+  import { oneDark } from '@codemirror/theme-one-dark';
+  import { EditorState } from '@codemirror/state';
+
+  interface Props {
+    content?: string;
+    onContentChange?: (content: string) => void;
+  }
+
+  let { content = $bindable(''), onContentChange }: Props = $props();
+
+  let editorElement: HTMLDivElement;
+  let editorView: EditorView;
+
+  onMount(() => {
+    editorView = new EditorView({
+      doc: content,
+      extensions: [
+        basicSetup,
+        markdown(),
+        oneDark,
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            content = update.state.doc.toString();
+            onContentChange?.(content);
+          }
+        })
+      ],
+      parent: editorElement
+    });
+  });
+
+  onDestroy(() => {
+    editorView?.destroy();
+  });
+
+  export function insertText(text: string) {
+    const { from, to } = editorView.state.selection.main;
+    editorView.dispatch({
+      changes: { from, to, insert: text }
+    });
+  }
+
+  export function getCursorPos() {
+    return editorView.state.selection.main.head;
+  }
+</script>
+
+<div bind:this={editorElement} class="editor-container"></div>
+
+<style>
+  .editor-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+
+  .editor-container :global(.cm-editor) {
+    height: 100%;
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+
+  .editor-container :global(.cm-content) {
+    padding: 16px;
+  }
+</style>
+```
+
+### Editor Store
+
+Create file: `src/lib/stores/editor.svelte.ts`
+
+```typescript
+export const editorState = $state({
+  content: "",
+  cursorLine: 1,
+  cursorCol: 1,
+  wordCount: 0,
+  isModified: false,
+});
+
+export function updateContent(content: string) {
+  editorState.content = content;
+  editorState.isModified = true;
+  updateWordCount();
+}
+
+export function updateCursor(line: number, col: number) {
+  editorState.cursorLine = line;
+  editorState.cursorCol = col;
+}
+
+function updateWordCount() {
+  const words = editorState.content.trim().split(/\s+/).filter(Boolean);
+  editorState.wordCount = words.length;
+}
+
+export function resetModified() {
+  editorState.isModified = false;
+}
+```
+
+### Markdown Utility
+
+Create file: `src/lib/utils/markdown.ts`
+
+```typescript
+import MarkdownIt from "markdown-it";
+
+export const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+});
+
+export function renderMarkdown(content: string): string {
+  try {
+    return md.render(content);
+  } catch (error) {
+    console.error("Markdown parse error:", error);
+    return "<p>Error rendering markdown</p>";
+  }
+}
+```
+
+### Viewer Component
+
+Create file: `src/lib/components/Viewer/Viewer.svelte`
+
+```svelte
+<script lang="ts">
+  import { renderMarkdown } from '$lib/utils/markdown';
+
+  interface Props {
+    content: string;
+    theme?: string;
+  }
+
+  let { content, theme = 'github-dark' }: Props = $props();
+
+  let html = $derived(renderMarkdown(content));
+</script>
+
+<div class="viewer-container" data-theme={theme}>
+  <div class="viewer-content">
+    {@html html}
+  </div>
+</div>
+
+<style>
+  .viewer-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    padding: 16px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .viewer-content {
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .viewer-content :global(h1) {
+    font-size: 2em;
+    margin-bottom: 0.5em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3em;
+  }
+
+  .viewer-content :global(h2) {
+    font-size: 1.5em;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+  }
+
+  .viewer-content :global(p) {
+    margin-bottom: 1em;
+  }
+
+  .viewer-content :global(code) {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  .viewer-content :global(pre) {
+    background: var(--bg-tertiary);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 1em;
+  }
+
+  .viewer-content :global(pre code) {
+    background: none;
+    padding: 0;
+  }
+
+  .viewer-content :global(ul),
+  .viewer-content :global(ol) {
+    margin-bottom: 1em;
+    padding-left: 2em;
+  }
+
+  .viewer-content :global(li) {
+    margin-bottom: 0.25em;
+  }
+
+  .viewer-content :global(blockquote) {
+    border-left: 4px solid var(--accent);
+    padding-left: 1em;
+    margin-left: 0;
+    margin-bottom: 1em;
+    color: var(--text-secondary);
+  }
+
+  .viewer-content :global(a) {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .viewer-content :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .viewer-content :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  .viewer-content :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+  }
+
+  .viewer-content :global(th),
+  .viewer-content :global(td) {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .viewer-content :global(th) {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+  }
+
+  .viewer-content :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+</style>
+```
+
+### Main Page Example
+
+Update file: `src/routes/+page.svelte`
+
+```svelte
+<script lang="ts">
+  import { invoke } from '@tauri-apps/api/core';
+  import Editor from '$lib/components/Editor/Editor.svelte';
+  import Viewer from '$lib/components/Viewer/Viewer.svelte';
+  import { editorState, updateContent, resetModified } from '$lib/stores/editor.svelte';
+
+  let viewMode = $state<'split' | 'editor' | 'viewer'>('split');
+
+  async function saveFile() {
+    try {
+      await invoke('write_file', { path: 'test.md', content: editorState.content });
+      resetModified();
+      console.log('File saved');
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+  }
+
+  function handleContentChange(content: string) {
+    updateContent(content);
+  }
+</script>
+
+<div class="app">
+  <header class="toolbar">
+    <div class="toolbar-left">
+      <span class="app-name">MarkEdiViewer</span>
+    </div>
+    <div class="toolbar-center">
+      <div class="view-toggle">
+        <button
+          class:active={viewMode === 'split'}
+          onclick={() => (viewMode = 'split')}
+        >
+          Split
+        </button>
+        <button
+          class:active={viewMode === 'editor'}
+          onclick={() => (viewMode = 'editor')}
+        >
+          Edit
+        </button>
+        <button
+          class:active={viewMode === 'viewer'}
+          onclick={() => (viewMode = 'viewer')}
+        >
+          View
+        </button>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button onclick={saveFile}>
+        Save
+        {#if editorState.isModified}
+          <span class="modified-indicator">●</span>
+        {/if}
+      </button>
+    </div>
+  </header>
+
+  <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'}>
+    {#if viewMode === 'split' || viewMode === 'editor'}
+      <div class="editor-pane">
+        <Editor
+          bind:content={editorState.content}
+          onContentChange={handleContentChange}
+        />
+      </div>
+    {/if}
+
+    {#if viewMode === 'split' || viewMode === 'viewer'}
+      <div class="viewer-pane">
+        <Viewer content={editorState.content} />
+      </div>
+    {/if}
+  </main>
+
+  <footer class="statusbar">
+    <span>Ln {editorState.cursorLine}, Col {editorState.cursorCol}</span>
+    <span>{editorState.wordCount} words</span>
+    <span>UTF-8</span>
+    <span>Markdown</span>
+  </footer>
+</div>
+
+<style>
+  /* ... existing styles ... */
+
+  .modified-indicator {
+    color: var(--accent);
+    margin-left: 4px;
+  }
+</style>
+```
+
+### Testing the Implementation
+
+#### 1. Run Development Server
+
+```bash
+npm run dev
+```
+
+#### 2. Test Editor Features
+
+- [ ] Type markdown text
+- [ ] See syntax highlighting
+- [ ] Verify live preview updates
+- [ ] Test save functionality
+
+#### 3. Test View Modes
+
+- [ ] Split mode shows editor and preview
+- [ ] Editor mode shows only editor
+- [ ] Viewer mode shows only preview
+
+### Common Issues & Solutions
+
+#### Issue: CodeMirror not rendering
+
+**Solution**: Ensure the parent element has a defined height:
+
+```css
+.editor-container {
+  height: 100%;
+  min-height: 200px;
+}
+```
+
+#### Issue: Live preview not updating
+
+**Solution**: Check that `$derived` is used correctly:
+
+```typescript
+let html = $derived(renderMarkdown(content));
+```
+
+#### Issue: Styles not applying to preview
+
+**Solution**: Use `:global()` selector for HTML content:
+
+```css
+.viewer-content :global(h1) {
+  /* styles */
+}
+```
+
+### Resources
+
+- [CodeMirror 6 Documentation](https://codemirror.net/6/docs/)
+- [markdown-it Documentation](https://markdown-it.github.io/)
+- [Svelte 5 Runes](https://svelte.dev/blog/runes)
+- [Tauri v2 Documentation](https://v2.tauri.app/)

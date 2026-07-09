@@ -53,7 +53,7 @@ Border:        #d1d5db
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  [B] [I] [H] [Link] [Image] [Code] [CodeBlock] [UL] [OL] [Task]  │
-│  [Quote] [HR] [Strike] [Table]        [Split] [Edit] [View]       │
+│  [Quote] [HR] [Strike] [Table]    [Split] [Edit] [View]           │
 │                                                                     │
 ├────────────────────────────────┬─┬──────────────────────────────────┤
 │                                │ │                                  │
@@ -93,7 +93,7 @@ Border:        #d1d5db
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  [B] [I] [H] [Link] [Image] [Code] [CodeBlock] [UL] [OL] [Task]  │
-│  [Quote] [HR] [Strike] [Table]        [Split] [Edit] [View]       │
+│  [Quote] [HR] [Strike] [Table]    [Split] [Edit] [View]           │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -115,7 +115,7 @@ Border:        #d1d5db
 │  16 console.log(hello);                                            │
 │  17 ```                                                            │
 │  18                                                                │
-│  19 [█]                                                            │
+│  19  [█]                                                           │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -152,10 +152,10 @@ Border:        #d1d5db
 │              │                                                      │
 │              │  This is a paragraph with a link.                    │
 │              │                                                      │
-│              │  ┌─────────────────────────────────┐                 │
-│              │  │ const hello = "world";          │                 │
-│              │  │ console.log(hello);             │                 │
-│              │  └─────────────────────────────────┘                 │
+│              │  ┌─────────────────────────────────┐                │
+│              │  │ const hello = "world";          │                │
+│              │  │ console.log(hello);             │                │
+│              │  └─────────────────────────────────┘                │
 │              │                                                      │
 ├──────────────┴──────────────────────────────────────────────────────┤
 │                                                                     │
@@ -252,7 +252,7 @@ When the file changes on disk while the editor is open, a banner appears:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
 │  [B] [I] [H] [Link] [Image] [Code] [CodeBlock] [UL] [OL] [Task]  │
-│  [Quote] [HR] [Strike] [Table]        [Split] [Edit] [View]       │
+│  [Quote] [HR] [Strike] [Table]    [Split] [Edit] [View]           │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```

@@ -16,6 +16,7 @@ A mix of TODO items and ideas for future development.
 - [ ] **User-defined themes**: Add user-defined markdown themes
 - [ ] **Export to PDF**: Save as pdf
 - [ ] **No Minimum Width of Editor and Preview**: Allow the user to draw the splitter between the editor and the preview all the way to either side and back again. Has the same effect as clicking the Split/Edit/View buttons. The buttons should be re-ordered to fit the left/middle/right order of the splitter to View/Split/Edit.
+- [] **Start-up with Config from Latest Run**: When starting the app it opens in the same position and size as the latest run ended. Also the latest setting of View/Split/Edit is reused.
 
 ## Bug Fixes
 

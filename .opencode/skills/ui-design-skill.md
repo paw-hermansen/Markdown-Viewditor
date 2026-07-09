@@ -18,22 +18,22 @@
   --bg-secondary: #252526;
   --bg-tertiary: #2d2d2d;
   --bg-hover: #3e3e3e;
-  
+
   /* Text */
   --text-primary: #cccccc;
   --text-secondary: #858585;
   --text-muted: #606060;
-  
+
   /* Accent */
   --accent-primary: #0078d4;
   --accent-hover: #1a8cff;
   --accent-muted: #0078d440;
-  
+
   /* Status */
   --success: #4ec9b0;
   --warning: #dcdcaa;
   --error: #f14c4c;
-  
+
   /* Borders */
   --border: #3e3e3e;
   --border-focus: #0078d4;
@@ -44,9 +44,9 @@
 
 ```css
 :root {
-  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-  
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -60,12 +60,12 @@
 
 ```css
 :root {
-  --space-1: 0.25rem;  /* 4px */
-  --space-2: 0.5rem;   /* 8px */
-  --space-3: 0.75rem;  /* 12px */
-  --space-4: 1rem;     /* 16px */
-  --space-6: 1.5rem;   /* 24px */
-  --space-8: 2rem;     /* 32px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
 }
 ```
 
@@ -83,8 +83,10 @@
   .editor-layout {
     grid-template-columns: 1fr;
   }
-  
-  .sidebar { display: none; }
+
+  .sidebar {
+    display: none;
+  }
 }
 ```
 
@@ -100,9 +102,9 @@
       <ItalicIcon />
     </button>
   </div>
-  
+
   <div class="toolbar-separator"></div>
-  
+
   <div class="toolbar-group">
     <button class="toolbar-btn" title="Heading">
       <HeadingIcon />
@@ -118,7 +120,7 @@
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
   }
-  
+
   .toolbar-btn {
     display: flex;
     align-items: center;
@@ -131,7 +133,7 @@
     border-radius: 4px;
     cursor: pointer;
   }
-  
+
   .toolbar-btn:hover {
     background: var(--bg-hover);
   }
@@ -146,7 +148,7 @@
     <span class="status-item">Line {line}, Col {col}</span>
     <span class="status-item">{wordCount} words</span>
   </div>
-  
+
   <div class="statusbar-right">
     <span class="status-item">UTF-8</span>
     <span class="status-item">Markdown</span>
@@ -175,13 +177,13 @@
   let isOpen = $state(false);
   let query = $state('');
   let selectedIndex = $state(0);
-  
+
   let filteredCommands = $derived(
-    commands.filter(cmd => 
+    commands.filter(cmd =>
       cmd.label.toLowerCase().includes(query.toLowerCase())
     )
   );
-  
+
   function handleKeydown(e) {
     if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
@@ -207,7 +209,7 @@
       <input bind:value={query} placeholder="Type a command..." autofocus />
       <div class="command-list">
         {#each filteredCommands as command, i}
-          <div 
+          <div
             class="command-item"
             class:selected={i === selectedIndex}
             onclick={() => { command.action(); isOpen = false; }}
@@ -227,6 +229,7 @@
 ## Accessibility
 
 ### ARIA Labels
+
 ```svelte
 <button aria-label="Bold" aria-pressed={isBold} title="Bold (Ctrl+B)">
   <BoldIcon />
@@ -242,6 +245,7 @@
 ```
 
 ### Focus Management
+
 ```css
 :focus-visible {
   outline: 2px solid var(--accent-primary);
@@ -254,6 +258,7 @@
 ```
 
 ### Reduced Motion
+
 ```css
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -267,13 +272,13 @@
 
 ```javascript
 const shortcuts = {
-  'ctrl+b': () => toggleBold(),
-  'ctrl+i': () => toggleItalic(),
-  'ctrl+s': () => saveFile(),
-  'ctrl+shift+p': () => openCommandPalette(),
-  'ctrl+n': () => newFile(),
-  'ctrl+o': () => openFile(),
-  'ctrl+w': () => closeFile(),
+  "ctrl+b": () => toggleBold(),
+  "ctrl+i": () => toggleItalic(),
+  "ctrl+s": () => saveFile(),
+  "ctrl+shift+p": () => openCommandPalette(),
+  "ctrl+n": () => newFile(),
+  "ctrl+o": () => openFile(),
+  "ctrl+w": () => closeFile(),
 };
 ```
 
@@ -281,14 +286,26 @@ const shortcuts = {
 
 ```css
 /* Fade */
-.fade-enter { opacity: 0; }
-.fade-enter-active { transition: opacity 0.2s; }
-.fade-enter-to { opacity: 1; }
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-to {
+  opacity: 1;
+}
 
 /* Slide */
-.slide-enter { transform: translateX(-100%); }
-.slide-enter-active { transition: transform 0.3s ease-out; }
-.slide-enter-to { transform: translateX(0); }
+.slide-enter {
+  transform: translateX(-100%);
+}
+.slide-enter-active {
+  transition: transform 0.3s ease-out;
+}
+.slide-enter-to {
+  transform: translateX(0);
+}
 ```
 
 ## Icon Libraries

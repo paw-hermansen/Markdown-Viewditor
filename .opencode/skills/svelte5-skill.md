@@ -6,6 +6,7 @@
 ## Critical Rules
 
 ### Always Do
+
 - Use `$state()` for reactive state, not plain `let`
 - Use `$derived()` for computed values, not `$effect()`
 - Use `onclick` not `on:click` (Svelte 5 syntax)
@@ -15,6 +16,7 @@
 - Use `Promise.all` for parallel requests in load functions
 
 ### Never Do
+
 - Never use `let` without `$state()` for reactive variables
 - Never use `$effect()` for derived values (use `$derived()`)
 - Never use `on:click` syntax (use `onclick`)
@@ -26,12 +28,13 @@
 ## Runes
 
 ### $state (Reactive State)
+
 ```svelte
 <script>
   let count = $state(0);
   let user = $state({ name: 'John', age: 30 });
   let items = $state(['a', 'b', 'c']);
-  
+
   // Mutation works
   function increment() {
     count++;
@@ -42,21 +45,23 @@
 ```
 
 ### $state.raw (Opt-out Deep Reactivity)
+
 ```svelte
 <script>
   let items = $state.raw([1, 2, 3]);
-  
+
   // items.push(4) WON'T trigger update
   items = [...items, 4]; // WILL trigger update
 </script>
 ```
 
 ### $derived (Computed Values)
+
 ```svelte
 <script>
   let count = $state(0);
   let doubled = $derived(count * 2);
-  
+
   // Complex derivations
   let filteredItems = $derived.by(() => {
     if (filter === 'even') return items.filter(n => n % 2 === 0);
@@ -66,15 +71,16 @@
 ```
 
 ### $effect (Side Effects)
+
 ```svelte
 <script>
   let count = $state(0);
-  
+
   $effect(() => {
     console.log('Count changed:', count);
     document.title = `Count is ${count}`;
   });
-  
+
   // Cleanup
   $effect(() => {
     const interval = setInterval(() => {}, 1000);
@@ -84,6 +90,7 @@
 ```
 
 ### $props (Component Props)
+
 ```svelte
 <script>
   let { name, age = 25, onclick } = $props();
@@ -95,6 +102,7 @@
 ```
 
 ### $bindable (Two-Way Binding)
+
 ```svelte
 <script>
   let { value = $bindable(''), disabled = $bindable(false) } = $props();
@@ -106,6 +114,7 @@
 ## TypeScript Integration
 
 ### Typed Props
+
 ```svelte
 <script lang="ts">
   interface Props {
@@ -113,12 +122,13 @@
     age?: number;
     onclick?: (e: MouseEvent) => void;
   }
-  
+
   let { name, age = 25, onclick }: Props = $props();
 </script>
 ```
 
 ### Generic Components
+
 ```svelte
 <script lang="ts" generics="T extends { id: string | number }">
   interface Props {
@@ -126,12 +136,12 @@
     selected?: T;
     onSelect: (item: T) => void;
   }
-  
+
   let { items, selected, onSelect }: Props = $props();
 </script>
 
 {#each items as item (item.id)}
-  <div 
+  <div
     class:selected={selected?.id === item.id}
     onclick={() => onSelect(item)}
   >
@@ -141,15 +151,16 @@
 ```
 
 ### Snippet Typing
+
 ```svelte
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  
+
   interface Props {
     children: Snippet;
     row: Snippet<[data: { id: number; name: string }]>;
   }
-  
+
   let { children, row }: Props = $props();
 </script>
 
@@ -163,6 +174,7 @@
 ## Snippets (Replaces Slots)
 
 ### Define Snippet
+
 ```svelte
 {#snippet header()}
   <h1>Header Content</h1>
@@ -174,23 +186,25 @@
 ```
 
 ### Render Snippet
+
 ```svelte
 {@render header()}
 {@render item({ id: 1, name: 'Item 1' })}
 ```
 
 ### Component with Snippets
+
 ```svelte
 <!-- Card.svelte -->
 <script>
   import type { Snippet } from 'svelte';
-  
+
   interface Props {
     title: string;
     children: Snippet;
     footer?: Snippet;
   }
-  
+
   let { title, children, footer }: Props = $props();
 </script>
 
@@ -206,12 +220,13 @@
 ## Event Handling
 
 ### Callback Props (Not createEventDispatcher)
+
 ```svelte
 <script>
-  let { 
+  let {
     onclick,
     onsubmit,
-    onchange 
+    onchange
   } = $props();
 </script>
 
@@ -223,23 +238,25 @@
 ## SvelteKit Integration
 
 ### Load Function (Type-Safe)
+
 ```typescript
 // src/routes/+page.ts
-import type { PageLoad } from './$types';
+import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ fetch }) => {
-  const response = await fetch('/api/data');
+  const response = await fetch("/api/data");
   const data = await response.json();
   return { data };
 };
 ```
 
 ### Page Component
+
 ```svelte
 <!-- src/routes/+page.svelte -->
 <script lang="ts">
   import type { PageProps } from './$types';
-  
+
   let { data }: PageProps = $props();
 </script>
 
@@ -247,11 +264,12 @@ export const load: PageLoad = async ({ fetch }) => {
 ```
 
 ### Form Actions
+
 ```svelte
 <!-- src/routes/+page.svelte -->
 <script lang="ts">
   import type { ActionData } from './$types';
-  
+
   let { form }: { form: ActionData } = $props();
 </script>
 
@@ -265,13 +283,14 @@ export const load: PageLoad = async ({ fetch }) => {
 ```
 
 ### Server Load (Universal)
+
 ```typescript
 // src/routes/+page.server.ts
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
   return {
-    user: locals.user
+    user: locals.user,
   };
 };
 ```
@@ -279,6 +298,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 ## SSR Pitfalls
 
 ### Module-Level State (Cross-Request Leak)
+
 ```svelte
 <!-- WRONG: Module-level state leaks between requests -->
 <script context="module">
@@ -292,6 +312,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 ```
 
 ### svelte:boundary (Error Boundaries)
+
 ```svelte
 {#snippet errorComponent(error: Error, reset: () => void)}
   <div class="error">
@@ -308,6 +329,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 ## Common Patterns
 
 ### Form with Enhance
+
 ```svelte
 <script>
   import { enhance } from '$app/forms';
@@ -319,33 +341,41 @@ export const load: PageServerLoad = async ({ locals }) => {
 ```
 
 ### Parallel Load
+
 ```typescript
 // WRONG: Sequential
 export const load = async ({ fetch }) => {
-  const users = await fetch('/api/users');
-  const posts = await fetch('/api/posts');
+  const users = await fetch("/api/users");
+  const posts = await fetch("/api/posts");
   return { users, posts };
 };
 
 // CORRECT: Parallel
 export const load = async ({ fetch }) => {
   const [users, posts] = await Promise.all([
-    fetch('/api/users'),
-    fetch('/api/posts')
+    fetch("/api/users"),
+    fetch("/api/posts"),
   ]);
   return { users, posts };
 };
 ```
 
 ### State Isolation
+
 ```typescript
 // CORRECT: Factory function
 export function createCounter(initial = 0) {
   let count = $state(initial);
   return {
-    get count() { return count; },
-    increment() { count++; },
-    decrement() { count--; }
+    get count() {
+      return count;
+    },
+    increment() {
+      count++;
+    },
+    decrement() {
+      count--;
+    },
   };
 }
 ```
@@ -353,6 +383,7 @@ export function createCounter(initial = 0) {
 ## Migration from Svelte 4
 
 ### Before (Svelte 4)
+
 ```svelte
 <script>
   export let name;
@@ -366,6 +397,7 @@ export function createCounter(initial = 0) {
 ```
 
 ### After (Svelte 5)
+
 ```svelte
 <script>
   let { name, onclick, children } = $props();
@@ -378,15 +410,15 @@ export function createCounter(initial = 0) {
 
 ## Quick Reference
 
-| Svelte 4 | Svelte 5 |
-|----------|----------|
-| `export let prop` | `let { prop } = $props()` |
-| `$: derived = ...` | `let derived = $derived(...)` |
-| `on:click` | `onclick` |
-| `createEventDispatcher()` | Callback props |
-| `<slot>` | `{@render children()}` |
-| `<slot name="foo">` | `{@render foo()}` |
-| `bind:value` | `$bindable()` + `bind:value` |
+| Svelte 4                  | Svelte 5                      |
+| ------------------------- | ----------------------------- |
+| `export let prop`         | `let { prop } = $props()`     |
+| `$: derived = ...`        | `let derived = $derived(...)` |
+| `on:click`                | `onclick`                     |
+| `createEventDispatcher()` | Callback props                |
+| `<slot>`                  | `{@render children()}`        |
+| `<slot name="foo">`       | `{@render foo()}`             |
+| `bind:value`              | `$bindable()` + `bind:value`  |
 
 ## Resources
 

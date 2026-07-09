@@ -1,12 +1,22 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
+  import Editor from '$lib/components/Editor/Editor.svelte';
+  import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
+  import { editorState, markSaved } from '$lib/stores/editor.svelte';
 
-  let content = $state('# Hello World\n\nStart writing markdown here...');
   let viewMode = $state<'split' | 'editor' | 'viewer'>('split');
+  let editorComponent = $state<Editor | undefined>(undefined);
+
+  function handleFormat(format: string) {
+    if (editorComponent) {
+      editorComponent.insertFormatting(format);
+    }
+  }
 
   async function saveFile() {
     try {
-      await invoke('write_file', { path: 'test.md', content });
+      await invoke('write_file', { path: 'test.md', content: editorState.content });
+      markSaved();
       console.log('File saved');
     } catch (error) {
       console.error('Failed to save:', error);
@@ -42,18 +52,20 @@
       </div>
     </div>
     <div class="toolbar-right">
-      <button onclick={saveFile}>Save</button>
+      <button onclick={saveFile}>
+        Save {#if editorState.isModified}*{/if}
+      </button>
     </div>
   </header>
+
+  {#if viewMode === 'split' || viewMode === 'editor'}
+    <EditorToolbar onFormat={handleFormat} />
+  {/if}
 
   <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'}>
     {#if viewMode === 'split' || viewMode === 'editor'}
       <div class="editor-pane">
-        <textarea
-          bind:value={content}
-          placeholder="Start writing markdown..."
-          spellcheck="false"
-        ></textarea>
+        <Editor bind:this={editorComponent} />
       </div>
     {/if}
 
@@ -67,7 +79,8 @@
   </main>
 
   <footer class="statusbar">
-    <span>Ready</span>
+    <span>Line {editorState.cursorLine}, Col {editorState.cursorCol}</span>
+    <span>{editorState.wordCount} words</span>
     <span>Markdown</span>
   </footer>
 </div>
@@ -146,20 +159,6 @@
 
   .content.viewer-only .viewer-pane {
     width: 100%;
-  }
-
-  textarea {
-    width: 100%;
-    height: 100%;
-    padding: 16px;
-    border: none;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: none;
-    outline: none;
   }
 
   .preview {

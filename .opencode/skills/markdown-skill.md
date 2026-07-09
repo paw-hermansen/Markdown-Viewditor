@@ -4,13 +4,13 @@
 
 ## Recommended Stack
 
-| Purpose | Library | Why |
-|---------|---------|-----|
-| **Parsing** | `markdown-it` | Flexible, plugins, GFM support |
-| **Syntax Highlighting** | `shiki` | VS Code quality, beautiful themes |
-| **Editor** | `@codemirror/view` | Best-in-class code editor |
-| **Frontmatter** | `gray-matter` | Standard YAML frontmatter |
-| **Svelte Integration** | `mdsvex` | Markdown in Svelte components |
+| Purpose                 | Library            | Why                               |
+| ----------------------- | ------------------ | --------------------------------- |
+| **Parsing**             | `markdown-it`      | Flexible, plugins, GFM support    |
+| **Syntax Highlighting** | `shiki`            | VS Code quality, beautiful themes |
+| **Editor**              | `@codemirror/view` | Best-in-class code editor         |
+| **Frontmatter**         | `gray-matter`      | Standard YAML frontmatter         |
+| **Svelte Integration**  | `mdsvex`           | Markdown in Svelte components     |
 
 ## markdown-it (Parsing)
 
@@ -20,20 +20,20 @@ npm install markdown-it-task-lists markdown-it-anchor
 ```
 
 ```javascript
-import MarkdownIt from 'markdown-it';
-import taskLists from 'markdown-it-task-lists';
-import anchor from 'markdown-it-anchor';
+import MarkdownIt from "markdown-it";
+import taskLists from "markdown-it-task-lists";
+import anchor from "markdown-it-anchor";
 
 const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
-  breaks: true
+  breaks: true,
 })
-.use(taskLists)
-.use(anchor);
+  .use(taskLists)
+  .use(anchor);
 
-const html = md.render('# Hello World\n\n- [x] Task 1\n- [ ] Task 2');
+const html = md.render("# Hello World\n\n- [x] Task 1\n- [ ] Task 2");
 ```
 
 ## Shiki (Syntax Highlighting)
@@ -43,15 +43,15 @@ npm install shiki
 ```
 
 ```javascript
-import { createHighlighter } from 'shiki';
+import { createHighlighter } from "shiki";
 
 const highlighter = await createHighlighter({
-  themes: ['github-dark', 'github-light'],
-  langs: ['javascript', 'typescript', 'rust', 'html', 'css', 'markdown']
+  themes: ["github-dark", "github-light"],
+  langs: ["javascript", "typescript", "rust", "html", "css", "markdown"],
 });
 
 function highlightCode(code, lang) {
-  return highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
+  return highlighter.codeToHtml(code, { lang, theme: "github-dark" });
 }
 
 // Integration with markdown-it
@@ -66,13 +66,13 @@ npm install @codemirror/language @codemirror/commands @codemirror/theme-one-dark
 ```
 
 ```javascript
-import { EditorView, basicSetup } from 'codemirror';
-import { EditorState } from '@codemirror/state';
-import { markdown } from '@codemirror/lang-markdown';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView, basicSetup } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { markdown } from "@codemirror/lang-markdown";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 const state = EditorState.create({
-  doc: '# Hello World',
+  doc: "# Hello World",
   extensions: [
     basicSetup,
     markdown(),
@@ -82,13 +82,13 @@ const state = EditorState.create({
         const content = update.state.doc.toString();
         // Handle content change
       }
-    })
-  ]
+    }),
+  ],
 });
 
 const view = new EditorView({
   state,
-  parent: document.getElementById('editor')
+  parent: document.getElementById("editor"),
 });
 ```
 
@@ -99,7 +99,7 @@ npm install gray-matter
 ```
 
 ```javascript
-import matter from 'gray-matter';
+import matter from "gray-matter";
 
 const { data, content } = matter(`
 ---
@@ -112,7 +112,7 @@ date: 2024-01-01
 `);
 
 console.log(data.title); // 'My Post'
-console.log(content);    // '# Content here'
+console.log(content); // '# Content here'
 ```
 
 ## mdsvex (Svelte + Markdown)
@@ -123,22 +123,24 @@ npm install mdsvex
 
 ```javascript
 // svelte.config.js
-import { mdsvex } from 'mdsvex';
+import { mdsvex } from "mdsvex";
 
 export default {
-  extensions: ['.svelte', '.md'],
+  extensions: [".svelte", ".md"],
   preprocess: mdsvex({
-    extensions: ['.md'],
+    extensions: [".md"],
     highlight: {
-      theme: 'github-dark'
-    }
-  })
+      theme: "github-dark",
+    },
+  }),
 };
 ```
 
 ```markdown
 <!-- src/routes/blog/post.md -->
+
 ---
+
 title: My Post
 date: 2024-01-01
 ---
@@ -150,7 +152,7 @@ date: 2024-01-01
 </script>
 
 <button onclick={() => count++}>
-  Clicked {count} times
+Clicked {count} times
 </button>
 ```
 
@@ -159,25 +161,25 @@ date: 2024-01-01
 ```svelte
 <script>
   import { EditorView } from '@codemirror/view';
-  
+
   let { editorView } = $props();
-  
+
   function insertMarkdown(syntax) {
     const { from, to } = editorView.state.selection.main;
     const selected = editorView.state.sliceDoc(from, to);
-    
+
     const replacements = {
       bold: `**${selected || 'bold text'}**`,
       italic: `*${selected || 'italic text'}*`,
       heading: `## ${selected || 'Heading'}`,
       link: `[${selected || 'link text'}](url)`,
-      code: selected.includes('\n') 
+      code: selected.includes('\n')
         ? `\`\`\`\n${selected || 'code'}\n\`\`\``
         : `\`${selected || 'code'}\``,
       list: `- ${selected || 'list item'}`,
       task: `- [ ] ${selected || 'task'}`
     };
-    
+
     editorView.dispatch({
       changes: { from, to, insert: replacements[syntax] }
     });
@@ -201,24 +203,24 @@ date: 2024-01-01
 <script>
   import MarkdownIt from 'markdown-it';
   import { createHighlighter } from 'shiki';
-  
+
   let content = $state('# Hello World');
   let html = $derived(md.render(content));
-  
+
   const md = new MarkdownIt({
     html: true,
     linkify: true,
     typographer: true
   });
-  
+
   let highlighter;
-  
+
   onMount(async () => {
     highlighter = await createHighlighter({
       themes: ['github-dark'],
       langs: ['javascript', 'typescript', 'rust', 'html', 'css']
     });
-    
+
     md.options.highlight = (code, lang) => {
       return highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
     };
@@ -238,13 +240,13 @@ npm install katex markdown-it-katex
 ```
 
 ```javascript
-import MarkdownIt from 'markdown-it';
-import katex from 'markdown-it-katex';
+import MarkdownIt from "markdown-it";
+import katex from "markdown-it-katex";
 
 const md = new MarkdownIt().use(katex);
 
 // Renders: E = mc^2
-const html = md.render('$$E = mc^2$$');
+const html = md.render("$$E = mc^2$$");
 ```
 
 ## Diagram Support (Mermaid)
@@ -256,10 +258,10 @@ npm install mermaid
 ```svelte
 <script>
   import mermaid from 'mermaid';
-  
+
   let { code } = $props();
   let svg = $state('');
-  
+
   $effect(async () => {
     const { svg: rendered } = await mermaid.render('diagram', code);
     svg = rendered;
@@ -272,12 +274,14 @@ npm install mermaid
 ## Best Practices
 
 ### Performance
+
 - Debounce preview updates (300ms)
 - Use web workers for parsing large documents
 - Cache rendered HTML
 - Lazy load syntax highlighter
 
 ### UX
+
 - Split editor/preview view
 - Auto-save with localStorage
 - Keyboard shortcuts for common operations
@@ -285,6 +289,7 @@ npm install mermaid
 - Word count in status bar
 
 ### Security
+
 - Sanitize HTML output (DOMPurify)
 - Validate markdown input
 - Handle malformed markdown gracefully

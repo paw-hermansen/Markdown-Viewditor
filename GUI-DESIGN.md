@@ -77,13 +77,14 @@ Border:        #e5e7eb
 ```
 
 **The split view shows:**
+
 - **Left:** Editor with line numbers and cursor
 - **Right:** Live preview that updates on every keystroke
 - **Bottom:** Status bar with cursor position and word count
 
 ### Editor Only Mode
 
-```
+````
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
 │  ⬤ ⬤ ⬤                   MarkEdiViewer                 ☰          │
@@ -119,7 +120,7 @@ Border:        #e5e7eb
 │   Ln 19, Col 1       156 words        UTF-8        Markdown        │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
-```
+````
 
 ### Viewer Only Mode (Live Preview)
 
@@ -193,6 +194,7 @@ Border:        #e5e7eb
 **Right side:** View mode toggle
 
 **Button Style:**
+
 - 32x32px
 - Rounded corners (6px)
 - Subtle hover effect
@@ -230,6 +232,7 @@ The live preview is always active when in Split or View mode. A subtle indicator
 ## Typography
 
 ### UI Text
+
 ```
 Font: Inter, -apple-system, BlinkMacSystemFont, sans-serif
 Size: 14px
@@ -238,6 +241,7 @@ Line Height: 1.5
 ```
 
 ### Editor
+
 ```
 Font: JetBrains Mono, Fira Code, monospace
 Size: 14px
@@ -246,6 +250,7 @@ Line Height: 1.6
 ```
 
 ### Headings (Viewer)
+
 ```
 H1: 28px, Weight 600
 H2: 24px, Weight 600
@@ -271,6 +276,7 @@ Section gap: 16px
 ## Shadows & Borders
 
 ### Shadows
+
 ```
 Card: 0 1px 3px rgba(0, 0, 0, 0.1)
 Dropdown: 0 4px 12px rgba(0, 0, 0, 0.15)
@@ -278,6 +284,7 @@ Modal: 0 8px 24px rgba(0, 0, 0, 0.2)
 ```
 
 ### Borders
+
 ```
 Default: 1px solid rgba(255, 255, 255, 0.1)
 Focus: 2px solid #e94560
@@ -289,6 +296,7 @@ Divider: 1px solid rgba(255, 255, 255, 0.05)
 ## Animations
 
 ### Transitions
+
 ```
 Duration: 150ms
 Easing: ease-in-out
@@ -296,6 +304,7 @@ Properties: background, color, opacity, transform
 ```
 
 ### Hover Effects
+
 ```
 Button: background lighten 10%
 Link: color darken 10%
@@ -325,16 +334,19 @@ Menu: ☰
 ## Responsive Behavior
 
 ### Desktop (>1024px)
+
 - Full layout
 - Split view with live preview
 - All features visible
 
 ### Tablet (768px - 1024px)
+
 - Toggle between views
 - Touch-friendly buttons
 - Live preview in split mode
 
 ### Mobile (<768px)
+
 - Single pane
 - Bottom toolbar
 - Swipe gestures
@@ -345,18 +357,21 @@ Menu: ☰
 ## Accessibility
 
 ### Focus States
+
 ```
 Outline: 2px solid #e94560
 Offset: 2px
 ```
 
 ### Color Contrast
+
 ```
 Text on background: 4.5:1 minimum
 Interactive elements: 3:1 minimum
 ```
 
 ### Keyboard Navigation
+
 ```
 Tab: Move between elements
 Enter/Space: Activate buttons

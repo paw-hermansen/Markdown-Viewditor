@@ -3,6 +3,7 @@
 ## Project Overview
 
 **MarkEdiViewer** - A markdown editor and viewer with **live preview** built with:
+
 - **Backend**: Rust (Tauri v2)
 - **Frontend**: Svelte 5 + SvelteKit
 - **Platforms**: Linux, macOS, Windows, Android, iOS
@@ -56,17 +57,20 @@ cargo clippy
 ## Architecture
 
 ### Why Tauri v2?
+
 - Small binary (~10MB vs ~100MB+ Electron)
 - Native performance, system webview
 - Cross-platform (desktop + mobile)
 - Rust backend for security
 
 ### Why Svelte 5?
+
 - Compiler-based, no runtime overhead
 - Runes for fine-grained reactivity
 - Small bundle, great TypeScript support
 
 ### Why Live Preview?
+
 - Instant feedback as you write
 - Reduces errors and improves workflow
 - Core feature of modern markdown editors
@@ -74,6 +78,7 @@ cargo clippy
 ## Coding Conventions
 
 ### Svelte Components
+
 - Use `.svelte` extension, PascalCase names
 - Use `$state()` for reactive state
 - Use `$derived()` for computed values
@@ -83,12 +88,14 @@ cargo clippy
 - Use snippets `{@render}` not `<slot>`
 
 ### Rust Code
+
 - Use `snake_case` functions, `PascalCase` types
 - Use `#[tauri::command]` for IPC
 - Return `Result<T, E>` for error handling
 - Use `lib.rs` for all logic (mobile requirement)
 
 ### CSS
+
 - CSS custom properties (variables)
 - 8px spacing grid
 - Support dark/light themes
@@ -97,6 +104,7 @@ cargo clippy
 ## Critical Patterns
 
 ### Tauri v2 Entry Point
+
 ```rust
 // src-tauri/src/lib.rs
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -116,11 +124,12 @@ fn main() {
 ```
 
 ### Svelte 5 Component
+
 ```svelte
 <script>
   let { name = $bindable('') } = $props();
   let doubled = $derived(name.length * 2);
-  
+
   $effect(() => {
     console.log('Name changed:', name);
   });
@@ -131,10 +140,11 @@ fn main() {
 ```
 
 ### Calling Rust from Svelte
+
 ```svelte
 <script>
   import { invoke } from '@tauri-apps/api/core';
-  
+
   async function readFile(path) {
     return await invoke('read_file', { path });
   }
@@ -142,13 +152,14 @@ fn main() {
 ```
 
 ### Live Preview Pattern
+
 ```svelte
 <script>
   import MarkdownIt from 'markdown-it';
-  
+
   let content = $state('# Hello World');
   let html = $derived(md.render(content));
-  
+
   const md = new MarkdownIt();
 </script>
 
@@ -158,14 +169,14 @@ fn main() {
 
 ## Common Mistakes to Avoid
 
-| Mistake | Solution |
-|---------|----------|
-| `let` without `$state()` | Use `$state()` for reactive vars |
-| `on:click` syntax | Use `onclick` (Svelte 5) |
-| `<slot>` | Use `{@render children()}` |
-| `&str` in async commands | Use `String` (owned type) |
-| Missing capabilities | Add to `capabilities/default.json` |
-| Commands not registered | Add to `generate_handler![]` |
+| Mistake                  | Solution                           |
+| ------------------------ | ---------------------------------- |
+| `let` without `$state()` | Use `$state()` for reactive vars   |
+| `on:click` syntax        | Use `onclick` (Svelte 5)           |
+| `<slot>`                 | Use `{@render children()}`         |
+| `&str` in async commands | Use `String` (owned type)          |
+| Missing capabilities     | Add to `capabilities/default.json` |
+| Commands not registered  | Add to `generate_handler![]`       |
 
 ## Resources
 

@@ -1,4 +1,4 @@
-export type ViewMode = 'split' | 'editor' | 'viewer';
+export type ViewMode = "split" | "editor" | "viewer";
 
 export interface FileInfo {
   path: string;

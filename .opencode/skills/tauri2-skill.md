@@ -6,6 +6,7 @@
 ## Critical Rules
 
 ### Always Do
+
 - Register every command in `tauri::generate_handler![cmd1, cmd2, ...]`
 - Return `Result<T, E>` from commands for proper error handling
 - Use `Mutex<T>` or `RwLock<T>` for shared state
@@ -14,6 +15,7 @@
 - Use `#[cfg_attr(mobile, tauri::mobile_entry_point)]` on `pub fn run()`
 
 ### Never Do
+
 - Never use borrowed types (`&str`) in async commands - use owned types
 - Never block the main thread - use async for I/O operations
 - Never hardcode paths - use Tauri path APIs
@@ -51,12 +53,14 @@ my-tauri-app/
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "windows": [{
-      "label": "main",
-      "title": "Markdown Editor",
-      "width": 1200,
-      "height": 800
-    }],
+    "windows": [
+      {
+        "label": "main",
+        "title": "Markdown Editor",
+        "width": 1200,
+        "height": 800
+      }
+    ],
     "security": {
       "csp": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'",
       "capabilities": ["default"]
@@ -126,6 +130,7 @@ strip = true
 ## Rust Commands (IPC)
 
 ### Entry Point (lib.rs)
+
 ```rust
 // src-tauri/src/lib.rs
 use serde::{Deserialize, Serialize};
@@ -187,6 +192,7 @@ pub fn run() {
 ```
 
 ### Main Entry (main.rs)
+
 ```rust
 // src-tauri/src/main.rs
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -198,12 +204,13 @@ fn main() {
 ## Frontend Integration (Svelte)
 
 ### Calling Rust Commands
+
 ```svelte
 <script>
   import { invoke } from '@tauri-apps/api/core';
-  
+
   let content = $state('');
-  
+
   async function openFile() {
     try {
       content = await invoke('read_file', { path: '/path/to/file.md' });
@@ -211,7 +218,7 @@ fn main() {
       console.error('Failed to read file:', error);
     }
   }
-  
+
   async function saveFile() {
     try {
       await invoke('write_file', { path: '/path/to/file.md', content });
@@ -223,18 +230,19 @@ fn main() {
 ```
 
 ### Event System
+
 ```svelte
 <script>
   import { listen } from '@tauri-apps/api/event';
-  
+
   let unlisten;
-  
+
   onMount(async () => {
     unlisten = await listen('file-changed', (event) => {
       console.log('File changed:', event.payload);
     });
   });
-  
+
   onDestroy(() => {
     unlisten?.();
   });
@@ -242,6 +250,7 @@ fn main() {
 ```
 
 ### Channel Streaming (High-Frequency)
+
 ```rust
 use tauri::ipc::Channel;
 
@@ -261,11 +270,11 @@ async fn watch_file(path: String, on_event: Channel<FileEvent>) {
 ```
 
 ```typescript
-import { invoke, Channel } from '@tauri-apps/api/core';
+import { invoke, Channel } from "@tauri-apps/api/core";
 
 const channel = new Channel();
 channel.onmessage = (msg) => console.log(msg.event, msg.data);
-await invoke('watch_file', { path: '/file.md', onEvent: channel });
+await invoke("watch_file", { path: "/file.md", onEvent: channel });
 ```
 
 ## State Management
@@ -309,15 +318,15 @@ cargo tauri plugin add window-state
 
 ## Common Mistakes Prevention
 
-| Issue | Root Cause | Solution |
-|-------|-----------|----------|
-| "Command not found" | Missing from generate_handler! | Add command to handler macro |
-| "Permission denied" | Missing capability | Add to capabilities/default.json |
-| Plugin feature fails | Plugin installed but permission not in capability | Add plugin permission string |
-| White screen on launch | Frontend not building | Check beforeDevCommand in config |
-| State panic on access | Type mismatch in State<T> | Use exact type from .manage() |
-| Mobile build fails | Missing Rust targets | Run `rustup target add <target>` |
-| Borrowed type error | `&str` in async command | Use `String` instead |
+| Issue                  | Root Cause                                        | Solution                         |
+| ---------------------- | ------------------------------------------------- | -------------------------------- |
+| "Command not found"    | Missing from generate_handler!                    | Add command to handler macro     |
+| "Permission denied"    | Missing capability                                | Add to capabilities/default.json |
+| Plugin feature fails   | Plugin installed but permission not in capability | Add plugin permission string     |
+| White screen on launch | Frontend not building                             | Check beforeDevCommand in config |
+| State panic on access  | Type mismatch in State<T>                         | Use exact type from .manage()    |
+| Mobile build fails     | Missing Rust targets                              | Run `rustup target add <target>` |
+| Borrowed type error    | `&str` in async command                           | Use `String` instead             |
 
 ## Cross-Platform
 
@@ -329,12 +338,13 @@ fn configure_platform() {
 
 #[cfg(target_os = "windows")]
 fn configure_platform() {
-    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", 
+    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
         "--disable-features=msWebOOUI");
 }
 ```
 
 ### Platform-Specific Capabilities
+
 ```json
 // src-tauri/capabilities/desktop.json
 {
@@ -360,16 +370,19 @@ strip = true
 ## Troubleshooting
 
 ### White Screen on Launch
+
 1. Verify `devUrl` matches frontend dev server port
 2. Check `beforeDevCommand` runs dev server
 3. Open DevTools (F12) to check for errors
 
 ### Command Returns Undefined
+
 1. Verify command is in `generate_handler![]`
 2. Check Rust command returns a value
 3. Ensure argument names match (camelCase in JS, snake_case in Rust)
 
 ### Mobile Build Failures
+
 ```bash
 # Android targets
 rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android

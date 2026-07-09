@@ -3,6 +3,7 @@
 ## What We're Building
 
 **MarkEdiViewer** - A cross-platform markdown editor and viewer with **live preview**:
+
 - **Three use cases**: Create, Edit, View markdown files
 - **Live preview**: See rendered markdown as you type
 - **Linked editor/viewer**: Synchronized scrolling
@@ -35,6 +36,7 @@
 ```
 
 **Why this design?**
+
 1. Familiar layout (VS Code, Obsidian, Notion)
 2. **Live preview** while editing
 3. Flexible view modes (Split/Editor/Viewer)
@@ -42,13 +44,13 @@
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Editor** | CodeMirror 6 with syntax highlighting, toolbar |
-| **Live Preview** | Real-time markdown rendering with theme support |
-| **Scroll Sync** | Bidirectional synchronized scrolling |
-| **Themes** | 8 built-in themes (GitHub, Solarized, Dracula, etc.) |
-| **Settings** | Persisted via Tauri Store plugin |
+| Feature          | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| **Editor**       | CodeMirror 6 with syntax highlighting, toolbar       |
+| **Live Preview** | Real-time markdown rendering with theme support      |
+| **Scroll Sync**  | Bidirectional synchronized scrolling                 |
+| **Themes**       | 8 built-in themes (GitHub, Solarized, Dracula, etc.) |
+| **Settings**     | Persisted via Tauri Store plugin                     |
 
 ## Implementation Phases
 

@@ -175,15 +175,76 @@ The outline sidebar shows a clickable heading tree. Collapsible on narrow screen
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
+│  ⬤ ⬤ ⬤    readme.md *  [↻]     MarkEdiViewer           ☰        │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 - Traffic light buttons (macOS style)
 - **Current filename** left of center, with `*` modified indicator
+- **Reload button** `[↻]` next to filename (Lucide: `refresh-cw`)
 - App name right of center
 - Hamburger menu right
+
+### Reload from Disk
+
+The reload button reloads the file from disk, discarding any local edits.
+
+**Appearance:**
+
+```
+          Inactive (gray)           Active (accent)
+         ┌──────────────┐          ┌──────────────┐
+         │    [↻]       │          │    [↻]       │
+         └──────────────┘          └──────────────┘
+```
+
+- Gray and non-interactive when inactive
+- Accent-colored when active
+- Hidden when no file is loaded (untitled document)
+- Keyboard shortcut: F5
+
+**When is the button active?**
+
+| Situation | State | On click |
+|-----------|-------|----------|
+| No file loaded (untitled) | Hidden | — |
+| File loaded, no changes anywhere | Inactive | — |
+| External change detected by file watcher | Active | Reload |
+| External change + local unsaved edits | Active | Confirm dialog then reload |
+| User dismissed external change notification | Active | Reload (confirm if local edits) |
+| Local unsaved edits only, no external change | Active | Confirm dialog then reload |
+
+The button is active whenever there is something to reload — either an external change exists, or the user has unsaved edits they may want to discard.
+
+**Confirmation dialog (when unsaved edits exist):**
+
+```
+┌─────────────────────────────────────────────┐
+│                                             │
+│  Reload file from disk?                     │
+│                                             │
+│  You have unsaved changes that will be      │
+│  lost if you reload.                        │
+│                                             │
+│           [Cancel]    [Reload]              │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**File watcher — external change notification:**
+
+When the file changes on disk while the editor is open, a banner appears:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  readme.md has been modified on disk.    [Reload] [Keep Editor]    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+- Clicking **Reload** loads the disk version immediately (shows confirm dialog if local edits exist)
+- Clicking **Keep Editor** dismisses the banner; the reload button becomes active so the user can reload later
+- The banner uses the accent color for the border-left to draw attention
 
 ### Toolbar
 
@@ -473,6 +534,7 @@ All toolbar and UI icons use Lucide. No emoji characters in the UI.
 | Open File           | Ctrl+O            |
 | Save                | Ctrl+S            |
 | Save As             | Ctrl+Shift+S      |
+| Reload from Disk    | F5                |
 | Find                | Ctrl+F            |
 | Find & Replace      | Ctrl+H            |
 | Command Palette     | Ctrl+Shift+P      |

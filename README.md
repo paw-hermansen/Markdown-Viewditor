@@ -72,6 +72,7 @@ npm run check
 ```
 ├── src/                    # Svelte frontend
 ├── src-tauri/              # Rust backend
+│   └── test.md             # Sample markdown file for testing save functionality
 ├── .opencode/skills/       # AI skill files
 ├── README.md               # This file
 ├── PLAN.md                 # Development plan & progress

@@ -18,13 +18,13 @@
 ### Dark Theme (Default)
 
 ```
-Background:    #1a1a2e
-Surface:       #16213e
-Card:          #0f3460
+Background:    #1e1e2e   (near-neutral with subtle purple tint)
+Surface:       #24243a
+Card:          #2a2a42
 Primary:       #e94560
 Text:          #eaeaea
 Text Muted:    #8892b0
-Border:        #233554
+Border:        #313150
 ```
 
 ### Light Theme
@@ -36,7 +36,7 @@ Card:          #f5f5f5
 Primary:       #e94560
 Text:          #2d2d2d
 Text Muted:    #6b7280
-Border:        #e5e7eb
+Border:        #d1d5db
 ```
 
 ---
@@ -48,30 +48,30 @@ Border:        #e5e7eb
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤                   MarkEdiViewer                 ☰          │
+│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│   B   I   H   🔗   ⟨⟩   •   ☐   —        [Split] [Edit] [View]   │
+│  [B] [I] [H] [Link] [Image] [Code] [CodeBlock] [UL] [OL] [Task]  │
+│  [Quote] [HR] [Strike] [Table]        [Split] [Edit] [View]       │
 │                                                                     │
-├───────────────────────────┬─────────────────────────────────────────┤
-│                           │                                         │
-│   1  # Hello World        │   Hello World                           │
-│   2                       │   ─────────────                         │
-│   3  This is **markdown** │   This is markdown                      │
-│   4  with *formatting*.   │   with formatting.                      │
-│   5                       │                                         │
-│   6  ## Features          │   Features                              │
-│   7  - Item 1             │   • Item 1                              │
-│   8  - Item 2             │   • Item 2                              │
-│   9                       │                                         │
-│  10  [█]                  │                                         │
-│                           │   ↑                                     │
-│                           │   Live preview updates                  │
-│                           │   as you type                           │
-├───────────────────────────┴─────────────────────────────────────────┤
+├────────────────────────────────┬─┬──────────────────────────────────┤
+│                                │ │                                  │
+│   1  # Hello World             │ │  Hello World                     │
+│   2                            │ │  ─────────────                   │
+│   3  This is **markdown**      │ │  This is markdown                │
+│   4  with *formatting*.        │ │  with formatting.                │
+│   5                            │ │                                  │
+│   6  ## Features               │ │  Features                        │
+│   7  - Item 1                  │ │  • Item 1                        │
+│   8  - Item 2                  │ │  • Item 2                        │
+│   9                            │ │                                  │
+│  10  [█]                       │ │                                  │
+│                                │ │  Live preview updates            │
+│                                │ │  as you type                     │
+├────────────────────────────────┴─┴──────────────────────────────────┤
 │                                                                     │
-│   Ln 10, Col 4        42 words        UTF-8        Markdown        │
+│   Ln 10, Col 4        42 words        ~1 min read        Markdown  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -80,18 +80,20 @@ Border:        #e5e7eb
 
 - **Left:** Editor with line numbers and cursor
 - **Right:** Live preview that updates on every keystroke
-- **Bottom:** Status bar with cursor position and word count
+- **Center:** Draggable divider to resize panes (default 50/50)
+- **Bottom:** Status bar with cursor position, word count, and reading time
 
 ### Editor Only Mode
 
-````
+```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤                   MarkEdiViewer                 ☰          │
+│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│   B   I   H   🔗   ⟨⟩   •   ☐   —        [Split] [Edit] [View]   │
+│  [B] [I] [H] [Link] [Image] [Code] [CodeBlock] [UL] [OL] [Task]  │
+│  [Quote] [HR] [Strike] [Table]        [Split] [Edit] [View]       │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -117,50 +119,52 @@ Border:        #e5e7eb
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│   Ln 19, Col 1       156 words        UTF-8        Markdown        │
+│   Ln 19, Col 1       156 words       ~1 min read        Markdown  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
-````
+```
 
-### Viewer Only Mode (Live Preview)
+### Viewer Only Mode (Live Preview with Outline)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤                   MarkEdiViewer                 ☰          │
+│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│   Theme: [GitHub Dark ▼]                [Split] [Edit] [View]      │
+│  Theme: [GitHub Dark]                [Split] [Edit] [View]         │
 │                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
+├──────────────┬──────────────────────────────────────────────────────┤
+│              │                                                      │
+│  Outline     │  Hello World                                         │
+│  ────────    │  ═══════════                                         │
+│              │                                                      │
+│  > Features  │  This is markdown with formatting.                   │
+│    > Item 1  │                                                      │
+│    > Item 2  │  Features                                            │
+│              │  ────────                                            │
+│              │  • Item 1                                            │
+│              │  • Item 2                                            │
+│              │                                                      │
+│              │  ☐ Task 1                                            │
+│              │  ☑ Task 2                                            │
+│              │                                                      │
+│              │  This is a paragraph with a link.                    │
+│              │                                                      │
+│              │  ┌─────────────────────────────────┐                 │
+│              │  │ const hello = "world";          │                 │
+│              │  │ console.log(hello);             │                 │
+│              │  └─────────────────────────────────┘                 │
+│              │                                                      │
+├──────────────┴──────────────────────────────────────────────────────┤
 │                                                                     │
-│                           Hello World                               │
-│                           ═══════════                               │
-│                                                                     │
-│                           This is markdown with formatting.         │
-│                                                                     │
-│                           Features                                  │
-│                           ────────                                  │
-│                           • Item 1                                  │
-│                           • Item 2                                  │
-│                                                                     │
-│                           ☐ Task 1                                  │
-│                           ☑ Task 2                                  │
-│                                                                     │
-│                           This is a paragraph with a link.          │
-│                                                                     │
-│                           ┌─────────────────────────────────┐       │
-│                           │ const hello = "world";          │       │
-│                           │ console.log(hello);             │       │
-│                           └─────────────────────────────────┘       │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   156 words        Theme: GitHub Dark                               │
+│   156 words        ~1 min read        Theme: GitHub Dark            │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+The outline sidebar shows a clickable heading tree. Collapsible on narrow screens.
 
 ---
 
@@ -171,13 +175,14 @@ Border:        #e5e7eb
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤                   MarkEdiViewer                 ☰          │
+│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 - Traffic light buttons (macOS style)
-- App name centered
+- **Current filename** left of center, with `*` modified indicator
+- App name right of center
 - Hamburger menu right
 
 ### Toolbar
@@ -185,12 +190,13 @@ Border:        #e5e7eb
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│   B   I   H   🔗   ⟨⟩   •   ☐   —        [Split] [Edit] [View]   │
+│  [B] [I] [H] [Link] [Image] [Code] [CodeBlock] [UL] [OL] [Task]  │
+│  [Quote] [HR] [Strike] [Table]        [Split] [Edit] [View]       │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Left side:** Formatting buttons
+**Left side:** Formatting buttons (Lucide icons)
 **Right side:** View mode toggle
 
 **Button Style:**
@@ -199,6 +205,67 @@ Border:        #e5e7eb
 - Rounded corners (6px)
 - Subtle hover effect
 - Active state indicator
+
+**Formatting Buttons (Lucide Icons):**
+
+| Action       | Icon          | Shortcut     | Tooltip |
+| ------------ | ------------- | ------------ | ------- |
+| Bold         | `bold`        | Ctrl+B       | Select text and click to bold, or click to start typing bold |
+| Italic       | `italic`      | Ctrl+I       | Select text and click to italicize, or click to start typing italic |
+| Strikethrough| `strikethrough`| —           | Select text and click to strike through |
+| Heading      | `heading`     | Ctrl+H       | Adds `##` at line start. Click again to cycle H1 → H2 → H3 |
+| Link         | `link`        | Ctrl+K       | Select text first to use as link text, then click |
+| Image        | `image`       | —            | Inserts `![alt](url)` placeholder |
+| Inline Code  | `code`        | —            | Wraps selection in backticks |
+| Code Block   | `terminal`    | —            | Inserts fenced code block with language hint |
+| Bullet List  | `list`        | —            | Adds `-` prefix. Select lines to convert to list |
+| Numbered List| `list-ordered`| —            | Adds `1.` prefix. Select lines to convert to list |
+| Task List    | `list-checks` | —            | Adds `- [ ]` checkbox |
+| Blockquote   | `quote`       | —            | Adds `>` prefix to selection |
+| Horizontal   | `minus`       | —            | Inserts `---` divider on new line |
+| Table        | `table`       | —            | Inserts a 3×3 markdown table template |
+
+### Tooltips
+
+Every toolbar button shows a tooltip on interaction. The tooltip explains the button's behavior and its shortcut key (if any).
+
+**Desktop (hover):**
+
+```
+          ┌──────────────────────────────────┐
+          │  Bold (Ctrl+B)                   │
+  [B] ◄── │  Select text and click to bold,  │
+          │  or click to start typing bold   │
+          └──────────────────────────────────┘
+```
+
+- Appears after 500ms hover delay
+- Positioned below the button
+- Disappears on mouse leave
+- Never obscures the editor content area
+
+**Mobile (long-press):**
+
+```
+          ┌──────────────────────────────────┐
+          │  Select text and tap to bold     │
+  [B] ◄── │  Long-press for help             │
+          └──────────────────────────────────┘
+```
+
+- Long-press (500ms) on a button shows tooltip
+- Haptic feedback on trigger (if supported)
+- Tap anywhere to dismiss
+- First-use hint shown on app launch: *"Select text, then tap a format button to apply it"*
+
+**Tooltip style:**
+
+- Background: `var(--card)`
+- Border: `1px solid var(--border)`
+- Shadow: `var(--shadow-md)`
+- Font: `var(--font-sans)` at 12px
+- Max width: 240px
+- Arrow pointing to parent button
 
 ### View Mode Toggle
 
@@ -210,22 +277,80 @@ Border:        #e5e7eb
 - Active button highlighted
 - Smooth transition between modes
 
-### Live Preview Indicator
-
-The live preview is always active when in Split or View mode. A subtle indicator shows the preview is "live":
+### Split Divider
 
 ```
-┌─────────────────────────────────────────┐
-│                                         │
-│   Hello World                           │
-│   ═══════════                           │
-│                                         │
-│   ↑                                     │
-│   Live preview updates                  │
-│   as you type                           │
-│                                         │
-└─────────────────────────────────────────┘
+├────────────────────────────────┬─┬──────────────────────────────────┤
+│                                │ │                                  │
+│   Editor pane                  │ │  Preview pane                    │
+│                                │ │                                  │
 ```
+
+- 6px wide draggable divider
+- Cursor changes to `col-resize` on hover
+- Accent-colored line when dragging
+- Double-click to reset to 50/50
+- Min pane width: 200px
+- Ratio persisted in settings
+
+---
+
+## Overlays
+
+### Find & Replace
+
+```
+┌─────────────────────────────────────┐
+│  Find                    [X]        │
+│  ┌───────────────────────┐ [▲] [▼] │
+│  │ search term           │          │
+│  └───────────────────────┘          │
+│  Replace                            │
+│  ┌───────────────────────┐ [Replace]│
+│  │ replacement           │ [All]    │
+│  └───────────────────────┘          │
+│  [ ] Match case  [ ] Regex          │
+└─────────────────────────────────────┘
+```
+
+- Opens via Ctrl+F (find) or Ctrl+H (find & replace)
+- Floating panel at top-right of editor
+- Escape to close
+- Enter to find next, Shift+Enter to find previous
+- Match count shown (e.g., "3 of 12")
+
+### Command Palette
+
+```
+┌─────────────────────────────────────────────┐
+│  Type a command or search...                │
+├─────────────────────────────────────────────┤
+│  > Toggle Bold                              │
+│  > Insert Link                              │
+│  > Switch to Split View                     │
+│  > Open File                                │
+│  > Save                                     │
+│  > Toggle Theme                             │
+└─────────────────────────────────────────────┘
+```
+
+- Opens via Ctrl+Shift+P (or Cmd+Shift+P)
+- Fuzzy search across all commands
+- Arrow keys to navigate, Enter to execute
+- Escape to close
+- Categories: File, Edit, View, Format
+
+---
+
+## Live Preview
+
+The live preview is always active when in Split or View mode. It renders markdown in real-time as you type.
+
+**Rendering stack:**
+
+- `markdown-it` for parsing
+- `shiki` for code block syntax highlighting
+- Scroll sync between editor and preview (proportional)
 
 ---
 
@@ -286,9 +411,9 @@ Modal: 0 8px 24px rgba(0, 0, 0, 0.2)
 ### Borders
 
 ```
-Default: 1px solid rgba(255, 255, 255, 0.1)
-Focus: 2px solid #e94560
-Divider: 1px solid rgba(255, 255, 255, 0.05)
+Default: 1px solid var(--border)
+Focus: 2px solid var(--primary)
+Divider: 1px solid var(--border)
 ```
 
 ---
@@ -315,19 +440,49 @@ Card: shadow increase
 
 ## Icons
 
-**Recommended:** Lucide Icons
+**Icon set:** Lucide Icons (via `lucide-svelte`)
 
-```
-Bold: B (text)
-Italic: I (text)
-Heading: H (text)
-Link: 🔗
-Code: ⟨⟩
-List: •
-Task: ☐
-Divider: —
-Menu: ☰
-```
+All toolbar and UI icons use Lucide. No emoji characters in the UI.
+
+| Context       | Icon           |
+| ------------- | -------------- |
+| Menu          | `menu`         |
+| Settings      | `settings`     |
+| File          | `file`         |
+| Save          | `save`         |
+| Search        | `search`       |
+| Close         | `x`            |
+| Expand        | `chevron-down` |
+| Collapse      | `chevron-up`   |
+
+---
+
+## Interactions
+
+### Drag and Drop
+
+- Drag a `.md` / `.txt` file onto the window to open it
+- Visual overlay shown during drag: "Drop to open file"
+- Supported on all desktop platforms
+
+### Keyboard Shortcuts
+
+| Action              | Shortcut          |
+| ------------------- | ----------------- |
+| New File            | Ctrl+N            |
+| Open File           | Ctrl+O            |
+| Save                | Ctrl+S            |
+| Save As             | Ctrl+Shift+S      |
+| Find                | Ctrl+F            |
+| Find & Replace      | Ctrl+H            |
+| Command Palette     | Ctrl+Shift+P      |
+| Toggle Bold         | Ctrl+B            |
+| Toggle Italic       | Ctrl+I            |
+| Insert Link         | Ctrl+K            |
+| Toggle Split View   | Ctrl+\            |
+| Toggle Sidebar      | Ctrl+B (viewer)   |
+| Zoom In             | Ctrl+=            |
+| Zoom Out            | Ctrl+-            |
 
 ---
 
@@ -335,22 +490,26 @@ Menu: ☰
 
 ### Desktop (>1024px)
 
-- Full layout
-- Split view with live preview
+- Full layout with split view
+- Resizable split divider
+- Outline sidebar in viewer mode
 - All features visible
 
 ### Tablet (768px - 1024px)
 
-- Toggle between views
-- Touch-friendly buttons
-- Live preview in split mode
+- Toggle between views (no split)
+- Touch-friendly buttons (36x36px)
+- Outline sidebar collapsible
+- Bottom sheet for formatting toolbar
 
 ### Mobile (<768px)
 
-- Single pane
-- Bottom toolbar
-- Swipe gestures
-- Toggle between editor and preview
+- Single pane only
+- Floating action button for mode toggle (editor ↔ preview)
+- Formatting toolbar as bottom sheet (swipe up to reveal)
+- Virtual keyboard toolbar with essential formatting (B, I, H, Link, Code)
+- No outline sidebar (use heading navigation in preview)
+- Pull-down to open file picker
 
 ---
 
@@ -359,7 +518,7 @@ Menu: ☰
 ### Focus States
 
 ```
-Outline: 2px solid #e94560
+Outline: 2px solid var(--primary)
 Offset: 2px
 ```
 
@@ -375,9 +534,16 @@ Interactive elements: 3:1 minimum
 ```
 Tab: Move between elements
 Enter/Space: Activate buttons
-Escape: Close modals
-Arrow keys: Navigate lists
+Escape: Close modals/overlays
+Arrow keys: Navigate lists and outline
 ```
+
+### Screen Reader
+
+- All toolbar buttons have `aria-label`
+- View mode toggle uses `role="tablist"`
+- Live region announces file save status
+- Outline navigation uses `nav` landmark
 
 ---
 

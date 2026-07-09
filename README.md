@@ -14,18 +14,48 @@ A clean, simple, and modern markdown editor and viewer with **live preview** bui
 
 Live preview shows you exactly how your markdown will look as you type. No need to switch tabs or press buttons — the preview updates instantly as you write, giving you immediate visual feedback on your formatting, headings, lists, code blocks, and more.
 
-## Quick Start
+## How to Run
 
 ```bash
 # Install dependencies
 npm install
 
-# Start development
+# Start development in browser (frontend only)
 npm run dev
+
+# Start development as desktop app (via npm)
+npm run tauri dev
+
+# Start development as desktop app (via cargo)
+cargo tauri dev
 
 # Build for production
 npm run build
+
+# Build desktop app
+cargo tauri build
+
+# Lint
+npm run lint
+
+# Typecheck
+npm run check
 ```
+
+## Versions
+
+| Tool | Version | Description |
+|------|---------|-------------|
+| Tauri | 2.11.5 | Desktop & mobile app framework (Rust backend) |
+| @tauri-apps/api | 2.11.1 | Tauri JavaScript API for frontend-backend communication |
+| Svelte | 5.56.4 | UI component framework with runes reactivity |
+| SvelteKit | 2.69.2 | Application framework for Svelte (routing, SSR, build) |
+| Vite | 6.4.3 | Fast build tool and dev server |
+| TypeScript | 5.9.3 | Typed superset of JavaScript |
+| Rust edition | 2021 | Systems programming language for the backend |
+| CodeMirror | 6.7.1 | Code editor component for the markdown editor |
+| markdown-it | 14.3.0 | Markdown parser and renderer |
+| shiki | 1.29.2 | Syntax highlighter for code blocks |
 
 ## Project Structure
 

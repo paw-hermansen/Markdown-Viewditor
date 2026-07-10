@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { updateWordCount } from "../editor.svelte.ts";
+import { updateWordCount } from "../editor.svelte";
 
 describe("updateWordCount", () => {
   it("should count words correctly", () => {

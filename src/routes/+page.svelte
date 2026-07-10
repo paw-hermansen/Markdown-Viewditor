@@ -6,12 +6,13 @@
   import Viewer from '$lib/components/Viewer/Viewer.svelte';
   import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges } from '$lib/stores/editor.svelte';
-  import { fileState, openFile, saveFile, saveFileAs, closeFile, getFileName } from '$lib/stores/file.svelte';
+  import { fileState, openFile, saveFile, saveFileAs, closeFile, readFile, getFileName } from '$lib/stores/file.svelte';
+  import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
   import { createScrollSync } from '$lib/utils/scroll-sync';
-  import { onDestroy } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
 
-  let viewMode = $state<ViewMode>('split');
+  let viewMode = $state<ViewMode>(settingsState.viewMode);
   let editorComponent = $state<Editor | undefined>(undefined);
   let viewerComponent = $state<Viewer | undefined>(undefined);
   let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
@@ -71,6 +72,7 @@
 
   function handleViewModeChange(mode: ViewMode) {
     viewMode = mode;
+    updateViewMode(mode);
   }
 
   function handleCopyHtml() {
@@ -103,6 +105,17 @@
   $effect(() => {
     if (editorComponent && viewerElement) {
       initScrollSync();
+    }
+  });
+
+  onMount(async () => {
+    if (settingsState.lastOpenedFile) {
+      const content = await readFile(settingsState.lastOpenedFile);
+      if (content !== null) {
+        editorState.content = content;
+        editorComponent?.setContent(content);
+        markSaved();
+      }
     }
   });
 

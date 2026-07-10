@@ -6,6 +6,7 @@
   import { EditorState } from '@codemirror/state';
   import { keymap, type ViewUpdate } from '@codemirror/view';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
+  import { settingsState } from '$lib/stores/settings.svelte';
 
   interface Props {
     content?: string;
@@ -64,10 +65,10 @@
         EditorView.theme({
           '&': {
             height: '100%',
-            fontSize: '14px'
+            fontSize: settingsState.editorFontSize + 'px'
           },
           '.cm-scroller': {
-            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+            fontFamily: settingsState.editorFontFamily,
             lineHeight: '1.6'
           },
           '.cm-content': {

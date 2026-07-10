@@ -1,9 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import {
+  settingsState,
+  updateRecentFiles,
+  updateLastOpenedFile,
+} from "$lib/stores/settings.svelte";
 
 export const fileState = $state({
-  currentFile: null as string | null,
-  recentFiles: [] as string[],
+  currentFile: settingsState.lastOpenedFile as string | null,
+  recentFiles: [...settingsState.recentFiles] as string[],
   isLoading: false,
   error: null as string | null,
 });
@@ -27,6 +32,7 @@ export async function openFile(): Promise<string | null> {
     const content = await invoke<string>("read_file", { path });
     fileState.currentFile = path;
     addRecentFile(path);
+    updateLastOpenedFile(path);
     return content;
   } catch (error) {
     fileState.error =
@@ -48,6 +54,7 @@ export async function saveFile(
     await invoke("write_file", { path, content });
     fileState.currentFile = path;
     addRecentFile(path);
+    updateLastOpenedFile(path);
     return true;
   } catch (error) {
     fileState.error =
@@ -76,6 +83,7 @@ export async function saveFileAs(content: string): Promise<string | null> {
     await invoke("write_file", { path, content });
     fileState.currentFile = path;
     addRecentFile(path);
+    updateLastOpenedFile(path);
     return path;
   } catch (error) {
     fileState.error =
@@ -94,6 +102,7 @@ export async function readFile(path: string): Promise<string | null> {
     const content = await invoke<string>("read_file", { path });
     fileState.currentFile = path;
     addRecentFile(path);
+    updateLastOpenedFile(path);
     return content;
   } catch (error) {
     fileState.error =
@@ -107,6 +116,7 @@ export async function readFile(path: string): Promise<string | null> {
 export function closeFile() {
   fileState.currentFile = null;
   fileState.error = null;
+  updateLastOpenedFile(null);
 }
 
 export function clearError() {
@@ -122,6 +132,7 @@ function addRecentFile(path: string) {
   if (fileState.recentFiles.length > 10) {
     fileState.recentFiles.pop();
   }
+  updateRecentFiles(fileState.recentFiles);
 }
 
 export function getRecentFiles(): string[] {

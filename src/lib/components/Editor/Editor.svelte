@@ -49,7 +49,7 @@
           {
             key: 'Mod-i',
             run: () => {
-              wrapSelection('*', '*');
+              toggleItalic();
               return true;
             }
           },
@@ -109,6 +109,46 @@
       changes: { from, to, insert: replacement },
       selection: { anchor: from + before.length, head: from + before.length + (selectedText.length || 4) }
     });
+  }
+
+  function toggleItalic() {
+    if (!editorView) return;
+    const { from, to } = editorView.state.selection.main;
+    const selectedText = editorView.state.sliceDoc(from, to);
+
+    const before1 = editorView.state.sliceDoc(from - 1, from);
+    const after1 = editorView.state.sliceDoc(to, to + 1);
+    const before2 = editorView.state.sliceDoc(from - 2, from);
+    const after2 = editorView.state.sliceDoc(to, to + 2);
+    const before3 = editorView.state.sliceDoc(from - 3, from);
+    const after3 = editorView.state.sliceDoc(to, to + 3);
+
+    if (before3 === '***' && after3 === '***' && selectedText.length > 0) {
+      // ***text*** → **text** (remove italic, keep bold)
+      editorView.dispatch({
+        changes: { from: from - 3, to: to + 3, insert: '**' + selectedText + '**' },
+        selection: { anchor: from - 1, head: from - 1 + selectedText.length }
+      });
+    } else if (before2 === '**' && after2 === '**' && selectedText.length > 0) {
+      // **text** → ***text*** (add italic to bold)
+      editorView.dispatch({
+        changes: { from: from - 2, to: to + 2, insert: '***' + selectedText + '***' },
+        selection: { anchor: from + 1, head: from + 1 + selectedText.length }
+      });
+    } else if (before1 === '*' && after1 === '*' && selectedText.length > 0) {
+      // *text* → text (remove italic)
+      editorView.dispatch({
+        changes: { from: from - 1, to: to + 1, insert: selectedText },
+        selection: { anchor: from - 1, head: from - 1 + selectedText.length }
+      });
+    } else {
+      // text → *text* (add italic)
+      const replacement = '*' + (selectedText || 'text') + '*';
+      editorView.dispatch({
+        changes: { from, to, insert: replacement },
+        selection: { anchor: from + 1, head: from + 1 + (selectedText.length || 4) }
+      });
+    }
   }
 
   function insertLink() {
@@ -207,7 +247,7 @@
         wrapSelection('**', '**');
         return;
       case 'italic':
-        wrapSelection('*', '*');
+        toggleItalic();
         return;
       default:
         return;

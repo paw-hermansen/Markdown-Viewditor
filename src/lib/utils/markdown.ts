@@ -33,6 +33,138 @@ async function initHighlighter(): Promise<Highlighter> {
   return highlighter;
 }
 
+function createLineNumbersPlugin() {
+  return function lineNumbersPlugin(md: MarkdownIt) {
+    const defaultRender =
+      md.renderer.rules.paragraph_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.paragraph_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultRender(tokens, idx, options, env, self);
+    };
+
+    const defaultHeadingOpen =
+      md.renderer.rules.heading_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.heading_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultHeadingOpen(tokens, idx, options, env, self);
+    };
+
+    const defaultFence =
+      md.renderer.rules.fence ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultFence(tokens, idx, options, env, self);
+    };
+
+    const defaultBulletListOpen =
+      md.renderer.rules.bullet_list_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.bullet_list_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultBulletListOpen(tokens, idx, options, env, self);
+    };
+
+    const defaultOrderedListOpen =
+      md.renderer.rules.ordered_list_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.ordered_list_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultOrderedListOpen(tokens, idx, options, env, self);
+    };
+
+    const defaultBlockquoteOpen =
+      md.renderer.rules.blockquote_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.blockquote_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultBlockquoteOpen(tokens, idx, options, env, self);
+    };
+
+    const defaultTableOpen =
+      md.renderer.rules.table_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.table_open = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultTableOpen(tokens, idx, options, env, self);
+    };
+  };
+}
+
 function createShikiPlugin(highlighter: Highlighter) {
   return function shikiPlugin(md: MarkdownIt) {
     const defaultFence =
@@ -74,7 +206,9 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       html: true,
       linkify: true,
       typographer: true,
-    }).use(createShikiPlugin(hl));
+    })
+      .use(createLineNumbersPlugin())
+      .use(createShikiPlugin(hl));
   }
   return md;
 }

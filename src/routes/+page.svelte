@@ -8,10 +8,15 @@
   import { editorState, markSaved, resetEditor, hasUnsavedChanges } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, closeFile, getFileName } from '$lib/stores/file.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
+  import { createScrollSync } from '$lib/utils/scroll-sync';
+  import { onDestroy } from 'svelte';
 
   let viewMode = $state<ViewMode>('split');
   let editorComponent = $state<Editor | undefined>(undefined);
+  let viewerComponent = $state<Viewer | undefined>(undefined);
   let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
+  let scrollSync: ReturnType<typeof createScrollSync> | undefined;
+  let viewerElement: HTMLDivElement | undefined;
 
   function handleFormat(format: string) {
     if (editorComponent) {
@@ -78,6 +83,34 @@
   function handlePrint() {
     window.print();
   }
+
+  function initScrollSync() {
+    if (scrollSync) {
+      scrollSync.destroy();
+    }
+
+    const editorView = editorComponent?.getEditorView();
+    if (editorView && viewerElement) {
+      scrollSync = createScrollSync(editorView, viewerElement);
+    }
+  }
+
+  function handleViewerReady(element: HTMLDivElement) {
+    viewerElement = element;
+    initScrollSync();
+  }
+
+  $effect(() => {
+    if (editorComponent && viewerElement) {
+      initScrollSync();
+    }
+  });
+
+  onDestroy(() => {
+    if (scrollSync) {
+      scrollSync.destroy();
+    }
+  });
 </script>
 
 <AppLayout
@@ -100,7 +133,11 @@
   {#if viewMode === 'split' || viewMode === 'viewer'}
     <div class="viewer-pane">
       <ViewerToolbar onCopyHtml={handleCopyHtml} onPrint={handlePrint} />
-      <Viewer content={editorState.content} />
+      <Viewer
+        bind:this={viewerComponent}
+        content={editorState.content}
+        onViewerReady={handleViewerReady}
+      />
     </div>
   {/if}
 </AppLayout>

@@ -403,21 +403,21 @@ export const md = new MarkdownIt({
 </div>
 ```
 
-### Phase 5: Scroll Synchronization
+### Phase 5: Scroll Synchronization - COMPLETED ✅
 
-- [ ] Implement editor → preview sync
+- [x] Implement editor → preview sync
   - Map editor line numbers to viewer DOM positions
   - Use `requestAnimationFrame` for smooth updates
   - Handle edge cases (images, code blocks)
-- [ ] Implement preview → editor sync
+- [x] Implement preview → editor sync
   - Track viewer scroll position
   - Calculate corresponding editor line
   - Scroll editor to match
-- [ ] Handle edge cases
+- [x] Handle edge cases
   - Large documents
   - Dynamic content (images loading)
   - Feedback loop prevention
-- [ ] Optimize performance
+- [x] Optimize performance
   - Throttle scroll events
   - Cache DOM positions
   - Use intersection observer
@@ -778,7 +778,7 @@ enum AppError {
 
 ## Implementation Status
 
-**Current Phase: Phase 4 - Layout & Navigation** (AppLayout, ViewToggle, StatusBar, file operations implemented)
+**Current Phase: Phase 5 - Scroll Synchronization** (Editor ↔ preview scroll sync implemented)
 
 ### What Has Been Implemented
 
@@ -897,9 +897,8 @@ markdown-viewditor/
   - Recent files tracking (max 10)
   - Error handling
 
-#### NOT YET IMPLEMENTED (Phase 5+):
+#### NOT YET IMPLEMENTED (Phase 6+):
 
-- **Scroll synchronization** - Editor ↔ preview scroll sync (Phase 5)
 - **Settings persistence** - User preferences (Phase 6)
 
 #### Build System
@@ -929,11 +928,10 @@ markdown-viewditor/
 - mermaid (diagrams)
 - dompurify (HTML sanitization)
 
-### Next Steps (to complete Phase 5)
+### Next Steps (to complete Phase 6)
 
-1. **Implement scroll synchronization** - Editor ↔ preview scroll sync
-2. **Add settings persistence** - User preferences with Tauri Store
-3. **Add keyboard shortcuts** - Global shortcuts for file operations
+1. **Add settings persistence** - User preferences with Tauri Store
+2. **Add keyboard shortcuts** - Global shortcuts for file operations
 
 ---
 
@@ -1027,12 +1025,12 @@ export function showError(message: string) {
 4. ~~**Create Viewer component with markdown-it**~~ ✅ DONE
 5. ~~**Implement basic live preview**~~ ✅ DONE
 
-#### 🟡 Important (Phase 3-4) - IN PROGRESS
+#### 🟡 Important (Phase 3-4) - COMPLETED ✅
 
 1. ~~**Add Shiki syntax highlighting**~~ ✅ DONE - Code block highlighting with 15 themes
 2. ~~**Create theme selector**~~ ✅ DONE - Theme picker UI with dropdown
-3. **Implement scroll synchronization** - Phase 5 feature
-4. **Add file dialog integration** - Open/save files
+3. ~~**Implement scroll synchronization**~~ ✅ DONE - Phase 5 feature
+4. ~~**Add file dialog integration**~~ ✅ DONE - Open/save files
 5. **Create settings persistence** - User preferences
 
 #### 🟢 Nice to Have (Phase 5-7)

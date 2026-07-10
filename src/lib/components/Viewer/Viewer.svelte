@@ -4,9 +4,10 @@
 
   interface Props {
     content: string;
+    onViewerReady?: (element: HTMLDivElement) => void;
   }
 
-  let { content }: Props = $props();
+  let { content, onViewerReady }: Props = $props();
 
   let html = $state('');
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
@@ -29,10 +30,20 @@
     };
   });
 
+  $effect(() => {
+    if (viewerElement && onViewerReady) {
+      onViewerReady(viewerElement);
+    }
+  });
+
   function handleScroll() {
     if (viewerElement) {
       viewerState.scrollTop = viewerElement.scrollTop;
     }
+  }
+
+  export function getViewerElement() {
+    return viewerElement;
   }
 </script>
 

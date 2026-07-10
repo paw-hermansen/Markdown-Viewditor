@@ -333,7 +333,7 @@ $effect(() => {
 });
 ```
 
-### Phase 3: Live Preview - IN PROGRESS
+### Phase 3: Live Preview - COMPLETED ✅
 
 - [x] Integrate markdown-it
   - Configure with HTML, linkify, typographer options
@@ -370,16 +370,16 @@ export const md = new MarkdownIt({
 }).use(fromHighlighter(highlighter, {}));
 ```
 
-### Phase 4: Layout & Navigation
+### Phase 4: Layout & Navigation - IN PROGRESS
 
-- [ ] Implement three-pane layout
+- [x] Implement three-pane layout
   - Create `AppLayout.svelte`
   - Use CSS Grid for responsive layout
   - Handle split/editor/viewer modes
-- [ ] Add view mode toggle
+- [x] Add view mode toggle
   - Create `ViewToggle.svelte`
   - Persist mode in settings
-- [ ] Implement file operations
+- [x] Implement file operations
   - Create `stores/file.svelte.ts`
   - Integrate Tauri dialog plugin
   - Handle open/save/save-as flows
@@ -778,7 +778,7 @@ enum AppError {
 
 ## Implementation Status
 
-**Current Phase: Phase 3 - Live Preview** (markdown-it integrated, Shiki integrated, themes implemented)
+**Current Phase: Phase 4 - Layout & Navigation** (AppLayout, ViewToggle, StatusBar, file operations implemented)
 
 ### What Has Been Implemented
 
@@ -797,13 +797,18 @@ markediviewer/
 │       │   ├── Editor/
 │       │   │   ├── Editor.svelte     # CodeMirror wrapper ✅
 │       │   │   └── EditorToolbar.svelte # Formatting buttons ✅
-│       │   └── Viewer/
-│       │       ├── Viewer.svelte     # Live preview ✅
-│       │       ├── ViewerToolbar.svelte # Viewer toolbar ✅
-│       │       └── ThemeSelector.svelte # Theme picker ✅
+│       │   ├── Viewer/
+│       │   │   ├── Viewer.svelte     # Live preview ✅
+│       │   │   ├── ViewerToolbar.svelte # Viewer toolbar ✅
+│       │   │   └── ThemeSelector.svelte # Theme picker ✅
+│       │   └── Layout/
+│       │       ├── AppLayout.svelte  # Main layout with toolbar ✅
+│       │       ├── ViewToggle.svelte # Split/Edit/View toggle ✅
+│       │       └── StatusBar.svelte  # Bottom status bar ✅
 │       ├── stores/
 │       │   ├── editor.svelte.ts      # Editor state ✅
-│       │   └── viewer.svelte.ts      # Viewer state ✅
+│       │   ├── viewer.svelte.ts      # Viewer state ✅
+│       │   └── file.svelte.ts        # File operations ✅
 │       ├── utils/
 │       │   ├── markdown.ts           # markdown-it + Shiki integration ✅
 │       │   └── themes.ts             # Theme definitions ✅
@@ -882,11 +887,19 @@ markediviewer/
   - Dropdown with all available themes
   - Theme type indicators (light/dark)
   - Active theme highlighting
+- **Layout Components** (Phase 4 - DONE):
+  - AppLayout.svelte - Main layout with toolbar and status bar
+  - ViewToggle.svelte - Split/Edit/View mode toggle
+  - StatusBar.svelte - Bottom status bar with file info
+- **File Store** (Phase 4 - DONE):
+  - File operations with Tauri dialog integration
+  - Open/save/save-as flows
+  - Recent files tracking (max 10)
+  - Error handling
 
-#### NOT YET IMPLEMENTED (Phase 4+):
+#### NOT YET IMPLEMENTED (Phase 5+):
 
 - **Scroll synchronization** - Editor ↔ preview scroll sync (Phase 5)
-- **File operations** - Open/save/save-as dialogs (Phase 4)
 - **Settings persistence** - User preferences (Phase 6)
 
 #### Build System
@@ -906,6 +919,8 @@ markediviewer/
 - @types/markdown-it - **installed** ✅
 - shiki (v1) - **integrated** ✅
 - markdown-it-shiki - **installed & integrated** ✅
+- @tauri-apps/plugin-dialog - **installed** ✅
+- @tauri-apps/plugin-store - **installed** ✅
 
 #### Need to Install
 
@@ -914,12 +929,11 @@ markediviewer/
 - mermaid (diagrams)
 - dompurify (HTML sanitization)
 
-### Next Steps (to complete Phase 4)
+### Next Steps (to complete Phase 5)
 
-1. **Implement three-pane layout** - AppLayout with CSS Grid
-2. **Add view mode toggle** - ViewToggle component
-3. **Implement file operations** - Open/save/save-as dialogs
-4. **Add scroll synchronization** - Phase 5 feature
+1. **Implement scroll synchronization** - Editor ↔ preview scroll sync
+2. **Add settings persistence** - User preferences with Tauri Store
+3. **Add keyboard shortcuts** - Global shortcuts for file operations
 
 ---
 

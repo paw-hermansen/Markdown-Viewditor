@@ -6,24 +6,33 @@
   import { EditorState } from '@codemirror/state';
   import { keymap, type ViewUpdate } from '@codemirror/view';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
-  import { editorState } from '$lib/stores/editor.svelte';
+
+  interface Props {
+    content?: string;
+    onContentChange?: (content: string) => void;
+  }
+
+  let { content = $bindable(''), onContentChange }: Props = $props();
 
   let editorElement: HTMLDivElement;
   let editorView: EditorView | undefined;
+  let isUpdatingFromProp = false;
 
   function createEditor() {
     if (!editorElement) return;
 
     const state = EditorState.create({
-      doc: editorState.content,
+      doc: content,
       extensions: [
         basicSetup,
         markdown(),
         oneDark,
         EditorView.updateListener.of((update: ViewUpdate) => {
-          if (update.docChanged) {
+          if (update.docChanged && !isUpdatingFromProp) {
             const newContent = update.state.doc.toString();
+            content = newContent;
             updateContent(newContent);
+            onContentChange?.(newContent);
           }
           const pos = update.state.selection.main.head;
           const line = update.state.doc.lineAt(pos);
@@ -83,6 +92,18 @@
     if (!editorView) return;
     const { from, to } = editorView.state.selection.main;
     const selectedText = editorView.state.sliceDoc(from, to);
+
+    // Check if already wrapped - toggle off
+    const beforeText = editorView.state.sliceDoc(from - before.length, from);
+    const afterText = editorView.state.sliceDoc(to, to + after.length);
+    if (beforeText === before && afterText === after && selectedText.length > 0) {
+      editorView.dispatch({
+        changes: { from: from - before.length, to: to + after.length, insert: selectedText },
+        selection: { anchor: from - before.length, head: from - before.length + selectedText.length }
+      });
+      return;
+    }
+
     const replacement = before + (selectedText || 'text') + after;
     editorView.dispatch({
       changes: { from, to, insert: replacement },
@@ -113,10 +134,37 @@
     let cursorOffset = 0;
 
     switch (format) {
-      case 'heading':
-        replacement = `## ${selectedText || 'Heading'}`;
-        cursorOffset = 3;
-        break;
+      case 'heading': {
+        const line = editorView.state.doc.lineAt(from);
+        const lineText = line.text;
+        const match = lineText.match(/^(#{1,6})\s/);
+        if (match) {
+          const level = match[1].length;
+          if (level >= 6) {
+            // Remove heading
+            const newLine = lineText.replace(/^#{1,6}\s/, '');
+            editorView.dispatch({
+              changes: { from: line.from, to: line.to, insert: newLine },
+              selection: { anchor: line.from, head: line.from + newLine.length }
+            });
+          } else {
+            // Increment heading level
+            const newLine = '#' + lineText;
+            editorView.dispatch({
+              changes: { from: line.from, to: line.to, insert: newLine },
+              selection: { anchor: line.from + level + 2, head: line.to + 1 }
+            });
+          }
+        } else {
+          // Add h2
+          const newLine = `## ${lineText}`;
+          editorView.dispatch({
+            changes: { from: line.from, to: line.to, insert: newLine },
+            selection: { anchor: line.from + 3, head: line.from + newLine.length }
+          });
+        }
+        return;
+      }
       case 'code':
         replacement = `\`${selectedText || 'code'}\``;
         cursorOffset = 1;
@@ -150,8 +198,11 @@
         break;
       case 'hr':
         replacement = `\n---\n`;
-        cursorOffset = 5;
-        break;
+        editorView.dispatch({
+          changes: { from, to, insert: replacement },
+          selection: { anchor: from + 4, head: from + 4 }
+        });
+        return;
       case 'bold':
         wrapSelection('**', '**');
         return;
@@ -171,6 +222,18 @@
     });
   }
 
+  $effect(() => {
+    if (!editorView) return;
+    const editorContent = editorView.state.doc.toString();
+    if (content !== editorContent) {
+      isUpdatingFromProp = true;
+      editorView.dispatch({
+        changes: { from: 0, to: editorContent.length, insert: content }
+      });
+      isUpdatingFromProp = false;
+    }
+  });
+
   onMount(() => {
     createEditor();
   });
@@ -180,6 +243,18 @@
       editorView.destroy();
     }
   });
+
+  export function setContent(newContent: string) {
+    if (!editorView) return;
+    const editorContent = editorView.state.doc.toString();
+    if (newContent !== editorContent) {
+      isUpdatingFromProp = true;
+      editorView.dispatch({
+        changes: { from: 0, to: editorContent.length, insert: newContent }
+      });
+      isUpdatingFromProp = false;
+    }
+  }
 
   export function getEditorView() {
     return editorView;

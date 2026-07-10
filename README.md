@@ -1,10 +1,10 @@
-# MarkEdiViewer
+# Markdown Viewditor
 
 A clean, simple, and modern markdown editor and viewer with **live preview** built with Tauri v2 + Svelte 5.
 
 ## Overview
 
-**MarkEdiViewer** is a cross-platform markdown editor that provides:
+**Markdown Viewditor** is a cross-platform markdown editor that provides:
 
 - **Three use cases**: Create, Edit, View markdown files
 - **Live preview**: See rendered markdown as you type

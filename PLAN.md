@@ -1,8 +1,8 @@
-# MarkEdiViewer - Development Plan
+# Markdown Viewditor - Development Plan
 
 ## Project Overview
 
-**MarkEdiViewer** is a cross-platform markdown editor and viewer with **live preview**, built with Tauri v2 + Svelte 5, supporting Linux, macOS, Windows, Android, and iOS.
+**Markdown Viewditor** is a cross-platform markdown editor and viewer with **live preview**, built with Tauri v2 + Svelte 5, supporting Linux, macOS, Windows, Android, and iOS.
 
 ---
 
@@ -40,7 +40,7 @@
 
 ## Key Feature: Live Preview
 
-**Live preview** is the core feature of MarkEdiViewer. As the user types in the editor, the viewer immediately shows the rendered markdown. This provides:
+**Live preview** is the core feature of Markdown Viewditor. As the user types in the editor, the viewer immediately shows the rendered markdown. This provides:
 
 1. **Instant feedback** - See formatting as you write
 2. **Reduced errors** - Catch formatting mistakes immediately
@@ -785,7 +785,7 @@ enum AppError {
 #### Project Structure
 
 ```
-markediviewer/
+markdown-viewditor/
 ├── src/                              # Svelte frontend
 │   ├── app.html                      # HTML shell
 │   ├── app.css                       # Global styles with CSS variables
@@ -1519,7 +1519,7 @@ Update file: `src/routes/+page.svelte`
 <div class="app">
   <header class="toolbar">
     <div class="toolbar-left">
-      <span class="app-name">MarkEdiViewer</span>
+      <span class="app-name">Markdown Viewditor</span>
     </div>
     <div class="toolbar-center">
       <div class="view-toggle">

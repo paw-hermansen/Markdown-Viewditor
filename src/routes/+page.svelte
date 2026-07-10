@@ -21,7 +21,7 @@
 
   async function handleNew() {
     if (hasUnsavedChanges()) {
-      const confirmed = await ask('You have unsaved changes. Create new file?', { title: 'MarkEdiViewer', kind: 'warning' });
+      const confirmed = await ask('You have unsaved changes. Create new file?', { title: 'Markdown Viewditor', kind: 'warning' });
       if (!confirmed) return;
     }
     resetEditor();
@@ -31,7 +31,7 @@
 
   async function handleOpen() {
     if (hasUnsavedChanges()) {
-      const confirmed = await ask('You have unsaved changes. Open a new file?', { title: 'MarkEdiViewer', kind: 'warning' });
+      const confirmed = await ask('You have unsaved changes. Open a new file?', { title: 'Markdown Viewditor', kind: 'warning' });
       if (!confirmed) return;
     }
 

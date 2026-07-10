@@ -51,7 +51,7 @@
         </svg>
       </button>
       <span class="separator"></span>
-      <span class="app-name">MarkEdiViewer</span>
+      <span class="app-name">Markdown Viewditor</span>
       {#if fileName}
         <span class="separator"></span>
         <span class="file-name">{fileName}{#if isModified} *{/if}</span>

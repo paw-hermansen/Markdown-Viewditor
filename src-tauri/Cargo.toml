@@ -1,5 +1,5 @@
 [package]
-name = "markediviewer"
+name = "markdown-viewditor"
 version = "0.1.0"
 edition = "2021"
 

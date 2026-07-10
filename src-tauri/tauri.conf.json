@@ -1,8 +1,8 @@
 {
   "$schema": "./gen/schemas/desktop-schema.json",
-  "productName": "MarkEdiViewer",
+  "productName": "Markdown Viewditor",
   "version": "0.1.0",
-  "identifier": "com.markediviewer.app",
+  "identifier": "com.markdown-viewditor.app",
   "build": {
     "devUrl": "http://localhost:5173",
     "frontendDist": "../build",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "MarkEdiViewer",
+        "title": "Markdown Viewditor",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

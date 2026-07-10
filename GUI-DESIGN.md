@@ -1,4 +1,4 @@
-# MarkEdiViewer - GUI Design Document
+# Markdown Viewditor - GUI Design Document
 
 ## Design Philosophy
 
@@ -48,7 +48,7 @@ Border:        #d1d5db
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
+│  ⬤ ⬤ ⬤    readme.md *        Markdown Viewditor              ☰        │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -88,7 +88,7 @@ Border:        #d1d5db
 ````
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
+│  ⬤ ⬤ ⬤    readme.md *        Markdown Viewditor              ☰        │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -129,7 +129,7 @@ Border:        #d1d5db
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤    readme.md *        MarkEdiViewer              ☰        │
+│  ⬤ ⬤ ⬤    readme.md *        Markdown Viewditor              ☰        │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -175,7 +175,7 @@ The outline sidebar shows a clickable heading tree. Collapsible on narrow screen
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ⬤ ⬤ ⬤    readme.md *  [↻]     MarkEdiViewer           ☰        │
+│  ⬤ ⬤ ⬤    readme.md *  [↻]     Markdown Viewditor           ☰        │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::env;
-use tauri::{Emitter, Manager};
+use std::sync::Mutex;
+use tauri::{Emitter, Manager, State};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -26,6 +27,13 @@ struct FileInfo {
     name: String,
     is_dir: bool,
     size: u64,
+}
+
+struct InitialFile(Mutex<Option<String>>);
+
+#[tauri::command]
+fn get_initial_file(state: State<InitialFile>) -> Option<String> {
+    state.0.lock().unwrap().take()
 }
 
 #[tauri::command]
@@ -105,21 +113,15 @@ pub fn run() {
                 }
             }
         }))
-        .setup(move |app| {
-            if let Some(file_path) = initial_file {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.emit("open-file", &file_path);
-                }
-            }
-            Ok(())
-        })
+        .manage(InitialFile(Mutex::new(initial_file)))
         .invoke_handler(tauri::generate_handler![
             greet,
             read_file,
             write_file,
             list_files,
             create_file,
-            delete_file
+            delete_file,
+            get_initial_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

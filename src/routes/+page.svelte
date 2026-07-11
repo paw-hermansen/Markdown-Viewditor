@@ -11,6 +11,7 @@
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
   import { listen } from '@tauri-apps/api/event';
+  import { invoke } from '@tauri-apps/api/core';
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { onMount, onDestroy } from 'svelte';
 
@@ -146,7 +147,15 @@
       handleOpenFile(event.payload);
     });
 
-    if (settingsState.lastOpenedFile) {
+    const initialFile = await invoke<string | null>('get_initial_file');
+    if (initialFile) {
+      const content = await readFile(initialFile);
+      if (content !== null) {
+        editorState.content = content;
+        editorComponent?.setContent(content);
+        markSaved();
+      }
+    } else if (settingsState.lastOpenedFile) {
       const content = await readFile(settingsState.lastOpenedFile);
       if (content !== null) {
         editorState.content = content;

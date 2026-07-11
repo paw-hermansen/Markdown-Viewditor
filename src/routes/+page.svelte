@@ -6,6 +6,7 @@
   import Viewer from '$lib/components/Viewer/Viewer.svelte';
   import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
   import AboutDialog from '$lib/components/About/AboutDialog.svelte';
+  import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, closeFile, readFile, getFileName } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
@@ -22,6 +23,7 @@
   let scrollSync: ReturnType<typeof createScrollSync> | undefined;
   let viewerElement: HTMLDivElement | undefined;
   let showAbout = $state(false);
+  let showCommandPalette = $state(false);
   let unlistenOpenFile: (() => void) | undefined;
 
   function handleFormat(format: string) {
@@ -113,10 +115,53 @@
     showAbout = false;
   }
 
+  function handleCloseCommandPalette() {
+    showCommandPalette = false;
+  }
+
   function handleGlobalKeydown(e: KeyboardEvent) {
+    const isMod = e.metaKey || e.ctrlKey;
+
     if (e.key === 'F1') {
       e.preventDefault();
       showAbout = !showAbout;
+      return;
+    }
+
+    if (isMod && e.key === 's' && !e.shiftKey) {
+      e.preventDefault();
+      handleSave();
+      return;
+    }
+
+    if (isMod && e.key === 'S' && e.shiftKey) {
+      e.preventDefault();
+      handleSaveAs();
+      return;
+    }
+
+    if (isMod && e.key === 'n') {
+      e.preventDefault();
+      handleNew();
+      return;
+    }
+
+    if (isMod && e.key === 'o') {
+      e.preventDefault();
+      handleOpen();
+      return;
+    }
+
+    if (isMod && e.shiftKey && e.key === 'P') {
+      e.preventDefault();
+      showCommandPalette = !showCommandPalette;
+      return;
+    }
+
+    if (isMod && e.key === 'p') {
+      e.preventDefault();
+      showCommandPalette = !showCommandPalette;
+      return;
     }
   }
 
@@ -206,6 +251,18 @@
 </AppLayout>
 
 <AboutDialog open={showAbout} onClose={handleCloseAbout} />
+<CommandPalette
+  open={showCommandPalette}
+  onClose={handleCloseCommandPalette}
+  onNew={handleNew}
+  onOpen={handleOpen}
+  onSave={handleSave}
+  onSaveAs={handleSaveAs}
+  onViewModeChange={handleViewModeChange}
+  onAbout={handleAbout}
+  onCopyHtml={handleCopyHtml}
+  onPrint={handlePrint}
+/>
 
 <style>
   .editor-pane {

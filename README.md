@@ -50,6 +50,12 @@ npm run lint
 
 # Typecheck
 npm run check
+
+# Run tests (single run)
+npm run test
+
+# Run tests (watch mode)
+npm run test:watch
 ```
 
 ## Versions

@@ -108,7 +108,7 @@ async fn delete_file(path: String) -> Result<(), AppError> {
 async fn save_window_state(app: tauri::AppHandle) -> Result<(), AppError> {
     if let Some(window) = app.get_webview_window("main") {
         let position = window.outer_position().map_err(|e| AppError::NotFound(e.to_string()))?;
-        let size = window.outer_size().map_err(|e| AppError::NotFound(e.to_string()))?;
+        let size = window.inner_size().map_err(|e| AppError::NotFound(e.to_string()))?;
         let is_maximized = window.is_maximized().unwrap_or(false);
 
         let state = WindowState {
@@ -125,31 +125,6 @@ async fn save_window_state(app: tauri::AppHandle) -> Result<(), AppError> {
         }
     }
     Ok(())
-}
-
-#[tauri::command]
-async fn restore_window_state(app: tauri::AppHandle) -> Result<bool, AppError> {
-    if let Ok(store) = tauri_plugin_store::StoreBuilder::new(&app, "window-state.json").build() {
-        if let Some(value) = store.get("windowState") {
-            if let Ok(state) = serde_json::from_value::<WindowState>(value.clone()) {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                        x: state.x as i32,
-                        y: state.y as i32,
-                    }));
-                    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                        width: state.width as u32,
-                        height: state.height as u32,
-                    }));
-                    if state.maximized {
-                        let _ = window.maximize();
-                    }
-                    return Ok(true);
-                }
-            }
-        }
-    }
-    Ok(false)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -179,10 +154,38 @@ pub fn run() {
             create_file,
             delete_file,
             get_initial_file,
-            save_window_state,
-            restore_window_state
+            save_window_state
         ])
         .setup(|app| {
+            // Restore window state before frontend loads
+            if let Ok(store) = tauri_plugin_store::StoreBuilder::new(app.handle(), "window-state.json").build() {
+                if let Some(value) = store.get("windowState") {
+                    if let Ok(state) = serde_json::from_value::<WindowState>(value.clone()) {
+                        if let Some(window) = app.get_webview_window("main") {
+                            if state.maximized {
+                                let _ = window.maximize();
+                            } else {
+                                // Set size immediately
+                                let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                                    width: state.width as u32,
+                                    height: state.height as u32,
+                                }));
+                                // Defer position restore — Linux WMs override set_position
+                                // if called before the window is fully mapped
+                                let win = window.clone();
+                                std::thread::spawn(move || {
+                                    std::thread::sleep(std::time::Duration::from_millis(100));
+                                    let _ = win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                                        x: state.x as i32,
+                                        y: state.y as i32,
+                                    }));
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
             let app_handle = app.handle().clone();
             if let Some(window) = app.get_webview_window("main") {
                 window.on_window_event(move |event| {
@@ -218,7 +221,7 @@ fn save_window_state_debounced(app: &tauri::AppHandle) {
     };
     if should_save {
         if let Some(window) = app.get_webview_window("main") {
-            if let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) {
+            if let (Ok(position), Ok(size)) = (window.outer_position(), window.inner_size()) {
                 let is_maximized = window.is_maximized().unwrap_or(false);
                 let state = WindowState {
                     x: position.x as f64,

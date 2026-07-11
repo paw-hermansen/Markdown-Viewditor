@@ -11,12 +11,13 @@
     onSaveAs: () => void;
     onOpen: () => void;
     onNew: () => void;
+    onAbout: () => void;
     isModified: boolean;
     fileName?: string;
     children: Snippet;
   }
 
-  let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, isModified, fileName, children }: Props = $props();
+  let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, onAbout, isModified, fileName, children }: Props = $props();
 </script>
 
 <div class="app-layout">
@@ -61,7 +62,13 @@
       <ViewToggle {viewMode} onchange={onViewModeChange} />
     </div>
     <div class="toolbar-right">
-      <!-- Placeholder for future actions -->
+      <button class="toolbar-btn" onclick={onAbout} title="About (F1)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 16v-4"/>
+          <path d="M12 8h.01"/>
+        </svg>
+      </button>
     </div>
   </header>
 

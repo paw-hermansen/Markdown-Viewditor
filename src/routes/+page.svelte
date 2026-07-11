@@ -5,6 +5,7 @@
   import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
   import Viewer from '$lib/components/Viewer/Viewer.svelte';
   import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
+  import AboutDialog from '$lib/components/About/AboutDialog.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, closeFile, readFile, getFileName } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
@@ -18,6 +19,7 @@
   let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
   let scrollSync: ReturnType<typeof createScrollSync> | undefined;
   let viewerElement: HTMLDivElement | undefined;
+  let showAbout = $state(false);
 
   function handleFormat(format: string) {
     if (editorComponent) {
@@ -86,6 +88,21 @@
     window.print();
   }
 
+  function handleAbout() {
+    showAbout = true;
+  }
+
+  function handleCloseAbout() {
+    showAbout = false;
+  }
+
+  function handleGlobalKeydown(e: KeyboardEvent) {
+    if (e.key === 'F1') {
+      e.preventDefault();
+      showAbout = !showAbout;
+    }
+  }
+
   function initScrollSync() {
     if (scrollSync) {
       scrollSync.destroy();
@@ -126,6 +143,8 @@
   });
 </script>
 
+<svelte:window onkeydown={handleGlobalKeydown} />
+
 <AppLayout
   {viewMode}
   onViewModeChange={handleViewModeChange}
@@ -133,6 +152,7 @@
   onSaveAs={handleSaveAs}
   onOpen={handleOpen}
   onNew={handleNew}
+  onAbout={handleAbout}
   isModified={editorState.isModified}
   {fileName}
 >
@@ -154,6 +174,8 @@
     </div>
   {/if}
 </AppLayout>
+
+<AboutDialog open={showAbout} onClose={handleCloseAbout} />
 
 <style>
   .editor-pane {

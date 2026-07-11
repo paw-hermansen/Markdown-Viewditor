@@ -4,12 +4,14 @@
   import { loadUserThemes } from '$lib/utils/user-themes';
   import { applyTheme } from '$lib/utils/themes';
   import { setTheme } from '$lib/stores/viewer.svelte';
+  import { restoreWindowState } from '$lib/utils/window-state';
   import { onMount } from 'svelte';
 
   let { children } = $props();
   let ready = $state(false);
 
   onMount(async () => {
+    await restoreWindowState();
     await loadSettings();
     await loadUserThemes();
     setTheme(settingsState.viewerTheme);

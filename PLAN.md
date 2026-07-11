@@ -445,21 +445,21 @@ export function createScrollSync(editor: EditorView, viewer: HTMLElement) {
 }
 ```
 
-### Phase 6: Settings & Persistence
+### Phase 6: Settings & Persistence - COMPLETED ✅
 
-- [ ] Create settings store
+- [x] Create settings store
   - Create `stores/settings.svelte.ts`
   - Use `$state()` for reactive settings
   - Type-safe with TypeScript interface
-- [ ] Implement Tauri Store integration
+- [x] Implement Tauri Store integration
   - Load settings on app start
   - Save settings on change
   - Handle defaults gracefully
-- [ ] Save/restore window state
+- [x] Save/restore window state
   - Window size and position
   - Last opened file
   - View mode
-- [ ] Persist user preferences
+- [x] Persist user preferences
   - Editor font size
   - Theme selection
   - Split ratio
@@ -761,23 +761,23 @@ enum AppError {
 
 ## Success Criteria
 
-- [ ] Create, edit, save markdown files
-- [ ] **Live preview** updates on every keystroke
-- [ ] Split view with synchronized scrolling
-- [ ] Multiple viewer themes
-- [ ] Persist user preferences
+- [x] Create, edit, save markdown files
+- [x] **Live preview** updates on every keystroke
+- [x] Split view with synchronized scrolling
+- [x] Multiple viewer themes
+- [x] Persist user preferences
 - [ ] Works on all target platforms
-- [ ] Responsive layout
+- [x] Responsive layout
 - [ ] Accessible (keyboard navigation)
-- [ ] Error handling for all operations
-- [ ] Performance: < 100ms for preview update
+- [x] Error handling for all operations
+- [x] Performance: < 100ms for preview update
 - [ ] Memory: < 200MB for 10MB file
 
 ---
 
 ## Implementation Status
 
-**Current Phase: Phase 5 - Scroll Synchronization** (Editor ↔ preview scroll sync implemented)
+**Current Phase: Phase 6 - Settings & Persistence** (All settings persisted, window state saved/restored)
 
 ### What Has Been Implemented
 
@@ -896,9 +896,20 @@ markdown-viewditor/
   - Recent files tracking (max 10)
   - Error handling
 
-#### NOT YET IMPLEMENTED (Phase 6+):
+#### Settings Persistence (Phase 6 - DONE):
 
-- **Settings persistence** - User preferences (Phase 6)
+- **Settings store** (`stores/settings.svelte.ts`) - Reactive settings with Svelte 5 runes
+- **Tauri Store integration** - Settings loaded on app start, saved on change with debounce
+- **Window state persistence** - Window size, position, and maximized state saved/restored
+- **Editor settings applied** - Font size, font family, line numbers, word wrap all reactive
+- **Split ratio persistence** - Resizable split view with ratio saved to settings
+- **Recent files** - Max 10 recent files tracked and persisted
+- **Last opened file** - Restored on app start
+
+#### NOT YET IMPLEMENTED (Phase 7+):
+
+- **Keyboard shortcuts** - Global shortcuts for file operations (Phase 7)
+- **Command palette** - Fuzzy search for commands (Phase 7)
 
 #### Build System
 
@@ -927,10 +938,10 @@ markdown-viewditor/
 - mermaid (diagrams)
 - dompurify (HTML sanitization)
 
-### Next Steps (to complete Phase 6)
+### Next Steps (to complete Phase 7)
 
-1. **Add settings persistence** - User preferences with Tauri Store
-2. **Add keyboard shortcuts** - Global shortcuts for file operations
+1. **Add keyboard shortcuts** - Global shortcuts for file operations
+2. **Implement command palette** - Fuzzy search for commands
 
 ---
 
@@ -1030,7 +1041,7 @@ export function showError(message: string) {
 2. ~~**Create theme selector**~~ ✅ DONE - Theme picker UI with dropdown
 3. ~~**Implement scroll synchronization**~~ ✅ DONE - Phase 5 feature
 4. ~~**Add file dialog integration**~~ ✅ DONE - Open/save files
-5. **Create settings persistence** - User preferences
+5. ~~**Create settings persistence**~~ ✅ DONE - Phase 6 feature
 
 #### 🟢 Nice to Have (Phase 5-7)
 

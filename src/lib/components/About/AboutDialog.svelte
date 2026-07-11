@@ -40,7 +40,6 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if open}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div class="backdrop" role="presentation" onclick={handleBackdropClick}>
     <div class="dialog" role="dialog" aria-label="About Markdown Viewditor">
       <button class="close-btn" onclick={onClose} aria-label="Close">

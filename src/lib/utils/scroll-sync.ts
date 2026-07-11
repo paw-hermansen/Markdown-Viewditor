@@ -40,8 +40,6 @@ export function createScrollSync(
   }
 
   function getEditorVisibleLine(): number {
-    const scrollDom = editor.scrollDOM;
-    const scrollTop = scrollDom.scrollTop;
     const editorRect = editor.dom.getBoundingClientRect();
 
     let bestLine = 1;

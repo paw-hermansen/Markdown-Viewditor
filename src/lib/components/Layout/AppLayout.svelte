@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { ViewMode } from '$lib/types';
+  import { settingsState, updateSplitRatio } from '$lib/stores/settings.svelte';
   import ViewToggle from './ViewToggle.svelte';
   import StatusBar from './StatusBar.svelte';
 
@@ -18,6 +19,33 @@
   }
 
   let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, onAbout, isModified, fileName, children }: Props = $props();
+
+  let isDragging = $state(false);
+  let splitRatio = $state(settingsState.splitRatio);
+
+  function handleMouseDown(e: MouseEvent) {
+    if (viewMode !== 'split') return;
+    isDragging = true;
+    e.preventDefault();
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const container = document.querySelector('.content');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      splitRatio = Math.max(0.2, Math.min(0.8, x / rect.width));
+    };
+
+    const handleMouseUp = () => {
+      isDragging = false;
+      updateSplitRatio(splitRatio);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }
 </script>
 
 <div class="app-layout">
@@ -72,8 +100,16 @@
     </div>
   </header>
 
-  <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'}>
+  <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'} style="--split-ratio: {splitRatio}">
     {@render children()}
+    {#if viewMode === 'split'}
+      <button
+        class="resize-handle"
+        class:dragging={isDragging}
+        onmousedown={handleMouseDown}
+        aria-label="Resize editor and viewer panels"
+      ></button>
+    {/if}
   </main>
 
   <StatusBar />
@@ -171,9 +207,15 @@
     flex: 1;
     display: flex;
     overflow: hidden;
+    position: relative;
   }
 
-  .content.split > :global(*) {
+  .content.split > :global(.editor-pane) {
+    flex: 0 0 calc(var(--split-ratio, 0.5) * 100%);
+    min-width: 0;
+  }
+
+  .content.split > :global(.viewer-pane) {
     flex: 1;
     min-width: 0;
   }
@@ -186,6 +228,19 @@
   .content.editor-only > :global(.viewer-pane),
   .content.viewer-only > :global(.editor-pane) {
     display: none;
+  }
+
+  .resize-handle {
+    width: 4px;
+    cursor: col-resize;
+    background: var(--border);
+    transition: background 150ms ease-in-out;
+    flex-shrink: 0;
+  }
+
+  .resize-handle:hover,
+  .resize-handle.dragging {
+    background: var(--accent);
   }
 
   @media (max-width: 640px) {

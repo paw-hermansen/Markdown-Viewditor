@@ -4,7 +4,7 @@
   import { markdown } from '@codemirror/lang-markdown';
   import { oneDark } from '@codemirror/theme-one-dark';
   import { EditorState, Compartment } from '@codemirror/state';
-  import { keymap, type ViewUpdate } from '@codemirror/view';
+  import { keymap, lineNumbers, type ViewUpdate } from '@codemirror/view';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
   import { settingsState } from '$lib/stores/settings.svelte';
   import { viewerState, getThemeType } from '$lib/stores/viewer.svelte';
@@ -20,6 +20,8 @@
   let editorView: EditorView | undefined;
   let isUpdatingFromProp = false;
   const themeCompartment = new Compartment();
+  const lineNumbersCompartment = new Compartment();
+  const wordWrapCompartment = new Compartment();
 
   const lightTheme = EditorView.theme({
     '&': {
@@ -65,6 +67,8 @@
         basicSetup,
         markdown(),
         themeCompartment.of(getThemeExtension()),
+        lineNumbersCompartment.of(settingsState.editorLineNumbers ? [] : lineNumbers()),
+        wordWrapCompartment.of(settingsState.editorWordWrap ? EditorView.lineWrapping : []),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged && !isUpdatingFromProp) {
             const newContent = update.state.doc.toString();
@@ -123,9 +127,25 @@
 
   $effect(() => {
     if (!editorView) return;
-    const theme = viewerState.theme;
+    void viewerState.theme;
     editorView.dispatch({
       effects: themeCompartment.reconfigure(getThemeExtension())
+    });
+  });
+
+  $effect(() => {
+    if (!editorView) return;
+    const showLineNumbers = settingsState.editorLineNumbers;
+    editorView.dispatch({
+      effects: lineNumbersCompartment.reconfigure(showLineNumbers ? [] : lineNumbers())
+    });
+  });
+
+  $effect(() => {
+    if (!editorView) return;
+    const wordWrap = settingsState.editorWordWrap;
+    editorView.dispatch({
+      effects: wordWrapCompartment.reconfigure(wordWrap ? EditorView.lineWrapping : [])
     });
   });
 

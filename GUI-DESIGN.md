@@ -410,7 +410,7 @@ The live preview is always active when in Split or View mode. It renders markdow
 **Rendering stack:**
 
 - `markdown-it` for parsing
-- `shiki` for code block syntax highlighting
+- `highlight.js` for code block syntax highlighting
 - Scroll sync between editor and preview (proportional)
 
 ---

@@ -1,43 +1,46 @@
 import { describe, it, expect } from "vitest";
 import {
-  AVAILABLE_THEMES,
-  getThemeByName,
+  BUILTIN_THEMES,
+  getAllThemes,
+  getThemeById,
   getThemesByType,
   getThemeLabel,
 } from "../themes";
 
 describe("themes", () => {
-  describe("AVAILABLE_THEMES", () => {
-    it("should contain at least 10 themes", () => {
-      expect(AVAILABLE_THEMES.length).toBeGreaterThanOrEqual(10);
+  describe("BUILTIN_THEMES", () => {
+    it("should contain at least 4 themes", () => {
+      expect(BUILTIN_THEMES.length).toBeGreaterThanOrEqual(4);
     });
 
     it("should have valid structure for each theme", () => {
-      for (const theme of AVAILABLE_THEMES) {
-        expect(theme).toHaveProperty("name");
+      for (const theme of BUILTIN_THEMES) {
+        expect(theme).toHaveProperty("id");
         expect(theme).toHaveProperty("label");
         expect(theme).toHaveProperty("type");
+        expect(theme).toHaveProperty("builtin");
         expect(["light", "dark"]).toContain(theme.type);
+        expect(theme.builtin).toBe(true);
       }
     });
 
     it("should include github-dark and github-light", () => {
-      const names = AVAILABLE_THEMES.map((t) => t.name);
-      expect(names).toContain("github-dark");
-      expect(names).toContain("github-light");
+      const ids = BUILTIN_THEMES.map((t) => t.id);
+      expect(ids).toContain("github-dark");
+      expect(ids).toContain("github-light");
     });
   });
 
-  describe("getThemeByName", () => {
-    it("should return theme for valid name", () => {
-      const theme = getThemeByName("github-dark");
+  describe("getThemeById", () => {
+    it("should return theme for valid id", () => {
+      const theme = getThemeById("github-dark");
       expect(theme).toBeDefined();
-      expect(theme?.name).toBe("github-dark");
+      expect(theme?.id).toBe("github-dark");
       expect(theme?.type).toBe("dark");
     });
 
-    it("should return undefined for unknown name", () => {
-      const theme = getThemeByName("nonexistent-theme");
+    it("should return undefined for unknown id", () => {
+      const theme = getThemeById("nonexistent-theme");
       expect(theme).toBeUndefined();
     });
   });
@@ -60,9 +63,10 @@ describe("themes", () => {
     });
 
     it("should cover all themes between dark and light", () => {
+      const all = getAllThemes();
       const dark = getThemesByType("dark");
       const light = getThemesByType("light");
-      expect(dark.length + light.length).toBe(AVAILABLE_THEMES.length);
+      expect(dark.length + light.length).toBe(all.length);
     });
   });
 

@@ -65,7 +65,7 @@ npm run check
 | Rust edition    | 2021    | Systems programming language for the backend            |
 | CodeMirror      | 6.7.1   | Code editor component for the markdown editor           |
 | markdown-it     | 14.3.0  | Markdown parser and renderer                            |
-| shiki           | 1.29.2  | Syntax highlighter for code blocks                      |
+| highlight.js    | 11.x    | Syntax highlighter for code blocks                      |
 
 ## Project Structure
 

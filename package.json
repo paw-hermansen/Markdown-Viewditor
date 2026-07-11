@@ -43,8 +43,9 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-store": "^2.4.3",
     "codemirror": "^6.0.2",
+    "highlight.js": "^11.11.1",
     "markdown-it": "^14.0.0",
-    "shiki": "^1.0.0"
+    "markdown-it-highlightjs": "^4.3.0"
   },
   "type": "module"
 }

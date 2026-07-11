@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { AVAILABLE_THEMES, getThemeLabel } from '$lib/utils/themes';
+  import { getAllThemes, getThemeLabel, applyTheme } from '$lib/utils/themes';
   import { viewerState, setTheme } from '$lib/stores/viewer.svelte';
-  import { loadTheme } from '$lib/utils/markdown';
-  import type { BundledTheme } from 'shiki/bundle/web';
 
   let isOpen = $state(false);
   let dropdownRef: HTMLDivElement | undefined = $state(undefined);
 
-  async function handleThemeChange(themeName: BundledTheme) {
-    await loadTheme(themeName);
-    setTheme(themeName);
+  const themes = getAllThemes();
+
+  async function handleThemeChange(themeId: string) {
+    await applyTheme(themeId);
+    setTheme(themeId);
     isOpen = false;
   }
 
@@ -53,11 +53,11 @@
   {#if isOpen}
     <div class="dropdown">
       <div class="dropdown-header">Theme</div>
-      {#each AVAILABLE_THEMES as theme}
+      {#each themes as theme}
         <button
           class="dropdown-item"
-          class:active={viewerState.theme === theme.name}
-          onclick={() => handleThemeChange(theme.name)}
+          class:active={viewerState.theme === theme.id}
+          onclick={() => handleThemeChange(theme.id)}
         >
           <span class="theme-label">{theme.label}</span>
           <span class="theme-type">{theme.type}</span>

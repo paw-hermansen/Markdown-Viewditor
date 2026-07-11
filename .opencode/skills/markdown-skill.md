@@ -4,13 +4,13 @@
 
 ## Recommended Stack
 
-| Purpose                 | Library            | Why                               |
-| ----------------------- | ------------------ | --------------------------------- |
-| **Parsing**             | `markdown-it`      | Flexible, plugins, GFM support    |
-| **Syntax Highlighting** | `shiki`            | VS Code quality, beautiful themes |
-| **Editor**              | `@codemirror/view` | Best-in-class code editor         |
-| **Frontmatter**         | `gray-matter`      | Standard YAML frontmatter         |
-| **Svelte Integration**  | `mdsvex`           | Markdown in Svelte components     |
+| Purpose                 | Library            | Why                              |
+| ----------------------- | ------------------ | -------------------------------- |
+| **Parsing**             | `markdown-it`      | Flexible, plugins, GFM support   |
+| **Syntax Highlighting** | `highlight.js`     | Pure JS, no WASM, reliable, fast |
+| **Editor**              | `@codemirror/view` | Best-in-class code editor        |
+| **Frontmatter**         | `gray-matter`      | Standard YAML frontmatter        |
+| **Svelte Integration**  | `mdsvex`           | Markdown in Svelte components    |
 
 ## markdown-it (Parsing)
 
@@ -36,26 +36,27 @@ const md = new MarkdownIt({
 const html = md.render("# Hello World\n\n- [x] Task 1\n- [ ] Task 2");
 ```
 
-## Shiki (Syntax Highlighting)
+## highlight.js (Syntax Highlighting)
 
 ```bash
-npm install shiki
+npm install highlight.js markdown-it-highlightjs
 ```
 
 ```javascript
-import { createHighlighter } from "shiki";
+import hljs from "highlight.js/lib/core";
+import highlightjs from "markdown-it-highlightjs";
 
-const highlighter = await createHighlighter({
-  themes: ["github-dark", "github-light"],
-  langs: ["javascript", "typescript", "rust", "html", "css", "markdown"],
-});
+// Register only the languages you need
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import python from "highlight.js/lib/languages/python";
 
-function highlightCode(code, lang) {
-  return highlighter.codeToHtml(code, { lang, theme: "github-dark" });
-}
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("python", python);
 
 // Integration with markdown-it
-md.options.highlight = (code, lang) => highlightCode(code, lang);
+md.use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
 ```
 
 ## CodeMirror 6 (Editor)
@@ -202,7 +203,8 @@ Clicked {count} times
 ```svelte
 <script>
   import MarkdownIt from 'markdown-it';
-  import { createHighlighter } from 'shiki';
+  import hljs from 'highlight.js/lib/core';
+  import highlightjs from 'markdown-it-highlightjs';
 
   let content = $state('# Hello World');
   let html = $derived(md.render(content));
@@ -211,20 +213,7 @@ Clicked {count} times
     html: true,
     linkify: true,
     typographer: true
-  });
-
-  let highlighter;
-
-  onMount(async () => {
-    highlighter = await createHighlighter({
-      themes: ['github-dark'],
-      langs: ['javascript', 'typescript', 'rust', 'html', 'css']
-    });
-
-    md.options.highlight = (code, lang) => {
-      return highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
-    };
-  });
+  }).use(highlightjs, { hljs, auto: true });
 </script>
 
 <div class="editor-container">
@@ -297,7 +286,7 @@ npm install mermaid
 ## Resources
 
 - markdown-it: https://github.com/markdown-it/markdown-it
-- shiki: https://github.com/shikijs/shiki
+- highlight.js: https://highlightjs.org/
 - CodeMirror 6: https://codemirror.net/6/
 - mdsvex: https://mdsvex.pngwn.io/
 - mermaid: https://mermaid.js.org/

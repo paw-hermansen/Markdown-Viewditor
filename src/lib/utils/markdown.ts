@@ -1,37 +1,33 @@
 import MarkdownIt from "markdown-it";
-import {
-  createHighlighter,
-  type Highlighter,
-  type BundledTheme,
-  type BundledLanguage,
-} from "shiki/bundle/web";
+import hljs from "highlight.js/lib/core";
+import highlightjs from "markdown-it-highlightjs";
 
-let highlighter: Highlighter | null = null;
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import python from "highlight.js/lib/languages/python";
+import css from "highlight.js/lib/languages/css";
+import xml from "highlight.js/lib/languages/xml";
+import json from "highlight.js/lib/languages/json";
+import bash from "highlight.js/lib/languages/bash";
+import markdown from "highlight.js/lib/languages/markdown";
+import sql from "highlight.js/lib/languages/sql";
+
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("html", xml);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("shell", bash);
+hljs.registerLanguage("shellscript", bash);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("sql", sql);
+
 let md: MarkdownIt | null = null;
-
-const DEFAULT_THEMES: BundledTheme[] = ["github-dark", "github-light"];
-const DEFAULT_LANGS: BundledLanguage[] = [
-  "javascript",
-  "typescript",
-  "python",
-  "css",
-  "html",
-  "json",
-  "shellscript",
-  "markdown",
-  "sql",
-  "svelte",
-];
-
-async function initHighlighter(): Promise<Highlighter> {
-  if (!highlighter) {
-    highlighter = await createHighlighter({
-      themes: DEFAULT_THEMES,
-      langs: DEFAULT_LANGS,
-    });
-  }
-  return highlighter;
-}
+let currentThemeStyle: HTMLStyleElement | null = null;
+let currentThemeId = "";
 
 function createLineNumbersPlugin() {
   return function lineNumbersPlugin(md: MarkdownIt) {
@@ -165,50 +161,15 @@ function createLineNumbersPlugin() {
   };
 }
 
-function createShikiPlugin(highlighter: Highlighter) {
-  return function shikiPlugin(md: MarkdownIt) {
-    const defaultFence =
-      md.renderer.rules.fence ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
-      const token = tokens[idx];
-      const info = token.info.trim();
-      const lang = info.split(/\s+/)[0] as BundledLanguage;
-
-      if (!lang || !highlighter.getLoadedLanguages().includes(lang)) {
-        return defaultFence(tokens, idx, options, env, self);
-      }
-
-      try {
-        const html = highlighter.codeToHtml(token.content, {
-          lang,
-          themes: {
-            light: "github-light",
-            dark: "github-dark",
-          },
-          defaultColor: false,
-        });
-        return html;
-      } catch {
-        return defaultFence(tokens, idx, options, env, self);
-      }
-    };
-  };
-}
-
 async function initMarkdownIt(): Promise<MarkdownIt> {
   if (!md) {
-    const hl = await initHighlighter();
     md = new MarkdownIt({
       html: true,
       linkify: true,
       typographer: true,
     })
       .use(createLineNumbersPlugin())
-      .use(createShikiPlugin(hl));
+      .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
   }
   return md;
 }
@@ -223,25 +184,19 @@ export async function renderMarkdown(content: string): Promise<string> {
   }
 }
 
-export function getAvailableThemes(): string[] {
-  if (highlighter) {
-    return highlighter.getLoadedThemes();
+export function setTheme(themeId: string, css: string): void {
+  if (currentThemeId === themeId) return;
+
+  if (!currentThemeStyle) {
+    currentThemeStyle = document.createElement("style");
+    currentThemeStyle.id = "hljs-theme";
+    document.head.appendChild(currentThemeStyle);
   }
-  return [...DEFAULT_THEMES];
+
+  currentThemeStyle.textContent = css;
+  currentThemeId = themeId;
 }
 
-export async function loadTheme(theme: BundledTheme): Promise<void> {
-  const hl = await initHighlighter();
-  const loadedThemes = hl.getLoadedThemes();
-  if (!loadedThemes.includes(theme)) {
-    await hl.loadTheme(theme);
-  }
-}
-
-export async function loadLanguage(lang: BundledLanguage): Promise<void> {
-  const hl = await initHighlighter();
-  const loadedLangs = hl.getLoadedLanguages();
-  if (!loadedLangs.includes(lang)) {
-    await hl.loadLanguage(lang);
-  }
+export function getAvailableLanguages(): string[] {
+  return hljs.listLanguages();
 }

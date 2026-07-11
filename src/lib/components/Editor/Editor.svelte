@@ -3,10 +3,11 @@
   import { EditorView, basicSetup } from 'codemirror';
   import { markdown } from '@codemirror/lang-markdown';
   import { oneDark } from '@codemirror/theme-one-dark';
-  import { EditorState } from '@codemirror/state';
+  import { EditorState, Compartment } from '@codemirror/state';
   import { keymap, type ViewUpdate } from '@codemirror/view';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
   import { settingsState } from '$lib/stores/settings.svelte';
+  import { viewerState, getThemeType } from '$lib/stores/viewer.svelte';
 
   interface Props {
     content?: string;
@@ -18,6 +19,42 @@
   let editorElement: HTMLDivElement;
   let editorView: EditorView | undefined;
   let isUpdatingFromProp = false;
+  const themeCompartment = new Compartment();
+
+  const lightTheme = EditorView.theme({
+    '&': {
+      backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)'
+    },
+    '.cm-content': {
+      caretColor: 'var(--accent)'
+    },
+    '.cm-cursor, .cm-dropCursor': {
+      borderLeftColor: 'var(--accent)'
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+      backgroundColor: 'rgba(233, 69, 96, 0.2)'
+    },
+    '.cm-activeLine': {
+      backgroundColor: 'var(--bg-hover)'
+    },
+    '.cm-gutters': {
+      backgroundColor: 'var(--bg-secondary)',
+      color: 'var(--text-muted)',
+      borderRight: '1px solid var(--border)'
+    },
+    '.cm-activeLineGutter': {
+      backgroundColor: 'var(--bg-hover)'
+    },
+    '.cm-foldPlaceholder': {
+      backgroundColor: 'var(--bg-tertiary)',
+      color: 'var(--text-secondary)'
+    }
+  });
+
+  function getThemeExtension() {
+    return getThemeType() === 'dark' ? oneDark : lightTheme;
+  }
 
   function createEditor() {
     if (!editorElement) return;
@@ -27,7 +64,7 @@
       extensions: [
         basicSetup,
         markdown(),
-        oneDark,
+        themeCompartment.of(getThemeExtension()),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged && !isUpdatingFromProp) {
             const newContent = update.state.doc.toString();
@@ -73,11 +110,6 @@
           },
           '.cm-content': {
             padding: '16px 0'
-          },
-          '.cm-gutters': {
-            backgroundColor: 'var(--bg-secondary)',
-            color: 'var(--text-muted)',
-            borderRight: '1px solid var(--border)'
           }
         })
       ]
@@ -89,12 +121,19 @@
     });
   }
 
+  $effect(() => {
+    if (!editorView) return;
+    const theme = viewerState.theme;
+    editorView.dispatch({
+      effects: themeCompartment.reconfigure(getThemeExtension())
+    });
+  });
+
   function wrapSelection(before: string, after: string) {
     if (!editorView) return;
     const { from, to } = editorView.state.selection.main;
     const selectedText = editorView.state.sliceDoc(from, to);
 
-    // Check if already wrapped - toggle off
     const beforeText = editorView.state.sliceDoc(from - before.length, from);
     const afterText = editorView.state.sliceDoc(to, to + after.length);
     if (beforeText === before && afterText === after && selectedText.length > 0) {
@@ -125,25 +164,21 @@
     const after3 = editorView.state.sliceDoc(to, to + 3);
 
     if (before3 === '***' && after3 === '***' && selectedText.length > 0) {
-      // ***text*** → **text** (remove italic, keep bold)
       editorView.dispatch({
         changes: { from: from - 3, to: to + 3, insert: '**' + selectedText + '**' },
         selection: { anchor: from - 1, head: from - 1 + selectedText.length }
       });
     } else if (before2 === '**' && after2 === '**' && selectedText.length > 0) {
-      // **text** → ***text*** (add italic to bold)
       editorView.dispatch({
         changes: { from: from - 2, to: to + 2, insert: '***' + selectedText + '***' },
         selection: { anchor: from + 1, head: from + 1 + selectedText.length }
       });
     } else if (before1 === '*' && after1 === '*' && selectedText.length > 0) {
-      // *text* → text (remove italic)
       editorView.dispatch({
         changes: { from: from - 1, to: to + 1, insert: selectedText },
         selection: { anchor: from - 1, head: from - 1 + selectedText.length }
       });
     } else {
-      // text → *text* (add italic)
       const replacement = '*' + (selectedText || 'text') + '*';
       editorView.dispatch({
         changes: { from, to, insert: replacement },
@@ -182,14 +217,12 @@
         if (match) {
           const level = match[1].length;
           if (level >= 6) {
-            // Remove heading
             const newLine = lineText.replace(/^#{1,6}\s/, '');
             editorView.dispatch({
               changes: { from: line.from, to: line.to, insert: newLine },
               selection: { anchor: line.from, head: line.from + newLine.length }
             });
           } else {
-            // Increment heading level
             const newLine = '#' + lineText;
             editorView.dispatch({
               changes: { from: line.from, to: line.to, insert: newLine },
@@ -197,7 +230,6 @@
             });
           }
         } else {
-          // Add h2
           const newLine = `## ${lineText}`;
           editorView.dispatch({
             changes: { from: line.from, to: line.to, insert: newLine },

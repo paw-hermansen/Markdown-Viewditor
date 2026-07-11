@@ -1,38 +1,76 @@
-import type { BundledTheme } from "shiki/bundle/web";
+import { setTheme } from "$lib/utils/markdown";
 
 export interface ThemeInfo {
-  name: BundledTheme;
+  id: string;
   label: string;
   type: "light" | "dark";
+  builtin: boolean;
+  css?: string;
 }
 
-export const AVAILABLE_THEMES: ThemeInfo[] = [
-  { name: "github-dark", label: "GitHub Dark", type: "dark" },
-  { name: "github-light", label: "GitHub Light", type: "light" },
-  { name: "one-dark-pro", label: "One Dark Pro", type: "dark" },
-  { name: "one-light", label: "One Light", type: "light" },
-  { name: "dracula", label: "Dracula", type: "dark" },
-  { name: "nord", label: "Nord", type: "dark" },
-  { name: "solarized-dark", label: "Solarized Dark", type: "dark" },
-  { name: "solarized-light", label: "Solarized Light", type: "light" },
-  { name: "monokai", label: "Monokai", type: "dark" },
-  { name: "material-theme", label: "Material Theme", type: "dark" },
-  { name: "catppuccin-mocha", label: "Catppuccin Mocha", type: "dark" },
-  { name: "catppuccin-latte", label: "Catppuccin Latte", type: "light" },
-  { name: "tokyo-night", label: "Tokyo Night", type: "dark" },
-  { name: "vitesse-dark", label: "Vitesse Dark", type: "dark" },
-  { name: "vitesse-light", label: "Vitesse Light", type: "light" },
+export const BUILTIN_THEMES: ThemeInfo[] = [
+  { id: "github-dark", label: "GitHub Dark", type: "dark", builtin: true },
+  { id: "github-light", label: "GitHub Light", type: "light", builtin: true },
+  { id: "atom-one-dark", label: "Atom One Dark", type: "dark", builtin: true },
+  {
+    id: "atom-one-light",
+    label: "Atom One Light",
+    type: "light",
+    builtin: true,
+  },
+  { id: "monokai", label: "Monokai", type: "dark", builtin: true },
+  { id: "nord", label: "Nord", type: "dark", builtin: true },
 ];
 
-export function getThemeByName(name: string): ThemeInfo | undefined {
-  return AVAILABLE_THEMES.find((t) => t.name === name);
+let userThemes: ThemeInfo[] = [];
+let allThemes: ThemeInfo[] = [...BUILTIN_THEMES];
+
+const builtinCssModules: Record<string, () => Promise<{ default: string }>> = {
+  "github-dark": () => import("$lib/styles/highlight/github-dark.css?raw"),
+  "github-light": () => import("$lib/styles/highlight/github-light.css?raw"),
+  "atom-one-dark": () => import("$lib/styles/highlight/atom-one-dark.css?raw"),
+  "atom-one-light": () =>
+    import("$lib/styles/highlight/atom-one-light.css?raw"),
+  monokai: () => import("$lib/styles/highlight/monokai.css?raw"),
+  nord: () => import("$lib/styles/highlight/nord.css?raw"),
+};
+
+export function getAllThemes(): ThemeInfo[] {
+  return allThemes;
 }
 
 export function getThemesByType(type: "light" | "dark"): ThemeInfo[] {
-  return AVAILABLE_THEMES.filter((t) => t.type === type);
+  return allThemes.filter((t) => t.type === type);
 }
 
-export function getThemeLabel(name: string): string {
-  const theme = getThemeByName(name);
-  return theme?.label ?? name;
+export function getThemeById(id: string): ThemeInfo | undefined {
+  return allThemes.find((t) => t.id === id);
+}
+
+export function getThemeLabel(id: string): string {
+  const theme = getThemeById(id);
+  return theme?.label ?? id;
+}
+
+export async function applyTheme(themeId: string): Promise<void> {
+  const theme = getThemeById(themeId);
+  if (!theme) {
+    console.warn(`Theme "${themeId}" not found`);
+    return;
+  }
+
+  if (theme.builtin) {
+    const loader = builtinCssModules[themeId];
+    if (loader) {
+      const mod = await loader();
+      setTheme(themeId, mod.default);
+    }
+  } else if (theme.css) {
+    setTheme(themeId, theme.css);
+  }
+}
+
+export function registerUserThemes(themes: ThemeInfo[]): void {
+  userThemes = themes;
+  allThemes = [...BUILTIN_THEMES, ...userThemes];
 }

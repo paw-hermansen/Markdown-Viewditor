@@ -49,7 +49,6 @@
 
 <div
   class="viewer-container"
-  data-theme={viewerState.theme}
   bind:this={viewerElement}
   onscroll={handleScroll}
 >

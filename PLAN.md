@@ -338,7 +338,7 @@ $effect(() => {
 - [x] Integrate markdown-it
   - Configure with HTML, linkify, typographer options
   - Add plugins for tables, task lists, footnotes
-- [x] Add Shiki syntax highlighting
+- [x] Add highlight.js syntax highlighting
   - Configure for code blocks
   - Support multiple themes
 - [x] Implement **real-time rendering**
@@ -355,13 +355,12 @@ $effect(() => {
 ```typescript
 // utils/markdown.ts
 import MarkdownIt from "markdown-it";
-import { fromHighlighter } from "markdown-it-shiki";
-import { createHighlighter } from "shiki";
+import hljs from "highlight.js/lib/core";
+import highlightjs from "markdown-it-highlightjs";
 
-const highlighter = await createHighlighter({
-  themes: ["github-dark", "github-light"],
-  langs: ["javascript", "typescript", "python", "rust", "css", "html"],
-});
+// Register languages
+import javascript from "highlight.js/lib/languages/javascript";
+hljs.registerLanguage("javascript", javascript);
 
 export const md = new MarkdownIt({
   html: true,
@@ -549,7 +548,7 @@ export async function saveSettings() {
     "@codemirror/commands": "^6.x",
     "@codemirror/theme-one-dark": "^6.x",
     "markdown-it": "^14.x",
-    "shiki": "^1.x",
+    "highlight.js": "^11.x",
     "gray-matter": "^4.x",
     "katex": "^0.16.x",
     "mermaid": "^10.x"
@@ -810,7 +809,7 @@ markdown-viewditor/
 │       │   ├── viewer.svelte.ts      # Viewer state ✅
 │       │   └── file.svelte.ts        # File operations ✅
 │       ├── utils/
-│       │   ├── markdown.ts           # markdown-it + Shiki integration ✅
+│       │   ├── markdown.ts           # markdown-it + highlight.js integration ✅
 │       │   └── themes.ts             # Theme definitions ✅
 │       └── types/
 │           └── index.ts              # TypeScript types
@@ -873,11 +872,11 @@ markdown-viewditor/
   - Scroll position tracking
 - **Markdown Utility** (Phase 2 & 3 - DONE):
   - markdown-it integration with HTML, linkify, typographer options
-  - Shiki syntax highlighting integration
+  - highlight.js syntax highlighting integration
   - Theme loading support
   - Error handling for parse failures
 - **Themes Utility** (Phase 3 - DONE):
-  - 15 built-in themes (dark and light)
+  - 6 built-in themes (dark and light) + user themes
   - Theme metadata with labels and types
 - **Viewer Toolbar** (Phase 3 - DONE):
   - Theme selector dropdown
@@ -916,8 +915,8 @@ markdown-viewditor/
 - codemirror (v6.0.2)
 - markdown-it (v14) - **integrated** ✅
 - @types/markdown-it - **installed** ✅
-- shiki (v1) - **integrated** ✅
-- markdown-it-shiki - **installed & integrated** ✅
+- highlight.js (v11) - **integrated** ✅
+- markdown-it-highlightjs - **installed & integrated** ✅
 - @tauri-apps/plugin-dialog - **installed** ✅
 - @tauri-apps/plugin-store - **installed** ✅
 
@@ -1027,7 +1026,7 @@ export function showError(message: string) {
 
 #### 🟡 Important (Phase 3-4) - COMPLETED ✅
 
-1. ~~**Add Shiki syntax highlighting**~~ ✅ DONE - Code block highlighting with 15 themes
+1. ~~**Add highlight.js syntax highlighting**~~ ✅ DONE - Code block highlighting with 6 built-in themes + user themes
 2. ~~**Create theme selector**~~ ✅ DONE - Theme picker UI with dropdown
 3. ~~**Implement scroll synchronization**~~ ✅ DONE - Phase 5 feature
 4. ~~**Add file dialog integration**~~ ✅ DONE - Open/save files

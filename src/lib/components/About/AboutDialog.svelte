@@ -74,7 +74,7 @@
               This application was built with the help of
               <button class="link" onclick={() => handleLink('https://opencode.ai')}>OpenCode</button>,
               an AI-powered coding assistant. Development used multiple AI models and
-              specialized skill files for frontend design, documentation, and theme creation.
+              specialized skill files for among others frontend design, documentation, and theme creation.
             </p>
           </section>
 
@@ -102,7 +102,8 @@
                 <tr><td>Windows</td><td><code>%APPDATA%\com.markdown-viewditor.app\themes\</code></td></tr>
               </tbody>
             </table>
-            <p class="muted">The theme type (dark/light) is auto-detected from the CSS content.</p>
+            <p class="muted">Custom theme css files are auto-detected after a restart and included in the apps theme drop-down.</p>
+            <p class="muted">The themes are mainly focused on styling the Viewer. The theme type (dark/light) is auto-detected from the CSS content and is used elsewhere in the app.</p>
           </section>
 
           <section>

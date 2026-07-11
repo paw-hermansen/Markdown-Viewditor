@@ -41,6 +41,7 @@
     "@codemirror/theme-one-dark": "^6.0.0",
     "@codemirror/view": "^6.0.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-store": "^2.4.3",
     "codemirror": "^6.0.2",
     "highlight.js": "^11.11.1",

@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { openUrl } from '@tauri-apps/plugin-opener';
+
   interface Props {
     open: boolean;
     onClose: () => void;
   }
 
   let { open, onClose }: Props = $props();
+  let activeTab = $state<'about' | 'themes' | 'dependencies'>('about');
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') onClose();
@@ -14,15 +17,23 @@
     if (e.target === e.currentTarget) onClose();
   }
 
+  async function handleLink(url: string) {
+    try {
+      await openUrl(url);
+    } catch (err) {
+      console.warn('Failed to open URL:', err);
+    }
+  }
+
   const dependencies = [
-    { name: 'Tauri v2', license: 'MIT / Apache-2.0', url: 'https://tauri.app' },
-    { name: 'Svelte 5', license: 'MIT', url: 'https://svelte.dev' },
-    { name: 'SvelteKit', license: 'MIT', url: 'https://kit.svelte.dev' },
-    { name: 'Vite', license: 'MIT', url: 'https://vitejs.dev' },
-    { name: 'TypeScript', license: 'Apache-2.0', url: 'https://www.typescriptlang.org' },
-    { name: 'CodeMirror 6', license: 'MIT', url: 'https://codemirror.net' },
-    { name: 'markdown-it', license: 'MIT', url: 'https://github.com/markdown-it/markdown-it' },
-    { name: 'highlight.js', license: 'BSD 3-Clause', url: 'https://highlightjs.org' },
+    { name: 'Tauri v2', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://tauri.app' },
+    { name: 'Svelte 5', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://svelte.dev' },
+    { name: 'SvelteKit', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://kit.svelte.dev' },
+    { name: 'Vite', license: 'MIT', copyright: 'Evan You', url: 'https://vitejs.dev' },
+    { name: 'TypeScript', license: 'Apache-2.0', copyright: 'Microsoft Corp.', url: 'https://www.typescriptlang.org' },
+    { name: 'CodeMirror 6', license: 'MIT', copyright: 'Marijn Haverbeke et al.', url: 'https://codemirror.net' },
+    { name: 'markdown-it', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it' },
+    { name: 'highlight.js', license: 'BSD 3-Clause', copyright: 'Ivan Sagalaev', url: 'https://highlightjs.org' },
   ];
 </script>
 
@@ -39,71 +50,114 @@
         </svg>
       </button>
 
-      <div class="content">
+      <div class="header">
         <h1>Markdown Viewditor</h1>
         <p class="version">Version 0.1.0</p>
+      </div>
 
-        <section>
-          <h2>Author</h2>
-          <p>Paw Hermansen<br/><span class="muted">Retired Senior Software Developer</span></p>
-        </section>
+      <div class="tabs" role="tablist">
+        <button class="tab" class:active={activeTab === 'about'} role="tab" aria-selected={activeTab === 'about'} onclick={() => activeTab = 'about'}>About</button>
+        <button class="tab" class:active={activeTab === 'themes'} role="tab" aria-selected={activeTab === 'themes'} onclick={() => activeTab = 'themes'}>Custom Themes</button>
+        <button class="tab" class:active={activeTab === 'dependencies'} role="tab" aria-selected={activeTab === 'dependencies'} onclick={() => activeTab = 'dependencies'}>Dependencies</button>
+      </div>
 
-        <section>
-          <h2>AI-Assisted Development</h2>
-          <p>
-            This application was built with the help of
-            <a href="https://opencode.ai" target="_blank" rel="noopener">OpenCode</a>,
-            an AI-powered coding assistant. Development used multiple AI models and
-            specialized skill files for frontend design, documentation, and theme creation.
-          </p>
-        </section>
+      <div class="tab-content">
+        {#if activeTab === 'about'}
+          <section>
+            <h2>Author</h2>
+            <p>Paw Hermansen<br/><span class="muted">Retired Senior Software Developer</span></p>
+          </section>
 
-        <section>
-          <h2>License</h2>
-          <p>
-            Licensed under the
-            <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a>.
-            You are free to use, modify, and distribute this software.
-          </p>
-        </section>
+          <section>
+            <h2>AI-Assisted Development</h2>
+            <p>
+              This application was built with the help of
+              <button class="link" onclick={() => handleLink('https://opencode.ai')}>OpenCode</button>,
+              an AI-powered coding assistant. Development used multiple AI models and
+              specialized skill files for frontend design, documentation, and theme creation.
+            </p>
+          </section>
 
-        <section>
-          <h2>Dependencies</h2>
-          <table>
-            <thead>
-              <tr><th>Library</th><th>License</th></tr>
-            </thead>
-            <tbody>
-              {#each dependencies as dep}
-                <tr>
-                  <td><a href={dep.url} target="_blank" rel="noopener">{dep.name}</a></td>
-                  <td>{dep.license}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-          <p class="muted details-link">See THIRD-PARTY-LICENSES.md for full license texts.</p>
-        </section>
+          <section>
+            <h2>License</h2>
+            <p>
+              Licensed under the
+              <button class="link" onclick={() => handleLink('https://opensource.org/licenses/MIT')}>MIT License</button>.
+              You are free to use, modify, and distribute this software.
+            </p>
+          </section>
+        {/if}
 
-        <section>
-          <h2>Custom Themes</h2>
-          <p>Place <code>.css</code> files in the themes directory:</p>
-          <table>
-            <thead>
-              <tr><th>Platform</th><th>Path</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Linux</td><td><code>~/.config/com.markdown-viewditor.app/themes/</code></td></tr>
-              <tr><td>macOS</td><td><code>~/Library/Application Support/com.markdown-viewditor.app/themes/</code></td></tr>
-              <tr><td>Windows</td><td><code>%APPDATA%\com.markdown-viewditor.app\themes\</code></td></tr>
-            </tbody>
-          </table>
-          <p class="muted">
-            Themes can override code highlighting (<code>.hljs</code> classes)
-            and app colors (<code>--bg-primary</code>, <code>--text-primary</code>, etc.).
-            See README.md for a complete example.
-          </p>
-        </section>
+        {#if activeTab === 'themes'}
+          <section>
+            <h2>Custom Themes</h2>
+            <p>Place <code>.css</code> files in the themes directory:</p>
+            <table>
+              <thead>
+                <tr><th>Platform</th><th>Path</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Linux</td><td><code>~/.config/com.markdown-viewditor.app/themes/</code></td></tr>
+                <tr><td>macOS</td><td><code>~/Library/Application Support/com.markdown-viewditor.app/themes/</code></td></tr>
+                <tr><td>Windows</td><td><code>%APPDATA%\com.markdown-viewditor.app\themes\</code></td></tr>
+              </tbody>
+            </table>
+            <p class="muted">The theme type (dark/light) is auto-detected from the CSS content.</p>
+          </section>
+
+          <section>
+            <h2>What can be customized</h2>
+            <p>A theme file can override code block syntax highlighting and app UI colors.</p>
+            <p class="muted"><strong>Code highlighting</strong> uses <code>.hljs</code> classes. <strong>App colors</strong> use CSS custom properties like <code>--bg-primary</code>, <code>--text-primary</code>, <code>--accent</code>, etc.</p>
+          </section>
+
+          <section>
+            <h2>Example: One Dark theme</h2>
+            <p>Create <code>one-dark.css</code> in the themes directory:</p>
+            <pre class="code-example"><code>{`/* Code highlighting */
+.hljs { color: #abb2bf; background: #282c34; }
+.hljs-keyword, .hljs-doctag { color: #c678dd; }
+.hljs-string, .hljs-regexp { color: #98c379; }
+.hljs-comment { color: #5c6370; font-style: italic; }
+.hljs-number, .hljs-literal { color: #d19a66; }
+.hljs-function .hljs-title { color: #61afef; }
+.hljs-built_in { color: #e5c07b; }
+.hljs-attr, .hljs-attribute { color: #d19a66; }
+
+/* App UI */
+:root {
+  --bg-primary: #282c34;
+  --bg-secondary: #21252b;
+  --bg-tertiary: #2c313a;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --text-primary: #abb2bf;
+  --text-secondary: #828997;
+  --text-muted: #5c6370;
+  --accent: #c678dd;
+  --border: #3e4451;
+}`}</code></pre>
+          </section>
+        {/if}
+
+        {#if activeTab === 'dependencies'}
+          <section>
+            <h2>Third-Party Libraries</h2>
+            <table class="deps-table">
+              <thead>
+                <tr><th>Library</th><th>License</th><th>Copyright</th></tr>
+              </thead>
+              <tbody>
+                {#each dependencies as dep}
+                  <tr>
+                    <td><button class="link" onclick={() => handleLink(dep.url)}>{dep.name}</button></td>
+                    <td>{dep.license}</td>
+                    <td class="muted">{dep.copyright}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </section>
+        {/if}
       </div>
     </div>
   </div>
@@ -166,8 +220,8 @@
     color: var(--text-primary);
   }
 
-  .content {
-    padding: 32px;
+  .header {
+    padding: 28px 28px 0;
   }
 
   h1 {
@@ -179,11 +233,44 @@
   .version {
     color: var(--text-secondary);
     font-size: 14px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 150ms ease-in-out;
+  }
+
+  .tab:hover {
+    color: var(--text-primary);
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-content {
+    padding: 20px 28px 28px;
   }
 
   section {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   section:last-child {
@@ -210,12 +297,20 @@
     font-size: 13px;
   }
 
-  a {
+  .link {
     color: var(--accent);
     text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    vertical-align: baseline;
   }
 
-  a:hover {
+  .link:hover {
     text-decoration: underline;
   }
 
@@ -246,11 +341,26 @@
     font-size: 12px;
   }
 
-  td a {
-    font-weight: 500;
+  .code-example {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    margin-top: 8px;
   }
 
-  .details-link {
-    margin-top: 8px;
+  .code-example code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  .deps-table td:nth-child(3) {
+    font-size: 12px;
   }
 </style>

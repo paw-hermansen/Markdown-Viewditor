@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::env;
+use tauri::{Emitter, Manager};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -87,12 +89,30 @@ async fn delete_file(path: String) -> Result<(), AppError> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let initial_file = env::args().nth(1);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if let Some(file_path) = args.get(1) {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("open-file", file_path);
+                    let _ = window.set_focus();
+                }
+            }
+        }))
+        .setup(move |app| {
+            if let Some(file_path) = initial_file {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("open-file", &file_path);
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             read_file,

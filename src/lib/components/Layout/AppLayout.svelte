@@ -20,31 +20,90 @@
 
   let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, onAbout, isModified, fileName, children }: Props = $props();
 
+  const EDGE_THRESHOLD = 0.05;
+
   let isDragging = $state(false);
   let splitRatio = $state(settingsState.splitRatio);
+  let nearEdge = $state<'left' | 'right' | 'center' | null>(null);
+
+  let displayRatio = $derived(isDragging ? splitRatio : settingsState.splitRatio);
+
+  function getRatioFromClientX(clientX: number): number {
+    const container = document.querySelector('.content');
+    if (!container) return 0.5;
+    const rect = container.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }
+
+  function handleDragStart(clientX: number) {
+    isDragging = true;
+
+    if (viewMode !== 'split') {
+      splitRatio = getRatioFromClientX(clientX);
+      onViewModeChange('split');
+    }
+  }
+
+  function handleDragMove(clientX: number) {
+    splitRatio = getRatioFromClientX(clientX);
+    if (splitRatio < EDGE_THRESHOLD) {
+      nearEdge = 'left';
+    } else if (splitRatio > 1 - EDGE_THRESHOLD) {
+      nearEdge = 'right';
+    } else if (Math.abs(splitRatio - 0.5) < EDGE_THRESHOLD / 2) {
+      nearEdge = 'center';
+    } else {
+      nearEdge = null;
+    }
+  }
+
+  function handleDragEnd() {
+    isDragging = false;
+    nearEdge = null;
+
+    if (splitRatio < EDGE_THRESHOLD) {
+      onViewModeChange('viewer');
+    } else if (splitRatio > 1 - EDGE_THRESHOLD) {
+      onViewModeChange('editor');
+    } else {
+      if (Math.abs(splitRatio - 0.5) < EDGE_THRESHOLD / 2) {
+        splitRatio = 0.5;
+      }
+      updateSplitRatio(splitRatio);
+    }
+  }
 
   function handleMouseDown(e: MouseEvent) {
-    if (viewMode !== 'split') return;
-    isDragging = true;
     e.preventDefault();
+    handleDragStart(e.clientX);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const container = document.querySelector('.content');
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      splitRatio = Math.max(0.2, Math.min(0.8, x / rect.width));
-    };
-
+    const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX);
     const handleMouseUp = () => {
-      isDragging = false;
-      updateSplitRatio(splitRatio);
+      handleDragEnd();
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+  }
+
+  function handleTouchStart(e: TouchEvent) {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    handleDragStart(e.touches[0].clientX);
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1) handleDragMove(e.touches[0].clientX);
+    };
+    const handleTouchEnd = () => {
+      handleDragEnd();
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
   }
 </script>
 
@@ -100,16 +159,16 @@
     </div>
   </header>
 
-  <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'} style="--split-ratio: {splitRatio}">
+  <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'} style="--split-ratio: {displayRatio}">
     {@render children()}
-    {#if viewMode === 'split'}
-      <button
-        class="resize-handle"
-        class:dragging={isDragging}
-        onmousedown={handleMouseDown}
-        aria-label="Resize editor and viewer panels"
-      ></button>
-    {/if}
+    <button
+      class="resize-handle"
+      class:dragging={isDragging}
+      class:near-edge={nearEdge !== null}
+      onmousedown={handleMouseDown}
+      ontouchstart={handleTouchStart}
+      aria-label="Resize editor and viewer panels"
+    ></button>
   </main>
 
   <StatusBar />
@@ -213,11 +272,13 @@
   .content.split > :global(.editor-pane) {
     flex: 0 0 calc(var(--split-ratio, 0.5) * 100%);
     min-width: 0;
+    order: 1;
   }
 
   .content.split > :global(.viewer-pane) {
     flex: 1;
     min-width: 0;
+    order: 3;
   }
 
   .content.editor-only > :global(.editor-pane),
@@ -241,6 +302,31 @@
   .resize-handle:hover,
   .resize-handle.dragging {
     background: var(--accent);
+  }
+
+  .resize-handle.near-edge {
+    background: var(--accent);
+    opacity: 0.6;
+  }
+
+  .content.split > .resize-handle {
+    order: 2;
+  }
+
+  .content.editor-only > :global(.editor-pane) {
+    order: 1;
+  }
+
+  .content.editor-only > .resize-handle {
+    order: 2;
+  }
+
+  .content.viewer-only > .resize-handle {
+    order: 0;
+  }
+
+  .content.viewer-only > :global(.viewer-pane) {
+    order: 1;
   }
 
   @media (max-width: 640px) {

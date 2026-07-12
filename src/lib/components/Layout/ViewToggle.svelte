@@ -9,8 +9,8 @@
   let { viewMode, onchange }: Props = $props();
 
   const modes: { value: ViewMode; label: string; icon: string }[] = [
-    { value: 'split', label: 'Split', icon: '⊞' },
     { value: 'editor', label: 'Edit', icon: '✎' },
+    { value: 'split', label: 'Split', icon: '⊞' },
     { value: 'viewer', label: 'View', icon: '👁' },
   ];
 </script>

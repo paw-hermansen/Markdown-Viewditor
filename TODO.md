@@ -19,7 +19,11 @@ A mix of TODO items and ideas for future development.
 - [x] **Start-up with Config from Latest Run**: When starting the app it opens in the same position and size as the latest run ended. Also the latest setting of View/Split/Edit is reused.
 - [ ] **Ask before closing**: When closing the app and changes exists then the user should be asked if they want to save the file before leaving the app.
 - [x] **Version**: Add a version number somewhere - could be with the name but could also be in the button info bar.
-- [ ] **Linux auto-open on .md** The Markdown Viewditor does not show-up in the list of apps when selecting "Open With" on a `.md` file.
+- [X] **Linux auto-open on .md** The Markdown Viewditor does not show-up in the list of apps when selecting "Open With" on a `.md` file.
+
+## GUI
+
+- [ ] **Icon**: Create and add an icon for the app.
 
 ## Bug Fixes
 

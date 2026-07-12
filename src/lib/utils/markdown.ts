@@ -1,6 +1,9 @@
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js/lib/core";
 import highlightjs from "markdown-it-highlightjs";
+import { load as yamlLoad } from "js-yaml";
+
+import type { Frontmatter, RenderResult } from "$lib/types";
 
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
@@ -28,6 +31,56 @@ hljs.registerLanguage("sql", sql);
 let md: MarkdownIt | null = null;
 let currentThemeStyle: HTMLStyleElement | null = null;
 let currentThemeId = "";
+
+const FRONTMATTER_DELIMITER = "---";
+
+function createFrontmatterPlugin() {
+  return function frontmatterPlugin(md: MarkdownIt) {
+    md.block.ruler.before(
+      "hr",
+      "front_matter",
+      function frontMatterRule(state, startLine, _endLine, silent) {
+        // Only at the very first line of the document.
+        if (startLine !== 0) return false;
+
+        // Opening line must be exactly "---" (ignoring trailing whitespace).
+        const openStart = state.bMarks[startLine] + state.tShift[startLine];
+        const openEnd = state.eMarks[startLine];
+        if (
+          state.src.slice(openStart, openEnd).trim() !== FRONTMATTER_DELIMITER
+        )
+          return false;
+
+        // Scan for a closing "---" line.
+        let closeLine = -1;
+        for (let i = startLine + 1; i < state.lineMax; i++) {
+          const ls = state.bMarks[i] + state.tShift[i];
+          const le = state.eMarks[i];
+          if (state.src.slice(ls, le).trim() === FRONTMATTER_DELIMITER) {
+            closeLine = i;
+            break;
+          }
+        }
+        if (closeLine === -1) return false;
+
+        if (silent) return true;
+
+        // Extract the YAML body (between the opening and closing delimiters).
+        const bodyStart = state.eMarks[startLine] + 1;
+        const bodyEnd = state.bMarks[closeLine];
+        state.env.frontmatter = state.src
+          .slice(bodyStart, bodyEnd)
+          .replace(/\s+$/, "");
+
+        // Consume the frontmatter lines without emitting any token, so the
+        // body HTML starts at the line after the closing delimiter.
+        state.line = closeLine + 1;
+        return true;
+      },
+      { alt: [] },
+    );
+  };
+}
 
 function createLineNumbersPlugin() {
   return function lineNumbersPlugin(md: MarkdownIt) {
@@ -168,19 +221,46 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       linkify: true,
       typographer: true,
     })
+      .use(createFrontmatterPlugin())
       .use(createLineNumbersPlugin())
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
   }
   return md;
 }
 
-export async function renderMarkdown(content: string): Promise<string> {
+export async function renderMarkdown(content: string): Promise<RenderResult> {
+  if (content === null || content === undefined) {
+    return { html: "<p>Error rendering markdown</p>", frontmatter: null };
+  }
   try {
     const parser = await initMarkdownIt();
-    return parser.render(content);
+    const env: { frontmatter?: string } = {};
+    const tokens = parser.parse(content, env);
+    const html = parser.renderer.render(tokens, parser.options, env);
+
+    let frontmatter: Frontmatter | null = null;
+    if (
+      typeof env.frontmatter === "string" &&
+      env.frontmatter.trim().length > 0
+    ) {
+      try {
+        const parsed = yamlLoad(env.frontmatter);
+        if (
+          parsed !== null &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed)
+        ) {
+          frontmatter = parsed as Frontmatter;
+        }
+      } catch (yamlError) {
+        console.error("YAML frontmatter parse error:", yamlError);
+      }
+    }
+
+    return { html, frontmatter };
   } catch (error) {
     console.error("Markdown parse error:", error);
-    return "<p>Error rendering markdown</p>";
+    return { html: "<p>Error rendering markdown</p>", frontmatter: null };
   }
 }
 

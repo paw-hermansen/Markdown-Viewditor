@@ -31,3 +31,15 @@ export interface ViewerState {
   theme: string;
   scrollTop: number;
 }
+
+export interface Frontmatter {
+  name?: string;
+  description?: string;
+  license?: string;
+  [key: string]: unknown;
+}
+
+export interface RenderResult {
+  html: string;
+  frontmatter: Frontmatter | null;
+}

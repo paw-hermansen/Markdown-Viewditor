@@ -1,6 +1,7 @@
 <script lang="ts">
   import { renderMarkdown } from '$lib/utils/markdown';
   import { viewerState } from '$lib/stores/viewer.svelte';
+  import type { Frontmatter } from '$lib/types';
 
   interface Props {
     content: string;
@@ -10,6 +11,7 @@
   let { content, onViewerReady }: Props = $props();
 
   let html = $state('');
+  let frontmatter: Frontmatter | null = $state(null);
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
   let renderTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -20,7 +22,9 @@
 
     const currentContent = content;
     renderTimeout = setTimeout(async () => {
-      html = await renderMarkdown(currentContent);
+      const result = await renderMarkdown(currentContent);
+      html = result.html;
+      frontmatter = result.frontmatter;
     }, 150);
 
     return () => {
@@ -42,6 +46,31 @@
     }
   }
 
+  // A frontmatter block with both `name` and `description` is treated as a
+  // skill file and rendered as a prominent skill card.
+  const isSkill = $derived.by(() => {
+    if (!frontmatter) return false;
+    return Boolean(frontmatter.name) && Boolean(frontmatter.description);
+  });
+
+  // Extra metadata entries beyond the skill-specific fields.
+  const extraEntries = $derived.by(() => {
+    if (!frontmatter) return [];
+    const skip = new Set(['name', 'description']);
+    return Object.entries(frontmatter).filter(([k]) => !skip.has(k));
+  });
+
+  function formatValue(v: unknown): string {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  }
+
   export function getViewerElement() {
     return viewerElement;
   }
@@ -53,6 +82,35 @@
   onscroll={handleScroll}
 >
   <div class="viewer-content">
+    {#if frontmatter}
+      <div class="frontmatter-card" data-line="1">
+        {#if isSkill}
+          <div class="skill-badge">Skill</div>
+          {#if frontmatter.name}
+            <div class="skill-name">{frontmatter.name}</div>
+          {/if}
+          {#if frontmatter.description}
+            <p class="skill-description">{frontmatter.description}</p>
+          {/if}
+          {#if extraEntries.length > 0}
+            <dl class="skill-meta">
+              {#each extraEntries as [key, value]}
+                <dt>{key}</dt>
+                <dd>{formatValue(value)}</dd>
+              {/each}
+            </dl>
+          {/if}
+        {:else}
+          <div class="frontmatter-title">Frontmatter</div>
+          <dl class="skill-meta">
+            {#each Object.entries(frontmatter) as [key, value]}
+              <dt>{key}</dt>
+              <dd>{formatValue(value)}</dd>
+            {/each}
+          </dl>
+        {/if}
+      </div>
+    {/if}
     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
     {@html html}
   </div>
@@ -72,6 +130,64 @@
     max-width: 800px;
     margin: 0 auto;
     line-height: 1.6;
+  }
+
+  .frontmatter-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    padding: 16px 24px;
+    margin-bottom: 24px;
+  }
+
+  .skill-badge {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bg-primary);
+    background: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  .skill-name {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .skill-description {
+    margin: 0 0 12px 0;
+    color: var(--text-secondary);
+  }
+
+  .frontmatter-title {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .skill-meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 16px;
+    margin: 0;
+  }
+
+  .skill-meta dt {
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .skill-meta dd {
+    margin: 0;
+    word-break: break-word;
   }
 
   .viewer-content :global(h1) {

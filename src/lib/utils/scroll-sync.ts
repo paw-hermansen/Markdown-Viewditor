@@ -25,12 +25,13 @@ export function createScrollSync(
     const elements = viewer.querySelectorAll("[data-line]");
     const viewerRect = viewer.getBoundingClientRect();
     const scrollTop = viewer.scrollTop;
+    const paddingTop = parseFloat(getComputedStyle(viewer).paddingTop) || 0;
 
     elements.forEach((el) => {
       const line = parseInt(el.getAttribute("data-line") || "0", 10);
       if (line > 0) {
         const rect = el.getBoundingClientRect();
-        const top = rect.top - viewerRect.top + scrollTop;
+        const top = rect.top - viewerRect.top + scrollTop - paddingTop;
         positions.push({ line, top });
       }
     });
@@ -58,6 +59,27 @@ export function createScrollSync(
     }
 
     return bestLine;
+  }
+
+  function getEditorLinePositions(): LinePosition[] {
+    const positions: LinePosition[] = [];
+    const scroller = editor.scrollDOM;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const scrollTop = scroller.scrollTop;
+    const paddingTop =
+      parseFloat(getComputedStyle(editor.contentDOM).paddingTop) || 0;
+
+    for (let i = 1; i <= editor.state.doc.lines; i++) {
+      const lineInfo = editor.state.doc.line(i);
+      const coords = editor.coordsAtPos(lineInfo.from);
+      if (coords) {
+        const top = coords.top - scrollerRect.top + scrollTop - paddingTop;
+        positions.push({ line: i, top });
+      }
+    }
+
+    positions.sort((a, b) => a.line - b.line);
+    return positions;
   }
 
   function interpolateViewerPosition(
@@ -168,21 +190,16 @@ export function createScrollSync(
     }
 
     rafId = requestAnimationFrame(() => {
-      const positions = getViewerLinePositions();
+      const viewerPositions = getViewerLinePositions();
       const editorLine = getEditorLineFromViewerPosition(
         viewer.scrollTop,
-        positions,
+        viewerPositions,
       );
 
-      const clampedLine = Math.max(
-        1,
-        Math.min(editorLine, editor.state.doc.lines),
-      );
-      const lineInfo = editor.state.doc.line(clampedLine);
+      const editorPositions = getEditorLinePositions();
+      const editorTop = interpolateViewerPosition(editorLine, editorPositions);
 
-      editor.dispatch({
-        effects: EditorView.scrollIntoView(lineInfo.from, { y: "start" }),
-      });
+      editor.scrollDOM.scrollTop = editorTop;
 
       setTimeout(() => {
         isSyncing = false;

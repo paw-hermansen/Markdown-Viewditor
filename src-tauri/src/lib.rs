@@ -51,6 +51,13 @@ fn greet(name: String) -> String {
 }
 
 #[tauri::command]
+fn force_close_window(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.destroy();
+    }
+}
+
+#[tauri::command]
 async fn read_file(path: String) -> Result<String, AppError> {
     Ok(std::fs::read_to_string(&path)?)
 }
@@ -154,7 +161,8 @@ pub fn run() {
             create_file,
             delete_file,
             get_initial_file,
-            save_window_state
+            save_window_state,
+            force_close_window
         ])
         .setup(|app| {
             // Restore window state before frontend loads

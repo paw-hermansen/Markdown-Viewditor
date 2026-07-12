@@ -13,6 +13,7 @@
   import { ask } from '@tauri-apps/plugin-dialog';
   import { listen } from '@tauri-apps/api/event';
   import { invoke } from '@tauri-apps/api/core';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { onMount, onDestroy } from 'svelte';
 
@@ -25,6 +26,7 @@
   let showAbout = $state(false);
   let showCommandPalette = $state(false);
   let unlistenOpenFile: (() => void) | undefined;
+  let unlistenCloseRequested: (() => void) | undefined;
 
   function handleFormat(format: string) {
     if (editorComponent) {
@@ -192,6 +194,15 @@
       handleOpenFile(event.payload);
     });
 
+    unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async (event) => {
+      event.preventDefault();
+      if (hasUnsavedChanges()) {
+        const confirmed = await ask('You have unsaved changes. Quit anyway?', { title: 'Markdown Viewditor', kind: 'warning' });
+        if (!confirmed) return;
+      }
+      await invoke('force_close_window');
+    });
+
     const initialFile = await invoke<string | null>('get_initial_file');
     if (initialFile) {
       const content = await readFile(initialFile);
@@ -212,6 +223,7 @@
 
   onDestroy(() => {
     unlistenOpenFile?.();
+    unlistenCloseRequested?.();
     if (scrollSync) {
       scrollSync.destroy();
     }

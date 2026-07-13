@@ -15,6 +15,8 @@
     setTheme(settingsState.viewerTheme);
     await applyTheme(settingsState.viewerTheme);
     ready = true;
+
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
   });
 </script>
 

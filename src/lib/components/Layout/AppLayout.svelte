@@ -138,8 +138,6 @@
           <path d="M5 10h2M5 13h6" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <span class="separator"></span>
-      <span class="app-name">Markdown Viewditor</span>
       {#if fileName}
         <span class="separator"></span>
         <span class="file-name">{fileName}{#if isModified} *{/if}</span>
@@ -209,12 +207,6 @@
   .toolbar-right {
     flex: 1;
     justify-content: flex-end;
-  }
-
-  .app-name {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--text-primary);
   }
 
   .file-name {
@@ -329,9 +321,4 @@
     order: 1;
   }
 
-  @media (max-width: 640px) {
-    .toolbar-left .app-name {
-      display: none;
-    }
-  }
 </style>

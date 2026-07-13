@@ -92,11 +92,11 @@ npm run test:watch
 
 You can create your own themes by placing `.css` files in the themes directory:
 
-| Platform | Path                                                               |
-| -------- | ------------------------------------------------------------------ |
-| Linux    | `~/.config/com.markdown-viewditor.app/themes/`                     |
-| macOS    | `~/Library/Application Support/com.markdown-viewditor.app/themes/` |
-| Windows  | `%APPDATA%\com.markdown-viewditor.app\themes\`                     |
+| Platform | Path                                                                                |
+| -------- | ----------------------------------------------------------------------------------- |
+| Linux    | `~/.config/com.github.paw-hermansen.markdown-viewditor/themes/`                     |
+| macOS    | `~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/` |
+| Windows  | `%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\`                     |
 
 The theme type (dark/light) is auto-detected from the CSS content.
 
@@ -181,7 +181,7 @@ A theme CSS file can override both **code block syntax highlighting** and **app 
 
 ### Example: One Dark theme
 
-Create `~/.config/com.markdown-viewditor.app/themes/one-dark.css`:
+Create `~/.config/com.github.paw-hermansen.markdown-viewditor/themes/one-dark.css`:
 
 ```css
 /* Code highlighting */

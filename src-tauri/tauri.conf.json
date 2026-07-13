@@ -2,7 +2,7 @@
   "$schema": "./gen/schemas/desktop-schema.json",
   "productName": "Markdown Viewditor",
   "version": "0.1.0",
-  "identifier": "com.markdown-viewditor.app",
+  "identifier": "com.github.paw-hermansen.markdown-viewditor",
   "build": {
     "devUrl": "http://localhost:5173",
     "frontendDist": "../build",

@@ -27,13 +27,23 @@
 
   const dependencies = [
     { name: 'Tauri v2', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://tauri.app' },
+    { name: '@tauri-apps/api', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://tauri.app' },
+    { name: 'tauri-plugin-fs', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-dialog', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-clipboard-manager', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-store', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-opener', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-single-instance', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-dialog', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-opener', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-store', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'Svelte 5', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://svelte.dev' },
     { name: 'SvelteKit', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://kit.svelte.dev' },
     { name: 'Vite', license: 'MIT', copyright: 'Evan You', url: 'https://vitejs.dev' },
     { name: 'TypeScript', license: 'Apache-2.0', copyright: 'Microsoft Corp.', url: 'https://www.typescriptlang.org' },
     { name: 'CodeMirror 6', license: 'MIT', copyright: 'Marijn Haverbeke et al.', url: 'https://codemirror.net' },
     { name: 'markdown-it', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it' },
-    { name: 'markdown-it-highlightjs', license: 'Unlicense', copyright: 'Val', url: 'https://github.com/val-io/markdown-it-highlightjs' },
+    { name: 'markdown-it-highlightjs', license: 'Unlicense', copyright: 'Valérian Galliat', url: 'https://github.com/valeriangalliat/markdown-it-highlightjs' },
     { name: 'js-yaml', license: 'MIT', copyright: 'Vitaly Puzrin', url: 'https://github.com/nodeca/js-yaml' },
     { name: 'highlight.js', license: 'BSD 3-Clause', copyright: 'Ivan Sagalaev', url: 'https://highlightjs.org' },
     { name: 'serde', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://serde.rs' },
@@ -101,9 +111,9 @@
                 <tr><th>Platform</th><th>Path</th></tr>
               </thead>
               <tbody>
-                <tr><td>Linux</td><td><code>~/.config/com.markdown-viewditor.app/themes/</code></td></tr>
-                <tr><td>macOS</td><td><code>~/Library/Application Support/com.markdown-viewditor.app/themes/</code></td></tr>
-                <tr><td>Windows</td><td><code>%APPDATA%\com.markdown-viewditor.app\themes\</code></td></tr>
+                <tr><td>Linux</td><td><code>~/.config/com.github.paw-hermansen.markdown-viewditor/themes/</code></td></tr>
+                <tr><td>macOS</td><td><code>~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/</code></td></tr>
+                <tr><td>Windows</td><td><code>%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\</code></td></tr>
               </tbody>
             </table>
             <p class="muted">Custom theme css files are auto-detected after a restart and included in the apps theme drop-down.</p>

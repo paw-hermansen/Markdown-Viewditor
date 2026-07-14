@@ -1,6 +1,8 @@
 <script lang="ts">
   import { renderMarkdown } from '$lib/utils/markdown';
   import { viewerState } from '$lib/stores/viewer.svelte';
+  import { fileState } from '$lib/stores/file.svelte';
+  import { openUrl, openPath } from '@tauri-apps/plugin-opener';
   import type { Frontmatter } from '$lib/types';
 
   interface Props {
@@ -46,6 +48,92 @@
     }
   }
 
+  function resolveRelativePath(href: string): string {
+    if (!fileState.currentFile) return href;
+    const currentDir = fileState.currentFile.substring(0, fileState.currentFile.lastIndexOf('/'));
+    const parts = (currentDir + '/' + href).split('/');
+    const resolved: string[] = [];
+    for (const part of parts) {
+      if (part === '..') {
+        resolved.pop();
+      } else if (part !== '.' && part !== '') {
+        resolved.push(part);
+      }
+    }
+    return '/' + resolved.join('/');
+  }
+
+  async function handleLinkClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href');
+    if (!href) return;
+
+    e.preventDefault();
+
+    if (href.startsWith('#')) {
+      const el = viewerElement?.querySelector(href);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
+
+    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('file://')) {
+      try {
+        await openUrl(href);
+      } catch (err) {
+        console.warn('Failed to open URL:', err);
+      }
+      return;
+    }
+
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) {
+      try {
+        await openUrl(href);
+      } catch (err) {
+        console.warn('Failed to open URL:', err);
+      }
+      return;
+    }
+
+    if (href.startsWith('/')) {
+      try {
+        await openPath(href);
+      } catch (err) {
+        console.warn('Failed to open path:', err);
+      }
+      return;
+    }
+
+    if (fileState.currentFile) {
+      const resolved = resolveRelativePath(href);
+      try {
+        await openPath(resolved);
+      } catch (err) {
+        console.warn('Failed to open path:', err);
+      }
+      return;
+    }
+
+    try {
+      await openUrl(href);
+    } catch (err) {
+      console.warn('Failed to open URL:', err);
+    }
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'A') {
+        handleLinkClick(e as unknown as MouseEvent);
+      }
+    }
+  }
+
   // A frontmatter block with both `name` and `description` is treated as a
   // skill file and rendered as a prominent skill card.
   const isSkill = $derived.by(() => {
@@ -76,10 +164,15 @@
   }
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="viewer-container"
+  role="group"
+  aria-label="Markdown preview"
   bind:this={viewerElement}
   onscroll={handleScroll}
+  onclick={handleLinkClick}
+  onkeydown={handleKeydown}
 >
   <div class="viewer-content">
     {#if frontmatter}

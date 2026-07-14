@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::sync::Mutex;
-use tauri::{Emitter, Manager, State};
+use tauri::{Manager, State};
 use thiserror::Error;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -144,14 +144,6 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            if let Some(file_path) = args.get(1) {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.emit("open-file", file_path);
-                    let _ = window.set_focus();
-                }
-            }
-        }))
         .manage(InitialFile(Mutex::new(initial_file)))
         .invoke_handler(tauri::generate_handler![
             greet,

@@ -33,7 +33,6 @@
     { name: 'tauri-plugin-clipboard-manager', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'tauri-plugin-store', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'tauri-plugin-opener', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: 'tauri-plugin-single-instance', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: '@tauri-apps/plugin-dialog', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: '@tauri-apps/plugin-opener', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: '@tauri-apps/plugin-store', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },

@@ -11,7 +11,6 @@
   import { fileState, openFile, saveFile, saveFileAs, closeFile, readFile, getFileName } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
-  import { listen } from '@tauri-apps/api/event';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { createScrollSync } from '$lib/utils/scroll-sync';
@@ -25,7 +24,6 @@
   let viewerElement: HTMLDivElement | undefined;
   let showAbout = $state(false);
   let showCommandPalette = $state(false);
-  let unlistenOpenFile: (() => void) | undefined;
   let unlistenCloseRequested: (() => void) | undefined;
 
   function handleFormat(format: string) {
@@ -51,20 +49,6 @@
     }
 
     const content = await openFile();
-    if (content !== null) {
-      editorState.content = content;
-      editorComponent?.setContent(content);
-      markSaved();
-    }
-  }
-
-  async function handleOpenFile(path: string) {
-    if (hasUnsavedChanges()) {
-      const confirmed = await ask('You have unsaved changes. Open a new file?', { title: 'Markdown Viewditor', kind: 'warning' });
-      if (!confirmed) return;
-    }
-
-    const content = await readFile(path);
     if (content !== null) {
       editorState.content = content;
       editorComponent?.setContent(content);
@@ -190,10 +174,6 @@
   });
 
   onMount(async () => {
-    unlistenOpenFile = await listen<string>('open-file', (event) => {
-      handleOpenFile(event.payload);
-    });
-
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async (event) => {
       event.preventDefault();
       if (hasUnsavedChanges()) {
@@ -222,7 +202,6 @@
   });
 
   onDestroy(() => {
-    unlistenOpenFile?.();
     unlistenCloseRequested?.();
     if (scrollSync) {
       scrollSync.destroy();

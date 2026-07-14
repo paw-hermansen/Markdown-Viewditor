@@ -27,15 +27,15 @@
 
   const dependencies = [
     { name: 'Tauri v2', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://tauri.app' },
-    { name: '@tauri-apps/api', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://tauri.app' },
-    { name: 'tauri-plugin-fs', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: 'tauri-plugin-dialog', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: 'tauri-plugin-clipboard-manager', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: 'tauri-plugin-store', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: 'tauri-plugin-opener', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: '@tauri-apps/plugin-dialog', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: '@tauri-apps/plugin-opener', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
-    { name: '@tauri-apps/plugin-store', license: 'MIT', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/api', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://tauri.app' },
+    { name: 'tauri-plugin-fs', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-dialog', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-clipboard-manager', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-store', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-opener', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-dialog', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-opener', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-store', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'Svelte 5', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://svelte.dev' },
     { name: 'SvelteKit', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://kit.svelte.dev' },
     { name: 'Vite', license: 'MIT', copyright: 'Evan You', url: 'https://vitejs.dev' },
@@ -322,6 +322,7 @@
     font-size: inherit;
     line-height: inherit;
     vertical-align: baseline;
+    text-align: left;
   }
 
   .link:hover {

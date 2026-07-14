@@ -38,7 +38,7 @@ SOFTWARE.
 
 ## @tauri-apps/api
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -70,7 +70,7 @@ SOFTWARE.
 
 ## tauri-plugin-fs
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -102,7 +102,7 @@ SOFTWARE.
 
 ## tauri-plugin-dialog
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -134,7 +134,7 @@ SOFTWARE.
 
 ## tauri-plugin-clipboard-manager
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -166,7 +166,7 @@ SOFTWARE.
 
 ## tauri-plugin-store
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -198,7 +198,7 @@ SOFTWARE.
 
 ## tauri-plugin-opener
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -230,7 +230,7 @@ SOFTWARE.
 
 ## @tauri-apps/plugin-dialog
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -262,7 +262,7 @@ SOFTWARE.
 
 ## @tauri-apps/plugin-opener
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 
@@ -294,7 +294,7 @@ SOFTWARE.
 
 ## @tauri-apps/plugin-store
 
-**License:** MIT
+**License:** MIT / Apache-2.0
 
 **Copyright:** Copyright (c) 2017 - Present Tauri Apps Contributors
 

@@ -13,12 +13,20 @@ export const fileState = $state({
   error: null as string | null,
 });
 
+function getDefaultDir(): string | undefined {
+  const path = fileState.currentFile || settingsState.lastOpenedFile;
+  if (!path) return undefined;
+  const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return lastSlash > 0 ? path.substring(0, lastSlash) : undefined;
+}
+
 export async function openFile(): Promise<string | null> {
   try {
     fileState.isLoading = true;
     fileState.error = null;
 
     const selected = await open({
+      defaultPath: getDefaultDir(),
       multiple: false,
       filters: [
         { name: "Markdown", extensions: ["md", "markdown", "txt"] },
@@ -71,6 +79,7 @@ export async function saveFileAs(content: string): Promise<string | null> {
     fileState.error = null;
 
     const path = await save({
+      defaultPath: getDefaultDir(),
       filters: [
         { name: "Markdown", extensions: ["md", "markdown"] },
         { name: "Text", extensions: ["txt"] },

@@ -6,11 +6,13 @@
 A clean, simple, and modern markdown editor and viewer with **live preview** built with Tauri v2 + Svelte 5.
 
 <!-- Screenshot/GIF placeholder -->
+
 ![Screendump](screendump.png)
 
 ## Features
 
 - **Live Preview** — See your markdown rendered in real-time as you type
+- **GitHub-Flavored Markdown** — Tables, task lists, strikethrough, footnotes, and more
 - **Three View Modes** — Split, Editor only, Preview only
 - **Scroll Sync** — Editor and preview stay synchronized
 - **Multiple Themes** — 6 built-in themes + custom CSS
@@ -33,11 +35,11 @@ Mobile (Android, iOS) is technically supported by Tauri v2 but untested. A markd
 
 Place `.css` files in the themes directory:
 
-| Platform | Path |
-|----------|------|
-| Linux | `~/.config/com.github.paw-hermansen.markdown-viewditor/themes/` |
-| macOS | `~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/` |
-| Windows | `%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\` |
+| Platform | Path                                                                                |
+| -------- | ----------------------------------------------------------------------------------- |
+| Linux    | `~/.config/com.github.paw-hermansen.markdown-viewditor/themes/`                     |
+| macOS    | `~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/` |
+| Windows  | `%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\`                     |
 
 Theme type (dark/light) is auto-detected from the CSS content.
 

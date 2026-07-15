@@ -391,4 +391,33 @@
   .viewer-content :global(em) {
     font-style: italic;
   }
+
+  .viewer-content :global(.task-list-item) {
+    list-style: none;
+    margin-left: -1.5em;
+  }
+
+  .viewer-content :global(.task-list-item input[type="checkbox"]) {
+    margin-right: 0.5em;
+  }
+
+  .viewer-content :global(.footnotes-sep) {
+    border-top: 1px solid var(--border);
+    margin-top: 2em;
+  }
+
+  .viewer-content :global(.footnotes) {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+  }
+
+  .viewer-content :global(.footnotes ol) {
+    padding-left: 1.5em;
+  }
+
+  .viewer-content :global(.footnotes .footnote-backref) {
+    color: var(--accent);
+    text-decoration: none;
+    margin-left: 0.25em;
+  }
 </style>

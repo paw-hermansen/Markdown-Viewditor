@@ -133,4 +133,33 @@ describe("renderMarkdown", () => {
     const result = await renderMarkdown("# Title\n\n---\nname: late\n---\n");
     expect(result.frontmatter).toBeNull();
   });
+
+  it("should render unchecked task list items", async () => {
+    const result = await renderMarkdown("- [ ] todo item");
+    expect(result.html).toContain("<input");
+    expect(result.html).toContain('type="checkbox"');
+    expect(result.html).not.toContain("checked");
+  });
+
+  it("should render checked task list items", async () => {
+    const result = await renderMarkdown("- [x] done item");
+    expect(result.html).toContain("<input");
+    expect(result.html).toContain('type="checkbox"');
+    expect(result.html).toContain("checked");
+  });
+
+  it("should render footnotes", async () => {
+    const result = await renderMarkdown(
+      "Here is a footnote[^1].\n\n[^1]: This is the note.",
+    );
+    expect(result.html).toContain("<sup");
+    expect(result.html).toContain("footnotes");
+    expect(result.html).toContain("This is the note.");
+  });
+
+  it("should render footnote backref links", async () => {
+    const result = await renderMarkdown("Text[^1].\n\n[^1]: Note content.");
+    expect(result.html).toContain("footnote-backref");
+    expect(result.html).toContain('href="#fnref1"');
+  });
 });

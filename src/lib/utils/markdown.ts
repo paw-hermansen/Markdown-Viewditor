@@ -1,6 +1,8 @@
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js/lib/core";
 import highlightjs from "markdown-it-highlightjs";
+import taskLists from "markdown-it-task-lists";
+import footnote from "markdown-it-footnote";
 import { load as yamlLoad } from "js-yaml";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
@@ -265,6 +267,8 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       .use(createFrontmatterPlugin())
       .use(createLineNumbersPlugin())
       .use(createLocalImagePlugin())
+      .use(taskLists)
+      .use(footnote)
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
   }
   return md;

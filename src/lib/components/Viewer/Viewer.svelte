@@ -24,7 +24,7 @@
 
     const currentContent = content;
     renderTimeout = setTimeout(async () => {
-      const result = await renderMarkdown(currentContent);
+      const result = await renderMarkdown(currentContent, fileState.currentFile);
       html = result.html;
       frontmatter = result.frontmatter;
     }, 150);

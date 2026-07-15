@@ -2,6 +2,7 @@ import MarkdownIt from "markdown-it";
 import hljs from "highlight.js/lib/core";
 import highlightjs from "markdown-it-highlightjs";
 import { load as yamlLoad } from "js-yaml";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 import type { Frontmatter, RenderResult } from "$lib/types";
 
@@ -214,6 +215,46 @@ function createLineNumbersPlugin() {
   };
 }
 
+function resolveRelativePath(basePath: string, href: string): string {
+  const currentDir = basePath.substring(0, basePath.lastIndexOf("/"));
+  const parts = (currentDir + "/" + href).split("/");
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === "..") {
+      resolved.pop();
+    } else if (part !== "." && part !== "") {
+      resolved.push(part);
+    }
+  }
+  return "/" + resolved.join("/");
+}
+
+function createLocalImagePlugin() {
+  return function localImagePlugin(md: MarkdownIt) {
+    const defaultImageRenderer =
+      md.renderer.rules.image ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.image = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      const srcIndex = token.attrIndex("src");
+
+      if (srcIndex >= 0 && env.filePath) {
+        const src = token.attrs![srcIndex][1];
+
+        if (!src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
+          const absolutePath = resolveRelativePath(env.filePath, src);
+          token.attrs![srcIndex][1] = convertFileSrc(absolutePath);
+        }
+      }
+
+      return defaultImageRenderer(tokens, idx, options, env, self);
+    };
+  };
+}
+
 async function initMarkdownIt(): Promise<MarkdownIt> {
   if (!md) {
     md = new MarkdownIt({
@@ -223,18 +264,25 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
     })
       .use(createFrontmatterPlugin())
       .use(createLineNumbersPlugin())
+      .use(createLocalImagePlugin())
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
   }
   return md;
 }
 
-export async function renderMarkdown(content: string): Promise<RenderResult> {
+export async function renderMarkdown(
+  content: string,
+  filePath?: string | null,
+): Promise<RenderResult> {
   if (content === null || content === undefined) {
     return { html: "<p>Error rendering markdown</p>", frontmatter: null };
   }
   try {
     const parser = await initMarkdownIt();
-    const env: { frontmatter?: string } = {};
+    const env: { frontmatter?: string; filePath?: string } = {};
+    if (filePath) {
+      env.filePath = filePath;
+    }
     const tokens = parser.parse(content, env);
     const html = parser.renderer.render(tokens, parser.options, env);
 

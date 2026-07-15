@@ -118,19 +118,46 @@
               </tbody>
             </table>
             <p class="muted">Custom theme css files are auto-detected after a restart and included in the apps theme drop-down.</p>
-            <p class="muted">The themes are mainly focused on styling the Viewer. The theme type (dark/light) is auto-detected from the CSS content and is used elsewhere in the app.</p>
+            <p class="muted">The theme type (dark/light) is auto-detected from the CSS content and is used elsewhere in the app.</p>
           </section>
 
           <section>
             <h2>What can be customized</h2>
-            <p>A theme file can override code block syntax highlighting and app UI colors.</p>
-            <p class="muted"><strong>Code highlighting</strong> uses <code>.hljs</code> classes. <strong>App colors</strong> use CSS custom properties like <code>--bg-primary</code>, <code>--text-primary</code>, <code>--accent</code>, etc.</p>
+            <p>A theme file can override viewer element styles and code block syntax highlighting.</p>
+            <p class="muted"><strong>Viewer elements</strong> are rendered inside <code>body .viewer-content</code>. Use that selector to override individual element styles. <strong>Code highlighting</strong> uses <code>.hljs</code> classes — these apply uniformly to all languages.</p>
+          </section>
+
+          <section>
+            <h2>Markdown Element Reference</h2>
+            <p>Markdown syntax is converted to HTML elements inside the viewer:</p>
+            <table class="ref-table">
+              <thead>
+                <tr><th>Markdown</th><th>HTML Element</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code># text</code></td><td><code>h1</code> &ndash; <code>h6</code></td></tr>
+                <tr><td><code>paragraph</code></td><td><code>p</code></td></tr>
+                <tr><td><code>**bold**</code></td><td><code>strong</code></td></tr>
+                <tr><td><code>*italic*</code></td><td><code>em</code></td></tr>
+                <tr><td><code>`code`</code></td><td><code>code</code></td></tr>
+                <tr><td><code>```code```</code></td><td><code>pre &gt; code</code></td></tr>
+                <tr><td><code>&gt; quote</code></td><td><code>blockquote</code></td></tr>
+                <tr><td><code>- item</code></td><td><code>ul &gt; li</code></td></tr>
+                <tr><td><code>1. item</code></td><td><code>ol &gt; li</code></td></tr>
+                <tr><td><code>- [ ] task</code></td><td><code>li.task-list-item</code></td></tr>
+                <tr><td><code>| col |</code></td><td><code>table</code>, <code>th</code>, <code>td</code></td></tr>
+                <tr><td><code>[text](url)</code></td><td><code>a</code></td></tr>
+                <tr><td><code>![alt](src)</code></td><td><code>img</code></td></tr>
+                <tr><td><code>---</code></td><td><code>hr</code></td></tr>
+                <tr><td><code>[^1]</code></td><td><code>.footnotes</code></td></tr>
+              </tbody>
+            </table>
           </section>
 
           <section>
             <h2>Example: One Dark theme</h2>
             <p>Create <code>one-dark.css</code> in the themes directory:</p>
-            <pre class="code-example"><code>{`/* Code highlighting */
+            <pre class="code-example"><code>{`/* Code highlighting — applies to all languages */
 .hljs { color: #abb2bf; background: #282c34; }
 .hljs-keyword, .hljs-doctag { color: #c678dd; }
 .hljs-string, .hljs-regexp { color: #98c379; }
@@ -140,17 +167,15 @@
 .hljs-built_in { color: #e5c07b; }
 .hljs-attr, .hljs-attribute { color: #d19a66; }
 
-/* App UI */
-:root {
-  --bg-primary: #282c34;
-  --bg-secondary: #21252b;
-  --bg-tertiary: #2c313a;
-  --bg-hover: rgba(255, 255, 255, 0.05);
-  --text-primary: #abb2bf;
-  --text-secondary: #828997;
-  --text-muted: #5c6370;
-  --accent: #c678dd;
-  --border: #3e4451;
+/* Viewer element overrides — use #viewer-content prefix
+   to override built-in styles */
+#viewer-content th {
+  background: #3a1f6e;
+  color: #e0d0ff;
+  font-weight: 700;
+}
+#viewer-content blockquote {
+  border-left-color: #c678dd;
 }`}</code></pre>
           </section>
         {/if}

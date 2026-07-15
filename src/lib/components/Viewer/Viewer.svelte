@@ -174,7 +174,7 @@
   onclick={handleLinkClick}
   onkeydown={handleKeydown}
 >
-  <div class="viewer-content">
+  <div class="viewer-content" id="viewer-content">
     {#if frontmatter}
       <div class="frontmatter-card" data-line="1">
         {#if isSkill}

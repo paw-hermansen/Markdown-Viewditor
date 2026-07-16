@@ -50,8 +50,9 @@
 
   function resolveRelativePath(href: string): string {
     if (!fileState.currentFile) return href;
-    const currentDir = fileState.currentFile.substring(0, fileState.currentFile.lastIndexOf('/'));
-    const parts = (currentDir + '/' + href).split('/');
+    const normalized = fileState.currentFile.replace(/\\/g, '/');
+    const currentDir = normalized.substring(0, normalized.lastIndexOf('/'));
+    const parts = (currentDir + '/' + href.replace(/\\/g, '/')).split('/');
     const resolved: string[] = [];
     for (const part of parts) {
       if (part === '..') {

@@ -149,5 +149,6 @@ export function getRecentFiles(): string[] {
 }
 
 export function getFileName(path: string): string {
-  return path.split("/").pop() || path.split("\\").pop() || path;
+  const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
 }

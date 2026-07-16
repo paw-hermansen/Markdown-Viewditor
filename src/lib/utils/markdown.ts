@@ -218,8 +218,9 @@ function createLineNumbersPlugin() {
 }
 
 function resolveRelativePath(basePath: string, href: string): string {
-  const currentDir = basePath.substring(0, basePath.lastIndexOf("/"));
-  const parts = (currentDir + "/" + href).split("/");
+  const normalized = basePath.replace(/\\/g, "/");
+  const currentDir = normalized.substring(0, normalized.lastIndexOf("/"));
+  const parts = (currentDir + "/" + href.replace(/\\/g, "/")).split("/");
   const resolved: string[] = [];
   for (const part of parts) {
     if (part === "..") {

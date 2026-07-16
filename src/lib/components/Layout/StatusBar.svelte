@@ -1,8 +1,8 @@
 <script lang="ts">
   import { editorState } from '$lib/stores/editor.svelte';
-  import { fileState } from '$lib/stores/file.svelte';
+  import { fileState, getFileName } from '$lib/stores/file.svelte';
 
-  let fileName = $derived(fileState.currentFile ? fileState.currentFile.split('/').pop() : 'Untitled');
+  let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
 </script>
 
 <footer class="statusbar">

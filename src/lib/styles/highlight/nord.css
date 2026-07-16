@@ -273,3 +273,58 @@ Aurora
 .language-yaml .hljs-meta {
   color: #D08770
 }
+
+/* Full viewer theme */
+#viewer-content {
+  background: #2E3440;
+  color: #D8DEE9;
+}
+#viewer-content h1 {
+  color: #ECEFF4;
+  border-bottom-color: #3B4252;
+}
+#viewer-content h2,
+#viewer-content h3,
+#viewer-content h4,
+#viewer-content h5,
+#viewer-content h6 {
+  color: #ECEFF4;
+}
+#viewer-content a {
+  color: #88C0D0;
+}
+#viewer-content blockquote {
+  border-left-color: #81A1C1;
+  color: #4C566A;
+}
+#viewer-content code {
+  background: #3B4252;
+}
+#viewer-content pre {
+  background: #2E3440;
+}
+#viewer-content pre code {
+  background: transparent;
+}
+#viewer-content th {
+  background: #3B4252;
+  color: #4C566A;
+}
+#viewer-content th,
+#viewer-content td {
+  border-color: #3B4252;
+}
+#viewer-content hr {
+  border-top-color: #3B4252;
+}
+#viewer-content .frontmatter-card {
+  background: #3B4252;
+  border-color: #434C5E;
+}
+#viewer-content .skill-badge {
+  background: #88C0D0;
+  color: #2E3440;
+}
+#viewer-content img {
+  border-color: #3B4252;
+}

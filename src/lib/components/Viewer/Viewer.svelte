@@ -315,7 +315,6 @@
   }
 
   .viewer-content :global(pre) {
-    background: var(--bg-tertiary);
     padding: 16px;
     border-radius: 8px;
     overflow-x: auto;

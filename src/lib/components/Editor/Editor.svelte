@@ -2,7 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
   import { markdown } from '@codemirror/lang-markdown';
-  import { oneDark } from '@codemirror/theme-one-dark';
+  import { oneDarkTheme, oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
+  import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+  import { tags } from '@lezer/highlight';
   import { EditorState, Compartment } from '@codemirror/state';
   import { keymap, lineNumbers, type ViewUpdate } from '@codemirror/view';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
@@ -35,7 +37,7 @@
       borderLeftColor: 'var(--accent)'
     },
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-      backgroundColor: 'rgba(233, 69, 96, 0.2)'
+      backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)'
     },
     '.cm-activeLine': {
       backgroundColor: 'var(--bg-hover)'
@@ -54,8 +56,32 @@
     }
   });
 
+  const lightHighlightStyle = HighlightStyle.define([
+    { tag: tags.keyword, color: '#a626a4' },
+    { tag: tags.operator, color: '#383a42' },
+    { tag: tags.special(tags.variableName), color: '#0184bb' },
+    { tag: tags.typeName, color: '#c18401' },
+    { tag: tags.atom, color: '#0184bb' },
+    { tag: tags.number, color: '#986801' },
+    { tag: tags.definition(tags.variableName), color: '#4078f2' },
+    { tag: tags.string, color: '#50a14f' },
+    { tag: tags.special(tags.string), color: '#50a14f' },
+    { tag: tags.comment, color: '#a0a1a7', fontStyle: 'italic' },
+    { tag: tags.variableName, color: '#383a42' },
+    { tag: tags.tagName, color: '#e45649' },
+    { tag: tags.bracket, color: '#383a42' },
+    { tag: tags.meta, color: '#a626a4' },
+    { tag: tags.attributeName, color: '#986801' },
+    { tag: tags.attributeValue, color: '#50a14f' },
+    { tag: tags.heading, color: '#4078f2', fontWeight: 'bold' },
+    { tag: tags.link, color: '#4078f2', textDecoration: 'underline' },
+    { tag: tags.invalid, color: '#e45649' },
+  ]);
+
   function getThemeExtension() {
-    return getThemeType() === 'dark' ? oneDark : lightTheme;
+    return getThemeType() === 'dark'
+      ? [oneDarkTheme, syntaxHighlighting(oneDarkHighlightStyle)]
+      : [lightTheme, syntaxHighlighting(lightHighlightStyle)];
   }
 
   function createEditor() {
@@ -126,8 +152,8 @@
   }
 
   $effect(() => {
-    if (!editorView) return;
     void viewerState.theme;
+    if (!editorView) return;
     editorView.dispatch({
       effects: themeCompartment.reconfigure(getThemeExtension())
     });

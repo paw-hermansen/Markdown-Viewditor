@@ -19,7 +19,9 @@ export const BUILTIN_THEMES: ThemeInfo[] = [
     builtin: true,
   },
   { id: "monokai", label: "Monokai", type: "dark", builtin: true },
+  { id: "monokai-light", label: "Monokai Light", type: "light", builtin: true },
   { id: "nord", label: "Nord", type: "dark", builtin: true },
+  { id: "nord-light", label: "Nord Light", type: "light", builtin: true },
 ];
 
 let userThemes: ThemeInfo[] = [];
@@ -32,7 +34,9 @@ const builtinCssModules: Record<string, () => Promise<{ default: string }>> = {
   "atom-one-light": () =>
     import("$lib/styles/highlight/atom-one-light.css?raw"),
   monokai: () => import("$lib/styles/highlight/monokai.css?raw"),
+  "monokai-light": () => import("$lib/styles/highlight/monokai-light.css?raw"),
   nord: () => import("$lib/styles/highlight/nord.css?raw"),
+  "nord-light": () => import("$lib/styles/highlight/nord-light.css?raw"),
 };
 
 export function getAllThemes(): ThemeInfo[] {

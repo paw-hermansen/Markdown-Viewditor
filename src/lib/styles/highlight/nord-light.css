@@ -1,0 +1,199 @@
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+code.hljs {
+  padding: 3px 5px
+}
+/*
+Nord Light - adapted from Nord by Arctic Ice Studio
+Light variant using Snow Storm backgrounds with darkened Frost/Aurora colors
+
+Original Nord palette:
+  Polar Night:  #2E3440 #3B4252 #434C5E #4C566A
+  Snow Storm:   #D8DEE9 #E5E9F0 #ECEFF4
+  Frost:        #8FBCBB #88C0D0 #81A1C1 #5E81AC
+  Aurora:       #BF616A #D08770 #EBCB8B #A3BE8C #B48EAD
+*/
+.hljs {
+  background: #ECEFF4
+}
+.hljs,
+.hljs-subst {
+  color: #2E3440
+}
+.hljs-selector-tag {
+  color: #5E81AC
+}
+.hljs-selector-id {
+  color: #5e8ea0;
+  font-weight: bold
+}
+.hljs-selector-class {
+  color: #5e8ea0
+}
+.hljs-selector-attr {
+  color: #5e8ea0
+}
+.hljs-property {
+  color: #5e8ea0
+}
+.hljs-selector-pseudo {
+  color: #5e8ea0
+}
+.hljs-addition {
+  background-color: rgba(163, 190, 140, 0.3)
+}
+.hljs-deletion {
+  background-color: rgba(191, 97, 106, 0.3)
+}
+.hljs-built_in,
+.hljs-type {
+  color: #5e8ea0
+}
+.hljs-class {
+  color: #5e8ea0
+}
+.hljs-function {
+  color: #5e8ea0
+}
+.hljs-title.hljs-function,
+.hljs-function > .hljs-title {
+  color: #5e8ea0
+}
+.hljs-keyword,
+.hljs-literal,
+.hljs-symbol {
+  color: #5E81AC
+}
+.hljs-number {
+  color: #8b6cad
+}
+.hljs-regexp {
+  color: #b08830
+}
+.hljs-string {
+  color: #77995c
+}
+.hljs-title {
+  color: #5e8ea0
+}
+.hljs-params {
+  color: #2E3440
+}
+.hljs-bullet {
+  color: #5E81AC
+}
+.hljs-code {
+  color: #5e8ea0
+}
+.hljs-emphasis {
+  font-style: italic
+}
+.hljs-formula {
+  color: #5e8ea0
+}
+.hljs-strong {
+  font-weight: bold
+}
+.hljs-link:hover {
+  text-decoration: underline
+}
+.hljs-quote {
+  color: #6d7a8c;
+  font-style: italic
+}
+.hljs-comment {
+  color: #6d7a8c;
+  font-style: italic
+}
+.hljs-doctag {
+  color: #5e8ea0
+}
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: #5E81AC
+}
+.hljs-meta .hljs-string {
+  color: #77995c
+}
+.hljs-attr {
+  color: #5e8ea0
+}
+.hljs-attribute {
+  color: #2E3440
+}
+.hljs-name {
+  color: #5E81AC
+}
+.hljs-section {
+  color: #5e8ea0
+}
+.hljs-tag {
+  color: #5E81AC
+}
+.hljs-variable {
+  color: #2E3440
+}
+.hljs-template-variable {
+  color: #2E3440
+}
+.hljs-template-tag {
+  color: #5E81AC
+}
+
+/* Full viewer theme */
+#viewer-content {
+  background: #ECEFF4;
+  color: #2E3440;
+}
+#viewer-content h1 {
+  color: #2E3440;
+  border-bottom-color: #D8DEE9;
+}
+#viewer-content h2,
+#viewer-content h3,
+#viewer-content h4,
+#viewer-content h5,
+#viewer-content h6 {
+  color: #2E3440;
+}
+#viewer-content a {
+  color: #5E81AC;
+}
+#viewer-content blockquote {
+  border-left-color: #81A1C1;
+  color: #4C566A;
+}
+#viewer-content code {
+  background: #E5E9F0;
+}
+#viewer-content pre {
+  background: #E5E9F0;
+}
+#viewer-content pre code {
+  background: transparent;
+}
+#viewer-content th {
+  background: #E5E9F0;
+  color: #4C566A;
+}
+#viewer-content th,
+#viewer-content td {
+  border-color: #D8DEE9;
+}
+#viewer-content hr {
+  border-top-color: #D8DEE9;
+}
+#viewer-content .frontmatter-card {
+  background: #E5E9F0;
+  border-color: #D8DEE9;
+}
+#viewer-content .skill-badge {
+  background: #5E81AC;
+  color: #ECEFF4;
+}
+#viewer-content img {
+  border-color: #D8DEE9;
+}

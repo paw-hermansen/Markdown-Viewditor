@@ -88,3 +88,58 @@ hue-6-2: #e6c07b
 .hljs-link {
   text-decoration: underline
 }
+
+/* Full viewer theme */
+#viewer-content {
+  background: #282c34;
+  color: #abb2bf;
+}
+#viewer-content h1 {
+  color: #e5c07b;
+  border-bottom-color: #3e4451;
+}
+#viewer-content h2,
+#viewer-content h3,
+#viewer-content h4,
+#viewer-content h5,
+#viewer-content h6 {
+  color: #e5c07b;
+}
+#viewer-content a {
+  color: #61afef;
+}
+#viewer-content blockquote {
+  border-left-color: #c678dd;
+  color: #5c6370;
+}
+#viewer-content code {
+  background: #2c313a;
+}
+#viewer-content pre {
+  background: #282c34;
+}
+#viewer-content pre code {
+  background: transparent;
+}
+#viewer-content th {
+  background: #2c313a;
+  color: #5c6370;
+}
+#viewer-content th,
+#viewer-content td {
+  border-color: #3e4451;
+}
+#viewer-content hr {
+  border-top-color: #3e4451;
+}
+#viewer-content .frontmatter-card {
+  background: #2c313a;
+  border-color: #3e4451;
+}
+#viewer-content .skill-badge {
+  background: #61afef;
+  color: #282c34;
+}
+#viewer-content img {
+  border-color: #3e4451;
+}

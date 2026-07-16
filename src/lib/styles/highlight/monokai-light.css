@@ -7,11 +7,12 @@ code.hljs {
   padding: 3px 5px
 }
 /*
-Monokai style - ported by Luigi Maselli - http://grigio.org
+Monokai Light - adapted from Monokai by Luigi Maselli
+Light variant preserving Monokai's vibrant character
 */
 .hljs {
-  background: #272822;
-  color: #ddd
+  background: #fafafa;
+  color: #272822
 }
 .hljs-tag,
 .hljs-keyword,
@@ -20,17 +21,17 @@ Monokai style - ported by Luigi Maselli - http://grigio.org
 .hljs-strong,
 .hljs-number,
 .hljs-name {
-  color: #f92672
+  color: #e02070
 }
 .hljs-code {
-  color: #66d9ef
+  color: #0090a0
 }
 .hljs-attribute,
 .hljs-attr,
 .hljs-symbol,
 .hljs-regexp,
 .hljs-link {
-  color: #bf79db
+  color: #9b30ff
 }
 .hljs-string,
 .hljs-bullet,
@@ -46,17 +47,18 @@ Monokai style - ported by Luigi Maselli - http://grigio.org
 .hljs-variable,
 .hljs-template-tag,
 .hljs-template-variable {
-  color: #a6e22e
+  color: #2e8b2e
 }
 .hljs-title.class_,
 .hljs-class .hljs-title {
-  color: white
+  color: #1f2328
 }
 .hljs-comment,
 .hljs-quote,
 .hljs-deletion,
 .hljs-meta {
-  color: #75715e
+  color: #999988;
+  font-style: italic
 }
 .hljs-keyword,
 .hljs-selector-tag,
@@ -71,55 +73,55 @@ Monokai style - ported by Luigi Maselli - http://grigio.org
 
 /* Full viewer theme */
 #viewer-content {
-  background: #272822;
-  color: #ddd;
+  background: #fafafa;
+  color: #272822;
 }
 #viewer-content h1 {
-  color: #f8f8f2;
-  border-bottom-color: #3e3d32;
+  color: #1f2328;
+  border-bottom-color: #e0e0e0;
 }
 #viewer-content h2,
 #viewer-content h3,
 #viewer-content h4,
 #viewer-content h5,
 #viewer-content h6 {
-  color: #f8f8f2;
+  color: #1f2328;
 }
 #viewer-content a {
-  color: #a6e22e;
+  color: #0090a0;
 }
 #viewer-content blockquote {
-  border-left-color: #f92672;
-  color: #75715e;
+  border-left-color: #e02070;
+  color: #666655;
 }
 #viewer-content code {
-  background: #2d2e27;
+  background: #f0f0ea;
 }
 #viewer-content pre {
-  background: #272822;
+  background: #f0f0ea;
 }
 #viewer-content pre code {
   background: transparent;
 }
 #viewer-content th {
-  background: #2d2e27;
-  color: #75715e;
+  background: #f0f0ea;
+  color: #666655;
 }
 #viewer-content th,
 #viewer-content td {
-  border-color: #3e3d32;
+  border-color: #e0e0e0;
 }
 #viewer-content hr {
-  border-top-color: #3e3d32;
+  border-top-color: #e0e0e0;
 }
 #viewer-content .frontmatter-card {
-  background: #2d2e27;
-  border-color: #3e3d32;
+  background: #f0f0ea;
+  border-color: #e0e0e0;
 }
 #viewer-content .skill-badge {
-  background: #a6e22e;
-  color: #272822;
+  background: #e02070;
+  color: #ffffff;
 }
 #viewer-content img {
-  border-color: #3e3d32;
+  border-color: #e0e0e0;
 }

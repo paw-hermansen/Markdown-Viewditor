@@ -123,8 +123,8 @@
 
           <section>
             <h2>What can be customized</h2>
-            <p>A theme file can override viewer element styles and code block syntax highlighting.</p>
-            <p class="muted"><strong>Viewer elements</strong> are rendered inside <code>body .viewer-content</code>. Use that selector to override individual element styles. <strong>Code highlighting</strong> uses <code>.hljs</code> classes — these apply uniformly to all languages.</p>
+            <p>A theme file is a complete stylesheet that controls both code highlighting and all viewer content.</p>
+            <p class="muted"><strong>Code highlighting</strong> uses <code>.hljs</code> classes. <strong>Viewer elements</strong> (headings, links, tables, blockquotes, etc.) are rendered inside <code>#viewer-content</code> — use that id selector for high-specificity overrides. The theme type (dark/light) also controls the app chrome automatically.</p>
           </section>
 
           <section>
@@ -155,8 +155,8 @@
           </section>
 
           <section>
-            <h2>Example: One Dark theme</h2>
-            <p>Create <code>one-dark.css</code> in the themes directory:</p>
+            <h2>Example: Custom Dark Theme</h2>
+            <p>Create <code>my-theme.css</code> in the themes directory:</p>
             <pre class="code-example"><code>{`/* Code highlighting — applies to all languages */
 .hljs { color: #abb2bf; background: #282c34; }
 .hljs-keyword, .hljs-doctag { color: #c678dd; }
@@ -167,16 +167,18 @@
 .hljs-built_in { color: #e5c07b; }
 .hljs-attr, .hljs-attribute { color: #d19a66; }
 
-/* Viewer element overrides — use #viewer-content prefix
-   to override built-in styles */
-#viewer-content th {
-  background: #3a1f6e;
-  color: #e0d0ff;
-  font-weight: 700;
-}
-#viewer-content blockquote {
-  border-left-color: #c678dd;
-}`}</code></pre>
+/* Full viewer theme — use #viewer-content for
+   all markdown elements */
+#viewer-content { background: #282c34; color: #abb2bf; }
+#viewer-content h1 { color: #e5c07b; border-bottom-color: #3e4451; }
+#viewer-content h2, #viewer-content h3 { color: #e5c07b; }
+#viewer-content a { color: #61afef; }
+#viewer-content blockquote { border-left-color: #c678dd; color: #5c6370; }
+#viewer-content code { background: #2c313a; }
+#viewer-content pre { background: #282c34; }
+#viewer-content th { background: #2c313a; color: #5c6370; }
+#viewer-content th, #viewer-content td { border-color: #3e4451; }
+#viewer-content hr { border-top-color: #3e4451; }`}</code></pre>
           </section>
         {/if}
 

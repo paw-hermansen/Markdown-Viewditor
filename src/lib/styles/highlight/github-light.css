@@ -116,3 +116,58 @@ code.hljs {
   /* purposely ignored */
   
 }
+
+/* Full viewer theme */
+#viewer-content {
+  background: #ffffff;
+  color: #24292e;
+}
+#viewer-content h1 {
+  color: #1f2328;
+  border-bottom-color: #d1d9e0;
+}
+#viewer-content h2,
+#viewer-content h3,
+#viewer-content h4,
+#viewer-content h5,
+#viewer-content h6 {
+  color: #1f2328;
+}
+#viewer-content a {
+  color: #0969da;
+}
+#viewer-content blockquote {
+  border-left-color: #0969da;
+  color: #57606a;
+}
+#viewer-content code {
+  background: #f6f8fa;
+}
+#viewer-content pre {
+  background: #f6f8fa;
+}
+#viewer-content pre code {
+  background: transparent;
+}
+#viewer-content th {
+  background: #f6f8fa;
+  color: #57606a;
+}
+#viewer-content th,
+#viewer-content td {
+  border-color: #d1d9e0;
+}
+#viewer-content hr {
+  border-top-color: #d1d9e0;
+}
+#viewer-content .frontmatter-card {
+  background: #f6f8fa;
+  border-color: #d1d9e0;
+}
+#viewer-content .skill-badge {
+  background: #0969da;
+  color: #ffffff;
+}
+#viewer-content img {
+  border-color: #d1d9e0;
+}

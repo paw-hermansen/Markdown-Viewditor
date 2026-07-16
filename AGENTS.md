@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Markdown Viewditor** - A markdown editor and viewer with **live preview** built with:
+**Markdown Viewditor** - A markdown viewer and editor with **live preview** built with:
 
 - **Backend**: Rust (Tauri v2)
 - **Frontend**: Svelte 5 + SvelteKit

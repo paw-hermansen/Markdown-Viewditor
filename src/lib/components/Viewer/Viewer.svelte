@@ -168,7 +168,7 @@
 <div
   class="viewer-container"
   role="group"
-  aria-label="Markdown preview"
+  aria-label="Markdown view"
   bind:this={viewerElement}
   onscroll={handleScroll}
   onclick={handleLinkClick}

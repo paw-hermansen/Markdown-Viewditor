@@ -44,8 +44,8 @@
       "icons/icon_512.png"
     ],
     "category": "Productivity",
-    "shortDescription": "A markdown editor with live preview",
-    "copyright": "Copyright © 2026",
+    "shortDescription": "A markdown viewer and editor with live preview",
+    "copyright": "Copyright © 2026 Paw Hermansen",
     "fileAssociations": [
       {
         "ext": ["md", "markdown"],

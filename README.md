@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
-A clean, simple, and modern markdown editor and viewer with **live preview** built with Tauri v2 + Svelte 5.
+A clean, simple, and modern markdown viewer and editor with **live preview** built with Tauri v2 + Svelte 5.
 
 <!-- Screenshot/GIF placeholder -->
 
@@ -13,9 +13,9 @@ A clean, simple, and modern markdown editor and viewer with **live preview** bui
 
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **GitHub-Flavored Markdown** — Tables, task lists, strikethrough, footnotes, and more
-- **Three View Modes** — Split, Editor only, Preview only
-- **Scroll Sync** — Editor and preview stay synchronized
-- **Multiple Themes** — 6 built-in themes + custom CSS
+- **Three View Modes** — Editor only, Split, View only
+- **Scroll Sync** — Editor and view stay synchronized
+- **Multiple Themes** — 8 built-in themes + custom CSS
 - **Cross-Platform** — Windows, macOS, Linux
 
 ## AI-Assisted Development

@@ -214,6 +214,41 @@ function createLineNumbersPlugin() {
       }
       return defaultTableOpen(tokens, idx, options, env, self);
     };
+
+    // The footnote plugin renders all footnote definitions as a single block
+    // at the end of the document. Tag that block (its <section>) with a
+    // data-line anchored to the end of the source so scroll-sync can map it
+    // correctly. The inner footnote content is handled separately in
+    // renderMarkdown (its source-line maps are stripped, since that content is
+    // rendered at the bottom rather than at its original source location).
+    const defaultFootnoteBlockOpen =
+      md.renderer.rules.footnote_block_open ||
+      function (_tokens, _idx, options) {
+        return (
+          (options.xhtmlOut
+            ? '<hr class="footnotes-sep" />\n'
+            : '<hr class="footnotes-sep">\n') +
+          '<section class="footnotes">\n<ol class="footnotes-list">\n'
+        );
+      };
+
+    md.renderer.rules.footnote_block_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      const out = defaultFootnoteBlockOpen(tokens, idx, options, env, self);
+      if (token.map) {
+        return out.replace(
+          '<section class="footnotes">',
+          `<section class="footnotes" data-line="${token.map[0] + 1}">`,
+        );
+      }
+      return out;
+    };
   };
 }
 
@@ -299,6 +334,34 @@ function createLocalImagePlugin() {
   };
 }
 
+type MdToken = ReturnType<MarkdownIt["parse"]>[number];
+
+function normalizeFootnoteLineMaps(tokens: MdToken[], content: string) {
+  // The footnote plugin pulls every `[^x]: ...` definition out of its source
+  // location and re-renders all of them as a single block at the end of the
+  // document. The inner tokens keep their original `.map` (pointing at the
+  // definition's source line), which would tag the footnote content - rendered
+  // at the bottom of the viewer - with a `data-line` from the middle of the
+  // document. That makes the viewer's `line -> top` mapping non-monotonic and
+  // breaks scroll-sync interpolation.
+  //
+  // Fix: strip those maps so footnote content carries no `data-line`, and
+  // anchor the footnote block itself to the last source line so scrolling to
+  // the end of the editor lines up with the rendered footnotes section.
+  let inFootnotes = false;
+  const lastLine = content.split("\n").length;
+  for (const token of tokens) {
+    if (token.type === "footnote_block_open") {
+      inFootnotes = true;
+      token.map = [lastLine - 1, lastLine - 1];
+    } else if (token.type === "footnote_block_close") {
+      inFootnotes = false;
+    } else if (inFootnotes && token.map) {
+      token.map = null;
+    }
+  }
+}
+
 async function initMarkdownIt(): Promise<MarkdownIt> {
   if (!md) {
     md = new MarkdownIt({
@@ -307,10 +370,10 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       typographer: true,
     })
       .use(createFrontmatterPlugin())
+      .use(footnote)
       .use(createLineNumbersPlugin())
       .use(createLocalImagePlugin())
       .use(taskLists)
-      .use(footnote)
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
   }
   return md;
@@ -330,6 +393,7 @@ export async function renderMarkdown(
       env.filePath = filePath;
     }
     const tokens = parser.parse(content, env);
+    normalizeFootnoteLineMaps(tokens, content);
     const html = parser.renderer.render(tokens, parser.options, env);
 
     let frontmatter: Frontmatter | null = null;

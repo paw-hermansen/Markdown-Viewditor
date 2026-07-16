@@ -162,4 +162,87 @@ describe("renderMarkdown", () => {
     expect(result.html).toContain("footnote-backref");
     expect(result.html).toContain('href="#fnref1"');
   });
+
+  it("should not tag footnote content with its original source data-line", async () => {
+    // The `[^1]: note` definition lives on source line 3, but the footnote
+    // plugin renders it at the bottom of the document. Its content must not
+    // carry data-line="3", otherwise the viewer's line<->position mapping
+    // becomes non-monotonic and scroll-sync breaks. The "After." paragraph on
+    // line 5 keeps data-line="5"; the footnotes section is anchored to the
+    // last line (5), not to the definition's source line (3).
+    const result = await renderMarkdown(
+      "Para[^1].\n\n[^1]: note text\n\nAfter.",
+    );
+    expect(result.html).not.toContain('data-line="3"');
+    expect(result.html).toContain('data-line="5"');
+  });
+
+  it("should tag the footnotes section with the document's last line", async () => {
+    // 5-line document -> the rendered footnotes section is anchored to the
+    // last source line (5), so scrolling to the end of the editor lines up
+    // with the footnotes section in the viewer.
+    const result = await renderMarkdown(
+      "Para[^1].\n\n[^1]: note text\n\nAfter.",
+    );
+    expect(result.html).toMatch(/<section class="footnotes" data-line="5">/);
+  });
+
+  it("should keep data-line values monotonic with rendered order for footnoted docs", async () => {
+    // Mirrors Example.md: a footnote definition in the middle of the document
+    // followed by more content. The data-line attributes, read in the order
+    // they appear in the rendered HTML, must be non-decreasing so that
+    // scroll-sync's interpolation (which assumes line and top are monotonic)
+    // works correctly.
+    const src = [
+      "# Title",
+      "",
+      "Intro paragraph[^1].",
+      "",
+      "[^1]: the note",
+      "",
+      "Final paragraph.",
+    ].join("\n");
+    const result = await renderMarkdown(src);
+    const dataLines = [...result.html.matchAll(/data-line="(\d+)"/g)].map((m) =>
+      parseInt(m[1], 10),
+    );
+    // The footnote note (source line 5) must not appear as a data-line in the
+    // middle of the rendered output.
+    expect(dataLines).not.toContain(5);
+    // data-line values should be non-decreasing in rendered order.
+    for (let i = 1; i < dataLines.length; i++) {
+      expect(dataLines[i]).toBeGreaterThanOrEqual(dataLines[i - 1]);
+    }
+  });
+
+  it("should keep Example.md data-line values monotonic in rendered order", async () => {
+    // Regression guard mirroring Example.md: footnote definitions sit in the
+    // middle of the document (here on lines 3 and 9) but are rendered at the
+    // bottom. The data-line attributes read in rendered order must stay
+    // non-decreasing so scroll-sync's interpolation between editor and viewer
+    // stays correct. Before the fix this sequence ended [..., 11, 3, 9].
+    const src = [
+      "# Examples of Markdown Formatting",
+      "",
+      "## Tables with aligned columns[^1]",
+      "[^1]: https://example.org/colour",
+      "",
+      "| Left | Right |",
+      "| :--- | ---: |",
+      "| White | 24.8 |",
+      "",
+      "## Html Is Allowed[^2]",
+      "[^2]: footnote rendered at the bottom",
+      "",
+      'A <i>clean</i> <span style="color:red">viewer</span> with live preview.',
+    ].join("\n");
+    const result = await renderMarkdown(src);
+    const dataLines = [...result.html.matchAll(/data-line="(\d+)"/g)].map((m) =>
+      parseInt(m[1], 10),
+    );
+    expect(dataLines.length).toBeGreaterThan(0);
+    for (let i = 1; i < dataLines.length; i++) {
+      expect(dataLines[i]).toBeGreaterThanOrEqual(dataLines[i - 1]);
+    }
+  });
 });

@@ -5,7 +5,7 @@
 
 A clean, simple, and modern markdown viewer and editor with **live preview** built with Tauri v2 + Svelte 5.
 
-![Screendump](screendump.png)
+![Screendump](images/screendump.png)
 
 ## Features
 

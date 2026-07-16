@@ -4,18 +4,6 @@
 
 A *clean*, **simple**, and ***modern*** _markdown_ viewer ~~and~~ editor with live preview.
 
-## Html Is Allowed[^1]
-[^1]: Might not be compatible with all uses of Markdown. By 
-the way: this is a footnote that will appear at the bottom
-of the formatted text.
-
-A <i>clean</i>, <b>simple</b>, and <i><b>modern</b></i> <em>markdown</em>
-<span style="color: red">viewer</span> <s>and</s>
-<span style="color: green">editor</span> with 
-<span style="font-size: 144%; font-family: fantasy, serif;">live preview</span>.
-
-<img src="screendump.png" width="200px" alt="An example Image">
-
 ## Code Syntax Highlighting
 
 ```json
@@ -26,8 +14,8 @@ A <i>clean</i>, <b>simple</b>, and <i><b>modern</b></i> <em>markdown</em>
 }
 ```
 
-## Tables with aligned columns[^2]
-[^2]: https://en.wikipedia.org/wiki/Car_colour_popularity
+## Tables with aligned columns[^1]
+[^1]: https://en.wikipedia.org/wiki/Car_colour_popularity
 
 | Left Aligned | Centered | Right Aligned |
 | :--- | :----: | ---: |
@@ -39,6 +27,10 @@ A <i>clean</i>, <b>simple</b>, and <i><b>modern</b></i> <em>markdown</em>
 | Red | Kind of not | 7.3 |
 | Green | Not | 2.0 |
 | Others | Not | 1.8 |
+
+## Images
+
+![A AI Generated Flower](images/ai_flower.png)
 
 ## Links
 
@@ -59,16 +51,24 @@ for that kind of links:
 1. Build a volcano out of the flour and drop the eggs into the crater
 2. Gradually fold the eggs into the flour, continuing until the dough is done
 3. Knead the dough until it becomes smooth and slightly elastic
-4. Cut it into whatever form you like best
+4. Cut it into whatever shape you like best
 
 ### TODO After Retirement
 - [x] Write a Markdown Viewer and Editor
 - [ ] Become Rich ~~and Famous~~
 - [ ] Listen to Wagner's *The Ring of the Nibelung* in its entirety
 
+## Html Is Allowed[^2]
+[^2]: Might not be compatible with all uses of Markdown. By 
+the way: this is a footnote that will appear at the bottom
+of the formatted text.
+
+A <i>clean</i>, <b>simple</b>, and <i><b>modern</b></i> <em>markdown</em>
+<span style="color: red">viewer</span> <s>and</s>
+<span style="color: green">editor</span> with 
+<span style="font-size: 144%; font-family: fantasy, serif;">live preview</span>.
+
+<img src="images/screendump.png" width="200px" alt="A Sized Image">
 
 
-
-## Images
-![image example](screendump.png)
 

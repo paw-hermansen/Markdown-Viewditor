@@ -231,6 +231,19 @@ function resolveRelativePath(basePath: string, href: string): string {
   return "/" + resolved.join("/");
 }
 
+function resolveHtmlImagePaths(html: string, filePath: string): string {
+  return html.replace(
+    /(<img\s[^>]*?)src=["']([^"']+)["']/gi,
+    (match, prefix, src) => {
+      if (src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
+        return match;
+      }
+      const absolutePath = resolveRelativePath(filePath, src);
+      return `${prefix}src="${convertFileSrc(absolutePath)}"`;
+    },
+  );
+}
+
 function createLocalImagePlugin() {
   return function localImagePlugin(md: MarkdownIt) {
     const defaultImageRenderer =
@@ -253,6 +266,34 @@ function createLocalImagePlugin() {
       }
 
       return defaultImageRenderer(tokens, idx, options, env, self);
+    };
+
+    const defaultHtmlBlock =
+      md.renderer.rules.html_block ||
+      function (tokens, idx, _options, _env, self) {
+        return self.renderToken(tokens, idx, _options);
+      };
+
+    md.renderer.rules.html_block = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      if (env.filePath) {
+        token.content = resolveHtmlImagePaths(token.content, env.filePath);
+      }
+      return defaultHtmlBlock(tokens, idx, options, env, self);
+    };
+
+    const defaultHtmlInline =
+      md.renderer.rules.html_inline ||
+      function (tokens, idx, _options, _env, self) {
+        return self.renderToken(tokens, idx, _options);
+      };
+
+    md.renderer.rules.html_inline = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      if (env.filePath) {
+        token.content = resolveHtmlImagePaths(token.content, env.filePath);
+      }
+      return defaultHtmlInline(tokens, idx, options, env, self);
     };
   };
 }

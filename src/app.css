@@ -8,6 +8,7 @@
   --text-secondary: #8892b0;
   --text-muted: #6b7280;
   --accent: #e94560;
+  --accent-snap: #4ade80;
   --border: #233554;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -28,6 +29,7 @@
   --text-secondary: #6b7280;
   --text-muted: #9ca3af;
   --accent: #e94560;
+  --accent-snap: #16a34a;
   --border: #e5e7eb;
 }
 

@@ -289,6 +289,12 @@
     background: var(--border);
     transition: background 150ms ease-in-out;
     flex-shrink: 0;
+    border: none;
+    outline: none;
+  }
+
+  .resize-handle:focus-visible {
+    outline: none;
   }
 
   .resize-handle:hover,
@@ -297,8 +303,8 @@
   }
 
   .resize-handle.near-edge {
-    background: var(--accent);
-    opacity: 0.6;
+    background: var(--accent-snap);
+    opacity: 0.9;
   }
 
   .content.split > .resize-handle {

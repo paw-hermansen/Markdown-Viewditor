@@ -1,9 +1,0 @@
-{
-  "app": {
-    "security": {
-      "assetProtocol": {
-        "scope": ["/**/*", "[A-Z]:/**/*"]
-      }
-    }
-  }
-}

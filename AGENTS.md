@@ -13,16 +13,16 @@
 ```bash
 # Development
 npm install
-npm run dev                    # or: cargo tauri dev
+npm run dev                    # or: npm run tauri dev
 
 # Build
-npm run build                  # or: cargo tauri build
+npm run build                  # or: npm run tauri build
 
 # Mobile
-cargo tauri android init
-cargo tauri android dev
-cargo tauri ios init
-cargo tauri ios dev
+npm run tauri android init
+npm run tauri android dev
+npm run tauri ios init
+npm run tauri ios dev
 
 # Lint & Typecheck
 npm run lint

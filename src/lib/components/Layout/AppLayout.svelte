@@ -105,6 +105,13 @@
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
   }
+
+  function handleDoubleClick() {
+    if (viewMode !== 'split') {
+      onViewModeChange('split');
+    }
+    updateSplitRatio(0.5);
+  }
 </script>
 
 <div class="app-layout">
@@ -165,6 +172,7 @@
       class:near-edge={nearEdge !== null}
       onmousedown={handleMouseDown}
       ontouchstart={handleTouchStart}
+      ondblclick={handleDoubleClick}
       aria-label="Resize editor and viewer panels"
     ></button>
   </main>

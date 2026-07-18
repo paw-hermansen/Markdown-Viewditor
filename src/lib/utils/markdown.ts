@@ -253,9 +253,18 @@ function createLineNumbersPlugin() {
 }
 
 function resolveRelativePath(basePath: string, href: string): string {
+  const normalizedHref = href.replace(/\\/g, "/");
+  // Unix absolute path or Windows drive-absolute path (e.g. "C:/...", "G:/...")
+  // is returned as-is, not joined onto the base directory.
+  if (
+    normalizedHref.startsWith("/") ||
+    /^[A-Za-z]:[\/]/.test(normalizedHref)
+  ) {
+    return normalizedHref;
+  }
   const normalized = basePath.replace(/\\/g, "/");
   const currentDir = normalized.substring(0, normalized.lastIndexOf("/"));
-  const parts = (currentDir + "/" + href.replace(/\\/g, "/")).split("/");
+  const parts = (currentDir + "/" + normalizedHref).split("/");
   const resolved: string[] = [];
   for (const part of parts) {
     if (part === "..") {
@@ -275,7 +284,7 @@ function resolveHtmlImagePaths(html: string, filePath: string): string {
         return match;
       }
       const absolutePath = resolveRelativePath(filePath, src);
-      return `${prefix}src="${convertFileSrc(absolutePath)}"`;
+      return `${prefix}src="${convertFileSrc(absolutePath, "localimg")}"`;
     },
   );
 }
@@ -297,7 +306,7 @@ function createLocalImagePlugin() {
 
         if (!src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
           const absolutePath = resolveRelativePath(env.filePath, src);
-          token.attrs![srcIndex][1] = convertFileSrc(absolutePath);
+          token.attrs![srcIndex][1] = convertFileSrc(absolutePath, "localimg");
         }
       }
 

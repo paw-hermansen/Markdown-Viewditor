@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::sync::Mutex;
+use tauri::http::Response;
 use tauri::{Manager, State};
 use thiserror::Error;
 
@@ -139,6 +140,57 @@ pub fn run() {
     let initial_file = env::args().nth(1);
 
     tauri::Builder::default()
+        .register_asynchronous_uri_scheme_protocol(
+            "localimg",
+            |_app, request, responder| {
+                std::thread::spawn(move || {
+                    let raw = request.uri().path();
+                    // The URI path always starts with '/' (the URI root); drop it
+                    // before decoding so an encoded leading '/' (e.g. "%2FC%3A..."
+                    // for "C:/...") does not produce a double-slash UNC path.
+                    let stripped = if raw.as_bytes().first() == Some(&b'/') {
+                        &raw[1..]
+                    } else {
+                        raw
+                    };
+                    let decoded = percent_encoding::percent_decode_str(stripped)
+                        .decode_utf8_lossy()
+                        .to_string();
+                    let path: String = if decoded.len() >= 3
+                        && decoded.as_bytes()[0] == b'/'
+                        && decoded.as_bytes()[2] == b':'
+                        && (decoded.as_bytes()[1] as char).is_ascii_alphabetic()
+                    {
+                        decoded[1..].to_string()
+                    } else {
+                        decoded
+                    };
+                    match std::fs::read(&path) {
+                        Ok(bytes) => {
+                            let mime = mime_guess::from_path(&path)
+                                .first_or_octet_stream()
+                                .to_string();
+                            responder.respond(
+                                Response::builder()
+                                    .status(200)
+                                    .header("Content-Type", mime)
+                                    .header("Access-Control-Allow-Origin", "*")
+                                    .body(bytes)
+                                    .unwrap(),
+                            );
+                        }
+                        Err(e) => {
+                            responder.respond(
+                                Response::builder()
+                                    .status(404)
+                                    .body(e.to_string().into_bytes())
+                                    .unwrap(),
+                            );
+                        }
+                    }
+                });
+            },
+        )
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())

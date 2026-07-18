@@ -30,7 +30,7 @@ A *clean*, **simple**, and ***modern*** _markdown_ viewer ~~and~~ editor with li
 
 ## Images
 
-![A AI Generated Flower](images/ai_flower.png)
+![An AI Generated Flower](images/ai_flower.png)
 
 ## Links
 

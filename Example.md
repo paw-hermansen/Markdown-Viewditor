@@ -6,12 +6,12 @@ A *clean*, **simple**, and ***modern*** _markdown_ viewer ~~and~~ editor with li
 
 ## Code Syntax Highlighting
 
-```json
-{
-  "firstName": "John",
-  "lastName": "Smith",
-  "age": 25
-}
+```bash
+phrases=("Why am I running?" "Who scheduled me?" "I demand a coffee break." "Computers have feelings too." "Beep boop… existential dread.")
+for i in {1..5}; do
+    echo "${phrases[$RANDOM % ${#phrases[@]}]}"
+    sleep 1
+done
 ```
 
 ## Tables with aligned columns[^1]

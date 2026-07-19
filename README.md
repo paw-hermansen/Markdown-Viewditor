@@ -47,14 +47,9 @@ Theme type (dark/light) is auto-detected from the CSS content.
 
 ## Contributing
 
-Contributions are welcome! Please see [CHANGELOG.md](CHANGELOG.md) for the release history.
+Contributions are welcome! Anyone may [open an issue](../../issues) (bug reports and suggestions alike) or submit a pull request — whether human-created, AI-created, or any mix of both. All pull requests will be reviewed and approved or denied by the maintainer.
 
-```bash
-# Bump version (updates package.json, Cargo.toml, tauri.conf.json, CHANGELOG.md, commits & tags)
-npm run version:patch    # 0.1.0 → 0.1.1
-npm run version:minor    # 0.1.0 → 0.2.0
-npm run version:major    # 0.1.0 → 1.0.0
-```
+Please read the [Contributing Guide](CONTRIBUTING.md) for the PR workflow, checklists, and development setup, and the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ## License
 

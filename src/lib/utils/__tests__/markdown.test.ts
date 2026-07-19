@@ -1,4 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// renderMarkdown -> markdown-it's local-image plugin calls `convertFileSrc`
+// from @tauri-apps/api/core, which requires `window`/`navigator`. The Node
+// test environment doesn't have those, so mock the helper to expose the
+// arguments it was called with via a deterministic URL form.
+vi.mock("@tauri-apps/api/core", () => ({
+  convertFileSrc: (path: string, protocol = "asset") =>
+    `${protocol}://localhost/${encodeURIComponent(path)}`,
+}));
+
 import { renderMarkdown } from "../markdown";
 
 describe("renderMarkdown", () => {
@@ -244,5 +254,107 @@ describe("renderMarkdown", () => {
     for (let i = 1; i < dataLines.length; i++) {
       expect(dataLines[i]).toBeGreaterThanOrEqual(dataLines[i - 1]);
     }
+  });
+
+  describe("local image src rewriting", () => {
+    it("rewrites a relative image src to a localimg URL using the file's dir", async () => {
+      const result = await renderMarkdown(
+        "![alt](images/flower.png)",
+        "/home/devel/r/Example.md",
+      );
+      // Resolved path is "/home/devel/r/images/flower.png"; the mock
+      // URL-encodes it after the protocol prefix.
+      expect(result.html).toContain(
+        'src="localimg://localhost/%2Fhome%2Fdevel%2Fr%2Fimages%2Fflower.png"',
+      );
+      expect(result.html).not.toContain('src="images/flower.png"');
+    });
+
+    it("rewrites a parent-dir relative image src", async () => {
+      const result = await renderMarkdown(
+        "![alt](../assets/flower.png)",
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain("localimg");
+      // Resolved path: "/home/devel/assets/flower.png"
+      expect(result.html).toContain("%2Fhome%2Fdevel%2Fassets%2Fflower.png");
+    });
+
+    it("rewrites a Windows drive-absolute image src (forward-slash form)", async () => {
+      // markdown-it URL-encodes backslashes in link destinations, so we use
+      // the forward-slash form `C:/Users/...` which survives markdown parsing
+      // unchanged. The backslash form is exercised in path.test.ts.
+      const result = await renderMarkdown(
+        "![alt](C:/Users/paw/flower.png)",
+        "C:/Users/paw/repos/Example.md",
+      );
+      expect(result.html).toContain("localimg");
+      // The path passed to convertFileSrc should be "C:/Users/paw/flower.png",
+      // NOT joined onto the base dir or prefixed with "/C:/".
+      expect(result.html).toContain("C%3A%2FUsers%2Fpaw%2Fflower.png");
+      expect(result.html).not.toContain("repos");
+      expect(result.html).not.toMatch(/%2FC%3A\//);
+    });
+
+    it("rewrites a different-drive image src (G:/...) without joining onto base", async () => {
+      const result = await renderMarkdown(
+        "![alt](G:/MyFolder/flower.png)",
+        "C:/Users/paw/repos/Example.md",
+      );
+      expect(result.html).toContain("localimg");
+      expect(result.html).toContain("G%3A%2FMyFolder%2Fflower.png");
+      expect(result.html).not.toContain("Users");
+    });
+
+    it("rewrites a UNC image src (//server/share/...) as a UNC path", async () => {
+      const result = await renderMarkdown(
+        "![alt](//nas/share/images/flower.png)",
+        "//nas/share/docs/Example.md",
+      );
+      expect(result.html).toContain("localimg");
+      // The path should preserve the UNC form: //nas/share/images/flower.png.
+      expect(result.html).toContain("%2F%2Fnas%2Fshare%2Fimages%2Fflower.png");
+      expect(result.html).not.toMatch(/C%3A/);
+    });
+
+    it("rewrites a Windows drive-absolute image src with backslash form", async () => {
+      // markdown-it URL-encodes backslashes, so the plugin receives
+      // "C:%5CUsers%5Cpaw%5Cflower.png". resolveLink must decode it back to
+      // "C:\Users\paw\flower.png" and then normalize to forward slashes.
+      const result = await renderMarkdown(
+        "![alt](C:\\Users\\paw\\flower.png)",
+        "C:\\Users\\paw\\repos\\Example.md",
+      );
+      expect(result.html).toContain("localimg");
+      expect(result.html).toContain("C%3A%2FUsers%2Fpaw%2Fflower.png");
+      expect(result.html).not.toContain("repos");
+    });
+
+    it("leaves http(s) image srcs untouched", async () => {
+      const result = await renderMarkdown(
+        "![alt](https://example.com/flower.png)",
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('src="https://example.com/flower.png"');
+      expect(result.html).not.toContain("localimg");
+    });
+
+    it("leaves data: image srcs untouched", async () => {
+      const result = await renderMarkdown(
+        "![alt](data:image/png;base64,AAAA)",
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('src="data:image/png;base64,AAAA"');
+      expect(result.html).not.toContain("localimg");
+    });
+
+    it('rewrites <img src="..."> in raw HTML blocks', async () => {
+      const result = await renderMarkdown(
+        '<img src="images/flower.png" alt="x">',
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain("localimg");
+      expect(result.html).not.toContain('src="images/flower.png"');
+    });
   });
 });

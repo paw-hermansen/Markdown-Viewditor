@@ -145,26 +145,7 @@ pub fn run() {
             |_app, request, responder| {
                 std::thread::spawn(move || {
                     let raw = request.uri().path();
-                    // The URI path always starts with '/' (the URI root); drop it
-                    // before decoding so an encoded leading '/' (e.g. "%2FC%3A..."
-                    // for "C:/...") does not produce a double-slash UNC path.
-                    let stripped = if raw.as_bytes().first() == Some(&b'/') {
-                        &raw[1..]
-                    } else {
-                        raw
-                    };
-                    let decoded = percent_encoding::percent_decode_str(stripped)
-                        .decode_utf8_lossy()
-                        .to_string();
-                    let path: String = if decoded.len() >= 3
-                        && decoded.as_bytes()[0] == b'/'
-                        && decoded.as_bytes()[2] == b':'
-                        && (decoded.as_bytes()[1] as char).is_ascii_alphabetic()
-                    {
-                        decoded[1..].to_string()
-                    } else {
-                        decoded
-                    };
+                    let path = normalize_localimg_path(raw);
                     match std::fs::read(&path) {
                         Ok(bytes) => {
                             let mime = mime_guess::from_path(&path)
@@ -291,4 +272,152 @@ fn save_window_state_debounced(app: &tauri::AppHandle) {
     }
 }
 
+/// Normalize a URI path received by the `localimg://` protocol handler into a
+/// filesystem path. Handles Windows drive-absolute paths (`C:/...`), UNC paths
+/// (`//server/share/...`), and Unix-absolute paths (`/home/...`) on every
+/// platform, regardless of how many leading slashes the URI parser produced.
+fn normalize_localimg_path(raw_uri_path: &str) -> String {
+    // The URI path always starts with '/' (the URI root). Drop exactly one
+    // leading '/' *before* decoding so that an encoded leading '/' (e.g.
+    // "%2FC%3A..." for an input like "C:/...") does not produce a double-slash
+    // UNC-style path after decoding.
+    let stripped = raw_uri_path.strip_prefix('/').unwrap_or(raw_uri_path);
+    let decoded = percent_encoding::percent_decode_str(stripped)
+        .decode_utf8_lossy()
+        .to_string();
+    normalize_decoded_path(&decoded)
+}
 
+/// Reconstruct a normalized filesystem path from the percent-decoded URI body.
+/// After decoding, the body can be in one of these forms (depending on what
+/// the frontend passed to `convertFileSrc` and how the URI parser normalized
+/// it):
+///
+/// - `C:/Users/...`       — Windows drive-absolute (no leading slash).
+/// - `/C:/Users/...`      — drive-absolute with one extra leading slash.
+/// - `//C:/Users/...`     — drive-absolute with two extra leading slashes.
+/// - `//server/share/...` — UNC.
+/// - `/home/...`          — Unix-absolute.
+/// - `home/...`           — relative (degenerate; returned as-is).
+///
+/// The returned path uses forward slashes only, which `std::fs::read` accepts
+/// on every supported platform.
+fn normalize_decoded_path(decoded: &str) -> String {
+    let leading_slash_count = decoded.bytes().take_while(|&b| b == b'/').count();
+    let trimmed = &decoded[leading_slash_count..];
+
+    // Windows drive-absolute: an ASCII letter followed by ':' and (normally) '/'.
+    // Strip any extra leading slashes so the result is "C:/...".
+    if trimmed.len() >= 3
+        && trimmed.as_bytes()[0].is_ascii_alphabetic()
+        && trimmed.as_bytes()[1] == b':'
+        && (trimmed.len() == 2 || trimmed.as_bytes()[2] == b'/')
+    {
+        return trimmed.to_string();
+    }
+
+    // UNC path: preserve exactly two leading slashes.
+    if leading_slash_count >= 2 {
+        return format!("//{}", trimmed);
+    }
+
+    // Unix-absolute path: preserve exactly one leading slash.
+    if leading_slash_count == 1 {
+        return format!("/{}", trimmed);
+    }
+
+    // Relative path or unrecognized form: surface to `std::fs::read` which will
+    // produce a clear error against the process's current working directory.
+    decoded.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_decoded_path;
+
+    #[test]
+    fn drive_path_without_leading_slash_is_preserved() {
+        assert_eq!(
+            normalize_decoded_path("C:/Users/paw/file.png"),
+            "C:/Users/paw/file.png"
+        );
+    }
+
+    #[test]
+    fn drive_path_with_one_leading_slash_has_it_stripped() {
+        // Frontend passes "C:/..."; convertFileSrc may produce a URI whose
+        // decoded form has an extra leading slash.
+        assert_eq!(
+            normalize_decoded_path("/C:/Users/paw/file.png"),
+            "C:/Users/paw/file.png"
+        );
+    }
+
+    #[test]
+    fn drive_path_with_two_leading_slashes_has_them_stripped() {
+        assert_eq!(
+            normalize_decoded_path("//C:/Users/paw/file.png"),
+            "C:/Users/paw/file.png"
+        );
+    }
+
+    #[test]
+    fn drive_path_with_backslash_is_not_recognized_as_drive() {
+        // After percent-decoding we should only see forward slashes, but if a
+        // raw backslash somehow survives it must not be treated as a drive.
+        let result = normalize_decoded_path("C:\\Users");
+        assert_eq!(result, "C:\\Users");
+    }
+
+    #[test]
+    fn different_drive_letter_works() {
+        assert_eq!(
+            normalize_decoded_path("G:/MyFolder/Another.md"),
+            "G:/MyFolder/Another.md"
+        );
+    }
+
+    #[test]
+    fn unc_path_with_two_leading_slashes_is_preserved() {
+        assert_eq!(
+            normalize_decoded_path("//server/share/file.png"),
+            "//server/share/file.png"
+        );
+    }
+
+    #[test]
+    fn unc_path_with_extra_leading_slashes_collapses_to_two() {
+        assert_eq!(
+            normalize_decoded_path("///server/share/file.png"),
+            "//server/share/file.png"
+        );
+    }
+
+    #[test]
+    fn unix_absolute_path_is_preserved() {
+        assert_eq!(
+            normalize_decoded_path("/home/devel/file.png"),
+            "/home/devel/file.png"
+        );
+    }
+
+    #[test]
+    fn two_leading_slashes_treated_as_unc_even_if_unix_like() {
+        // `//home/...` is ambiguous; treating it as UNC (host="home") is
+        // consistent with Windows convention and the frontend's normalization.
+        assert_eq!(
+            normalize_decoded_path("//home/devel/file.png"),
+            "//home/devel/file.png"
+        );
+    }
+
+    #[test]
+    fn relative_path_returned_as_is() {
+        assert_eq!(normalize_decoded_path("just-a-name.png"), "just-a-name.png");
+    }
+
+    #[test]
+    fn empty_string_returned_as_is() {
+        assert_eq!(normalize_decoded_path(""), "");
+    }
+}

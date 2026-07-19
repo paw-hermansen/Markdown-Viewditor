@@ -1,5 +1,6 @@
 <script lang="ts">
   import { renderMarkdown } from '$lib/utils/markdown';
+  import { resolveLink } from '$lib/utils/path';
   import { viewerState } from '$lib/stores/viewer.svelte';
   import { fileState } from '$lib/stores/file.svelte';
   import { openUrl, openPath } from '@tauri-apps/plugin-opener';
@@ -48,22 +49,6 @@
     }
   }
 
-  function resolveRelativePath(href: string): string {
-    if (!fileState.currentFile) return href;
-    const normalized = fileState.currentFile.replace(/\\/g, '/');
-    const currentDir = normalized.substring(0, normalized.lastIndexOf('/'));
-    const parts = (currentDir + '/' + href.replace(/\\/g, '/')).split('/');
-    const resolved: string[] = [];
-    for (const part of parts) {
-      if (part === '..') {
-        resolved.pop();
-      } else if (part !== '.' && part !== '') {
-        resolved.push(part);
-      }
-    }
-    return '/' + resolved.join('/');
-  }
-
   async function handleLinkClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
@@ -74,55 +59,32 @@
 
     e.preventDefault();
 
-    if (href.startsWith('#')) {
-      const el = viewerElement?.querySelector(href);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-      return;
-    }
+    const resolved = resolveLink(fileState.currentFile, href);
 
-    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('file://')) {
-      try {
-        await openUrl(href);
-      } catch (err) {
-        console.warn('Failed to open URL:', err);
+    switch (resolved.kind) {
+      case 'anchor': {
+        const el = viewerElement?.querySelector(`#${CSS.escape(resolved.id)}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+        return;
       }
-      return;
-    }
-
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) {
-      try {
-        await openUrl(href);
-      } catch (err) {
-        console.warn('Failed to open URL:', err);
+      case 'url': {
+        try {
+          await openUrl(resolved.href);
+        } catch (err) {
+          console.warn('Failed to open URL:', err);
+        }
+        return;
       }
-      return;
-    }
-
-    if (href.startsWith('/')) {
-      try {
-        await openPath(href);
-      } catch (err) {
-        console.warn('Failed to open path:', err);
+      case 'local-path': {
+        try {
+          await openPath(resolved.path);
+        } catch (err) {
+          console.warn('Failed to open path:', err);
+        }
+        return;
       }
-      return;
-    }
-
-    if (fileState.currentFile) {
-      const resolved = resolveRelativePath(href);
-      try {
-        await openPath(resolved);
-      } catch (err) {
-        console.warn('Failed to open path:', err);
-      }
-      return;
-    }
-
-    try {
-      await openUrl(href);
-    } catch (err) {
-      console.warn('Failed to open URL:', err);
     }
   }
 

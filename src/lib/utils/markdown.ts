@@ -5,6 +5,7 @@ import taskLists from "markdown-it-task-lists";
 import footnote from "markdown-it-footnote";
 import { load as yamlLoad } from "js-yaml";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { resolveLink } from "$lib/utils/path";
 
 import type { Frontmatter, RenderResult } from "$lib/types";
 
@@ -252,28 +253,21 @@ function createLineNumbersPlugin() {
   };
 }
 
-function resolveRelativePath(basePath: string, href: string): string {
-  const normalizedHref = href.replace(/\\/g, "/");
-  // Unix absolute path or Windows drive-absolute path (e.g. "C:/...", "G:/...")
-  // is returned as-is, not joined onto the base directory.
-  if (
-    normalizedHref.startsWith("/") ||
-    /^[A-Za-z]:[\/]/.test(normalizedHref)
-  ) {
-    return normalizedHref;
+/**
+ * Resolve an image href against the base file's directory. Returns the
+ * absolute local path if the href is a local-path reference (relative,
+ * drive-absolute, UNC, or Unix-absolute); returns null for URLs (http(s):,
+ * data:, asset:, blob:, etc.) so the caller can leave the src untouched.
+ */
+function tryResolveLocalPath(
+  basePath: string,
+  href: string,
+): { isLocal: true; path: string } | { isLocal: false } {
+  const resolved = resolveLink(basePath, href);
+  if (resolved.kind === "local-path") {
+    return { isLocal: true, path: resolved.path };
   }
-  const normalized = basePath.replace(/\\/g, "/");
-  const currentDir = normalized.substring(0, normalized.lastIndexOf("/"));
-  const parts = (currentDir + "/" + normalizedHref).split("/");
-  const resolved: string[] = [];
-  for (const part of parts) {
-    if (part === "..") {
-      resolved.pop();
-    } else if (part !== "." && part !== "") {
-      resolved.push(part);
-    }
-  }
-  return "/" + resolved.join("/");
+  return { isLocal: false };
 }
 
 function resolveHtmlImagePaths(html: string, filePath: string): string {
@@ -283,8 +277,11 @@ function resolveHtmlImagePaths(html: string, filePath: string): string {
       if (src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
         return match;
       }
-      const absolutePath = resolveRelativePath(filePath, src);
-      return `${prefix}src="${convertFileSrc(absolutePath, "localimg")}"`;
+      const resolved = tryResolveLocalPath(filePath, src);
+      if (!resolved.isLocal) {
+        return match;
+      }
+      return `${prefix}src="${convertFileSrc(resolved.path, "localimg")}"`;
     },
   );
 }
@@ -305,8 +302,13 @@ function createLocalImagePlugin() {
         const src = token.attrs![srcIndex][1];
 
         if (!src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
-          const absolutePath = resolveRelativePath(env.filePath, src);
-          token.attrs![srcIndex][1] = convertFileSrc(absolutePath, "localimg");
+          const resolved = tryResolveLocalPath(env.filePath, src);
+          if (resolved.isLocal) {
+            token.attrs![srcIndex][1] = convertFileSrc(
+              resolved.path,
+              "localimg",
+            );
+          }
         }
       }
 

@@ -14,13 +14,15 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development
 
+Run all commands from the project root unless noted otherwise.
+
 ```bash
-# Frontend
+# Frontend (project root)
 npm run check          # Typecheck
 npm run lint           # Lint (prettier + eslint)
 npm run test           # Run tests
 
-# Rust backend
+# Rust backend (from src-tauri/)
 cargo clippy           # Lint
 cargo test             # Test
 ```

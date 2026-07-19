@@ -20,20 +20,76 @@ target/
 *.swo
 *~
 
-# OS
+# OS - macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.fseventsd
+.TemporaryItems
+
+# OS - Windows
+Desktop.ini
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+$RECYCLE.BIN/
+*.lnk
+*.stackdump
+
+# OS - Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Tauri
 src-tauri/gen/
 src-tauri/target/
 
+# Tauri Mobile
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+DerivedData/
+*.xcuserstate
+*.xcworkspacedata
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+local.properties
+
 # Rust
-Cargo.lock
+# Cargo.lock is committed for binary projects (reproducible builds)
+
+# Test / Coverage
+coverage/
+*.lcov
+
+# ESLint
+.eslintcache
+
+# Vite
+*.local
 
 # Misc
 *.tgz

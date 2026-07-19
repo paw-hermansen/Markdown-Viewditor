@@ -13,7 +13,10 @@
     "format": "prettier --write .",
     "tauri": "tauri",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version:patch": "bash scripts/version-bump.sh patch",
+    "version:minor": "bash scripts/version-bump.sh minor",
+    "version:major": "bash scripts/version-bump.sh major"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.0",

@@ -45,6 +45,17 @@ Place `.css` files in the themes directory:
 
 Theme type (dark/light) is auto-detected from the CSS content.
 
+## Contributing
+
+Contributions are welcome! Please see [CHANGELOG.md](CHANGELOG.md) for the release history.
+
+```bash
+# Bump version (updates package.json, Cargo.toml, tauri.conf.json, CHANGELOG.md, commits & tags)
+npm run version:patch    # 0.1.0 → 0.1.1
+npm run version:minor    # 0.1.0 → 0.2.0
+npm run version:major    # 0.1.0 → 1.0.0
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.

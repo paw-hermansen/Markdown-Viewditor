@@ -28,6 +28,11 @@ npm run tauri ios dev
 npm run lint
 npm run check
 cargo clippy
+
+# Versioning
+npm run version:patch    # 0.1.0 → 0.1.1
+npm run version:minor    # 0.1.0 → 0.2.0
+npm run version:major    # 0.1.0 → 1.0.0
 ```
 
 ## Coding Conventions

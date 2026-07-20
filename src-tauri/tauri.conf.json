@@ -33,6 +33,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Paw Hermansen",
     "icon": [
       "icons/icon.icns",
       "icons/icon.ico",
@@ -66,9 +67,6 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper",
         "silent": true
-      },
-      "wix": {
-        "publisher": "Paw Hermansen"
       },
       "nsis": {
         "installMode": "perMachine"

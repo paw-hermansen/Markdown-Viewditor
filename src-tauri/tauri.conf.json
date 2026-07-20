@@ -60,6 +60,7 @@
       "minimumSystemVersion": "11.0"
     },
     "windows": {
+      "publisher": "Paw Hermansen",
       "webviewInstallMode": {
         "type": "embedBootstrapper",
         "silent": true

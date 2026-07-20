@@ -85,9 +85,11 @@ describe("renderMarkdown", () => {
   });
 
   it("should return error message on parse failure", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await renderMarkdown(null as unknown as string);
     expect(result.html).toContain("Error rendering markdown");
     expect(result.frontmatter).toBeNull();
+    errorSpy.mockRestore();
   });
 
   it("should strip frontmatter from body HTML", async () => {
@@ -130,6 +132,7 @@ describe("renderMarkdown", () => {
   });
 
   it("should return null frontmatter for invalid YAML", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     // Unclosed flow mapping is invalid YAML.
     const result = await renderMarkdown(
       "---\nname: {unterminated\n---\n\n# Body",
@@ -137,6 +140,7 @@ describe("renderMarkdown", () => {
     expect(result.frontmatter).toBeNull();
     expect(result.html).toContain("<h1");
     expect(result.html).toContain("Body");
+    errorSpy.mockRestore();
   });
 
   it("should not treat frontmatter not at the document start as frontmatter", async () => {

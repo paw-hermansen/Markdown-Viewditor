@@ -157,12 +157,14 @@ describe("settings store", () => {
     });
 
     it("should handle store load error gracefully", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const { Store } = await import("@tauri-apps/plugin-store");
       vi.mocked(Store.load).mockRejectedValueOnce(new Error("store error"));
 
       await loadSettings();
 
       expect(settingsState.viewMode).toBe("split");
+      errorSpy.mockRestore();
     });
   });
 

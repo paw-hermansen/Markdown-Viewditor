@@ -63,6 +63,9 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper",
         "silent": true
+      },
+      "nsis": {
+        "installMode": "perMachine"
       }
     },
     "linux": {

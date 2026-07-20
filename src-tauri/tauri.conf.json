@@ -74,10 +74,22 @@
     },
     "linux": {
       "deb": {
-        "section": "editors"
+        "section": "editors",
+        "desktopTemplate": "deb/markdown-viewditor.desktop",
+        "files": {
+          "/usr/share/mime/packages/markdown-viewditor.xml": "mime/markdown-viewditor.xml"
+        },
+        "postInstallScript": "deb/postinst",
+        "postRemoveScript": "deb/postrm"
       },
       "rpm": {
-        "release": "1"
+        "release": "1",
+        "desktopTemplate": "deb/markdown-viewditor.desktop",
+        "files": {
+          "/usr/share/mime/packages/markdown-viewditor.xml": "mime/markdown-viewditor.xml"
+        },
+        "postInstallScript": "rpm/postinst",
+        "postRemoveScript": "rpm/postrm"
       }
     }
   }

@@ -45,6 +45,9 @@
     ],
     "category": "Productivity",
     "shortDescription": "A markdown viewer and editor with live preview",
+    "homepage": "https://github.com/paw-hermansen/Markdown-Viewditor",
+    "license": "MIT",
+    "licenseFile": "../LICENSE",
     "copyright": "Copyright © 2026 Paw Hermansen",
     "fileAssociations": [
       {
@@ -60,10 +63,12 @@
       "minimumSystemVersion": "11.0"
     },
     "windows": {
-      "publisher": "Paw Hermansen",
       "webviewInstallMode": {
         "type": "embedBootstrapper",
         "silent": true
+      },
+      "wix": {
+        "publisher": "Paw Hermansen"
       },
       "nsis": {
         "installMode": "perMachine"

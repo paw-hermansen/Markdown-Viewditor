@@ -24,7 +24,7 @@ export type ResolvedLink =
    */
   | { kind: "local-path"; path: string };
 
-const URL_SCHEME_RE = /^([A-Za-z][A-Za-z0-9+.\-]*):/;
+const URL_SCHEME_RE = /^([A-Za-z][A-Za-z0-9+.-]*):/;
 const WIN_DRIVE_PREFIX_RE = /^[A-Za-z]:[\\/]/;
 
 /**

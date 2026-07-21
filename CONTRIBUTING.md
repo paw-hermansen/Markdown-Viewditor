@@ -48,6 +48,7 @@ Checklist:
 - [ ] `npm run lint` passes
 - [ ] `npm run test` passes
 - [ ] `cargo clippy` passes (no warnings)
+- [ ] `cargo test` passes
 - [ ] Changes are described in the PR
 
 ## Reporting Issues

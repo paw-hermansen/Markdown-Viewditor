@@ -136,10 +136,12 @@ function createLineNumbersPlugin() {
 
     md.renderer.rules.fence = function (tokens, idx, options, env, self) {
       const token = tokens[idx];
+      const html = defaultFence(tokens, idx, options, env, self);
       if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
+        const line = String(token.map[0] + 1);
+        return html.replace(/<pre(?=\s|>)/, `<pre data-line="${line}"`);
       }
-      return defaultFence(tokens, idx, options, env, self);
+      return html;
     };
 
     const defaultBulletListOpen =

@@ -106,7 +106,7 @@
         {#if activeTab === 'themes'}
           <section>
             <h2>Custom Themes</h2>
-            <p>Place <code>.css</code> files in the themes directory:</p>
+            <p>A custom theme is a CSS file that styles code highlighting and the rendered markdown. Place <code>.css</code> files in the themes directory:</p>
             <table>
               <thead>
                 <tr><th>Platform</th><th>Path</th></tr>
@@ -117,14 +117,18 @@
                 <tr><td>Windows</td><td><code>%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\</code></td></tr>
               </tbody>
             </table>
-            <p class="muted">Custom theme css files are auto-detected after a restart and included in the apps theme drop-down.</p>
-            <p class="muted">The theme type (dark/light) is auto-detected from the CSS content and is used elsewhere in the app.</p>
+            <p class="muted">Theme files are detected on startup and appear in the theme drop-down. A restart is required after adding or removing files.</p>
+            <p class="muted">The theme type (dark or light) is auto-detected from the CSS content and also controls the app chrome (toolbar, editor, etc.).</p>
           </section>
 
           <section>
             <h2>What can be customized</h2>
-            <p>A theme file is a complete stylesheet that controls both code highlighting and all viewer content.</p>
-            <p class="muted"><strong>Code highlighting</strong> uses <code>.hljs</code> classes. <strong>Viewer elements</strong> (headings, links, tables, blockquotes, etc.) are rendered inside <code>#viewer-content</code> — use that id selector for high-specificity overrides. The theme type (dark/light) also controls the app chrome automatically.</p>
+            <p>Both code highlighting and viewer elements are rendered inside <code>#viewer-content</code>. Prefix your selectors with <code>#viewer-content</code> so they override the app's default styles:</p>
+            <ul>
+              <li><strong>Code highlighting</strong> — <code>.hljs</code> classes on token spans (e.g. <code>#viewer-content .hljs</code>, <code>#viewer-content .hljs-keyword</code>, <code>#viewer-content .hljs-string</code>).</li>
+              <li><strong>Viewer elements</strong> — headings, paragraphs, links, tables, blockquotes, etc. (e.g. <code>#viewer-content h1</code>, <code>#viewer-content a</code>, <code>#viewer-content blockquote</code>).</li>
+            </ul>
+            <p class="muted">For code blocks, set the background on <code>#viewer-content pre</code> and clear it on <code>#viewer-content pre code</code> so the background covers the whole block, not each line.</p>
           </section>
 
           <section>
@@ -149,7 +153,7 @@
                 <tr><td><code>[text](url)</code></td><td><code>a</code></td></tr>
                 <tr><td><code>![alt](src)</code></td><td><code>img</code></td></tr>
                 <tr><td><code>---</code></td><td><code>hr</code></td></tr>
-                <tr><td><code>[^1]</code></td><td><code>.footnotes</code></td></tr>
+                <tr><td><code>[^1]</code></td><td><code>sup.footnote-ref</code>, <code>section.footnotes</code></td></tr>
               </tbody>
             </table>
           </section>
@@ -157,18 +161,17 @@
           <section>
             <h2>Example: Custom Dark Theme</h2>
             <p>Create <code>my-theme.css</code> in the themes directory:</p>
-            <pre class="code-example"><code>{`/* Code highlighting — applies to all languages */
-.hljs { color: #abb2bf; background: #282c34; }
-.hljs-keyword, .hljs-doctag { color: #c678dd; }
-.hljs-string, .hljs-regexp { color: #98c379; }
-.hljs-comment { color: #5c6370; font-style: italic; }
-.hljs-number, .hljs-literal { color: #d19a66; }
-.hljs-function .hljs-title { color: #61afef; }
-.hljs-built_in { color: #e5c07b; }
-.hljs-attr, .hljs-attribute { color: #d19a66; }
+            <pre class="code-example"><code>{`/* Code highlighting — prefix selectors with #viewer-content. */
+#viewer-content .hljs { color: #abb2bf; }
+#viewer-content .hljs-keyword, #viewer-content .hljs-doctag { color: #c678dd; }
+#viewer-content .hljs-string, #viewer-content .hljs-regexp { color: #98c379; }
+#viewer-content .hljs-comment { color: #5c6370; font-style: italic; }
+#viewer-content .hljs-number, #viewer-content .hljs-literal { color: #d19a66; }
+#viewer-content .hljs-function .hljs-title { color: #61afef; }
+#viewer-content .hljs-built_in { color: #e5c07b; }
+#viewer-content .hljs-attr, #viewer-content .hljs-attribute { color: #d19a66; }
 
-/* Full viewer theme — use #viewer-content for
-   all markdown elements */
+/* Viewer elements — prefix selectors with #viewer-content. */
 #viewer-content { background: #282c34; color: #abb2bf; }
 #viewer-content h1 { color: #e5c07b; border-bottom-color: #3e4451; }
 #viewer-content h2, #viewer-content h3 { color: #e5c07b; }
@@ -176,6 +179,7 @@
 #viewer-content blockquote { border-left-color: #c678dd; color: #5c6370; }
 #viewer-content code { background: #2c313a; }
 #viewer-content pre { background: #282c34; }
+#viewer-content pre code { background: transparent; }
 #viewer-content th { background: #2c313a; color: #5c6370; }
 #viewer-content th, #viewer-content td { border-color: #3e4451; }
 #viewer-content hr { border-top-color: #3e4451; }`}</code></pre>

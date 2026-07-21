@@ -27,7 +27,7 @@
 
   const lightTheme = EditorView.theme({
     '&': {
-      backgroundColor: 'var(--bg-primary)',
+      backgroundColor: 'var(--viewer-bg)',
       color: 'var(--text-primary)'
     },
     '.cm-content': {
@@ -393,6 +393,7 @@
 
   .editor-container :global(.cm-editor) {
     height: 100%;
+    background: var(--viewer-bg);
   }
 
   .editor-container :global(.cm-scroller) {

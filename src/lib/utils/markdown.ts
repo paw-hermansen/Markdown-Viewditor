@@ -444,6 +444,14 @@ export function setTheme(themeId: string, css: string): void {
 
   currentThemeStyle.textContent = css;
   currentThemeId = themeId;
+
+  requestAnimationFrame(() => {
+    const el = document.getElementById("viewer-content");
+    if (el) {
+      const bg = getComputedStyle(el).backgroundColor;
+      document.documentElement.style.setProperty("--viewer-bg", bg);
+    }
+  });
 }
 
 export function getAvailableLanguages(): string[] {

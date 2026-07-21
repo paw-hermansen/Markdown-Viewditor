@@ -178,7 +178,7 @@
     height: 100%;
     overflow: auto;
     padding: 16px;
-    background: var(--bg-primary);
+    background: var(--viewer-bg);
     color: var(--text-primary);
   }
 

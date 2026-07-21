@@ -1,0 +1,306 @@
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+code.hljs {
+  padding: 3px 5px
+}
+/*!
+  Theme: Test Kaleidoscope
+  Description: Maximum-distinctiveness test theme - every element has a unique color
+  Author: opencode
+*/
+.hljs {
+  color: #f0e68c;
+  background: #1a0a2e
+}
+.hljs-keyword,
+.hljs-doctag,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_,
+.hljs-variable.language {
+  color: #ff00ff
+}
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_,
+.hljs-function,
+.hljs-function_ {
+  color: #00ffff
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-variable.constant,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: #ff6600
+}
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: #00ff00
+}
+.hljs-built_in,
+.hljs-symbol {
+  color: #ffff00
+}
+.hljs-comment,
+.hljs-code,
+.hljs-doctag {
+  color: #888888
+}
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: #ff69b4
+}
+.hljs-subst {
+  color: #f0e68c
+}
+.hljs-section {
+  color: #ff0000;
+  font-weight: bold
+}
+.hljs-bullet {
+  color: #7fffd4
+}
+.hljs-emphasis {
+  color: #f0e68c;
+  font-style: italic
+}
+.hljs-strong {
+  color: #f0e68c;
+  font-weight: bold
+}
+.hljs-link,
+.hljs-params,
+.hljs-property,
+.hljs-punctuation,
+.hljs-tag {
+  color: #c0c0c0
+}
+
+/* Full viewer theme - Test Kaleidoscope */
+#viewer-content {
+  background: #1a0a2e;
+  color: #f0e68c;
+}
+#viewer-content h1 {
+  color: #ff0000;
+  border-bottom-color: #ff6600;
+  border-bottom-width: 3px;
+  border-bottom-style: dashed;
+}
+#viewer-content h2 {
+  color: #ff00ff;
+  border-bottom: 2px dotted #ff69b4;
+  padding-bottom: 0.2em;
+}
+#viewer-content h3 {
+  color: #00ffff;
+  text-decoration: underline wavy #00ffff;
+}
+#viewer-content h4 {
+  color: #ffff00;
+}
+#viewer-content h5 {
+  color: #7fffd4;
+  font-style: italic;
+}
+#viewer-content h6 {
+  color: #ff69b4;
+  text-transform: uppercase;
+}
+#viewer-content p {
+  color: #f0e68c;
+  line-height: 1.8;
+}
+#viewer-content a {
+  color: #00ffff;
+  text-decoration: underline;
+  text-decoration-color: #ff00ff;
+  text-decoration-style: wavy;
+}
+#viewer-content a:hover {
+  color: #ff00ff;
+  text-decoration-color: #00ffff;
+}
+#viewer-content strong {
+  color: #ff6600;
+  font-weight: 900;
+}
+#viewer-content em {
+  color: #ff69b4;
+  font-style: italic;
+}
+#viewer-content code {
+  background: #2d1050;
+  color: #00ff00;
+  padding: 2px 8px;
+  border-radius: 0;
+  border: 1px dashed #ff00ff;
+  font-family: "Courier New", monospace;
+}
+#viewer-content pre {
+  background: #1a0a2e;
+  border: 2px solid #ff6600;
+  border-radius: 0;
+  padding: 20px;
+}
+#viewer-content pre code {
+  background: transparent;
+  border: none;
+  color: #f0e68c;
+  padding: 0;
+}
+#viewer-content blockquote {
+  border-left: 6px double #ff00ff;
+  color: #c0c0c0;
+  background: rgba(255, 0, 255, 0.05);
+  padding: 12px 16px;
+  font-style: italic;
+}
+#viewer-content ul {
+  list-style-type: square;
+}
+#viewer-content ol {
+  list-style-type: upper-roman;
+}
+#viewer-content li {
+  color: #7fffd4;
+  margin-bottom: 0.5em;
+}
+#viewer-content li::marker {
+  color: #ff0000;
+}
+#viewer-content table {
+  border-collapse: separate;
+  border-spacing: 4px;
+}
+#viewer-content th {
+  background: #ff00ff;
+  color: #1a0a2e;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border: 2px solid #ff69b4;
+}
+#viewer-content td {
+  border: 2px dashed #00ffff;
+  color: #f0e68c;
+  background: rgba(0, 255, 255, 0.03);
+}
+#viewer-content hr {
+  border: none;
+  border-top: 3px double #ff0000;
+  margin: 2em 0;
+}
+#viewer-content img {
+  border: 3px solid #ff6600;
+  border-radius: 0;
+  box-shadow: 6px 6px 0 #ff00ff;
+}
+#viewer-content .frontmatter-card {
+  background: #2d1050;
+  border: 2px dashed #ffff00;
+  border-radius: 0;
+}
+#viewer-content .skill-badge {
+  background: #ff0000;
+  color: #ffffff;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: 0.65em;
+}
+#viewer-content .skill-name {
+  color: #00ffff;
+  font-size: 1.5em;
+  font-weight: 900;
+}
+#viewer-content .skill-description {
+  color: #ff69b4;
+}
+#viewer-content .frontmatter-title {
+  color: #ffff00;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+#viewer-content .skill-meta dt {
+  color: #ff00ff;
+  font-weight: 900;
+}
+#viewer-content .skill-meta dd {
+  color: #00ff00;
+}
+#viewer-content .task-list-item {
+  list-style: none;
+  color: #7fffd4;
+}
+#viewer-content .task-list-item input[type="checkbox"] {
+  accent-color: #ff0000;
+}
+#viewer-content .footnotes-sep {
+  border-top: 3px double #ff6600;
+}
+#viewer-content .footnotes {
+  color: #888888;
+  font-size: 0.85em;
+  font-style: italic;
+}
+#viewer-content .footnotes ol {
+  list-style-type: lower-alpha;
+}
+#viewer-content .footnotes .footnote-backref {
+  color: #00ffff;
+  text-decoration: none;
+  font-weight: 900;
+}
+#viewer-content del {
+  color: #ff0000;
+  text-decoration: line-through;
+  text-decoration-color: #ff6600;
+}
+#viewer-content ins {
+  color: #00ff00;
+  text-decoration: underline;
+  text-decoration-color: #ffff00;
+}
+#viewer-content mark {
+  background: #ff6600;
+  color: #1a0a2e;
+  padding: 0 4px;
+}
+#viewer-content sub,
+#viewer-content sup {
+  color: #ff69b4;
+  font-size: 0.75em;
+}
+#viewer-content kbd {
+  background: #2d1050;
+  color: #00ffff;
+  border: 2px outset #c0c0c0;
+  padding: 2px 6px;
+  font-family: "Courier New", monospace;
+}
+#viewer-content summary {
+  color: #ffff00;
+  cursor: pointer;
+  font-weight: 700;
+}
+#viewer-content details {
+  border: 1px dashed #ff00ff;
+  padding: 8px;
+  margin-bottom: 1em;
+}

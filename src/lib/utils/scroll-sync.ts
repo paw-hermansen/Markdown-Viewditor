@@ -15,17 +15,33 @@ export function createScrollSync(
   options: ScrollSyncOptions = {},
 ) {
   const { throttleMs = 16 } = options;
-  let isSyncing = false;
+  // After a sync moves pane B, ignore pane B's scroll events for this long.
+  // This breaks the feedback loop (A→B→A→B→…) that caused the editor and
+  // viewer to slowly drift upward by themselves. 100ms is long enough that
+  // the sync-induced scroll event (fired synchronously from scrollTop
+  // assignment) is always caught, yet short enough that the user doesn't
+  // notice a delay when manually switching which pane they scroll.
+  const SYNC_COOLDOWN = 100;
+
+  type Direction = "viewer-to-editor" | "editor-to-viewer";
+  let syncDirection: Direction | null = null;
+  let lastSyncTime = 0;
   let lastEditorScrollTime = 0;
   let lastViewerScrollTime = 0;
   let rafId: number | null = null;
+  let editorTrailingTimer: ReturnType<typeof setTimeout> | null = null;
+  let viewerTrailingTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function getViewerPaddingTop(): number {
+    return parseFloat(getComputedStyle(viewer).paddingTop) || 0;
+  }
 
   function getViewerLinePositions(): LinePosition[] {
     const positions: LinePosition[] = [];
     const elements = viewer.querySelectorAll("[data-line]");
     const viewerRect = viewer.getBoundingClientRect();
     const scrollTop = viewer.scrollTop;
-    const paddingTop = parseFloat(getComputedStyle(viewer).paddingTop) || 0;
+    const paddingTop = getViewerPaddingTop();
 
     elements.forEach((el) => {
       const line = parseInt(el.getAttribute("data-line") || "0", 10);
@@ -41,48 +57,26 @@ export function createScrollSync(
   }
 
   function getEditorVisibleLine(): number {
-    const editorRect = editor.dom.getBoundingClientRect();
-
-    let bestLine = 1;
-    let bestDistance = Infinity;
-
-    for (let i = 1; i <= editor.state.doc.lines; i++) {
-      const lineInfo = editor.state.doc.line(i);
-      const coords = editor.coordsAtPos(lineInfo.from);
-      if (coords) {
-        const distance = Math.abs(coords.top - editorRect.top);
-        if (coords.top <= editorRect.top + 10 && distance < bestDistance) {
-          bestDistance = distance;
-          bestLine = i;
-        }
-      }
-    }
-
-    return bestLine;
+    const paddingTop = editor.documentPadding.top;
+    const height = editor.scrollDOM.scrollTop - paddingTop;
+    const block = editor.lineBlockAtHeight(Math.max(0, height));
+    return editor.state.doc.lineAt(block.from).number;
   }
 
   function getEditorLinePositions(): LinePosition[] {
     const positions: LinePosition[] = [];
-    const scroller = editor.scrollDOM;
-    const scrollerRect = scroller.getBoundingClientRect();
-    const scrollTop = scroller.scrollTop;
-    const paddingTop =
-      parseFloat(getComputedStyle(editor.contentDOM).paddingTop) || 0;
 
     for (let i = 1; i <= editor.state.doc.lines; i++) {
       const lineInfo = editor.state.doc.line(i);
-      const coords = editor.coordsAtPos(lineInfo.from);
-      if (coords) {
-        const top = coords.top - scrollerRect.top + scrollTop - paddingTop;
-        positions.push({ line: i, top });
-      }
+      const block = editor.lineBlockAt(lineInfo.from);
+      positions.push({ line: i, top: block.top });
     }
 
     positions.sort((a, b) => a.line - b.line);
     return positions;
   }
 
-  function interpolateViewerPosition(
+  function interpolatePosition(
     targetLine: number,
     positions: LinePosition[],
   ): number {
@@ -116,17 +110,17 @@ export function createScrollSync(
     return before.top + ratio * (after.top - before.top);
   }
 
-  function getEditorLineFromViewerPosition(
-    viewerScrollTop: number,
+  function getLineFromPosition(
+    targetTop: number,
     positions: LinePosition[],
   ): number {
     if (positions.length === 0) return 1;
     if (positions.length === 1) return positions[0].line;
 
-    if (viewerScrollTop <= positions[0].top) {
+    if (targetTop <= positions[0].top) {
       return positions[0].line;
     }
-    if (viewerScrollTop >= positions[positions.length - 1].top) {
+    if (targetTop >= positions[positions.length - 1].top) {
       return positions[positions.length - 1].line;
     }
 
@@ -134,10 +128,7 @@ export function createScrollSync(
     let after = positions[1];
 
     for (let i = 0; i < positions.length - 1; i++) {
-      if (
-        positions[i].top <= viewerScrollTop &&
-        positions[i + 1].top >= viewerScrollTop
-      ) {
+      if (positions[i].top <= targetTop && positions[i + 1].top >= targetTop) {
         before = positions[i];
         after = positions[i + 1];
         break;
@@ -146,64 +137,101 @@ export function createScrollSync(
 
     if (after.top === before.top) return before.line;
 
-    const ratio = (viewerScrollTop - before.top) / (after.top - before.top);
+    const ratio = (targetTop - before.top) / (after.top - before.top);
     return Math.round(before.line + ratio * (after.line - before.line));
   }
 
+  function syncEditorToViewer(): void {
+    const editorLine = getEditorVisibleLine();
+    const viewerPositions = getViewerLinePositions();
+    const viewerDocTop = interpolatePosition(editorLine, viewerPositions);
+    const target = viewerDocTop + getViewerPaddingTop();
+
+    lastSyncTime = Date.now();
+    syncDirection = "editor-to-viewer";
+    viewer.scrollTop = target;
+  }
+
+  function syncViewerToEditor(): void {
+    const viewerDocTop = viewer.scrollTop - getViewerPaddingTop();
+    const viewerPositions = getViewerLinePositions();
+    const editorLine = getLineFromPosition(viewerDocTop, viewerPositions);
+    const editorPositions = getEditorLinePositions();
+    const editorDocTop = interpolatePosition(editorLine, editorPositions);
+    const target = editorDocTop + editor.documentPadding.top;
+
+    lastSyncTime = Date.now();
+    syncDirection = "viewer-to-editor";
+    editor.scrollDOM.scrollTop = target;
+  }
+
   function handleEditorScroll() {
-    if (isSyncing) return;
-
-    const now = Date.now();
-    if (now - lastEditorScrollTime < throttleMs) return;
-    lastEditorScrollTime = now;
-
-    isSyncing = true;
-
-    if (rafId) {
-      cancelAnimationFrame(rafId);
+    // Block sync-induced scrolls: if the last sync was viewer-to-editor
+    // (i.e., the viewer moved the editor), ignore the editor's scroll
+    // events for SYNC_COOLDOWN ms. This breaks the feedback loop that
+    // caused both panes to drift upward indefinitely.
+    if (
+      syncDirection === "viewer-to-editor" &&
+      Date.now() - lastSyncTime < SYNC_COOLDOWN
+    ) {
+      return;
     }
 
+    syncDirection = "editor-to-viewer";
+
+    const now = Date.now();
+    if (now - lastEditorScrollTime < throttleMs) {
+      // Throttled — schedule a trailing sync to ensure we don't miss the
+      // final position after the last scroll event in a burst.
+      if (editorTrailingTimer) clearTimeout(editorTrailingTimer);
+      editorTrailingTimer = setTimeout(() => {
+        editorTrailingTimer = null;
+        if (syncDirection !== "editor-to-viewer") return;
+        syncEditorToViewer();
+      }, throttleMs);
+      return;
+    }
+    lastEditorScrollTime = now;
+
+    if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
-      const editorLine = getEditorVisibleLine();
-      const positions = getViewerLinePositions();
-      const viewerTop = interpolateViewerPosition(editorLine, positions);
-
-      viewer.scrollTop = viewerTop;
-
-      setTimeout(() => {
-        isSyncing = false;
-      }, 50);
+      rafId = null;
+      if (syncDirection !== "editor-to-viewer") return;
+      syncEditorToViewer();
     });
   }
 
   function handleViewerScroll() {
-    if (isSyncing) return;
-
-    const now = Date.now();
-    if (now - lastViewerScrollTime < throttleMs) return;
-    lastViewerScrollTime = now;
-
-    isSyncing = true;
-
-    if (rafId) {
-      cancelAnimationFrame(rafId);
+    // Block sync-induced scrolls: if the last sync was editor-to-viewer
+    // (i.e., the editor moved the viewer), ignore the viewer's scroll
+    // events for SYNC_COOLDOWN ms.
+    if (
+      syncDirection === "editor-to-viewer" &&
+      Date.now() - lastSyncTime < SYNC_COOLDOWN
+    ) {
+      return;
     }
 
+    syncDirection = "viewer-to-editor";
+
+    const now = Date.now();
+    if (now - lastViewerScrollTime < throttleMs) {
+      // Throttled — schedule a trailing sync to catch the final position.
+      if (viewerTrailingTimer) clearTimeout(viewerTrailingTimer);
+      viewerTrailingTimer = setTimeout(() => {
+        viewerTrailingTimer = null;
+        if (syncDirection !== "viewer-to-editor") return;
+        syncViewerToEditor();
+      }, throttleMs);
+      return;
+    }
+    lastViewerScrollTime = now;
+
+    if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
-      const viewerPositions = getViewerLinePositions();
-      const editorLine = getEditorLineFromViewerPosition(
-        viewer.scrollTop,
-        viewerPositions,
-      );
-
-      const editorPositions = getEditorLinePositions();
-      const editorTop = interpolateViewerPosition(editorLine, editorPositions);
-
-      editor.scrollDOM.scrollTop = editorTop;
-
-      setTimeout(() => {
-        isSyncing = false;
-      }, 50);
+      rafId = null;
+      if (syncDirection !== "viewer-to-editor") return;
+      syncViewerToEditor();
     });
   }
 
@@ -217,9 +245,9 @@ export function createScrollSync(
       editor.scrollDOM.removeEventListener("scroll", handleEditorScroll);
       viewer.removeEventListener("scroll", handleViewerScroll);
 
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
+      if (rafId) cancelAnimationFrame(rafId);
+      if (editorTrailingTimer) clearTimeout(editorTrailingTimer);
+      if (viewerTrailingTimer) clearTimeout(viewerTrailingTimer);
     },
   };
 }

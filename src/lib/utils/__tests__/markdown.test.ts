@@ -46,18 +46,18 @@ describe("renderMarkdown", () => {
   it("should render unordered lists", async () => {
     const result = await renderMarkdown("- item 1\n- item 2");
     expect(result.html).toContain("<ul");
-    expect(result.html).toContain("<li>");
+    expect(result.html).toContain("<li");
   });
 
   it("should render ordered lists", async () => {
     const result = await renderMarkdown("1. item 1\n2. item 2");
     expect(result.html).toContain("<ol");
-    expect(result.html).toContain("<li>");
+    expect(result.html).toContain("<li");
   });
 
   it("should render code blocks", async () => {
     const result = await renderMarkdown("```\nconst x = 1;\n```");
-    expect(result.html).toContain("<pre>");
+    expect(result.html).toContain("<pre");
     expect(result.html).toContain("<code");
   });
 
@@ -258,6 +258,26 @@ describe("renderMarkdown", () => {
     for (let i = 1; i < dataLines.length; i++) {
       expect(dataLines[i]).toBeGreaterThanOrEqual(dataLines[i - 1]);
     }
+  });
+
+  it("should tag html_block with data-line", async () => {
+    const result = await renderMarkdown(
+      "Text.\n\n<details>\n<summary>S</summary>\n</details>",
+    );
+    expect(result.html).toContain('<div data-line="3">');
+    expect(result.html).toContain("<details>");
+  });
+
+  it("should tag list items with data-line", async () => {
+    const result = await renderMarkdown("- one\n- two\n- three");
+    expect(result.html).toContain('data-line="1"');
+    expect(result.html).toContain('data-line="2"');
+    expect(result.html).toContain('data-line="3"');
+  });
+
+  it("should tag hr with data-line", async () => {
+    const result = await renderMarkdown("Text.\n\n---\n\nMore.");
+    expect(result.html).toMatch(/<hr[^>]*data-line="3"/);
   });
 
   describe("local image src rewriting", () => {

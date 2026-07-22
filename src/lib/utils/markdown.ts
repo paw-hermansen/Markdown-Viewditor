@@ -252,6 +252,66 @@ function createLineNumbersPlugin() {
       }
       return out;
     };
+
+    // Tag <hr> elements with data-line.
+    const defaultHr =
+      md.renderer.rules.hr ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.hr = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultHr(tokens, idx, options, env, self);
+    };
+
+    // Tag list items (<li>) with data-line. This fills the gap between
+    // bullet_list_open/ordered_list_open (which only tags the first line)
+    // and the next block element, which can be many lines away for long
+    // lists (e.g. Example.md's HTML/SVG bullet list spans 13 lines but
+    // only the opening line was tagged).
+    const defaultListItemOpen =
+      md.renderer.rules.list_item_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.list_item_open = function (
+      tokens,
+      idx,
+      options,
+      env,
+      self,
+    ) {
+      const token = tokens[idx];
+      if (token.map) {
+        token.attrSet("data-line", String(token.map[0] + 1));
+      }
+      return defaultListItemOpen(tokens, idx, options, env, self);
+    };
+
+    // Tag raw HTML blocks with data-line. html_block renders raw HTML
+    // content (e.g. <details>, <svg>), so we wrap it in a <div
+    // data-line="..."> since the raw HTML can't have attributes added to
+    // it directly. This is safe because html_block is always block-level.
+    const defaultHtmlBlock =
+      md.renderer.rules.html_block ||
+      function (tokens, idx, _options, _env, self) {
+        return self.renderToken(tokens, idx, _options);
+      };
+
+    md.renderer.rules.html_block = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      const html = defaultHtmlBlock(tokens, idx, options, env, self);
+      if (token.map) {
+        const line = String(token.map[0] + 1);
+        return `<div data-line="${line}">${html}</div>`;
+      }
+      return html;
+    };
   };
 }
 

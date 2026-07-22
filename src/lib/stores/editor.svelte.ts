@@ -4,7 +4,7 @@ export const editorState = $state<EditorState>({
   content: "# Hello World\n\nStart writing markdown here...",
   cursorLine: 1,
   cursorCol: 1,
-  wordCount: 0,
+  wordCount: 6,
   isModified: false,
 });
 

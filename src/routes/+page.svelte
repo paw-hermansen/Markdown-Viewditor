@@ -7,7 +7,7 @@
   import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
   import AboutDialog from '$lib/components/About/AboutDialog.svelte';
   import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
-  import { editorState, markSaved, resetEditor, hasUnsavedChanges } from '$lib/stores/editor.svelte';
+  import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, closeFile, readFile, getFileName } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
@@ -51,6 +51,7 @@
     const content = await openFile();
     if (content !== null) {
       editorState.content = content;
+      updateWordCount(content);
       editorComponent?.setContent(content);
       markSaved();
     }
@@ -204,6 +205,7 @@
       const content = await readFile(initialFile);
       if (content !== null) {
         editorState.content = content;
+        updateWordCount(content);
         editorComponent?.setContent(content);
         markSaved();
       }
@@ -211,6 +213,7 @@
       const content = await readFile(settingsState.lastOpenedFile);
       if (content !== null) {
         editorState.content = content;
+        updateWordCount(content);
         editorComponent?.setContent(content);
         markSaved();
       }

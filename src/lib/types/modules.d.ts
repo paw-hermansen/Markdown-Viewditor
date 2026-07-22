@@ -9,3 +9,8 @@ declare module "markdown-it-footnote" {
   const footnote: MarkdownIt.PluginSimple;
   export default footnote;
 }
+
+declare module "*?raw" {
+  const content: string;
+  export default content;
+}

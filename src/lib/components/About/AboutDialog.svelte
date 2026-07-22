@@ -1,5 +1,6 @@
 <script lang="ts">
   import { openUrl } from '@tauri-apps/plugin-opener';
+  import licenseText from '../../../../LICENSE?raw';
 
   interface Props {
     open: boolean;
@@ -7,7 +8,7 @@
   }
 
   let { open, onClose }: Props = $props();
-  let activeTab = $state<'about' | 'themes' | 'dependencies'>('about');
+  let activeTab = $state<'about' | 'themes' | 'dependencies' | 'license'>('about');
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') onClose();
@@ -74,6 +75,7 @@
         <button class="tab" class:active={activeTab === 'about'} role="tab" aria-selected={activeTab === 'about'} onclick={() => activeTab = 'about'}>About</button>
         <button class="tab" class:active={activeTab === 'themes'} role="tab" aria-selected={activeTab === 'themes'} onclick={() => activeTab = 'themes'}>Custom Themes</button>
         <button class="tab" class:active={activeTab === 'dependencies'} role="tab" aria-selected={activeTab === 'dependencies'} onclick={() => activeTab = 'dependencies'}>Dependencies</button>
+        <button class="tab" class:active={activeTab === 'license'} role="tab" aria-selected={activeTab === 'license'} onclick={() => activeTab = 'license'}>License</button>
       </div>
 
       <div class="tab-content">
@@ -97,7 +99,7 @@
             <h2>License</h2>
             <p>
               Licensed under the
-              <button class="link" onclick={() => handleLink('https://opensource.org/licenses/MIT')}>MIT License</button>.
+              <button class="link" onclick={() => activeTab = 'license'}>MIT License</button>.
               You are free to use, modify, and distribute this software.
             </p>
           </section>
@@ -267,6 +269,13 @@
                 {/each}
               </tbody>
             </table>
+          </section>
+        {/if}
+
+        {#if activeTab === 'license'}
+          <section>
+            <h2>MIT License</h2>
+            <pre class="license-text">{licenseText}</pre>
           </section>
         {/if}
       </div>
@@ -474,5 +483,21 @@
 
   .deps-table td:nth-child(3) {
     font-size: 12px;
+  }
+
+  .license-text {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    overflow-y: auto;
+    max-height: 400px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin-top: 8px;
   }
 </style>

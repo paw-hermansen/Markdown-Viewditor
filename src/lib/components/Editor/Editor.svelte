@@ -187,6 +187,7 @@
         changes: { from: from - before.length, to: to + after.length, insert: selectedText },
         selection: { anchor: from - before.length, head: from - before.length + selectedText.length }
       });
+      editorView.focus();
       return;
     }
 
@@ -195,6 +196,7 @@
       changes: { from, to, insert: replacement },
       selection: { anchor: from + before.length, head: from + before.length + (selectedText.length || 4) }
     });
+    editorView.focus();
   }
 
   function toggleItalic() {
@@ -231,6 +233,7 @@
         selection: { anchor: from + 1, head: from + 1 + (selectedText.length || 4) }
       });
     }
+    editorView.focus();
   }
 
   function insertLink() {
@@ -245,6 +248,7 @@
         head: from + 1 + (selectedText.length || 4)
       }
     });
+    editorView.focus();
   }
 
   function insertFormatting(format: string) {
@@ -282,6 +286,7 @@
             selection: { anchor: line.from + 3, head: line.from + newLine.length }
           });
         }
+        editorView.focus();
         return;
       }
       case 'code':
@@ -321,6 +326,7 @@
           changes: { from, to, insert: replacement },
           selection: { anchor: from + 4, head: from + 4 }
         });
+        editorView.focus();
         return;
       case 'bold':
         wrapSelection('**', '**');
@@ -339,6 +345,7 @@
         head: from + cursorOffset + (selectedText.length || format.length)
       }
     });
+    editorView.focus();
   }
 
   $effect(() => {

@@ -22,6 +22,7 @@
     <button
       class="toolbar-btn"
       title={format.title}
+      onmousedown={(e) => { e.preventDefault(); }}
       onclick={() => onFormat(format.id)}
     >
       {format.icon}

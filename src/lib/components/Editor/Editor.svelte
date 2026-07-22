@@ -21,6 +21,8 @@
   let editorElement: HTMLDivElement;
   let editorView: EditorView | undefined;
   let isUpdatingFromProp = false;
+  let preventNativeFormat: ((e: Event) => void) | undefined;
+  let handleKeydown: ((e: KeyboardEvent) => void) | undefined;
   const themeCompartment = new Compartment();
   const lineNumbersCompartment = new Compartment();
   const wordWrapCompartment = new Compartment();
@@ -149,6 +151,30 @@
       state,
       parent: editorElement
     });
+
+    preventNativeFormat = (e: Event) => {
+      const ie = e as InputEvent;
+      if (ie.inputType === 'formatItalic' || ie.inputType === 'formatBold') {
+        e.preventDefault();
+      }
+    };
+    editorView.contentDOM.addEventListener('beforeinput', preventNativeFormat);
+
+    handleKeydown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== 'i') return;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      toggleItalic();
+      const after = editorView!.state.selection.main;
+      requestAnimationFrame(() => {
+        if (!editorView) return;
+        const cur = editorView.state.selection.main;
+        if (cur.from !== after.from || cur.to !== after.to) {
+          editorView.dispatch({ selection: { anchor: after.anchor, head: after.head } });
+        }
+      });
+    };
+    editorElement.addEventListener('keydown', handleKeydown, { capture: true });
   }
 
   $effect(() => {
@@ -366,7 +392,13 @@
 
   onDestroy(() => {
     if (editorView) {
+      if (preventNativeFormat) {
+        editorView.contentDOM.removeEventListener('beforeinput', preventNativeFormat);
+      }
       editorView.destroy();
+    }
+    if (handleKeydown) {
+      editorElement.removeEventListener('keydown', handleKeydown, { capture: true });
     }
   });
 

@@ -393,7 +393,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--text-muted);
+    color: var(--text-primary);
     margin-bottom: 8px;
   }
 

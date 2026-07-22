@@ -38,6 +38,7 @@
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .toolbar-btn {

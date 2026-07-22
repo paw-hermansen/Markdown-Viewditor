@@ -11,4 +11,4 @@
 
 2. Open a markdown file, for example `Example.md`, in the Markdown Viewditor
 3. The two custom themes should now be available to select from the
-   themes dropdown at the top right.
+   themes dropdown at the top right

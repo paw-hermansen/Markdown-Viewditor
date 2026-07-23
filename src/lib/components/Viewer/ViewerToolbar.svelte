@@ -10,10 +10,6 @@
 </script>
 
 <div class="viewer-toolbar">
-  <div class="toolbar-left">
-    <span class="toolbar-label">View</span>
-  </div>
-
   <div class="toolbar-right">
     {#if onCopyHtml}
       <button class="toolbar-button" onclick={onCopyHtml} title="Copy HTML">
@@ -44,22 +40,11 @@
   .viewer-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 6px 12px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
     height: 40px;
-  }
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-  }
-
-  .toolbar-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
   }
 
   .toolbar-right {

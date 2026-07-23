@@ -284,6 +284,8 @@
 
     let replacement = '';
     let cursorOffset = 0;
+    let placeholderLen = 0;
+    let cursorBefore = false;
 
     switch (format) {
       case 'heading': {
@@ -318,10 +320,13 @@
       case 'code':
         replacement = `\`${selectedText || 'code'}\``;
         cursorOffset = 1;
+        placeholderLen = 4;
         break;
       case 'codeblock':
         replacement = `\`\`\`\n${selectedText || 'code'}\n\`\`\``;
         cursorOffset = 4;
+        placeholderLen = 4;
+        cursorBefore = true;
         break;
       case 'link':
         insertLink();
@@ -329,22 +334,30 @@
       case 'image':
         replacement = `![${selectedText || 'alt'}](url)`;
         cursorOffset = 2;
+        placeholderLen = 3;
         break;
       case 'bullet':
         replacement = `- ${selectedText || 'item'}`;
         cursorOffset = 2;
+        placeholderLen = 4;
+        cursorBefore = true;
         break;
       case 'numbered':
         replacement = `1. ${selectedText || 'item'}`;
         cursorOffset = 3;
+        placeholderLen = 4;
+        cursorBefore = true;
         break;
       case 'task':
         replacement = `- [ ] ${selectedText || 'task'}`;
         cursorOffset = 6;
+        placeholderLen = 4;
+        cursorBefore = true;
         break;
       case 'quote':
         replacement = `> ${selectedText || 'quote'}`;
         cursorOffset = 2;
+        placeholderLen = 5;
         break;
       case 'hr':
         replacement = `\n---\n`;
@@ -364,11 +377,15 @@
         return;
     }
 
+    const textLen = selectedText.length || placeholderLen;
+    const selStart = from + cursorOffset;
+    const selEnd = selStart + textLen;
+
     editorView.dispatch({
       changes: { from, to, insert: replacement },
       selection: {
-        anchor: from + cursorOffset,
-        head: from + cursorOffset + (selectedText.length || format.length)
+        anchor: cursorBefore ? selEnd : selStart,
+        head: cursorBefore ? selStart : selEnd
       }
     });
     editorView.focus();

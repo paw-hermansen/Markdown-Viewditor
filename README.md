@@ -24,7 +24,8 @@ This application was built with the help of [OpenCode](https://opencode.ai), an 
 ## Quick Start
 
 1. **Install Rust** (required for Tauri) — see [rustup.rs](https://rustup.rs) for Windows, macOS, and Linux installers, then restart your terminal
-2. **Install dependencies** and start the dev server:
+2. **Install platform dependencies** — see the [Build Prerequisites](CONTRIBUTING.md#build-prerequisites) section (Linux requires extra system libraries)
+3. **Install dependencies** and start the dev server:
 
 ```bash
 npm install

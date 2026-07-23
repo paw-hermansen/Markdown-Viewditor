@@ -21,6 +21,8 @@ function getDefaultDir(): string | undefined {
 }
 
 export async function openFile(): Promise<string | null> {
+  if (fileState.isLoading) return null;
+
   try {
     fileState.isLoading = true;
     fileState.error = null;
@@ -74,6 +76,8 @@ export async function saveFile(
 }
 
 export async function saveFileAs(content: string): Promise<string | null> {
+  if (fileState.isLoading) return null;
+
   try {
     fileState.isLoading = true;
     fileState.error = null;

@@ -14,11 +14,12 @@
     onNew: () => void;
     onAbout: () => void;
     isModified: boolean;
+    isLoading?: boolean;
     fileName?: string;
     children: Snippet;
   }
 
-  let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, onAbout, isModified, fileName, children }: Props = $props();
+  let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, onAbout, isModified, isLoading = false, fileName, children }: Props = $props();
 
   const EDGE_THRESHOLD = 0.05;
 
@@ -124,12 +125,12 @@
           <path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <button class="toolbar-btn" onclick={onOpen} title="Open file (Ctrl+O)">
+      <button class="toolbar-btn" onclick={onOpen} title="Open file (Ctrl+O)" disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M2 4h4l2 2h6v7a1 1 0 01-1 1H2V4z" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <button class="toolbar-btn" onclick={onSave} title="Save (Ctrl+S)">
+      <button class="toolbar-btn" onclick={onSave} title="Save (Ctrl+S)" disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M12 15H3a1 1 0 01-1-1V2a1 1 0 011-1h8l3 3v10a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3H5V1M5 10h6" stroke="currentColor" stroke-width="1.5"/>
@@ -138,7 +139,7 @@
           <span class="modified-dot">●</span>
         {/if}
       </button>
-      <button class="toolbar-btn" onclick={onSaveAs} title="Save As (Ctrl+Shift+S)">
+      <button class="toolbar-btn" onclick={onSaveAs} title="Save As (Ctrl+Shift+S)" disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M12 15H3a1 1 0 01-1-1V2a1 1 0 011-1h8l3 3v10a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3H5V1" stroke="currentColor" stroke-width="1.5"/>
@@ -251,6 +252,12 @@
   .toolbar-btn:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
+  }
+
+  .toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 
   .modified-dot {

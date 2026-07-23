@@ -115,6 +115,8 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
+    if (fileState.isLoading) return;
+
     const isMod = e.metaKey || e.ctrlKey;
 
     if (e.key === 'F1') {
@@ -231,6 +233,7 @@
   onNew={handleNew}
   onAbout={handleAbout}
   isModified={editorState.isModified}
+  isLoading={fileState.isLoading}
   {fileName}
 >
   {#if viewMode === 'split' || viewMode === 'editor'}

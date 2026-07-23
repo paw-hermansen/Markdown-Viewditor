@@ -7,7 +7,8 @@
     "devUrl": "http://localhost:5173",
     "frontendDist": "../build",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build",
+    "removeUnusedCommands": true
   },
   "app": {
     "enableGTKAppId": false,
@@ -32,7 +33,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "rpm"],
+    "targets": ["deb", "rpm", "msi", "nsis", "dmg", "app"],
     "publisher": "Paw Hermansen",
     "icon": [
       "icons/icon.icns",

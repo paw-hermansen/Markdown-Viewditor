@@ -135,8 +135,25 @@ async fn save_window_state(app: tauri::AppHandle) -> Result<(), AppError> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+fn configure_platform() {
+    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+}
+
+#[cfg(target_os = "windows")]
+fn configure_platform() {
+    std::env::set_var(
+        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+        "--disable-features=msWebOOUI",
+    );
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
+fn configure_platform() {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    configure_platform();
     let initial_file = env::args().nth(1);
 
     tauri::Builder::default()

@@ -94,20 +94,12 @@
     const viewerContent = document.querySelector('.viewer-content');
     if (!viewerContent) return;
 
-    const appLayout = document.querySelector('.app-layout');
     const printDiv = document.createElement('div');
     printDiv.classList.add('print-content');
     printDiv.innerHTML = viewerContent.innerHTML;
     document.body.appendChild(printDiv);
-    if (appLayout) (appLayout as HTMLElement).style.display = 'none';
-
-    const cleanup = () => {
-      printDiv.remove();
-      if (appLayout) (appLayout as HTMLElement).style.display = '';
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
     window.print();
+    printDiv.remove();
   }
 
   function handleAbout() {

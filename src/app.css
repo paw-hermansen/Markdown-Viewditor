@@ -93,6 +93,10 @@ body {
     height: auto;
   }
 
+  .app-layout {
+    display: none !important;
+  }
+
   .print-content {
     font-family: var(--font-sans);
     font-size: 12pt;

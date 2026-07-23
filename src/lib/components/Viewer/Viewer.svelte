@@ -16,6 +16,7 @@
   let html = $state('');
   let frontmatter: Frontmatter | null = $state(null);
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
+  let viewerContentElement: HTMLDivElement | undefined = $state(undefined);
   let renderTimeout: ReturnType<typeof setTimeout> | undefined;
 
   $effect(() => {
@@ -125,6 +126,10 @@
   export function getViewerElement() {
     return viewerElement;
   }
+
+  export function getViewerContentElement() {
+    return viewerContentElement;
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -137,7 +142,7 @@
   onclick={handleLinkClick}
   onkeydown={handleKeydown}
 >
-  <div class="viewer-content" id="viewer-content">
+  <div class="viewer-content" id="viewer-content" bind:this={viewerContentElement}>
     {#if frontmatter}
       <div class="frontmatter-card" data-line="1">
         {#if isSkill}

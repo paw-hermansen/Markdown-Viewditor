@@ -84,14 +84,14 @@
   }
 
   function handleCopyHtml() {
-    const viewerContent = document.querySelector('.viewer-content');
+    const viewerContent = viewerComponent?.getViewerContentElement();
     if (viewerContent) {
       navigator.clipboard.writeText(viewerContent.innerHTML);
     }
   }
 
   function handlePrint() {
-    const viewerContent = document.querySelector('.viewer-content');
+    const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
 
     const printDiv = document.createElement('div');

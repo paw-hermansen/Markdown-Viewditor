@@ -32,7 +32,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb", "rpm"],
     "publisher": "Paw Hermansen",
     "icon": [
       "icons/icon.icns",

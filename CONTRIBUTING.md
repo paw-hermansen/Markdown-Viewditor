@@ -32,15 +32,14 @@ These are required for **all** Linux builds (dev and bundle):
 
 #### Bundle-Specific Extras
 
-The project's `tauri.conf.json` uses `bundle.targets: "all"`, which produces AppImage, `.deb`, and `.rpm` packages on Linux. Each format may need extra tooling:
+The project's `tauri.conf.json` uses `bundle.targets: ["deb", "rpm"]`, which produces `.deb` and `.rpm` packages on Linux. Each format may need extra tooling:
 
-| Bundle       | Extra dependencies          | Notes                                                                                                                             |
-| ------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **AppImage** | `libfuse2`                  | Required by `linuxdeploy` (which Tauri downloads automatically). Not needed on the end-user's system — only on the build machine. |
-| **.deb**     | `dpkg`                      | Pre-installed on Debian/Ubuntu.                                                                                                   |
-| **.rpm**     | `rpm` (provides `rpmbuild`) | Only needed when building RPM on a non-RPM distro (e.g., Ubuntu).                                                                 |
+| Bundle   | Extra dependencies          | Notes                                                             |
+| -------- | --------------------------- | ----------------------------------------------------------------- |
+| **.deb** | `dpkg`                      | Pre-installed on Debian/Ubuntu.                                   |
+| **.rpm** | `rpm` (provides `rpmbuild`) | Only needed when building RPM on a non-RPM distro (e.g., Ubuntu). |
 
-> **Note:** If you don't need AppImage, change `bundle.targets` from `"all"` to `["deb", "rpm"]` in `src-tauri/tauri.conf.json` to avoid the `libfuse2` / `linuxdeploy` dependency.
+> **Note:** AppImage is not built by default because the product name contains a space, which is incompatible with `linuxdeploy`. If you need AppImage, remove the space from `productName` in `src-tauri/tauri.conf.json` and add `"appimage"` to `bundle.targets`. You will also need `libfuse2` installed.
 
 ### macOS
 

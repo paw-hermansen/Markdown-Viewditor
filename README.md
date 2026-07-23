@@ -15,6 +15,7 @@ A clean, simple, and modern markdown viewer and editor with **live preview** bui
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
 - **Multiple Themes** — 8 built-in themes + custom CSS (see ⓘ inside the app)
+- **YAML Frontmatter** — for AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
 ## AI-Assisted Development

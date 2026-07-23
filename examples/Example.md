@@ -319,14 +319,14 @@ _italic text_ (emphasis)
 Here are some more HTML elements for testing:
 
 - Sized image:<br/>
-  <img src="../images/screendump.png" width="100px" alt="A Sized Image">
+  <img src="../images/ai_flower.png" width="80px" alt="A Sized Image">
 - <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy
 - H<sub>2</sub>O is water
 - E = mc<sup>2</sup>
 - <mark>highlighted text</mark>
 - Special characters: &AElig;&Oslash;&Aring; &ndash; &mdash;
   &#9834;&#9835; &rarr; &frac12;
-- Emojis: 😮 ✅ ❤️ ⚽ 🇩🇰
+- Emojis (copy-paste): 😮 ✅ ❤️ ⚽ 🇩🇰
 - <del>deleted text</del> and <ins>inserted text</ins>
 - Text in <span style="color: red">different</span>
   <span style="color: green">colors</span> and

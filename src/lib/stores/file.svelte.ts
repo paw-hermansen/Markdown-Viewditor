@@ -11,6 +11,8 @@ export const fileState = $state({
   recentFiles: [...settingsState.recentFiles] as string[],
   isLoading: false,
   error: null as string | null,
+  currentFileMtime: null as number | null,
+  externallyModified: false,
 });
 
 function getDefaultDir(): string | undefined {
@@ -18,6 +20,37 @@ function getDefaultDir(): string | undefined {
   if (!path) return undefined;
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return lastSlash > 0 ? path.substring(0, lastSlash) : undefined;
+}
+
+export async function getFileMtime(path: string): Promise<number | null> {
+  try {
+    return await invoke<number>("get_file_mtime", { path });
+  } catch {
+    return null;
+  }
+}
+
+export async function checkExternalModification(): Promise<
+  "deleted" | "modified" | "unchanged"
+> {
+  if (!fileState.currentFile || fileState.currentFileMtime === null)
+    return "unchanged";
+  const diskMtime = await getFileMtime(fileState.currentFile);
+  if (diskMtime === null) return "deleted";
+  if (diskMtime !== fileState.currentFileMtime) return "modified";
+  return "unchanged";
+}
+
+export async function showSaveDialog(): Promise<string | null> {
+  if (fileState.isLoading) return null;
+  return await save({
+    defaultPath: getDefaultDir(),
+    filters: [
+      { name: "Markdown", extensions: ["md", "markdown"] },
+      { name: "Text", extensions: ["txt"] },
+      { name: "All Files", extensions: ["*"] },
+    ],
+  });
 }
 
 export async function openFile(): Promise<string | null> {
@@ -41,6 +74,8 @@ export async function openFile(): Promise<string | null> {
     const path = typeof selected === "string" ? selected : selected;
     const content = await invoke<string>("read_file", { path });
     fileState.currentFile = path;
+    fileState.currentFileMtime = await getFileMtime(path);
+    fileState.externallyModified = false;
     addRecentFile(path);
     updateLastOpenedFile(path);
     return content;
@@ -63,6 +98,8 @@ export async function saveFile(
 
     await invoke("write_file", { path, content });
     fileState.currentFile = path;
+    fileState.currentFileMtime = await getFileMtime(path);
+    fileState.externallyModified = false;
     addRecentFile(path);
     updateLastOpenedFile(path);
     return true;
@@ -95,6 +132,8 @@ export async function saveFileAs(content: string): Promise<string | null> {
 
     await invoke("write_file", { path, content });
     fileState.currentFile = path;
+    fileState.currentFileMtime = await getFileMtime(path);
+    fileState.externallyModified = false;
     addRecentFile(path);
     updateLastOpenedFile(path);
     return path;
@@ -114,6 +153,8 @@ export async function readFile(path: string): Promise<string | null> {
 
     const content = await invoke<string>("read_file", { path });
     fileState.currentFile = path;
+    fileState.currentFileMtime = await getFileMtime(path);
+    fileState.externallyModified = false;
     addRecentFile(path);
     updateLastOpenedFile(path);
     return content;
@@ -128,6 +169,8 @@ export async function readFile(path: string): Promise<string | null> {
 
 export function closeFile() {
   fileState.currentFile = null;
+  fileState.currentFileMtime = null;
+  fileState.externallyModified = false;
   fileState.error = null;
   updateLastOpenedFile(null);
 }

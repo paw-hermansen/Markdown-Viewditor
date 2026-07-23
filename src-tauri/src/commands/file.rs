@@ -52,6 +52,16 @@ pub async fn create_file(path: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
+pub async fn get_file_mtime(path: String) -> Result<u64, AppError> {
+    let metadata = std::fs::metadata(&path)?;
+    Ok(metadata
+        .modified()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64)
+}
+
+#[tauri::command]
 pub async fn delete_file(path: String) -> Result<(), AppError> {
     let metadata = std::fs::metadata(&path)?;
     if metadata.is_dir() {
@@ -192,6 +202,45 @@ mod tests {
 
         assert!(file_path.exists());
         assert_eq!(std::fs::metadata(&file_path).unwrap().len(), 0);
+    }
+
+    // --- get_file_mtime ---
+
+    #[tokio::test]
+    async fn get_file_mtime_returns_valid_timestamp() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("mtime_test.md");
+        std::fs::write(&file_path, "content").unwrap();
+
+        let mtime = get_file_mtime(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(mtime > 0);
+    }
+
+    #[tokio::test]
+    async fn get_file_mtime_changes_after_write() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("mtime_change.md");
+        std::fs::write(&file_path, "first").unwrap();
+
+        let mtime1 = get_file_mtime(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        std::fs::write(&file_path, "second").unwrap();
+
+        let mtime2 = get_file_mtime(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(mtime2 >= mtime1);
+    }
+
+    #[tokio::test]
+    async fn get_file_mtime_returns_error_for_missing_file() {
+        let result = get_file_mtime("/nonexistent/path/file.md".to_string()).await;
+        assert!(result.is_err());
     }
 
     // --- delete_file ---

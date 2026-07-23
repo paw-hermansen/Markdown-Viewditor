@@ -16,13 +16,14 @@
     onOpen: () => void;
     onSave: () => void;
     onSaveAs: () => void;
+    onReload: () => void;
     onViewModeChange: (mode: ViewMode) => void;
     onAbout: () => void;
     onCopyHtml?: () => void;
     onPrint?: () => void;
   }
 
-  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onViewModeChange, onAbout, onCopyHtml, onPrint }: Props = $props();
+  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onViewModeChange, onAbout, onCopyHtml, onPrint }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
@@ -33,6 +34,7 @@
     { id: 'open', label: 'Open File', shortcut: 'Ctrl+O', category: 'File', action: onOpen },
     { id: 'save', label: 'Save', shortcut: 'Ctrl+S', category: 'File', action: onSave },
     { id: 'save-as', label: 'Save As', shortcut: 'Ctrl+Shift+S', category: 'File', action: onSaveAs },
+    { id: 'reload', label: 'Reload from Disk', shortcut: 'Ctrl+R', category: 'File', action: onReload },
     { id: 'view-split', label: 'Split View', category: 'View', action: () => onViewModeChange('split') },
     { id: 'view-editor', label: 'Editor Only', category: 'View', action: () => onViewModeChange('editor') },
     { id: 'view-viewer', label: 'Viewer Only', category: 'View', action: () => onViewModeChange('viewer') },

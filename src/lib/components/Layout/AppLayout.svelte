@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { ViewMode } from '$lib/types';
   import { settingsState, updateSplitRatio } from '$lib/stores/settings.svelte';
+  import { fileState } from '$lib/stores/file.svelte';
   import ViewToggle from './ViewToggle.svelte';
   import StatusBar from './StatusBar.svelte';
 
@@ -10,6 +11,7 @@
     onViewModeChange: (mode: ViewMode) => void;
     onSave: () => void;
     onSaveAs: () => void;
+    onReload: () => void;
     onOpen: () => void;
     onNew: () => void;
     onAbout: () => void;
@@ -19,7 +21,7 @@
     children: Snippet;
   }
 
-  let { viewMode, onViewModeChange, onSave, onSaveAs, onOpen, onNew, onAbout, isModified, isLoading = false, fileName, children }: Props = $props();
+  let { viewMode, onViewModeChange, onSave, onSaveAs, onReload, onOpen, onNew, onAbout, isModified, isLoading = false, fileName, children }: Props = $props();
 
   const EDGE_THRESHOLD = 0.05;
 
@@ -146,9 +148,16 @@
           <path d="M5 10h2M5 13h6" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
+      <span class="separator"></span>
+      <button class="toolbar-btn" onclick={onReload} title="Reload from Disk (Ctrl+R)" disabled={isLoading || !fileName}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 8a6 6 0 0110.47-4M14 8a6 6 0 01-10.47 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M12 1v3h-3M4 15v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       {#if fileName}
         <span class="separator"></span>
-        <span class="file-name">{fileName}{#if isModified} *{/if}</span>
+        <span class="file-name">{fileName}{#if isModified} *{/if}{#if fileState.externallyModified} <span class="external-change-warning" title="Externally modified">&#x26A0;</span>{/if}</span>
       {/if}
     </div>
     <div class="toolbar-center">
@@ -225,6 +234,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .external-change-warning {
+    color: var(--accent-warning, #f59e0b);
   }
 
   .separator {

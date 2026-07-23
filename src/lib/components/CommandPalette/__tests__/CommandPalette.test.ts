@@ -11,6 +11,7 @@ describe("CommandPalette", () => {
     onOpen: vi.fn(),
     onSave: vi.fn(),
     onSaveAs: vi.fn(),
+    onReload: vi.fn(),
     onViewModeChange: vi.fn(),
     onAbout: vi.fn(),
   };
@@ -39,6 +40,7 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Open File")).toBeInTheDocument();
     expect(screen.getByText("Save")).toBeInTheDocument();
     expect(screen.getByText("Save As")).toBeInTheDocument();
+    expect(screen.getByText("Reload from Disk")).toBeInTheDocument();
     expect(screen.getByText("About")).toBeInTheDocument();
   });
 

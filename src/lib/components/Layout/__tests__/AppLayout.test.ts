@@ -37,6 +37,7 @@ describe("AppLayout", () => {
     onViewModeChange: vi.fn(),
     onSave: vi.fn(),
     onSaveAs: vi.fn(),
+    onReload: vi.fn(),
     onOpen: vi.fn(),
     onNew: vi.fn(),
     onAbout: vi.fn(),

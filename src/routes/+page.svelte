@@ -8,7 +8,7 @@
   import AboutDialog from '$lib/components/About/AboutDialog.svelte';
   import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
-  import { fileState, openFile, saveFile, saveFileAs, closeFile, readFile, getFileName } from '$lib/stores/file.svelte';
+  import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, checkExternalModification, getFileMtime } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
   import { invoke } from '@tauri-apps/api/core';
@@ -25,6 +25,9 @@
   let showAbout = $state(false);
   let showCommandPalette = $state(false);
   let unlistenCloseRequested: (() => void) | undefined;
+  let unlistenFocusChanged: (() => void) | undefined;
+  let isCheckingExternalChanges = false;
+  let isSaving = false;
 
   function handleFormat(format: string) {
     if (editorComponent) {
@@ -61,22 +64,104 @@
 
   async function handleSave() {
     if (fileState.currentFile) {
-      const success = await saveFile(fileState.currentFile, editorState.content);
-      if (success) {
-        markSaved();
+      const status = await checkExternalModification();
+      if (status === 'modified') {
+        const confirmed = await ask(
+          'This file has been modified by another application since it was last saved. Do you want to overwrite the external changes?',
+          { title: 'Markdown Viewditor', kind: 'warning' }
+        );
+        if (!confirmed) {
+          const diskMtime = await getFileMtime(fileState.currentFile);
+          if (diskMtime !== null) fileState.currentFileMtime = diskMtime;
+          return;
+        }
+      } else if (status === 'deleted') {
+        const confirmed = await ask(
+          'This file no longer exists on disk (it may have been deleted or moved). Do you want to save it again?',
+          { title: 'Markdown Viewditor', kind: 'warning' }
+        );
+        if (!confirmed) return;
+      } else if (fileState.externallyModified) {
+        const confirmed = await ask(
+          'This file has been modified by another application. Do you want to overwrite the external changes?',
+          { title: 'Markdown Viewditor', kind: 'warning' }
+        );
+        if (!confirmed) return;
+      }
+      isSaving = true;
+      try {
+        const success = await saveFile(fileState.currentFile, editorState.content);
+        if (success) {
+          markSaved();
+        }
+      } finally {
+        isSaving = false;
       }
     } else {
-      const path = await saveFileAs(editorState.content);
-      if (path) {
-        markSaved();
+      isSaving = true;
+      try {
+        const path = await saveFileAs(editorState.content);
+        if (path) {
+          markSaved();
+        }
+      } finally {
+        isSaving = false;
       }
     }
   }
 
   async function handleSaveAs() {
-    const path = await saveFileAs(editorState.content);
-    if (path) {
+    const path = await showSaveDialog();
+    if (!path) return;
+
+    if (path === fileState.currentFile) {
+      const status = await checkExternalModification();
+      if (status === 'modified') {
+        const confirmed = await ask(
+          'This file has been modified by another application since it was last saved. Do you want to overwrite the external changes?',
+          { title: 'Markdown Viewditor', kind: 'warning' }
+        );
+        if (!confirmed) {
+          const diskMtime = await getFileMtime(fileState.currentFile);
+          if (diskMtime !== null) fileState.currentFileMtime = diskMtime;
+          return;
+        }
+      } else if (status === 'deleted') {
+        const confirmed = await ask(
+          'This file no longer exists on disk (it may have been deleted or moved). Do you want to save it again?',
+          { title: 'Markdown Viewditor', kind: 'warning' }
+        );
+        if (!confirmed) return;
+      }
+    }
+
+    isSaving = true;
+    try {
+      const success = await saveFile(path, editorState.content);
+      if (success) {
+        markSaved();
+      }
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  async function handleReload() {
+    if (!fileState.currentFile || fileState.isLoading) return;
+    if (hasUnsavedChanges()) {
+      const confirmed = await ask(
+        'You have unsaved changes. Reload and discard your changes?',
+        { title: 'Markdown Viewditor', kind: 'warning' }
+      );
+      if (!confirmed) return;
+    }
+    const content = await readFile(fileState.currentFile);
+    if (content !== null) {
+      editorState.content = content;
+      updateWordCount(content);
+      editorComponent?.setContent(content);
       markSaved();
+      fileState.externallyModified = false;
     }
   }
 
@@ -151,6 +236,12 @@
       return;
     }
 
+    if (isMod && e.key === 'r') {
+      e.preventDefault();
+      handleReload();
+      return;
+    }
+
     if (isMod && e.shiftKey && e.key === 'P') {
       e.preventDefault();
       showCommandPalette = !showCommandPalette;
@@ -196,6 +287,45 @@
       await invoke('force_close_window');
     });
 
+    unlistenFocusChanged = await getCurrentWindow().onFocusChanged(async ({ payload: focused }) => {
+      if (!focused || !fileState.currentFile || isCheckingExternalChanges || isSaving) return;
+      isCheckingExternalChanges = true;
+      try {
+        const status = await checkExternalModification();
+        if (status === 'modified') {
+          fileState.externallyModified = true;
+          let message = 'This file has been modified by another application.';
+          if (hasUnsavedChanges()) {
+            message += ' You also have unsaved changes. Reload and discard your changes?';
+          } else {
+            message += ' Do you want to reload it?';
+          }
+          const reload = await ask(message, { title: 'Markdown Viewditor', kind: 'warning' });
+          if (reload) {
+            const content = await readFile(fileState.currentFile);
+            if (content !== null) {
+              editorState.content = content;
+              updateWordCount(content);
+              editorComponent?.setContent(content);
+              markSaved();
+              fileState.externallyModified = false;
+            }
+          } else {
+            const diskMtime = await getFileMtime(fileState.currentFile);
+            if (diskMtime !== null) fileState.currentFileMtime = diskMtime;
+          }
+        } else if (status === 'deleted') {
+          fileState.externallyModified = true;
+          await ask(
+            'This file no longer exists on disk (it may have been deleted or moved). You can use Save As to save your work to a new location.',
+            { title: 'Markdown Viewditor', kind: 'warning' }
+          );
+        }
+      } finally {
+        isCheckingExternalChanges = false;
+      }
+    });
+
     const initialFile = await invoke<string | null>('get_initial_file');
     if (initialFile) {
       const content = await readFile(initialFile);
@@ -218,6 +348,7 @@
 
   onDestroy(() => {
     unlistenCloseRequested?.();
+    unlistenFocusChanged?.();
     if (scrollSync) {
       scrollSync.destroy();
     }
@@ -231,6 +362,7 @@
   onViewModeChange={handleViewModeChange}
   onSave={handleSave}
   onSaveAs={handleSaveAs}
+  onReload={handleReload}
   onOpen={handleOpen}
   onNew={handleNew}
   onAbout={handleAbout}
@@ -265,6 +397,7 @@
   onOpen={handleOpen}
   onSave={handleSave}
   onSaveAs={handleSaveAs}
+  onReload={handleReload}
   onViewModeChange={handleViewModeChange}
   onAbout={handleAbout}
   onCopyHtml={handleCopyHtml}

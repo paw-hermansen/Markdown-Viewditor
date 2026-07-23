@@ -23,7 +23,10 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
   openPath: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: () => ({ onCloseRequested: vi.fn(() => () => {}) }),
+  getCurrentWindow: () => ({
+    onCloseRequested: vi.fn(() => () => {}),
+    onFocusChanged: vi.fn(() => () => {}),
+  }),
 }));
 
 vi.mock("$lib/stores/file.svelte", () => ({
@@ -32,14 +35,19 @@ vi.mock("$lib/stores/file.svelte", () => ({
     recentFiles: [],
     isLoading: false,
     error: null,
+    currentFileMtime: null,
+    externallyModified: false,
   },
   openFile: mockOpenFile,
   saveFile: mockSaveFile,
   saveFileAs: vi.fn().mockResolvedValue(null),
+  showSaveDialog: vi.fn().mockResolvedValue(null),
   readFile: vi.fn().mockResolvedValue(null),
   closeFile: vi.fn(),
   clearError: vi.fn(),
   getFileName: mockGetFileName,
+  getFileMtime: vi.fn().mockResolvedValue(null),
+  checkExternalModification: vi.fn().mockResolvedValue("unchanged"),
 }));
 
 vi.mock("$lib/stores/editor.svelte", () => ({

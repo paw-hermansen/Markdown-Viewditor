@@ -44,11 +44,18 @@ function createFrontmatterPlugin() {
       "hr",
       "front_matter",
       function frontMatterRule(state, startLine, _endLine, silent) {
-        // Only at the very first line of the document.
-        if (startLine !== 0) return false;
+        // Allow blank / whitespace-only lines before the opening delimiter.
+        // Walk backward from startLine; if any non-blank line exists before it,
+        // the delimiter is not at the document start.
+        for (let i = startLine - 1; i >= 0; i--) {
+          const ls = state.bMarks[i] + state.tShift[i];
+          const le = state.eMarks[i];
+          if (ls < le) return false;
+        }
 
-        // Opening line must be exactly "---" (ignoring trailing whitespace).
-        const openStart = state.bMarks[startLine] + state.tShift[startLine];
+        // Opening line must be exactly "---" (no leading whitespace allowed).
+        if (state.tShift[startLine] !== 0) return false;
+        const openStart = state.bMarks[startLine];
         const openEnd = state.eMarks[startLine];
         if (
           state.src.slice(openStart, openEnd).trim() !== FRONTMATTER_DELIMITER

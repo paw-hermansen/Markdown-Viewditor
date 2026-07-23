@@ -148,6 +148,37 @@ describe("renderMarkdown", () => {
     expect(result.frontmatter).toBeNull();
   });
 
+  it("should parse frontmatter with leading blank lines", async () => {
+    const result = await renderMarkdown(
+      "\n\n---\nname: my-skill\ndescription: A skill.\n---\n\n# Body",
+    );
+    expect(result.frontmatter).not.toBeNull();
+    expect(result.frontmatter?.name).toBe("my-skill");
+    expect(result.frontmatter?.description).toBe("A skill.");
+  });
+
+  it("should parse frontmatter with leading whitespace-only lines", async () => {
+    const result = await renderMarkdown(
+      "   \n\t\n---\ntitle: hello\n---\n\n# Body",
+    );
+    expect(result.frontmatter).not.toBeNull();
+    expect(result.frontmatter?.title).toBe("hello");
+  });
+
+  it("should not treat indented opening --- as frontmatter", async () => {
+    const result = await renderMarkdown(
+      "  ---\nname: my-skill\ndescription: A skill.\n---\n\n# Body",
+    );
+    expect(result.frontmatter).toBeNull();
+  });
+
+  it("should not treat frontmatter with blank lines only if non-blank line precedes", async () => {
+    const result = await renderMarkdown(
+      "some text\n\n---\ntitle: hello\n---\n\n# Body",
+    );
+    expect(result.frontmatter).toBeNull();
+  });
+
   it("should render unchecked task list items", async () => {
     const result = await renderMarkdown("- [ ] todo item");
     expect(result.html).toContain("<input");

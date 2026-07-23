@@ -67,7 +67,7 @@ fn normalize_decoded_path(decoded: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_decoded_path;
+    use super::{normalize_decoded_path, normalize_localimg_path};
 
     #[test]
     fn drive_path_without_leading_slash_is_preserved() {
@@ -147,5 +147,23 @@ mod tests {
     #[test]
     fn empty_string_returned_as_is() {
         assert_eq!(normalize_decoded_path(""), "");
+    }
+
+    #[test]
+    fn normalize_localimg_path_decodes_percent_encoded_spaces() {
+        let result = normalize_localimg_path("/home/user/my%20file.png");
+        assert_eq!(result, "home/user/my file.png");
+    }
+
+    #[test]
+    fn normalize_localimg_path_decodes_percent_encoded_unicode() {
+        let result = normalize_localimg_path("/home/user/%C3%A9l%C3%A8ve.png");
+        assert_eq!(result, "home/user/élève.png");
+    }
+
+    #[test]
+    fn normalize_localimg_path_handles_empty_path_after_scheme() {
+        let result = normalize_localimg_path("/");
+        assert_eq!(result, "");
     }
 }

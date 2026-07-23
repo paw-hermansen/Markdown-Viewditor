@@ -118,7 +118,7 @@
 <div class="app-layout">
   <header class="toolbar">
     <div class="toolbar-left">
-      <button class="toolbar-btn" onclick={onNew} title="New file (Ctrl+N)">
+      <button class="toolbar-btn" onclick={onNew} title="New file (Ctrl+N)" disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M3 1h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3h3" stroke="currentColor" stroke-width="1.5"/>

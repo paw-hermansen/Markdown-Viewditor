@@ -33,6 +33,8 @@
   }
 
   async function handleNew() {
+    if (fileState.isLoading) return;
+
     if (hasUnsavedChanges()) {
       const confirmed = await ask('You have unsaved changes. Create new file?', { title: 'Markdown Viewditor', kind: 'warning' });
       if (!confirmed) return;

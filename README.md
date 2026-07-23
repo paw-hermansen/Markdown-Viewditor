@@ -21,6 +21,8 @@ A clean, simple, and modern markdown viewer and editor with **live preview** bui
 
 This application was built with the help of [OpenCode](https://opencode.ai), an AI-powered coding assistant. Development used multiple AI models and specialized skill files.
 
+Also most of the documentation has been written by AI. I believe that everything is fairly accurate but it might of course contain errors.
+
 ## Quick Start
 
 1. **Install Rust** (required for Tauri) — see [rustup.rs](https://rustup.rs) for Windows, macOS, and Linux installers, then restart your terminal

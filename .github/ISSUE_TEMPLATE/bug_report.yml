@@ -40,7 +40,7 @@ body:
     id: version
     attributes:
       label: App version
-      description: "Check **Help > About** or the window title bar."
+      description: "Click the ⓘ icon in the app to open the About dialog."
       placeholder: "e.g. 0.1.0"
     validations:
       required: false

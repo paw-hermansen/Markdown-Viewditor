@@ -100,9 +100,12 @@ Checklist:
 
 ## Reporting Issues
 
+When you [open an issue](../../issues/new/choose), GitHub will offer you templates for **bug reports** and **feature requests**. Use whichever fits, or open a blank issue if neither applies.
+
 Checklist:
 
 - [ ] Search existing issues first
+- [ ] Use the provided template (or explain why it doesn't fit)
 - [ ] Include steps to reproduce (for bugs)
 - [ ] Include expected vs actual behavior
 - [ ] Include your OS and app version

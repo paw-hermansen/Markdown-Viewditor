@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions & General Discussion
+    url: https://github.com/paw-hermansen/Markdown-Viewditor/discussions
+    about: For questions or general conversation, use GitHub Discussions (if available) or open a blank issue.

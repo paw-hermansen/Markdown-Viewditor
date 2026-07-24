@@ -113,11 +113,17 @@
       onClose();
     }
   }
+
+  function handleOverlayKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  }
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-  <div class="overlay" onclick={handleOverlayClick}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="overlay" onclick={handleOverlayClick} onkeydown={handleOverlayKeydown}>
     <div class="palette" role="dialog" aria-label="Command palette">
       <div class="search-container">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

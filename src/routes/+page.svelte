@@ -254,7 +254,7 @@
 
     if (isMod && e.key === 'p') {
       e.preventDefault();
-      showCommandPalette = !showCommandPalette;
+      handlePrint();
       return;
     }
   }

@@ -143,6 +143,5 @@ fn main() {
 - Tauri: https://v2.tauri.app
 - Svelte: https://svelte.dev
 - SvelteKit: https://kit.svelte.dev
-- Skill files: `.opencode/skills/`
 - Development plan: `PLAN.md`
 - Design specs: `GUI-DESIGN.md`

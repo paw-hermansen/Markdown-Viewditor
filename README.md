@@ -20,7 +20,7 @@ A clean, simple, and modern markdown viewer and editor with **live preview** bui
 
 ## AI-Assisted Development
 
-This application was built with the help of [OpenCode](https://opencode.ai), an AI-powered coding assistant. Development used multiple AI models and specialized skill files.
+This application was built with the help of [OpenCode](https://opencode.ai), an AI-powered coding assistant. Development used multiple AI models.
 
 Also most of the documentation has been written by AI. I believe that everything is fairly accurate but it might of course contain errors.
 

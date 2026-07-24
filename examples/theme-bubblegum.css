@@ -1,3 +1,8 @@
+/*!
+  Theme: Bubblegum Diner
+  Description: 1950's milkshake bar & jukebox cafe palette — pastels, chrome, cherry red
+  Author: opencode
+*/
 pre code.hljs {
   display: block;
   overflow-x: auto;
@@ -6,11 +11,6 @@ pre code.hljs {
 code.hljs {
   padding: 3px 5px
 }
-/*!
-  Theme: Bubblegum Diner
-  Description: 1950's milkshake bar & jukebox cafe palette — pastels, chrome, cherry red
-  Author: opencode
-*/
 .hljs {
   color: #3b2f3a;
   background: #fff5f7

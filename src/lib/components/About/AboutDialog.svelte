@@ -208,8 +208,66 @@
                 <tr><td><code>| col |</code></td><td><code>table</code>, <code>th</code>, <code>td</code></td></tr>
                 <tr><td><code>[text](url)</code></td><td><code>a</code></td></tr>
                 <tr><td><code>![alt](src)</code></td><td><code>img</code></td></tr>
+                <tr><td><code>~~text~~</code></td><td><code>del</code></td></tr>
                 <tr><td><code>---</code></td><td><code>hr</code></td></tr>
                 <tr><td><code>[^1]</code></td><td><code>sup.footnote-ref</code>, <code>section.footnotes</code></td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h2>Raw HTML Elements</h2>
+            <p>The following HTML elements can be used directly in markdown (with <code>html: true</code> enabled) and styled with custom themes:</p>
+            <table class="ref-table">
+              <thead>
+                <tr><th>HTML</th><th>Element</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>&lt;details&gt;&lt;summary&gt;text&lt;/summary&gt;content&lt;/details&gt;</code></td><td><code>details</code>, <code>summary</code></td></tr>
+                <tr><td><code>&lt;kbd&gt;key&lt;/kbd&gt;</code></td><td><code>kbd</code></td></tr>
+                <tr><td><code>&lt;sub&gt;text&lt;/sub&gt;</code></td><td><code>sub</code></td></tr>
+                <tr><td><code>&lt;sup&gt;text&lt;/sup&gt;</code></td><td><code>sup</code></td></tr>
+                <tr><td><code>&lt;ins&gt;text&lt;/ins&gt;</code></td><td><code>ins</code></td></tr>
+                <tr><td><code>&lt;mark&gt;text&lt;/mark&gt;</code></td><td><code>mark</code></td></tr>
+              </tbody>
+            </table>
+            <p class="muted">These elements require raw HTML in your markdown source. They can be styled like any other element in custom themes.</p>
+          </section>
+
+          <section>
+            <h2>YAML Frontmatter Styling</h2>
+            <p>When a markdown file has YAML frontmatter (between <code>---</code> delimiters), it is rendered as a card above the content. Skill files (with <code>name</code> and <code>description</code>) get special treatment:</p>
+            <table class="ref-table">
+              <thead>
+                <tr><th>Class</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>.frontmatter-card</code></td><td>Card container for all frontmatter</td></tr>
+                <tr><td><code>.frontmatter-title</code></td><td>"Frontmatter" label (non-skill files)</td></tr>
+                <tr><td><code>.skill-badge</code></td><td>"Skill" badge (skill files only)</td></tr>
+                <tr><td><code>.skill-name</code></td><td>Skill name (skill files only)</td></tr>
+                <tr><td><code>.skill-description</code></td><td>Skill description (skill files only)</td></tr>
+                <tr><td><code>.skill-meta dt</code></td><td>Metadata key labels</td></tr>
+                <tr><td><code>.skill-meta dd</code></td><td>Metadata values</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h2>Additional Styling Possibilities</h2>
+            <p>These CSS selectors can be used for more granular control over viewer elements:</p>
+            <table class="ref-table">
+              <thead>
+                <tr><th>Selector</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>a:hover</code></td><td>Link hover state</td></tr>
+                <tr><td><code>li::marker</code></td><td>List item markers (bullets, numbers)</td></tr>
+                <tr><td><code>tr:nth-child(even) td</code></td><td>Table zebra stripes</td></tr>
+                <tr><td><code>.footnotes-sep</code></td><td>Footnote separator line</td></tr>
+                <tr><td><code>.footnotes ol</code></td><td>Footnote list</td></tr>
+                <tr><td><code>.footnote-backref</code></td><td>Footnote back reference link</td></tr>
+                <tr><td><code>.task-list-item input[type="checkbox"]</code></td><td>Task list checkbox styling</td></tr>
               </tbody>
             </table>
           </section>
@@ -230,25 +288,27 @@
 #viewer-content .hljs-variable, #viewer-content .hljs-params { color: #e06c75; }
 #viewer-content .hljs-tag, #viewer-content .hljs-name { color: #e06c75; }
 #viewer-content .hljs-selector-tag, #viewer-content .hljs-selector-class { color: #e06c75; }
-#viewer-content .hljs-subst { color: #abb2bf; }
 #viewer-content .hljs-section { color: #e06c75; font-weight: bold; }
 #viewer-content .hljs-bullet { color: #98c379; }
 #viewer-content .hljs-link { color: #61afef; text-decoration: underline; }
 #viewer-content .hljs-strong { font-weight: bold; }
-#viewer-content .hljs-emphasis { font-style: italic; }
 
 /* Viewer elements — prefix selectors with #viewer-content. */
 #viewer-content { background: #282c34; color: #abb2bf; }
 #viewer-content h1 { color: #e5c07b; border-bottom-color: #3e4451; }
 #viewer-content h2, #viewer-content h3 { color: #e5c07b; }
 #viewer-content a { color: #61afef; }
+#viewer-content a:hover { color: #98c379; }
 #viewer-content blockquote { border-left-color: #c678dd; color: #5c6370; }
 #viewer-content code { background: #2c313a; }
 #viewer-content pre { background: #282c34; }
 #viewer-content pre code { background: transparent; }
 #viewer-content th { background: #2c313a; color: #5c6370; }
 #viewer-content th, #viewer-content td { border-color: #3e4451; }
-#viewer-content hr { border-top-color: #3e4451; }`}</code></pre>
+#viewer-content hr { border-top-color: #3e4451; }
+#viewer-content .frontmatter-card { background: #2c313a; border-color: #3e4451; }
+#viewer-content .footnotes { color: #5c6370; font-size: 0.85em; }
+#viewer-content .footnote-backref { color: #61afef; }`}</code></pre>
           </section>
         {/if}
 

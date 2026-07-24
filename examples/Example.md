@@ -1,6 +1,6 @@
 # Kaleidoscope Test Theme Example
 
-This file exercises **all** `.hljs-*` token classes emitted by the app's registered languages and all viewer HTML elements. Use it with the **Test Kaleidoscope** theme to verify styling.
+This file exercises **all** `.hljs-*` token classes emitted by the app's registered languages and all viewer HTML elements. Use it with the [theme-kaleidoscope.css](theme-kaleidoscope.css) custom theme to verify styling.
 
 ## Text Formatting
 
@@ -27,7 +27,7 @@ Task list
 
 ###### TODO After Retirement:
 
-- [x] Write a Markdown Viewer and Editor
+- [x] Write a Markdown Viewer and Editor and give it a stupid name
 - [ ] Become Rich ~~and Famous~~
 - [ ] Listen to Wagner's _The Ring of the Nibelung_ in its entirety
 
@@ -49,16 +49,16 @@ for that kind of links:
 
 Ref.: https://en.wikipedia.org/wiki/Car_colour_popularity
 
-| Left Aligned |  Centered   | Right Aligned |
-| :----------- | :---------: | ------------: |
-| White        |   Popular   |          24.8 |
-| Black        |   Popular   |          22.0 |
-| Grey         |   Popular   |          21.3 |
-| Silver       | Kind of not |           9.1 |
-| Blue         | Kind of not |           8.9 |
-| Red          | Kind of not |           7.3 |
-| Green        |     Not     |           2.0 |
-| Others       |     Not     |           1.8 |
+| Left Aligned | Centered | Right Aligned |
+| :--- | :---: | ---: |
+| White | Popular | 24.8 |
+| Black | Popular | 22.0 |
+| Grey | Popular | 21.3 |
+| Silver | Kind of not | 9.1 |
+| Blue | Kind of not | 8.9 |
+| Red | Kind of not | 7.3 |
+| Green | Not | 2.0 |
+| Others | Not | 1.8 |
 
 ## Highlight Classes
 

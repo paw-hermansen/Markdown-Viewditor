@@ -28,6 +28,7 @@
   let searchQuery = $state('');
   let selectedIndex = $state(0);
   let searchInput = $state<HTMLInputElement | undefined>();
+  let commandsList = $state<HTMLDivElement | undefined>();
 
   const commands: Command[] = $derived([
     { id: 'new', label: 'New File', shortcut: 'Ctrl+N', category: 'File', action: onNew },
@@ -65,6 +66,12 @@
     if (selectedIndex >= filteredCommands.length) {
       selectedIndex = Math.max(0, filteredCommands.length - 1);
     }
+  });
+
+  $effect(() => {
+    void selectedIndex;
+    const selected = commandsList?.querySelector('.selected');
+    selected?.scrollIntoView({ block: 'nearest' });
   });
 
   function handleKeydown(e: KeyboardEvent) {
@@ -109,8 +116,8 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="overlay" onclick={handleOverlayClick} onkeydown={handleKeydown}>
+  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+  <div class="overlay" onclick={handleOverlayClick}>
     <div class="palette" role="dialog" aria-label="Command palette">
       <div class="search-container">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -128,7 +135,7 @@
         />
         <span class="shortcut-hint">Esc to close</span>
       </div>
-      <div class="commands-list">
+      <div class="commands-list" bind:this={commandsList}>
         {#each filteredCommands as command, i}
           <button
             class="command-item"

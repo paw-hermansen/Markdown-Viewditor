@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { render, waitFor } from "@testing-library/svelte";
+import { render, waitFor, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Page from "../+page.svelte";
+import { fileState } from "$lib/stores/file.svelte";
+import { hasUnsavedChanges } from "$lib/stores/editor.svelte";
 
 const { mockInvoke, mockOpenFile, mockSaveFile, mockGetFileName } = vi.hoisted(
   () => ({
@@ -152,6 +154,48 @@ describe("+page.svelte", () => {
     const { container } = render(Page);
     await waitFor(() => {
       expect(container).toBeTruthy();
+    });
+  });
+
+  it("does not call saveFile when there are no unsaved changes and no external modifications", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(false);
+    (fileState as any).currentFile = "/test/file.md";
+    (fileState as any).externallyModified = false;
+
+    render(Page);
+    await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockSaveFile).not.toHaveBeenCalled();
+    });
+  });
+
+  it("calls saveFile when there are unsaved changes", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(true);
+    (fileState as any).currentFile = "/test/file.md";
+    (fileState as any).externallyModified = false;
+
+    render(Page);
+    await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockSaveFile).toHaveBeenCalledWith(
+        "/test/file.md",
+        expect.any(String),
+      );
+    });
+  });
+
+  it("calls saveFile when file is externally modified even without unsaved changes", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(false);
+    (fileState as any).currentFile = "/test/file.md";
+    (fileState as any).externallyModified = true;
+
+    render(Page);
+    await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockSaveFile).toHaveBeenCalled();
     });
   });
 });

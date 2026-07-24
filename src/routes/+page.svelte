@@ -63,6 +63,10 @@
   }
 
   async function handleSave() {
+    if (!hasUnsavedChanges() && !fileState.externallyModified) {
+      return;
+    }
+
     if (fileState.currentFile) {
       const status = await checkExternalModification();
       if (status === 'modified') {

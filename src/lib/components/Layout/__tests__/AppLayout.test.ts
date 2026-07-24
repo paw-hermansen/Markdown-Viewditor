@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent } from "@testing-library/svelte";
+import type { Snippet } from "svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AppLayout from "../AppLayout.svelte";
+
+const snippet = (content = "") => (() => content) as unknown as Snippet;
 
 const { mockSettingsState, mockUpdateSplitRatio } = vi.hoisted(() => ({
   mockSettingsState: {
@@ -52,7 +55,7 @@ describe("AppLayout", () => {
 
   it("renders header toolbar with action buttons", () => {
     render(AppLayout, {
-      props: { ...defaultProps, children: () => "content" },
+      props: { ...defaultProps, children: snippet("content") },
     });
     expect(screen.getByTitle("New file (Ctrl+N)")).toBeInTheDocument();
     expect(screen.getByTitle("Open file (Ctrl+O)")).toBeInTheDocument();
@@ -63,7 +66,7 @@ describe("AppLayout", () => {
   it("calls onNew on New button click", async () => {
     const onNew = vi.fn();
     render(AppLayout, {
-      props: { ...defaultProps, onNew, children: () => "" },
+      props: { ...defaultProps, onNew, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("New file (Ctrl+N)"));
     expect(onNew).toHaveBeenCalled();
@@ -72,7 +75,7 @@ describe("AppLayout", () => {
   it("calls onOpen on Open button click", async () => {
     const onOpen = vi.fn();
     render(AppLayout, {
-      props: { ...defaultProps, onOpen, children: () => "" },
+      props: { ...defaultProps, onOpen, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("Open file (Ctrl+O)"));
     expect(onOpen).toHaveBeenCalled();
@@ -81,7 +84,7 @@ describe("AppLayout", () => {
   it("calls onSave on Save button click", async () => {
     const onSave = vi.fn();
     render(AppLayout, {
-      props: { ...defaultProps, onSave, children: () => "" },
+      props: { ...defaultProps, onSave, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("Save (Ctrl+S)"));
     expect(onSave).toHaveBeenCalled();
@@ -90,7 +93,7 @@ describe("AppLayout", () => {
   it("calls onAbout on About button click", async () => {
     const onAbout = vi.fn();
     render(AppLayout, {
-      props: { ...defaultProps, onAbout, children: () => "" },
+      props: { ...defaultProps, onAbout, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("About (F1)"));
     expect(onAbout).toHaveBeenCalled();
@@ -98,7 +101,7 @@ describe("AppLayout", () => {
 
   it("renders resize handle", () => {
     render(AppLayout, {
-      props: { ...defaultProps, children: () => "" },
+      props: { ...defaultProps, children: snippet() },
     });
     expect(document.querySelector(".resize-handle")).toBeInTheDocument();
   });

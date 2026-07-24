@@ -2,17 +2,28 @@
 import { render, waitFor, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Page from "../+page.svelte";
-import { fileState } from "$lib/stores/file.svelte";
 import { hasUnsavedChanges } from "$lib/stores/editor.svelte";
 
-const { mockInvoke, mockOpenFile, mockSaveFile, mockGetFileName } = vi.hoisted(
-  () => ({
-    mockInvoke: vi.fn().mockResolvedValue(null),
-    mockOpenFile: vi.fn().mockResolvedValue(null),
-    mockSaveFile: vi.fn().mockResolvedValue(true),
-    mockGetFileName: vi.fn((path: string) => path.split("/").pop() ?? path),
-  }),
-);
+const {
+  mockInvoke,
+  mockOpenFile,
+  mockSaveFile,
+  mockGetFileName,
+  mockFileState,
+} = vi.hoisted(() => ({
+  mockInvoke: vi.fn().mockResolvedValue(null),
+  mockOpenFile: vi.fn().mockResolvedValue(null),
+  mockSaveFile: vi.fn().mockResolvedValue(true),
+  mockGetFileName: vi.fn((path: string) => path.split("/").pop() ?? path),
+  mockFileState: {
+    currentFile: null as string | null,
+    recentFiles: [] as string[],
+    isLoading: false,
+    error: null as string | null,
+    currentFileMtime: null as number | null,
+    externallyModified: false,
+  },
+}));
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -32,14 +43,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 
 vi.mock("$lib/stores/file.svelte", () => ({
-  fileState: {
-    currentFile: null,
-    recentFiles: [],
-    isLoading: false,
-    error: null,
-    currentFileMtime: null,
-    externallyModified: false,
-  },
+  fileState: mockFileState,
   openFile: mockOpenFile,
   saveFile: mockSaveFile,
   saveFileAs: vi.fn().mockResolvedValue(null),
@@ -140,6 +144,8 @@ vi.mock("$lib/components/About/AboutDialog.svelte", () => ({
 describe("+page.svelte", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFileState.currentFile = null;
+    mockFileState.externallyModified = false;
   });
 
   it("loads initial file from Tauri on mount", async () => {
@@ -159,8 +165,8 @@ describe("+page.svelte", () => {
 
   it("does not call saveFile when there are no unsaved changes and no external modifications", async () => {
     vi.mocked(hasUnsavedChanges).mockReturnValue(false);
-    (fileState as any).currentFile = "/test/file.md";
-    (fileState as any).externallyModified = false;
+    mockFileState.currentFile = "/test/file.md";
+    mockFileState.externallyModified = false;
 
     render(Page);
     await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
@@ -172,8 +178,8 @@ describe("+page.svelte", () => {
 
   it("calls saveFile when there are unsaved changes", async () => {
     vi.mocked(hasUnsavedChanges).mockReturnValue(true);
-    (fileState as any).currentFile = "/test/file.md";
-    (fileState as any).externallyModified = false;
+    mockFileState.currentFile = "/test/file.md";
+    mockFileState.externallyModified = false;
 
     render(Page);
     await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
@@ -188,8 +194,8 @@ describe("+page.svelte", () => {
 
   it("calls saveFile when file is externally modified even without unsaved changes", async () => {
     vi.mocked(hasUnsavedChanges).mockReturnValue(false);
-    (fileState as any).currentFile = "/test/file.md";
-    (fileState as any).externallyModified = true;
+    mockFileState.currentFile = "/test/file.md";
+    mockFileState.externallyModified = true;
 
     render(Page);
     await fireEvent.keyDown(window, { key: "s", ctrlKey: true });

@@ -19,7 +19,7 @@ describe("ViewerToolbar", () => {
     render(ViewerToolbar, {
       props: { onCopyHtml: vi.fn(), onPrint: vi.fn() },
     });
-    expect(screen.getByTitle("Print")).toBeInTheDocument();
+    expect(screen.getByTitle("Print (Ctrl+P)")).toBeInTheDocument();
   });
 
   it("does not render Copy HTML button when onCopyHtml is not provided", () => {
@@ -29,7 +29,7 @@ describe("ViewerToolbar", () => {
 
   it("does not render Print button when onPrint is not provided", () => {
     render(ViewerToolbar, { props: { onCopyHtml: vi.fn() } });
-    expect(screen.queryByTitle("Print")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Print (Ctrl+P)")).not.toBeInTheDocument();
   });
 
   it("calls onCopyHtml on Copy HTML click", async () => {
@@ -46,7 +46,7 @@ describe("ViewerToolbar", () => {
     render(ViewerToolbar, {
       props: { onCopyHtml: vi.fn(), onPrint },
     });
-    await fireEvent.click(screen.getByTitle("Print"));
+    await fireEvent.click(screen.getByTitle("Print (Ctrl+P)"));
     expect(onPrint).toHaveBeenCalled();
   });
 });

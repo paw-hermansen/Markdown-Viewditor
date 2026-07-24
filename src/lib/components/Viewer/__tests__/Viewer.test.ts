@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, waitFor } from "@testing-library/svelte";
+import { render, screen, waitFor } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Viewer from "../Viewer.svelte";
 
@@ -38,7 +38,7 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
 }));
 
 vi.mock("$lib/utils/path", () => ({
-  resolveLink: vi.fn((href: string, base: string) => {
+  resolveLink: vi.fn((href: string) => {
     if (href.startsWith("http")) return { kind: "url", url: href };
     if (href.startsWith("#")) return { kind: "anchor", id: href.slice(1) };
     return { kind: "local-path", path: href };

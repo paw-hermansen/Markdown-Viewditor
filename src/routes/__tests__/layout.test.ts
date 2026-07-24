@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from "@testing-library/svelte";
+import { render, waitFor } from "@testing-library/svelte";
+import type { Snippet } from "svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Layout from "../+layout.svelte";
+
+const snippet = (content = "") => (() => content) as unknown as Snippet;
 
 const { mockLoadSettings } = vi.hoisted(() => ({
   mockLoadSettings: vi.fn().mockResolvedValue(undefined),
@@ -43,14 +46,14 @@ describe("+layout.svelte", () => {
   });
 
   it("calls loadSettings on mount", async () => {
-    render(Layout, { props: { children: () => "content" } });
+    render(Layout, { props: { children: snippet("content") } });
     await waitFor(() => {
       expect(mockLoadSettings).toHaveBeenCalled();
     });
   });
 
   it("renders without errors", () => {
-    const { container } = render(Layout, { props: { children: () => "" } });
+    const { container } = render(Layout, { props: { children: snippet() } });
     expect(container).toBeTruthy();
   });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from "@testing-library/svelte";
+import { render } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Editor from "../Editor.svelte";
 

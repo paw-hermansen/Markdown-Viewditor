@@ -6,14 +6,14 @@
 pre code.hljs {
   display: block;
   overflow-x: auto;
-  padding: 1em
+  padding: 1em;
 }
 code.hljs {
-  padding: 3px 5px
+  padding: 3px 5px;
 }
 .hljs {
   color: #3b2f3a;
-  background: #fff5f7
+  background: #fff5f7;
 }
 .hljs-keyword,
 .hljs-doctag,
@@ -23,7 +23,7 @@ code.hljs {
 .hljs-variable.language_,
 .hljs-variable.language {
   color: #d63384;
-  font-weight: bold
+  font-weight: bold;
 }
 .hljs-title,
 .hljs-title.class_,
@@ -31,7 +31,7 @@ code.hljs {
 .hljs-title.function_,
 .hljs-function,
 .hljs-function_ {
-  color: #6a5acd
+  color: #6a5acd;
 }
 .hljs-attr,
 .hljs-attribute,
@@ -44,53 +44,53 @@ code.hljs {
 .hljs-selector-attr,
 .hljs-selector-class,
 .hljs-selector-id {
-  color: #6a5acd
+  color: #6a5acd;
 }
 .hljs-regexp,
 .hljs-string,
 .hljs-meta .hljs-string {
-  color: #2a9d8f
+  color: #2a9d8f;
 }
 .hljs-built_in,
 .hljs-symbol {
-  color: #2a9d8f
+  color: #2a9d8f;
 }
 .hljs-comment,
 .hljs-code,
 .hljs-doctag {
   color: #b8a9b0;
-  font-style: italic
+  font-style: italic;
 }
 .hljs-name,
 .hljs-quote,
 .hljs-selector-tag,
 .hljs-selector-pseudo {
-  color: #6a5acd
+  color: #6a5acd;
 }
 .hljs-subst {
-  color: #3b2f3a
+  color: #3b2f3a;
 }
 .hljs-section {
   color: #d63384;
-  font-weight: bold
+  font-weight: bold;
 }
 .hljs-bullet {
-  color: #2a9d8f
+  color: #2a9d8f;
 }
 .hljs-emphasis {
   color: #3b2f3a;
-  font-style: italic
+  font-style: italic;
 }
 .hljs-strong {
   color: #3b2f3a;
-  font-weight: bold
+  font-weight: bold;
 }
 .hljs-link,
 .hljs-params,
 .hljs-property,
 .hljs-punctuation,
 .hljs-tag {
-  color: #7a6b75
+  color: #7a6b75;
 }
 
 /* Full viewer theme — Bubblegum Diner */

@@ -1,2 +1,5 @@
 # Third-party CSS themes (copied from highlight.js)
 src/lib/styles/highlight/
+
+# Example files (sample markdown / hand-formatted CSS themes)
+examples/

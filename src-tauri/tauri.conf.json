@@ -33,7 +33,8 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "rpm", "msi", "nsis", "dmg", "app"],
+    "createUpdaterArtifacts": true,
+    "targets": ["deb", "rpm", "msi", "nsis", "dmg", "app", "appimage"],
     "publisher": "Paw Hermansen",
     "icon": [
       "icons/icon.icns",
@@ -92,6 +93,14 @@
         "postInstallScript": "rpm/postinst",
         "postRemoveScript": "rpm/postrm"
       }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4QzBFMzI1MzYyMTEyNApSV1FrRVdKVE1nNk1BNEpCRk9CY2grMURScnpvMG9lOUJJSzluWC9vQnZyeUx6eXJQaXhGWDVzKwo=",
+      "endpoints": [
+        "https://github.com/paw-hermansen/Markdown-Viewditor/releases/latest/download/latest.json"
+      ]
     }
   }
 }

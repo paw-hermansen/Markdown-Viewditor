@@ -26,12 +26,28 @@ fn configure_platform() {
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
 fn configure_platform() {}
 
+/// Whether the built-in Tauri updater should be active.
+///
+/// Sandboxed / package-managed installs (Flatpak, Snap) own the update
+/// lifecycle themselves (`flatpak update`, `snap refresh`). Running the
+/// in-app updater there would either fail (read-only filesystem) or
+/// conflict with the system updater, so we disable it.
+fn updater_enabled() -> bool {
+    if std::path::Path::new("/.flatpak-info").exists() {
+        return false;
+    }
+    if env::var_os("SNAP").is_some() {
+        return false;
+    }
+    true
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     configure_platform();
     let initial_file = env::args().nth(1);
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .register_asynchronous_uri_scheme_protocol(
             "localimg",
             protocol::localimg_protocol_handler,
@@ -40,7 +56,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_opener::init());
+
+    if updater_enabled() {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+    builder = builder.plugin(tauri_plugin_process::init());
+
+    builder
         .manage(InitialFile(std::sync::Mutex::new(initial_file)))
         .invoke_handler(tauri::generate_handler![
             read_file,

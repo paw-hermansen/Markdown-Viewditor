@@ -11,6 +11,8 @@
     "clipboard-manager:default",
     "store:default",
     "opener:default",
+    "updater:default",
+    "process:default",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "**" }]

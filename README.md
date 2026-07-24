@@ -7,6 +7,35 @@ A clean, simple, and modern markdown viewer and editor with **live preview** bui
 
 ![Screendump](images/screendump.png)
 
+## Download
+
+Pre-built binaries for Windows, macOS, and Linux are published on the
+[Releases page](../../releases/latest). Pick the file matching your platform:
+
+| Platform | File                                                                    | Notes                                                                    |
+| -------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Windows  | `Markdown-Viewditor_*_x64-setup.exe` (NSIS) or `.msi`                   | SmartScreen may warn on first launch — click **More info → Run anyway**. |
+| macOS    | `Markdown-Viewditor_*_aarch64.dmg` (Apple Silicon)                      | See [macOS first-launch note](#macos-first-launch-note) below.           |
+| Linux    | `*.AppImage` (portable), `*.deb` (Debian/Ubuntu), `*.rpm` (Fedora/RHEL) | AppImage: `chmod +x` then run.                                           |
+
+### macOS first-launch note
+
+The macOS build is **not code-signed** (to keep releases free). The first time
+you open it, Gatekeeper will block it. To bypass:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Markdown Viewditor.app"
+```
+
+or right-click the app → **Open** → **Open anyway**.
+
+### Auto-updates
+
+The Windows, macOS, and AppImage builds check the GitHub Releases feed for
+updates and can install them in place (Help → About → Check for Updates).
+When installed inside **Flatpak** or **Snap** (future channels), the in-app
+updater is disabled — use your system updater instead.
+
 ## Features
 
 - **Live Preview** — See your markdown rendered in real-time as you type

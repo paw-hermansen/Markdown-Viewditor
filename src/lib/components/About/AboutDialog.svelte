@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { getVersion } from '@tauri-apps/api/app';
+  import { relaunch } from '@tauri-apps/plugin-process';
+  import { check } from '@tauri-apps/plugin-updater';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import licenseText from '../../../../LICENSE?raw';
 
@@ -9,6 +12,62 @@
 
   let { open, onClose }: Props = $props();
   let activeTab = $state<'about' | 'themes' | 'dependencies' | 'license'>('about');
+  let appVersion = $state('');
+  let updateState = $state<'idle' | 'checking' | 'downloading' | 'installing' | 'up-to-date' | 'available' | 'error'>('idle');
+  let updateMessage = $state('');
+  let pendingUpdate = $state<Awaited<ReturnType<typeof check>>>(null);
+
+  $effect(() => {
+    if (open) {
+      getVersion().then((v) => (appVersion = v)).catch(() => (appVersion = '0.1.0'));
+    }
+  });
+
+  async function handleCheckForUpdates() {
+    if (updateState === 'checking' || updateState === 'downloading' || updateState === 'installing') return;
+    updateState = 'checking';
+    updateMessage = '';
+    try {
+      const update = await check();
+      pendingUpdate = update;
+      if (update?.available) {
+        updateState = 'available';
+        updateMessage = `Version ${update.version} is available`;
+      } else {
+        updateState = 'up-to-date';
+        updateMessage = 'You are on the latest version';
+      }
+    } catch (err) {
+      updateState = 'error';
+      updateMessage = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  async function handleDownloadAndInstall() {
+    if (!pendingUpdate) return;
+    try {
+      updateState = 'downloading';
+      updateMessage = 'Downloading...';
+      let total = 0;
+      let downloaded = 0;
+      await pendingUpdate.downloadAndInstall((event) => {
+        if (event.event === 'Started' && event.data.contentLength) {
+          total = event.data.contentLength;
+        } else if (event.event === 'Progress') {
+          downloaded += event.data.chunkLength ?? 0;
+          if (total > 0) {
+            updateMessage = `Downloading... ${Math.round((downloaded / total) * 100)}%`;
+          }
+        }
+      });
+      updateState = 'installing';
+      updateMessage = 'Installing...';
+      await relaunch();
+    } catch (err) {
+      updateState = 'error';
+      updateMessage = err instanceof Error ? err.message : String(err);
+    }
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') onClose();
@@ -34,9 +93,13 @@
     { name: 'tauri-plugin-clipboard-manager', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'tauri-plugin-store', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'tauri-plugin-opener', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-updater', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: 'tauri-plugin-process', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: '@tauri-apps/plugin-dialog', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: '@tauri-apps/plugin-opener', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: '@tauri-apps/plugin-store', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-updater', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
+    { name: '@tauri-apps/plugin-process', license: 'MIT / Apache-2.0', copyright: 'Tauri Apps Contributors', url: 'https://github.com/tauri-apps/plugins-workspace' },
     { name: 'Svelte 5', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://svelte.dev' },
     { name: 'SvelteKit', license: 'MIT', copyright: 'Svelte Contributors', url: 'https://kit.svelte.dev' },
     { name: 'Vite', license: 'MIT', copyright: 'Evan You', url: 'https://vitejs.dev' },
@@ -68,7 +131,7 @@
 
       <div class="header">
         <h1>Markdown Viewditor</h1>
-        <p class="version">Version 0.1.0</p>
+        <p class="version">Version {appVersion || '0.1.0'}</p>
       </div>
 
       <div class="tabs" role="tablist">
@@ -80,6 +143,36 @@
 
       <div class="tab-content">
         {#if activeTab === 'about'}
+          <section>
+            <h2>Updates</h2>
+            <div class="update-row">
+              <button
+                class="update-btn"
+                onclick={handleCheckForUpdates}
+                disabled={updateState === 'checking' || updateState === 'downloading' || updateState === 'installing'}
+              >
+                {#if updateState === 'checking'}
+                  Checking...
+                {:else if updateState === 'downloading'}
+                  Downloading
+                {:else if updateState === 'installing'}
+                  Installing
+                {:else}
+                  Check for Updates
+                {/if}
+              </button>
+              {#if updateState === 'available'}
+                <button class="update-btn primary" onclick={handleDownloadAndInstall}>
+                  Download &amp; Install {pendingUpdate?.version}
+                </button>
+              {/if}
+              {#if updateMessage}
+                <span class="update-msg" class:error={updateState === 'error'}>{updateMessage}</span>
+              {/if}
+            </div>
+            <p class="muted">In-app updates are disabled when running inside Flatpak or Snap — use your system updater there.</p>
+          </section>
+
           <section>
             <h2>Author</h2>
             <p>Paw Hermansen<br/><span class="muted">Retired Senior Software Developer</span></p>
@@ -414,6 +507,53 @@
     color: var(--text-secondary);
     font-size: 14px;
     margin-bottom: 20px;
+  }
+
+  .update-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .update-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 150ms ease-in-out;
+  }
+
+  .update-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .update-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .update-btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .update-btn.primary:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .update-msg {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .update-msg.error {
+    color: #e06c75;
   }
 
   .tabs {

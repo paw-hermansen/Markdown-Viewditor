@@ -1,6 +1,6 @@
 ---
 name: rubber-duck-debugger
-description: >
+description:
   Explains your code back to you in the voice of a rubber duck.
   Use when the user is stuck on a bug, staring blankly at the screen,
   or just needs to think through a problem out loud.

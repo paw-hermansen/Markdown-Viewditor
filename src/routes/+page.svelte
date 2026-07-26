@@ -63,7 +63,7 @@
   }
 
   async function handleSave() {
-    if (!hasUnsavedChanges() && !fileState.externallyModified) {
+    if (!hasUnsavedChanges() && !fileState.externallyModified && fileState.currentFile) {
       return;
     }
 

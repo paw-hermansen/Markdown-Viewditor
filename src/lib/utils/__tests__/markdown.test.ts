@@ -412,4 +412,98 @@ describe("renderMarkdown", () => {
       expect(result.html).not.toContain('src="images/flower.png"');
     });
   });
+
+  describe("heading IDs", () => {
+    it("should generate GitHub-style IDs for headings", async () => {
+      const result = await renderMarkdown("# Hello World");
+      expect(result.html).toContain('id="hello-world"');
+    });
+
+    it("should handle special characters in headings", async () => {
+      const result = await renderMarkdown("# Hello (World)!");
+      expect(result.html).toContain('id="hello-world"');
+    });
+
+    it("should support custom heading IDs with {#id} syntax", async () => {
+      const result = await renderMarkdown("# My Heading {#custom-id}");
+      expect(result.html).toContain('id="custom-id"');
+      expect(result.html).not.toContain("{#custom-id}");
+      expect(result.html).toContain("My Heading");
+    });
+
+    it("should handle duplicate headings with counter suffix", async () => {
+      const result = await renderMarkdown("# Heading\n\n# Heading");
+      expect(result.html).toContain('id="heading"');
+      expect(result.html).toContain('id="heading-1"');
+    });
+
+    it("should preserve data-line attributes with heading IDs", async () => {
+      const result = await renderMarkdown("# Hello World");
+      expect(result.html).toContain('data-line="1"');
+      expect(result.html).toContain('id="hello-world"');
+    });
+
+    it("should handle multiple heading levels", async () => {
+      const result = await renderMarkdown("# H1\n\n## H2\n\n### H3");
+      expect(result.html).toContain('id="h1"');
+      expect(result.html).toContain('id="h2"');
+      expect(result.html).toContain('id="h3"');
+    });
+
+    it("should handle headings with inline code", async () => {
+      const result = await renderMarkdown("# Use `npm install`");
+      expect(result.html).toContain('id="use-npm-install"');
+    });
+
+    it("should handle headings with links", async () => {
+      const result = await renderMarkdown(
+        "# See [example](https://example.com)",
+      );
+      expect(result.html).toContain('id="see-example"');
+    });
+
+    it("should handle empty headings gracefully", async () => {
+      const result = await renderMarkdown("# ");
+      // Should not crash, and should still have a heading tag
+      expect(result.html).toContain("<h1");
+    });
+
+    it("should handle custom ID with special characters", async () => {
+      const result = await renderMarkdown("# My Heading {#my-heading-123}");
+      expect(result.html).toContain('id="my-heading-123"');
+      expect(result.html).not.toContain("{#my-heading-123}");
+    });
+
+    it("should handle multiple {#id} patterns (use last one at end)", async () => {
+      const result = await renderMarkdown("# Heading {#first} {#second}");
+      // Only the last {#id} at the end is used as custom ID
+      expect(result.html).toContain('id="second"');
+      // The first {#id} is kept as regular text since it's not at the end
+      expect(result.html).toContain("{#first}");
+      expect(result.html).not.toContain("{#second}");
+    });
+
+    it("should not treat {#id} in middle of text as custom ID", async () => {
+      const result = await renderMarkdown("# Heading {#not-id} text");
+      // Should not extract {#not-id} as it's not at the end
+      expect(result.html).not.toContain('id="not-id"');
+      expect(result.html).toContain("{#not-id}");
+    });
+
+    it("should render anchor links without URL-encoded quotes", async () => {
+      const result = await renderMarkdown("[Jump](#heading)\n\n# Heading");
+      // Anchor href should be #heading, not %22#heading%22
+      expect(result.html).toContain('href="#heading"');
+      expect(result.html).not.toContain("%22");
+    });
+
+    it("should render anchor links to custom IDs", async () => {
+      const result = await renderMarkdown(
+        "[Jump](#custom)\n\n# My Heading {#custom}",
+      );
+      expect(result.html).toContain('href="#custom"');
+      expect(result.html).toContain('id="custom"');
+      expect(result.html).not.toContain("{#custom}");
+    });
+  });
 });

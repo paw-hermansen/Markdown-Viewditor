@@ -176,7 +176,8 @@ describe("Viewer", () => {
 
   it("forceRender appends a cache-busting parameter to external and local image URLs", async () => {
     mockRenderMarkdown.mockResolvedValue({
-      html: '<p><img src="https://picsum.photos/128" alt="pic"></p>' +
+      html:
+        '<p><img src="https://picsum.photos/128" alt="pic"></p>' +
         '<p><img src="localimg://localhost/img.png" alt="local"></p>' +
         '<p><img src="https://example.com/a.png?x=1" alt="has-query"></p>',
       frontmatter: null,

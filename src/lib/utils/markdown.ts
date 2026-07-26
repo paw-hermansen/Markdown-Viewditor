@@ -3,6 +3,7 @@ import hljs from "highlight.js/lib/core";
 import highlightjs from "markdown-it-highlightjs";
 import taskLists from "markdown-it-task-lists";
 import footnote from "markdown-it-footnote";
+import anchor from "markdown-it-anchor";
 import { load as yamlLoad } from "js-yaml";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { resolveLink } from "$lib/utils/path";
@@ -90,6 +91,53 @@ function createFrontmatterPlugin() {
       },
       { alt: [] },
     );
+  };
+}
+
+/**
+ * Custom plugin to extract {#custom-id} from heading text.
+ * If a heading ends with {#id}, that id is used as the heading's id attribute
+ * and the {#id} text is removed from the displayed content.
+ * This must be registered BEFORE markdown-it-anchor so the anchor plugin
+ * reuses the existing id.
+ */
+function createCustomHeadingIdPlugin() {
+  const CUSTOM_ID_RE = /\s*\{#([\w-]+)\}\s*$/;
+
+  return function customHeadingIdPlugin(md: MarkdownIt) {
+    md.core.ruler.push("custom_heading_id", function (state) {
+      const tokens = state.tokens;
+      for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i].type !== "heading_open") continue;
+
+        // The inline token with the heading text is the next token
+        const inlineToken = tokens[i + 1];
+        if (!inlineToken || inlineToken.type !== "inline") continue;
+
+        const match = CUSTOM_ID_RE.exec(inlineToken.content);
+        if (match) {
+          const customId = match[1];
+          // Set the id attribute on the heading_open token
+          tokens[i].attrSet("id", customId);
+          // Remove the {#id} from the displayed content
+          inlineToken.content = inlineToken.content.slice(0, match.index);
+          // Also update the children tokens if they exist
+          if (inlineToken.children) {
+            const lastChild =
+              inlineToken.children[inlineToken.children.length - 1];
+            if (lastChild && lastChild.type === "text") {
+              const childMatch = CUSTOM_ID_RE.exec(lastChild.content);
+              if (childMatch) {
+                lastChild.content = lastChild.content.slice(
+                  0,
+                  childMatch.index,
+                );
+              }
+            }
+          }
+        }
+      }
+    });
   };
 }
 
@@ -442,6 +490,18 @@ function normalizeFootnoteLineMaps(tokens: MdToken[], content: string) {
   }
 }
 
+/**
+ * GitHub-style slugification: lowercase, spaces to hyphens, strip special chars.
+ */
+function githubSlugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 async function initMarkdownIt(): Promise<MarkdownIt> {
   if (!md) {
     md = new MarkdownIt({
@@ -452,6 +512,13 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       .use(createFrontmatterPlugin())
       .use(footnote)
       .use(createLineNumbersPlugin())
+      .use(createCustomHeadingIdPlugin())
+      .use(anchor, {
+        slugify: githubSlugify,
+        permalink: false,
+        uniqueSlugStartIndex: 1,
+        tabIndex: false,
+      })
       .use(createLocalImagePlugin())
       .use(taskLists)
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });

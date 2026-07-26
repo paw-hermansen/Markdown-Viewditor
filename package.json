@@ -29,6 +29,7 @@
     "@testing-library/svelte": "^5.4.2",
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.1.2",
+    "@types/markdown-it-anchor": "^4.0.4",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-svelte": "^2.0.0",
@@ -59,6 +60,7 @@
     "highlight.js": "^11.11.1",
     "js-yaml": "^5.2.1",
     "markdown-it": "^14.0.0",
+    "markdown-it-anchor": "^9.2.1",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-highlightjs": "^4.3.0",
     "markdown-it-task-lists": "^2.1.1"

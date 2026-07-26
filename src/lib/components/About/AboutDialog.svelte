@@ -11,7 +11,7 @@
   }
 
   let { open, onClose }: Props = $props();
-  let activeTab = $state<'about' | 'themes' | 'dependencies' | 'license'>('about');
+  let activeTab = $state<'about' | 'themes' | 'shortcuts' | 'dependencies' | 'license'>('about');
   let appVersion = $state('');
   let updateState = $state<'idle' | 'checking' | 'downloading' | 'installing' | 'up-to-date' | 'available' | 'error'>('idle');
   let updateMessage = $state('');
@@ -137,6 +137,7 @@
       <div class="tabs" role="tablist">
         <button class="tab" class:active={activeTab === 'about'} role="tab" aria-selected={activeTab === 'about'} onclick={() => activeTab = 'about'}>About</button>
         <button class="tab" class:active={activeTab === 'themes'} role="tab" aria-selected={activeTab === 'themes'} onclick={() => activeTab = 'themes'}>Custom Themes</button>
+        <button class="tab" class:active={activeTab === 'shortcuts'} role="tab" aria-selected={activeTab === 'shortcuts'} onclick={() => activeTab = 'shortcuts'}>Keyboard Shortcuts</button>
         <button class="tab" class:active={activeTab === 'dependencies'} role="tab" aria-selected={activeTab === 'dependencies'} onclick={() => activeTab = 'dependencies'}>Dependencies</button>
         <button class="tab" class:active={activeTab === 'license'} role="tab" aria-selected={activeTab === 'license'} onclick={() => activeTab = 'license'}>License</button>
       </div>
@@ -405,6 +406,56 @@
           </section>
         {/if}
 
+        {#if activeTab === 'shortcuts'}
+          <section>
+            <h2>Command Palette</h2>
+            <p>Press <kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
+          </section>
+
+          <section>
+            <h2>File</h2>
+            <table class="ref-table">
+              <thead>
+                <tr><th>Action</th><th>Shortcut</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>New File</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">N</kbd></td></tr>
+                <tr><td>Open File</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">O</kbd></td></tr>
+                <tr><td>Save</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
+                <tr><td>Save As</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
+                <tr><td>Reload from Disk</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">R</kbd></td></tr>
+                <tr><td>Print Preview</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h2>Editor</h2>
+            <table class="ref-table">
+              <thead>
+                <tr><th>Action</th><th>Shortcut</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Bold</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">B</kbd></td></tr>
+                <tr><td>Italic</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
+                <tr><td>Insert Link</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">K</kbd></td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h2>Help</h2>
+            <table class="ref-table">
+              <thead>
+                <tr><th>Action</th><th>Shortcut</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>About</td><td><kbd class="shortcut-key">F1</kbd></td></tr>
+              </tbody>
+            </table>
+          </section>
+        {/if}
+
         {#if activeTab === 'dependencies'}
           <section>
             <h2>Third-Party Libraries</h2>
@@ -641,6 +692,19 @@
     border-radius: 4px;
     font-family: var(--font-mono);
     font-size: 12px;
+  }
+
+  .shortcut-key {
+    display: inline-block;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    box-shadow: 0 1px 0 var(--border);
   }
 
   table {

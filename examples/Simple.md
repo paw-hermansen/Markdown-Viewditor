@@ -22,9 +22,9 @@ This is a second paragraph with `inline code` and a [link](https://example.com).
 
 An autolink: https://example.com
 
-[Jump to table]("#table")
+[Jump to table](#table)
 
-[Jump to ÆØÅ-header with spaces]("#header-with")
+[Jump to ÆØÅ-header with spaces](#header-with)
 
 ## Lists
 

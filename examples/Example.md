@@ -55,6 +55,9 @@ for that kind of links:
 - [Google Search](https://google.com) probably opens a browser
 - [My local README markdown file](README.md) probably opens in _Markdown Viewditor_
 
+- An autolink: https://example.com
+- An internal anchor [link to header "Images"](#images)
+
 ## Blockquote
 
 > This is a blockquote. It can contain **formatted** text and `code`.

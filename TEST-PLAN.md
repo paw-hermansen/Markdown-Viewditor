@@ -126,7 +126,7 @@ For each: select text, click the toolbar button, verify markdown output in the e
 | 7.3 | Cancel open dialog | Open dialog, cancel | No change to current content |
 | 7.4 | Save new file | With "Untitled" file, click Save | Save-as dialog appears |
 | 7.5 | Save existing file | Edit file, click Save | File saved, `*` indicator disappears |
-| 7.6 | Save As same path | Save As to the current file's path | Saves normally |
+| 7.6 | Save As same path | Save As to the current file's path | Save-as dialog appears |
 | 7.7 | Save As different path | Save As to a new location | New file created, app tracks new path |
 | 7.8 | New file with unsaved changes | Edit content, click New | Prompt: "You have unsaved changes" |
 | 7.9 | New file confirms | Confirm new file | Editor clears, file name = "Untitled" |

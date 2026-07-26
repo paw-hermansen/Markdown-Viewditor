@@ -39,6 +39,15 @@
   });
 
   $effect(() => {
+    const el = viewerContentElement;
+    if (!el) return;
+    el.addEventListener('error', handleImageError, true);
+    return () => {
+      el.removeEventListener('error', handleImageError, true);
+    };
+  });
+
+  $effect(() => {
     if (viewerElement && onViewerReady) {
       onViewerReady(viewerElement);
     }
@@ -96,6 +105,22 @@
         handleLinkClick(e as unknown as MouseEvent);
       }
     }
+  }
+
+  function handleImageError(e: Event) {
+    const img = e.target as HTMLImageElement;
+    if (img.tagName !== 'IMG' || img.dataset.broken) return;
+    img.dataset.broken = '1';
+    if (!img.alt) {
+      try {
+        const url = new URL(img.src);
+        const decoded = decodeURIComponent(url.pathname.split('/').pop() ?? '');
+        img.alt = decoded || 'Image not found';
+      } catch {
+        img.alt = 'Image not found';
+      }
+    }
+    img.removeAttribute('src');
   }
 
   // A frontmatter block with both `name` and `description` is treated as a
@@ -325,6 +350,19 @@
     max-width: 100%;
     height: auto;
     border-radius: 8px;
+  }
+
+  .viewer-content :global(img[data-broken]) {
+    display: inline-block;
+    max-width: 200px;
+    min-height: 2em;
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    vertical-align: middle;
   }
 
   .viewer-content :global(table) {

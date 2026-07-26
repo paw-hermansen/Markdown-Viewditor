@@ -423,10 +423,14 @@
     if (!editorView) return;
     const editorContent = editorView.state.doc.toString();
     if (newContent !== editorContent) {
+      const savedHead = editorView.state.selection.main.head;
+      const savedScrollTop = editorView.scrollDOM.scrollTop;
       isUpdatingFromProp = true;
       editorView.dispatch({
-        changes: { from: 0, to: editorContent.length, insert: newContent }
+        changes: { from: 0, to: editorContent.length, insert: newContent },
+        selection: { anchor: Math.min(savedHead, newContent.length) }
       });
+      editorView.scrollDOM.scrollTop = savedScrollTop;
       isUpdatingFromProp = false;
     }
   }

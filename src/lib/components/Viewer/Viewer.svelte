@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { renderMarkdown } from '$lib/utils/markdown';
   import { resolveLink } from '$lib/utils/path';
   import { viewerState } from '$lib/stores/viewer.svelte';
@@ -15,6 +16,7 @@
 
   let html = $state('');
   let frontmatter: Frontmatter | null = $state(null);
+  let renderKey = $state(0);
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
   let viewerContentElement: HTMLDivElement | undefined = $state(undefined);
   let renderTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -155,6 +157,141 @@
   export function getViewerContentElement() {
     return viewerContentElement;
   }
+
+  // Append a cache-busting query parameter to image URLs so a forced render
+  // re-fetches them instead of being served from the webview's in-memory
+  // image cache. The localimg protocol handler ignores the query string (it
+  // only reads request.uri().path()), so local file resolution is unaffected.
+  // data:/blob: URLs carry no remote resource and are left untouched.
+  function bustImageCache(html: string, nonce: number): string {
+    return html.replace(
+      /(<img\s[^>]*?src=["'])([^"']+)(["'])/gi,
+      (match, prefix, src, quote) => {
+        if (/^(data:|blob:)/i.test(src)) return match;
+        const sep = src.includes('?') ? '&' : '?';
+        return `${prefix}${src}${sep}_r=${nonce}${quote}`;
+      }
+    );
+  }
+
+  // Capture the topmost visible data-line element and its fractional offset
+  // from the container's top edge. Restoring via this anchor avoids the ~1px
+  // per-reload drift caused by integer scrollTop round-trips.
+  function captureScrollAnchor(): { line: string; offset: number } | null {
+    if (!viewerElement || !viewerContentElement) return null;
+    const containerTop = viewerElement.getBoundingClientRect().top;
+    for (const el of viewerContentElement.querySelectorAll('[data-line]')) {
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom > containerTop) {
+        const line = el.getAttribute('data-line');
+        if (line) {
+          return { line, offset: rect.top - containerTop };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Setting scrollTop snaps the scroll position to whole device pixels
+  // (WebKit floors in device space). At a fractional devicePixelRatio (e.g.
+  // 0.9 zoom) every assignment — even re-assigning the current value — can
+  // shift the position by up to 1/dpr CSS pixels, and the integer getter
+  // then reports a new value, so re-applying it on the next reload ratchets
+  // the view ~1px per reload. Skipping sub-pixel adjustments avoids touching
+  // scrollTop at all when the anchor is already where it was captured.
+  const SCROLL_RESTORE_EPSILON_PX = 0.5;
+
+  function restoreScrollPosition(
+    anchor: { line: string; offset: number } | null,
+    fallbackScrollTop: number
+  ) {
+    if (!viewerElement) return;
+    if (anchor) {
+      const newEl = viewerContentElement?.querySelector(`[data-line="${anchor.line}"]`);
+      if (newEl) {
+        const containerTop = viewerElement.getBoundingClientRect().top;
+        const newOffset = newEl.getBoundingClientRect().top - containerTop;
+        const adjustment = newOffset - anchor.offset;
+        if (Math.abs(adjustment) >= SCROLL_RESTORE_EPSILON_PX) {
+          viewerElement.scrollTop = viewerElement.scrollTop + adjustment;
+        }
+        return;
+      }
+    }
+    if (Math.abs(viewerElement.scrollTop - fallbackScrollTop) >= SCROLL_RESTORE_EPSILON_PX) {
+      viewerElement.scrollTop = fallbackScrollTop;
+    }
+  }
+
+  const IMAGE_SETTLE_TIMEOUT_MS = 2000;
+
+  // Resolve once all current images have finished loading (or failed), so
+  // the scroll position can be restored against the final layout. Capped by
+  // a timeout so slow external images don't delay the restore indefinitely.
+  function waitForImages(): Promise<void> {
+    const imgs = viewerContentElement
+      ? Array.from(viewerContentElement.querySelectorAll('img'))
+      : [];
+    const pending = imgs
+      .filter((img) => !img.complete)
+      .map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            img.addEventListener('load', () => resolve(), { once: true });
+            img.addEventListener('error', () => resolve(), { once: true });
+          })
+      );
+    if (pending.length === 0) return Promise.resolve();
+    return Promise.race([
+      Promise.all(pending).then(() => undefined),
+      new Promise<void>((resolve) => setTimeout(resolve, IMAGE_SETTLE_TIMEOUT_MS)),
+    ]);
+  }
+
+  let activeForceRender: Promise<void> | null = null;
+
+  // Re-render the current content immediately (bypassing the debounce) and
+  // restore the scroll position afterwards. Used by Reload so that external
+  // resources (e.g. dynamic or previously broken images) are re-fetched even
+  // when the markdown itself has not changed. Concurrent calls share a single
+  // in-flight render.
+  export function forceRender(): Promise<void> {
+    if (activeForceRender) return activeForceRender;
+    activeForceRender = doForceRender().finally(() => {
+      activeForceRender = null;
+    });
+    return activeForceRender;
+  }
+
+  async function doForceRender() {
+    const savedScrollTop = viewerElement?.scrollTop ?? viewerState.scrollTop;
+    const anchor = captureScrollAnchor();
+    if (renderTimeout) {
+      clearTimeout(renderTimeout);
+      renderTimeout = undefined;
+    }
+    const result = await renderMarkdown(content, fileState.currentFile);
+    // Bumping the key forces the {#key} block around {@html} to destroy and
+    // recreate the DOM even when the rendered HTML is identical (Svelte
+    // skips the update for an unchanged string). This re-requests external
+    // images and retries previously broken ones.
+    renderKey += 1;
+    html = bustImageCache(result.html, renderKey);
+    frontmatter = result.frontmatter;
+    await tick();
+    // First restore: positions the anchor correctly in the transient layout
+    // where freshly recreated images have no dimensions yet.
+    restoreScrollPosition(anchor, savedScrollTop);
+    const scrollAfterRestore = viewerElement?.scrollTop;
+    // Recreated images load asynchronously; when they finish, their heights
+    // shift the layout above the anchor. Restore again against the settled
+    // layout so the view ends up exactly where it was captured.
+    await waitForImages();
+    // If the user scrolled while images were loading, don't yank the view back.
+    if (viewerElement && viewerElement.scrollTop === scrollAfterRestore) {
+      restoreScrollPosition(anchor, savedScrollTop);
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -197,8 +334,10 @@
         {/if}
       </div>
     {/if}
-    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-    {@html html}
+    {#key renderKey}
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+      {@html html}
+    {/key}
   </div>
 </div>
 

@@ -164,6 +164,7 @@
       editorState.content = content;
       updateWordCount(content);
       editorComponent?.setContent(content);
+      await viewerComponent?.forceRender();
       markSaved();
       fileState.externallyModified = false;
     }

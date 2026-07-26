@@ -1,8 +1,10 @@
 <script lang="ts">
   import { editorState } from '$lib/stores/editor.svelte';
   import { fileState, getFileName } from '$lib/stores/file.svelte';
+  import { settingsState } from '$lib/stores/settings.svelte';
 
   let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
+  let showEditorInfo = $derived(settingsState.viewMode === 'split' || settingsState.viewMode === 'editor');
 </script>
 
 <footer class="statusbar">
@@ -13,8 +15,10 @@
     </span>
   </div>
   <div class="statusbar-center">
-    <span>Line {editorState.cursorLine}, Col {editorState.cursorCol}</span>
-    <span class="separator">|</span>
+    {#if showEditorInfo}
+      <span>Line {editorState.cursorLine}, Col {editorState.cursorCol}</span>
+      <span class="separator">|</span>
+    {/if}
     <span>{editorState.wordCount} words</span>
   </div>
   <div class="statusbar-right">

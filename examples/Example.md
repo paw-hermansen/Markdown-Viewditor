@@ -1,6 +1,6 @@
 # Kaleidoscope Test Theme Example
 
-This file exercises **all** `.hljs-*` token classes emitted by the app's registered languages and all viewer HTML elements. Use it with the [theme-kaleidoscope.css](theme-kaleidoscope.css) custom theme to verify styling.
+This file exercises **all** `.hljs-*` token classes emitted by the app's registered languages and all viewer HTML elements. Use it with the [theme-kaleidoscope.css](custom_themes/theme-kaleidoscope.css) custom theme to verify styling.
 
 ## Text Formatting
 

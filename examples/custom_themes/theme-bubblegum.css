@@ -197,6 +197,9 @@ code.hljs {
   font-size: 0.9em;
   padding: 10px 14px;
 }
+#viewer-content th strong {
+  color: #fff5f7;
+}
 #viewer-content td {
   border: 1px solid #6a5acd;
   color: #3b2f3a;

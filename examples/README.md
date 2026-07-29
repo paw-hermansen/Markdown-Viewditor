@@ -1,7 +1,8 @@
 # Custom Themes
 
-1. Copy the example custom theme files `themes/theme-bubblegum.css`
-   and `themes/theme-kaleidoscope.css` to the themes folder:
+1. Copy the example custom theme files `custom_themes/theme-bubblegum.css`
+   and `custom_themes/theme-kaleidoscope.css` to the themes folder if
+   you want them included in Markdown Viewditor:
 
 | Platform | Path                                                                                |
 | -------- | ----------------------------------------------------------------------------------- |

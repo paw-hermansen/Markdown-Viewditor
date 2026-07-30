@@ -138,7 +138,7 @@ For each: select text, click the toolbar button, verify markdown output in the e
 | 7.14 | Open with unsaved changes     | Edit content, click Open                    | 3-button dialog: Save / Don't Save / Cancel                        |
 | 7.15 | Reload from disk              | Edit externally, click Reload               | Content updates from disk                                          |
 | 7.16 | Reload with unsaved changes   | Edit in app, click Reload                   | 3-button dialog: Save / Don't Save / Cancel                        |
-| 7.17 | Reload unchanged file         | No edits in app or on disk, click Reload    | Toast: "The file is already up to date."                           |
+| 7.17 | Reload unchanged file         | No edits in app or on disk, click Reload    | Reloads for example an external image that changes for each reload                           |
 | 7.18 | Reload deleted file           | Delete file externally, click Reload        | Warning: "File no longer exists. Use Save As."                     |
 | 7.19 | File name display             | Open a file                                 | File name shown in toolbar and status bar                          |
 | 7.20 | Modified indicator            | Edit content                                | `*` appears after filename, dot on Save button                     |

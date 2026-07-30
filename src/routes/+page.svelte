@@ -180,10 +180,6 @@
       await confirmOk(MSG.externalDeleted, 'warning');
       return;
     }
-    if (status === 'unchanged' && !hasUnsavedChanges()) {
-      toast.info(MSG.reloadUpToDate);
-      return;
-    }
 
     const content = await readFile(fileState.currentFile);
     if (content !== null) {

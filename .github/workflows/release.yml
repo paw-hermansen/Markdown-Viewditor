@@ -78,7 +78,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ steps.tag.outputs.name }}
-          releaseName: "Markdown Viewditor ${{ steps.tag.outputs.name }}"
+          releaseName: "MarkdownViewditor ${{ steps.tag.outputs.name }}"
           releaseBody: "See [CHANGELOG.md](https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/CHANGELOG.md) for release notes."
           releaseDraft: false
           prerelease: false

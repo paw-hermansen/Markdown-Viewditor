@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Markdown Viewditor",
+  "productName": "MarkdownViewditor",
   "version": "0.1.0",
   "identifier": "com.github.paw-hermansen.markdown-viewditor",
   "build": {

@@ -18,6 +18,11 @@ vi.mock("$lib/stores/settings.svelte", () => ({
   updateLastOpenedFile: vi.fn(),
 }));
 
+vi.mock("$lib/stores/toast.svelte", () => ({
+  toast: { error: vi.fn(), info: vi.fn(), warning: vi.fn() },
+  toastState: { items: [] },
+}));
+
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
@@ -30,6 +35,8 @@ import {
   clearError,
   getFileName,
   getRecentFiles,
+  removeRecentFile,
+  markCurrentFileDeleted,
 } from "../file.svelte";
 
 const mockInvoke = vi.mocked(invoke);
@@ -43,6 +50,12 @@ describe("file store", () => {
     fileState.recentFiles = [];
     fileState.isLoading = false;
     fileState.error = null;
+    fileState.currentFileMtime = null;
+    fileState.currentFileSize = null;
+    fileState.changeStatus = "unchanged";
+    fileState.externallyModified = false;
+    fileState.isReadOnly = null;
+    fileState.forceSaveAs = false;
   });
 
   describe("getFileName", () => {
@@ -199,6 +212,44 @@ describe("file store", () => {
       const result = await readFile("/test/file.md");
       expect(result).toBeNull();
       expect(fileState.error).toBe("not found");
+    });
+  });
+
+  describe("removeRecentFile", () => {
+    it("should remove a path from recent files", () => {
+      fileState.recentFiles = ["/a.md", "/b.md", "/c.md"];
+      removeRecentFile("/b.md");
+      expect(fileState.recentFiles).toEqual(["/a.md", "/c.md"]);
+    });
+
+    it("should be a no-op when the path is not present", () => {
+      fileState.recentFiles = ["/a.md"];
+      removeRecentFile("/missing.md");
+      expect(fileState.recentFiles).toEqual(["/a.md"]);
+    });
+  });
+
+  describe("markCurrentFileDeleted", () => {
+    it("marks the current file as deleted and forces Save As", () => {
+      fileState.currentFile = "/gone.md";
+      fileState.recentFiles = ["/gone.md", "/other.md"];
+      fileState.changeStatus = "unchanged";
+      fileState.forceSaveAs = false;
+
+      markCurrentFileDeleted();
+
+      expect(fileState.changeStatus).toBe("deleted");
+      expect(fileState.externallyModified).toBe(true);
+      expect(fileState.forceSaveAs).toBe(true);
+      expect(fileState.isReadOnly).toBe(true);
+      expect(fileState.recentFiles).not.toContain("/gone.md");
+    });
+
+    it("is a no-op on recents when no current file", () => {
+      fileState.currentFile = null;
+      fileState.recentFiles = [];
+      expect(() => markCurrentFileDeleted()).not.toThrow();
+      expect(fileState.forceSaveAs).toBe(true);
     });
   });
 });

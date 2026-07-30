@@ -6,7 +6,7 @@ mod state;
 use std::env;
 use tauri::Manager;
 
-use commands::file::{create_file, delete_file, get_file_mtime, get_initial_file, list_files, read_file, write_file};
+use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, get_initial_file, is_file_writable, list_files, read_file, write_file};
 use commands::window::{force_close_window, save_window_state, save_window_state_debounced};
 use state::{InitialFile, WindowState};
 
@@ -72,6 +72,8 @@ pub fn run() {
             create_file,
             delete_file,
             get_file_mtime,
+            get_file_info,
+            is_file_writable,
             get_initial_file,
             save_window_state,
             force_close_window

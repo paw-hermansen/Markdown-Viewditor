@@ -7,10 +7,14 @@
   import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
   import AboutDialog from '$lib/components/About/AboutDialog.svelte';
   import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import Toaster from '$lib/components/Toaster.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
-  import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, checkExternalModification, getFileMtime } from '$lib/stores/file.svelte';
+  import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
-  import { ask } from '@tauri-apps/plugin-dialog';
+  import { confirmSaveDiscardCancel, confirmYesNo, confirmOk } from '$lib/stores/confirm.svelte';
+  import { toast } from '$lib/stores/toast.svelte';
+  import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { createScrollSync } from '$lib/utils/scroll-sync';
@@ -39,8 +43,12 @@
     if (fileState.isLoading) return;
 
     if (hasUnsavedChanges()) {
-      const confirmed = await ask('You have unsaved changes. Create new file?', { title: 'Markdown Viewditor', kind: 'warning' });
-      if (!confirmed) return;
+      const choice = await confirmSaveDiscardCancel(MSG.newUnsaved);
+      if (choice !== 'save' && choice !== 'discard') return;
+      if (choice === 'save') {
+        const saved = await handleSave();
+        if (!saved) return;
+      }
     }
     resetEditor();
     editorComponent?.setContent('');
@@ -49,8 +57,12 @@
 
   async function handleOpen() {
     if (hasUnsavedChanges()) {
-      const confirmed = await ask('You have unsaved changes. Open a new file?', { title: 'Markdown Viewditor', kind: 'warning' });
-      if (!confirmed) return;
+      const choice = await confirmSaveDiscardCancel(MSG.openUnsaved);
+      if (choice !== 'save' && choice !== 'discard') return;
+      if (choice === 'save') {
+        const saved = await handleSave();
+        if (!saved) return;
+      }
     }
 
     const content = await openFile();
@@ -62,55 +74,53 @@
     }
   }
 
-  async function handleSave() {
-    if (!hasUnsavedChanges() && !fileState.externallyModified && fileState.currentFile) {
-      return;
+  /** Returns true when the document was saved (or nothing needed saving), false on cancel/failure. */
+  async function handleSave(): Promise<boolean> {
+    if (
+      fileState.currentFile &&
+      !fileState.forceSaveAs &&
+      !hasUnsavedChanges() &&
+      fileState.changeStatus === 'unchanged'
+    ) {
+      return true;
     }
 
-    if (fileState.currentFile) {
-      const status = await checkExternalModification();
-      if (status === 'modified') {
-        const confirmed = await ask(
-          'This file has been modified by another application since it was last saved. Do you want to overwrite the external changes?',
-          { title: 'Markdown Viewditor', kind: 'warning' }
-        );
-        if (!confirmed) {
-          const diskMtime = await getFileMtime(fileState.currentFile);
-          if (diskMtime !== null) fileState.currentFileMtime = diskMtime;
-          return;
-        }
-      } else if (status === 'deleted') {
-        const confirmed = await ask(
-          'This file no longer exists on disk (it may have been deleted or moved). Do you want to save it again?',
-          { title: 'Markdown Viewditor', kind: 'warning' }
-        );
-        if (!confirmed) return;
-      } else if (fileState.externallyModified) {
-        const confirmed = await ask(
-          'This file has been modified by another application. Do you want to overwrite the external changes?',
-          { title: 'Markdown Viewditor', kind: 'warning' }
-        );
-        if (!confirmed) return;
-      }
-      isSaving = true;
-      try {
-        const success = await saveFile(fileState.currentFile, editorState.content);
-        if (success) {
-          markSaved();
-        }
-      } finally {
-        isSaving = false;
-      }
-    } else {
+    if (!fileState.currentFile || fileState.forceSaveAs) {
       isSaving = true;
       try {
         const path = await saveFileAs(editorState.content);
         if (path) {
           markSaved();
+          return true;
         }
+        return false;
       } finally {
         isSaving = false;
       }
+    }
+
+    const status = await checkExternalModification();
+    if (status === 'deleted') {
+      await confirmOk(MSG.externalDeleted, 'warning');
+      return false;
+    }
+    if (status === 'modified') {
+      const overwrite = await confirmYesNo(MSG.externalOverwrite);
+      if (!overwrite) {
+        return false;
+      }
+    }
+
+    isSaving = true;
+    try {
+      const success = await saveFile(fileState.currentFile, editorState.content);
+      if (success) {
+        markSaved();
+        return true;
+      }
+      return false;
+    } finally {
+      isSaving = false;
     }
   }
 
@@ -118,24 +128,28 @@
     const path = await showSaveDialog();
     if (!path) return;
 
-    if (path === fileState.currentFile) {
-      const status = await checkExternalModification();
-      if (status === 'modified') {
-        const confirmed = await ask(
-          'This file has been modified by another application since it was last saved. Do you want to overwrite the external changes?',
-          { title: 'Markdown Viewditor', kind: 'warning' }
-        );
-        if (!confirmed) {
-          const diskMtime = await getFileMtime(fileState.currentFile);
-          if (diskMtime !== null) fileState.currentFileMtime = diskMtime;
-          return;
+    const info = await getFileInfo(path);
+    if (info && info.exists) {
+      if (info.readonly) {
+        toast.error(MSG.readonlySave, 'This file is read-only. Choose a different location.');
+        return;
+      }
+      if (path === fileState.currentFile) {
+        const status = await checkExternalModification();
+        if (status === 'deleted') {
+          // explicit recreate at the dead path; proceed
+        } else if (status === 'modified') {
+          const overwrite = await confirmYesNo(MSG.saveAsOverwrite);
+          if (!overwrite) {
+            return;
+          }
         }
-      } else if (status === 'deleted') {
-        const confirmed = await ask(
-          'This file no longer exists on disk (it may have been deleted or moved). Do you want to save it again?',
-          { title: 'Markdown Viewditor', kind: 'warning' }
+      } else {
+        const name = getFileName(path);
+        const replace = await confirmYesNo(
+          `A file named "${name}" already exists. Do you want to replace it?`,
         );
-        if (!confirmed) return;
+        if (!replace) return;
       }
     }
 
@@ -153,12 +167,24 @@
   async function handleReload() {
     if (!fileState.currentFile || fileState.isLoading) return;
     if (hasUnsavedChanges()) {
-      const confirmed = await ask(
-        'You have unsaved changes. Reload and discard your changes?',
-        { title: 'Markdown Viewditor', kind: 'warning' }
-      );
-      if (!confirmed) return;
+      const choice = await confirmSaveDiscardCancel(MSG.reloadUnsaved);
+      if (choice !== 'save' && choice !== 'discard') return;
+      if (choice === 'save') {
+        const saved = await handleSave();
+        if (!saved) return;
+      }
     }
+
+    const status = await checkExternalModification();
+    if (status === 'deleted') {
+      await confirmOk(MSG.externalDeleted, 'warning');
+      return;
+    }
+    if (status === 'unchanged' && !hasUnsavedChanges()) {
+      toast.info(MSG.reloadUpToDate);
+      return;
+    }
+
     const content = await readFile(fileState.currentFile);
     if (content !== null) {
       editorState.content = content;
@@ -166,8 +192,26 @@
       editorComponent?.setContent(content);
       await viewerComponent?.forceRender();
       markSaved();
-      fileState.externallyModified = false;
     }
+  }
+
+  /** Shared exit flow used by both window-close and Ctrl+Q. Returns true if the app closed. */
+  async function handleExit(): Promise<boolean> {
+    if (hasUnsavedChanges()) {
+      const choice = await confirmSaveDiscardCancel(MSG.exitUnsaved);
+      if (choice !== 'save' && choice !== 'discard') return false;
+      if (choice === 'save') {
+        const saved = await handleSave();
+        if (!saved) return false;
+      }
+    }
+    try {
+      await invoke('save_window_state');
+    } catch {
+      // best-effort; ignore persistence failures at exit
+    }
+    await invoke('force_close_window');
+    return true;
   }
 
   function handleViewModeChange(mode: ViewMode) {
@@ -247,6 +291,12 @@
       return;
     }
 
+    if (isMod && (e.key === 'q' || e.key === 'Q')) {
+      e.preventDefault();
+      handleExit();
+      return;
+    }
+
     if (isMod && e.shiftKey && e.key === 'P') {
       e.preventDefault();
       showCommandPalette = !showCommandPalette;
@@ -285,27 +335,21 @@
   onMount(async () => {
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async (event) => {
       event.preventDefault();
-      if (hasUnsavedChanges()) {
-        const confirmed = await ask('You have unsaved changes. Quit anyway?', { title: 'Markdown Viewditor', kind: 'warning' });
-        if (!confirmed) return;
-      }
-      await invoke('force_close_window');
+      await handleExit();
     });
 
     unlistenFocusChanged = await getCurrentWindow().onFocusChanged(async ({ payload: focused }) => {
       if (!focused || !fileState.currentFile || isCheckingExternalChanges || isSaving) return;
       isCheckingExternalChanges = true;
       try {
+        const previousStatus = fileState.changeStatus;
         const status = await checkExternalModification();
         if (status === 'modified') {
-          fileState.externallyModified = true;
-          let message = 'This file has been modified by another application.';
-          if (hasUnsavedChanges()) {
-            message += ' You also have unsaved changes. Reload and discard your changes?';
-          } else {
-            message += ' Do you want to reload it?';
-          }
-          const reload = await ask(message, { title: 'Markdown Viewditor', kind: 'warning' });
+          if (previousStatus === 'modified') return;
+          const message = hasUnsavedChanges()
+            ? MSG.externalModifiedDirty
+            : MSG.externalModifiedClean;
+          const reload = await confirmYesNo(message);
           if (reload) {
             const content = await readFile(fileState.currentFile);
             if (content !== null) {
@@ -313,18 +357,12 @@
               updateWordCount(content);
               editorComponent?.setContent(content);
               markSaved();
-              fileState.externallyModified = false;
             }
-          } else {
-            const diskMtime = await getFileMtime(fileState.currentFile);
-            if (diskMtime !== null) fileState.currentFileMtime = diskMtime;
           }
         } else if (status === 'deleted') {
-          fileState.externallyModified = true;
-          await ask(
-            'This file no longer exists on disk (it may have been deleted or moved). You can use Save As to save your work to a new location.',
-            { title: 'Markdown Viewditor', kind: 'warning' }
-          );
+          if (previousStatus === 'deleted') return;
+          markCurrentFileDeleted();
+          await confirmOk(MSG.externalDeleted, 'warning');
         }
       } finally {
         isCheckingExternalChanges = false;
@@ -403,11 +441,15 @@
   onSave={handleSave}
   onSaveAs={handleSaveAs}
   onReload={handleReload}
+  onQuit={handleExit}
   onViewModeChange={handleViewModeChange}
   onAbout={handleAbout}
   onCopyHtml={handleCopyHtml}
   onPrint={handlePrint}
 />
+
+<ConfirmDialog />
+<Toaster />
 
 <style>
   .editor-pane {

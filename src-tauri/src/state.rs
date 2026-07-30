@@ -18,6 +18,16 @@ pub struct FileInfo {
     pub size: u64,
 }
 
+/// Metadata for a single file used for external-modification detection,
+/// read-only indication and existence checks, fetched in one round-trip.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct FileInfoMeta {
+    pub exists: bool,
+    pub mtime_ms: u64,
+    pub size: u64,
+    pub readonly: bool,
+}
+
 pub struct InitialFile(pub Mutex<Option<String>>);
 
 #[cfg(test)]
@@ -109,6 +119,22 @@ mod tests {
         assert_eq!(original.name, restored.name);
         assert_eq!(original.is_dir, restored.is_dir);
         assert_eq!(original.size, restored.size);
+    }
+
+    #[test]
+    fn file_info_meta_round_trip() {
+        let original = FileInfoMeta {
+            exists: true,
+            mtime_ms: 1_700_000_000_000,
+            size: 4096,
+            readonly: false,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let restored: FileInfoMeta = serde_json::from_str(&json).unwrap();
+        assert_eq!(original.exists, restored.exists);
+        assert_eq!(original.mtime_ms, restored.mtime_ms);
+        assert_eq!(original.size, restored.size);
+        assert_eq!(original.readonly, restored.readonly);
     }
 
     #[test]

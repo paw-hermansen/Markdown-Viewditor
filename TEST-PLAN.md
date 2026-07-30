@@ -106,12 +106,13 @@ For each: select text, click the toolbar button, verify markdown output in the e
 | 6.3  | Save            | `Ctrl+S`       | Saves current file                          |
 | 6.4  | Save As         | `Ctrl+Shift+S` | Opens save-as dialog                        |
 | 6.5  | Reload          | `Ctrl+R`       | Reloads file from disk                      |
-| 6.6  | Command palette | `Ctrl+Shift+P` | Opens command palette                       |
-| 6.7  | Print           | `Ctrl+P`       | Opens print dialog                          |
-| 6.8  | About           | `F1`           | Opens About dialog                          |
-| 6.9  | Bold            | `Ctrl+B`       | Toggles bold                                |
-| 6.10 | Italic          | `Ctrl+I`       | Toggles italic                              |
-| 6.11 | Insert link     | `Ctrl+K`       | Inserts link syntax                         |
+| 6.6  | Quit            | `Ctrl+Q`       | Quits app (prompts if unsaved, saves state) |
+| 6.7  | Command palette | `Ctrl+Shift+P` | Opens command palette                       |
+| 6.8  | Print           | `Ctrl+P`       | Opens print dialog                          |
+| 6.9  | About           | `F1`           | Opens About dialog                          |
+| 6.10 | Bold            | `Ctrl+B`       | Toggles bold                                |
+| 6.11 | Italic          | `Ctrl+I`       | Toggles italic                              |
+| 6.12 | Insert link     | `Ctrl+K`       | Inserts link syntax                         |
 
 > On macOS, replace `Ctrl` with `Cmd` for all shortcuts above.
 
@@ -119,33 +120,54 @@ For each: select text, click the toolbar button, verify markdown output in the e
 
 ## 7. File Operations
 
-| #    | Test                          | Steps                              | Expected                                       |
-| ---- | ----------------------------- | ---------------------------------- | ---------------------------------------------- |
-| 7.1  | Open file                     | Click Open, select a `.md` file    | Content loads into editor, viewer renders it   |
-| 7.2  | Open dialog filters           | Open dialog                        | Shows "Markdown" and "All Files" filters       |
-| 7.3  | Cancel open dialog            | Open dialog, cancel                | No change to current content                   |
-| 7.4  | Save new file                 | With "Untitled" file, click Save   | Save-as dialog appears                         |
-| 7.5  | Save existing file            | Edit file, click Save              | File saved, `*` indicator disappears           |
-| 7.6  | Save As same path             | Save As to the current file's path | Save-as dialog appears                         |
-| 7.7  | Save As different path        | Save As to a new location          | New file created, app tracks new path          |
-| 7.8  | New file with unsaved changes | Edit content, click New            | Prompt: "You have unsaved changes"             |
-| 7.9  | New file confirms             | Confirm new file                   | Editor clears, file name = "Untitled"          |
-| 7.10 | Reload from disk              | Edit externally, click Reload      | Content updates from disk                      |
-| 7.11 | Reload with unsaved changes   | Edit in app, click Reload          | Prompt about unsaved changes                   |
-| 7.12 | File name display             | Open a file                        | File name shown in toolbar and status bar      |
-| 7.13 | Modified indicator            | Edit content                       | `*` appears after filename, dot on Save button |
+| #    | Test                          | Steps                                       | Expected                                                           |
+| ---- | ----------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| 7.1  | Open file                     | Click Open, select a `.md` file             | Content loads into editor, viewer renders it                       |
+| 7.2  | Open dialog filters           | Open dialog                                 | Shows "Markdown" and "All Files" filters                           |
+| 7.3  | Cancel open dialog            | Open dialog, cancel                         | No change to current content                                       |
+| 7.4  | Save new file                 | With "Untitled" file, click Save            | Save-as dialog appears                                             |
+| 7.5  | Save existing file            | Edit file, click Save                       | File saved, `*` indicator disappears, `.bak` backup created        |
+| 7.6  | Save As same path             | Save As to the current file's path          | If externally modified, overwrite prompt; otherwise saves directly |
+| 7.7  | Save As different path        | Save As to a new location                   | New file created, app tracks new path                              |
+| 7.8  | Save As to existing file      | Save As to a file that already exists       | Prompt: "A file named ... already exists. Replace?"                |
+| 7.9  | Save As to read-only file     | Save As to a read-only file                 | Toast: "This file is read-only. Choose a different location."      |
+| 7.10 | New file with unsaved changes | Edit content, click New                     | 3-button dialog: Save / Don't Save / Cancel                        |
+| 7.11 | New file — Save chosen        | In 3-button dialog, click Save              | Saves (Save As if untitled), then clears editor, "Untitled"        |
+| 7.12 | New file — Don't Save chosen  | In 3-button dialog, click Don't Save        | Editor clears, file name = "Untitled", changes lost                |
+| 7.13 | New file — Cancel chosen      | In 3-button dialog, click Cancel            | No change, editor content preserved                                |
+| 7.14 | Open with unsaved changes     | Edit content, click Open                    | 3-button dialog: Save / Don't Save / Cancel                        |
+| 7.15 | Reload from disk              | Edit externally, click Reload               | Content updates from disk                                          |
+| 7.16 | Reload with unsaved changes   | Edit in app, click Reload                   | 3-button dialog: Save / Don't Save / Cancel                        |
+| 7.17 | Reload unchanged file         | No edits in app or on disk, click Reload    | Toast: "The file is already up to date."                           |
+| 7.18 | Reload deleted file           | Delete file externally, click Reload        | Warning: "File no longer exists. Use Save As."                     |
+| 7.19 | File name display             | Open a file                                 | File name shown in toolbar and status bar                          |
+| 7.20 | Modified indicator            | Edit content                                | `*` appears after filename, dot on Save button                     |
+| 7.21 | Read-only indicator           | Open a read-only file                       | 🔒 appears next to filename in toolbar and status bar              |
+| 7.22 | Save to read-only file        | Edit a read-only file, click Save           | Toast error: "Could not save: the file is read-only."              |
+| 7.23 | Save — .bak backup created    | Save over an existing file, check directory | `<filename>.bak` contains the previous content                     |
+| 7.24 | UTF-8 BOM stripped on read    | Open file with UTF-8 BOM                    | Content reads correctly, no BOM artifact in editor                 |
+| 7.25 | Non-UTF-8 file (Latin-1)      | Open file with Latin-1 encoding             | Content decoded losslessly, no crash or garbled text               |
+| 7.26 | Toast on save failure         | Save to a path that fails (e.g. permission) | Error toast appears with failure message                           |
+| 7.27 | Toast on open failure         | Open a file that fails (e.g. locked)        | Error toast appears with failure message                           |
 
 ---
 
 ## 8. External Modification Detection
 
-| #   | Test                          | Steps                                                 | Expected                                           |
-| --- | ----------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
-| 8.1 | File modified externally      | Open file, edit in another editor, switch back to app | Prompt: "File was modified externally. Reload?"    |
-| 8.2 | Decline reload                | Decline reload prompt                                 | Warning icon (⚠) appears on filename               |
-| 8.3 | Accept reload                 | Accept reload prompt                                  | Content updates, warning clears                    |
-| 8.4 | File deleted externally       | Open file, delete it externally, switch to app        | Warning: "File was deleted. Use Save As?"          |
-| 8.5 | Save over externally modified | Modify externally, save in app                        | Prompt: "File was modified externally. Overwrite?" |
+| #    | Test                               | Steps                                                             | Expected                                                         |
+| ---- | ---------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 8.1  | File modified externally (clean)   | Open file, edit in another editor, switch back to app             | Prompt: "modified by another application. Reload it?"            |
+| 8.2  | File modified externally (dirty)   | Open file, edit in app, edit externally, switch back              | Prompt: "modified by another application. Reload and discard?"   |
+| 8.3  | Decline reload — ⚠ persists        | Decline reload prompt                                             | ⚠ indicator stays on filename, `changeStatus` stays "modified"   |
+| 8.4  | Decline reload — Save still warns  | Decline reload, then press Ctrl+S                                 | Overwrite prompt: "Overwrite external changes?" (still asked)    |
+| 8.5  | Decline reload — no re-prompt      | Decline reload, switch away and back                              | No second reload prompt (already acknowledged)                   |
+| 8.6  | Accept reload                      | Accept reload prompt                                              | Content updates, ⚠ clears, baseline reset                        |
+| 8.7  | File deleted externally            | Open file, delete it externally, switch to app                    | Warning: "File no longer exists. Use Save As."                   |
+| 8.8  | Save after external deletion       | After deletion warning, press Ctrl+S                              | Save routes to Save As dialog (does not recreate at old path)    |
+| 8.9  | Save over externally modified      | Modify externally, press Ctrl+S                                   | Overwrite prompt: "Overwrite external changes?"                  |
+| 8.10 | Reload after external modification | Modify externally, press Ctrl+R                                   | If dirty: 3-button dialog (Save/Don't Save/Cancel); else reloads |
+| 8.11 | Deletion clears recents            | After deletion warning, check recent files list                   | Deleted file is removed from recent files                        |
+| 8.12 | Size-only change detected          | Edit file externally without changing mtime (e.g. `touch -r ref`) | ⚠ appears on next focus (mtime OR size comparison)               |
 
 ---
 
@@ -307,6 +329,7 @@ Create a test file with all supported features and verify each renders correctly
 | Save             | `Ctrl+S`       | File     |
 | Save As          | `Ctrl+Shift+S` | File     |
 | Reload from Disk | `Ctrl+R`       | File     |
+| Quit             | `Ctrl+Q`       | File     |
 | Split View       | —              | View     |
 | Editor Only      | —              | View     |
 | Viewer Only      | —              | View     |
@@ -318,19 +341,20 @@ Create a test file with all supported features and verify each renders correctly
 
 ## 17. About Dialog
 
-| #     | Test              | Steps                      | Expected                                          |
-| ----- | ----------------- | -------------------------- | ------------------------------------------------- |
-| 17.1  | Open via button   | Click info icon in toolbar | About dialog opens                                |
-| 17.2  | Open via F1       | Press `F1`                 | About dialog opens                                |
-| 17.3  | Close (X button)  | Click X                    | Dialog closes                                     |
-| 17.4  | Close (backdrop)  | Click outside dialog       | Dialog closes                                     |
-| 17.5  | Close (Escape)    | Press `Escape`             | Dialog closes                                     |
-| 17.6  | About tab content | View About tab             | Shows app info, author, license summary           |
-| 17.7  | Custom Themes tab | Click Custom Themes tab    | Shows theme documentation with CSS examples       |
-| 17.8  | Dependencies tab  | Click Dependencies tab     | Shows table of all third-party libraries          |
-| 17.9  | License tab       | Click License tab          | Shows full MIT license text                       |
-| 17.10 | Check for updates | Click "Check for Updates"  | Shows status (checking, up-to-date, or available) |
-| 17.11 | External links    | Click any link in About    | Opens in external browser                         |
+| #     | Test                 | Steps                        | Expected                                          |
+| ----- | -------------------- | ---------------------------- | ------------------------------------------------- |
+| 17.1  | Open via button      | Click info icon in toolbar   | About dialog opens                                |
+| 17.2  | Open via F1          | Press `F1`                   | About dialog opens                                |
+| 17.3  | Close (X button)     | Click X                      | Dialog closes                                     |
+| 17.4  | Close (backdrop)     | Click outside dialog         | Dialog closes                                     |
+| 17.5  | Close (Escape)       | Press `Escape`               | Dialog closes                                     |
+| 17.6  | About tab content    | View About tab               | Shows app info, author, license summary           |
+| 17.7  | Custom Themes tab    | Click Custom Themes tab      | Shows theme documentation with CSS examples       |
+| 17.8  | Dependencies tab     | Click Dependencies tab       | Shows table of all third-party libraries          |
+| 17.9  | Shortcuts tab — Quit | Click Keyboard Shortcuts tab | "Quit" row with `Ctrl+Q` is listed                |
+| 17.10 | License tab          | Click License tab            | Shows full MIT license text                       |
+| 17.10 | Check for updates    | Click "Check for Updates"    | Shows status (checking, up-to-date, or available) |
+| 17.11 | External links       | Click any link in About      | Opens in external browser                         |
 
 ---
 
@@ -350,31 +374,37 @@ Create a test file with all supported features and verify each renders correctly
 
 ## 19. Error Handling & Edge Cases
 
-| #     | Test                             | Steps                                | Expected                                 |
-| ----- | -------------------------------- | ------------------------------------ | ---------------------------------------- |
-| 19.1  | Empty file                       | Create new file, don't type          | Viewer empty, word count 0               |
-| 19.2  | Very large file                  | Open 5MB+ markdown file              | Loads without freezing, scroll works     |
-| 19.3  | File with BOM                    | Open UTF-8 BOM file                  | Content reads correctly, no BOM artifact |
-| 19.4  | CRLF line endings                | Open Windows-style line endings file | Renders correctly                        |
-| 19.5  | Read-only file                   | Open read-only file, try to save     | Error shown, file not corrupted          |
-| 19.6  | Path with spaces                 | Open/save files with spaces in path  | Works correctly                          |
-| 19.7  | Unicode filename                 | Open file with unicode characters    | Works correctly                          |
-| 19.8  | Deeply nested lists              | Create 5+ levels of nested lists     | Renders without breaking layout          |
-| 19.9  | Nested blockquotes               | Create multi-level blockquotes       | Renders correctly                        |
-| 19.10 | Very long code block             | Paste 500+ line code block           | Renders, scrolls, syncs                  |
-| 19.11 | Rapid typing                     | Type fast for 30 seconds             | No lost characters, viewer catches up    |
-| 19.12 | Frontmatter with non-object YAML | Use array or string as frontmatter   | Gracefully ignored, no crash             |
-| 19.13 | Mixed content stress test        | File with every feature combined     | All features render correctly together   |
-| 19.14 | Switching views while rendering  | Rapidly toggle view modes            | No crashes or visual glitches            |
-| 19.15 | Open file while loading          | Double-click a file rapidly          | Only one file opens (loading guard)      |
+| #     | Test                             | Steps                                | Expected                                                    |
+| ----- | -------------------------------- | ------------------------------------ | ----------------------------------------------------------- |
+| 19.1  | Empty file                       | Create new file, don't type          | Viewer empty, word count 0                                  |
+| 19.2  | Very large file                  | Open 5MB+ markdown file              | Loads without freezing, scroll works                        |
+| 19.3  | File with BOM                    | Open UTF-8 BOM file                  | Content reads correctly, no BOM artifact                    |
+| 19.4  | CRLF line endings                | Open Windows-style line endings file | Renders correctly                                           |
+| 19.5  | Read-only file                   | Open read-only file, try to save     | 🔒 indicator shown, toast error on save, file not corrupted |
+| 19.6  | Path with spaces                 | Open/save files with spaces in path  | Works correctly                                             |
+| 19.7  | Unicode filename                 | Open file with unicode characters    | Works correctly                                             |
+| 19.8  | Deeply nested lists              | Create 5+ levels of nested lists     | Renders without breaking layout                             |
+| 19.9  | Nested blockquotes               | Create multi-level blockquotes       | Renders correctly                                           |
+| 19.10 | Very long code block             | Paste 500+ line code block           | Renders, scrolls, syncs                                     |
+| 19.11 | Rapid typing                     | Type fast for 30 seconds             | No lost characters, viewer catches up                       |
+| 19.12 | Frontmatter with non-object YAML | Use array or string as frontmatter   | Gracefully ignored, no crash                                |
+| 19.13 | Mixed content stress test        | File with every feature combined     | All features render correctly together                      |
+| 19.14 | Switching views while rendering  | Rapidly toggle view modes            | No crashes or visual glitches                               |
+| 19.15 | Open file while loading          | Double-click a file rapidly          | Only one file opens (loading guard)                         |
 
 ---
 
 ## 20. Quit Behavior
 
-| #    | Test                      | Steps                       | Expected                                         |
-| ---- | ------------------------- | --------------------------- | ------------------------------------------------ |
-| 20.1 | Quit with no changes      | Close window                | App closes immediately                           |
-| 20.2 | Quit with unsaved changes | Edit content, close window  | Prompt: "You have unsaved changes. Quit anyway?" |
-| 20.3 | Cancel quit               | Click cancel on quit prompt | Window stays open                                |
-| 20.4 | Confirm quit              | Confirm quit prompt         | App closes                                       |
+| #     | Test                       | Steps                               | Expected                                                                   |
+| ----- | -------------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| 20.1  | Quit with no changes       | Close window                        | App closes immediately                                                     |
+| 20.2  | Quit with unsaved changes  | Edit content, close window          | 3-button dialog: Save / Don't Save / Cancel                                |
+| 20.3  | Quit — Cancel              | Click Cancel in 3-button dialog     | Window stays open                                                          |
+| 20.4  | Quit — Don't Save          | Click Don't Save in 3-button dialog | App closes, changes lost                                                   |
+| 20.5  | Quit — Save (untitled)     | Click Save in 3-button dialog       | Save As dialog appears; on save app closes                                 |
+| 20.6  | Quit — Save (named)        | Click Save in 3-button dialog       | File saved, app closes                                                     |
+| 20.7  | Quit — Save cancelled      | Click Save, cancel Save As dialog   | Window stays open (save didn't complete)                                   |
+| 20.8  | Ctrl+Q shortcut            | Press `Ctrl+Q`                      | Same behavior as closing the window (3-button dialog if unsaved)           |
+| 20.9  | Command Palette Quit       | Open palette, type "quit", Enter    | Same behavior as closing the window (3-button dialog if unsaved)           |
+| 20.10 | Window state saved on quit | Resize window, quit, reopen         | Position and size restored (state persisted at exit via save_window_state) |

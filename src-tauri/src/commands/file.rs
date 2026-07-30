@@ -1,22 +1,106 @@
+use std::fs;
+use std::io::ErrorKind;
+use std::path::Path;
+
 use tauri::State;
 
 use crate::error::AppError;
-use crate::state::{FileInfo, InitialFile};
+use crate::state::{FileInfo, FileInfoMeta, InitialFile};
 
 #[tauri::command]
 pub fn get_initial_file(state: State<InitialFile>) -> Option<String> {
     state.0.lock().unwrap().take()
 }
 
-#[tauri::command]
-pub async fn read_file(path: String) -> Result<String, AppError> {
-    Ok(std::fs::read_to_string(&path)?)
+/// Decode raw bytes to a String, handling a UTF-8 BOM and falling back to a
+/// lossless Latin-1 (ISO-8859-1) decode when the file is not valid UTF-8 so
+/// content is never silently corrupted.
+fn decode_bytes(bytes: Vec<u8>) -> Result<String, AppError> {
+    let bytes = match bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
+        Some(rest) => rest,
+        None => &bytes,
+    };
+    match std::str::from_utf8(bytes) {
+        Ok(s) => Ok(s.to_string()),
+        Err(utf8_err) => {
+            let _ = utf8_err;
+            Ok(bytes.iter().map(|b| *b as char).collect())
+        }
+    }
 }
 
 #[tauri::command]
+pub async fn read_file(path: String) -> Result<String, AppError> {
+    let bytes = fs::read(&path)?;
+    decode_bytes(bytes).map_err(|e| AppError::Encoding(e.to_string()))
+}
+
+/// Returns `true` if the file at `path` is writable by the current process.
+/// On Unix this also probes by opening with write intent, catching ACL/owner
+/// restrictions that `readonly()` misses.
+#[tauri::command]
+pub async fn is_file_writable(path: String) -> Result<bool, AppError> {
+    let p = Path::new(&path);
+    let metadata = match fs::metadata(p) {
+        Ok(m) => m,
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(false),
+        Err(e) => return Err(AppError::Io(e)),
+    };
+    if metadata.permissions().readonly() {
+        return Ok(false);
+    }
+    #[cfg(unix)]
+    {
+        use std::fs::OpenOptions;
+        if OpenOptions::new().write(true).open(p).is_err() {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Atomically write `content` to `path`, leaving a `<path>.bak` backup of the
+/// previous version when it existed. A pre-write read-only check emits a typed
+/// `AppError::ReadOnly` so the frontend can route to Save As.
+#[tauri::command]
 pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
-    std::fs::write(&path, &content)?;
-    Ok(())
+    let p = Path::new(&path);
+
+    if let Ok(metadata) = fs::metadata(p) {
+        if metadata.permissions().readonly() {
+            return Err(AppError::ReadOnly(path));
+        }
+        #[cfg(unix)]
+        {
+            use std::fs::OpenOptions;
+            if OpenOptions::new().write(true).open(p).is_err() {
+                return Err(AppError::ReadOnly(path));
+            }
+        }
+
+        // Best-effort backup next to the target.
+        let bak = format!("{}.bak", path);
+        let _ = fs::copy(p, &bak);
+    }
+
+    let tmp = format!("{}.tmp.{}", path, std::process::id());
+    fs::write(&tmp, &content)?;
+
+    match fs::rename(&tmp, p) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            let _ = fs::remove_file(&tmp);
+            match e.raw_os_error() {
+                // EXDEV (cross-device): fall back to copy+delete (non-atomic)
+                // so the write still succeeds on unusual mount layouts.
+                Some(18) => {
+                    fs::write(p, &content)?;
+                    Ok(())
+                }
+                _ => Err(AppError::Io(e)),
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -47,18 +131,61 @@ pub async fn list_files(dir: String) -> Result<Vec<FileInfo>, AppError> {
 
 #[tauri::command]
 pub async fn create_file(path: String) -> Result<(), AppError> {
-    std::fs::File::create(&path)?;
+    use std::fs::OpenOptions;
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|e| {
+            if e.kind() == ErrorKind::AlreadyExists {
+                AppError::AlreadyExists(path)
+            } else {
+                AppError::Io(e)
+            }
+        })?;
+    drop(file);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_file_mtime(path: String) -> Result<u64, AppError> {
-    let metadata = std::fs::metadata(&path)?;
+    let metadata = fs::metadata(&path)?;
     Ok(metadata
         .modified()?
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64)
+}
+
+/// Fetch existence, mtime (ms), size and read-only flag in one call, used by
+/// the frontend to detect external modification and to drive the read-only
+/// indicator without extra round-trips.
+#[tauri::command]
+pub async fn get_file_info(path: String) -> Result<FileInfoMeta, AppError> {
+    match fs::metadata(&path) {
+        Ok(metadata) => {
+            let mtime_ms = metadata
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            let readonly = metadata.permissions().readonly();
+            Ok(FileInfoMeta {
+                exists: true,
+                mtime_ms,
+                size: metadata.len(),
+                readonly,
+            })
+        }
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(FileInfoMeta {
+            exists: false,
+            mtime_ms: 0,
+            size: 0,
+            readonly: true,
+        }),
+        Err(e) => Err(AppError::Io(e)),
+    }
 }
 
 #[tauri::command]
@@ -97,6 +224,33 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[tokio::test]
+    async fn read_file_strips_utf8_bom() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("bom.md");
+        std::fs::write(&file_path, [0xEF, 0xBB, 0xBF])
+            .unwrap();
+        std::fs::write(&file_path, b"\xEF\xBB\xBF# No BOM").unwrap();
+
+        let result = read_file(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert_eq!(result, "# No BOM");
+    }
+
+    #[tokio::test]
+    async fn read_file_falls_back_to_latin1_for_non_utf8() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("latin1.md");
+        // 0xE9 is 'é' in Latin-1, invalid as a UTF-8 continuation here.
+        std::fs::write(&file_path, [b'h', b'i', 0xE9]).unwrap();
+
+        let result = read_file(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert_eq!(result, "hi\u{00E9}");
+    }
+
     // --- write_file ---
 
     #[tokio::test]
@@ -133,6 +287,63 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn write_file_creates_bak_when_overwriting() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("bak.md");
+        std::fs::write(&file_path, "old content").unwrap();
+
+        write_file(
+            file_path.to_string_lossy().to_string(),
+            "new content".to_string(),
+        )
+        .await
+        .unwrap();
+
+        let bak_path = dir.path().join("bak.md.bak");
+        assert!(bak_path.exists());
+        assert_eq!(std::fs::read_to_string(&bak_path).unwrap(), "old content");
+    }
+
+    #[tokio::test]
+    async fn write_file_no_bak_for_new_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("fresh.md");
+
+        write_file(
+            file_path.to_string_lossy().to_string(),
+            "content".to_string(),
+        )
+        .await
+        .unwrap();
+
+        assert!(!dir.path().join("fresh.md.bak").exists());
+    }
+
+    #[tokio::test]
+    async fn write_file_leaves_no_temp_file_on_success() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("temp_check.md");
+
+        write_file(
+            file_path.to_string_lossy().to_string(),
+            "content".to_string(),
+        )
+        .await
+        .unwrap();
+
+        let leftover: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .contains(&format!(".tmp.{}", std::process::id()))
+            })
+            .collect();
+        assert!(leftover.is_empty());
+    }
+
+    #[tokio::test]
     async fn write_file_returns_error_for_invalid_path() {
         let result = write_file(
             "/nonexistent/dir/file.md".to_string(),
@@ -140,6 +351,24 @@ mod tests {
         )
         .await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn write_file_returns_readonly_error_for_ro_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("ro.md");
+        std::fs::write(&file_path, "original").unwrap();
+        let mut perms = std::fs::metadata(&file_path).unwrap().permissions();
+        perms.set_readonly(true);
+        std::fs::set_permissions(&file_path, perms).unwrap();
+
+        let result = write_file(
+            file_path.to_string_lossy().to_string(),
+            "new".to_string(),
+        )
+        .await;
+        assert!(matches!(result, Err(AppError::ReadOnly(_))));
+        assert_eq!(std::fs::read_to_string(&file_path).unwrap(), "original");
     }
 
     // --- list_files ---
@@ -202,6 +431,110 @@ mod tests {
 
         assert!(file_path.exists());
         assert_eq!(std::fs::metadata(&file_path).unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn create_file_fails_when_file_already_exists() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("exists.md");
+        std::fs::write(&file_path, "data").unwrap();
+
+        let result = create_file(file_path.to_string_lossy().to_string()).await;
+        assert!(matches!(result, Err(AppError::AlreadyExists(_))));
+        assert_eq!(std::fs::read_to_string(&file_path).unwrap(), "data");
+    }
+
+    // --- is_file_writable ---
+
+    #[tokio::test]
+    async fn is_file_writable_true_for_normal_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("w.md");
+        std::fs::write(&file_path, "x").unwrap();
+
+        let writable = is_file_writable(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(writable);
+    }
+
+    #[tokio::test]
+    async fn is_file_writable_false_for_readonly_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("ro.md");
+        std::fs::write(&file_path, "x").unwrap();
+        let mut perms = std::fs::metadata(&file_path).unwrap().permissions();
+        perms.set_readonly(true);
+        std::fs::set_permissions(&file_path, perms).unwrap();
+
+        let writable = is_file_writable(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(!writable);
+    }
+
+    #[tokio::test]
+    async fn is_file_writable_false_for_missing_file() {
+        let writable = is_file_writable("/nonexistent/file.md".to_string())
+            .await
+            .unwrap();
+        assert!(!writable);
+    }
+
+    // --- get_file_info ---
+
+    #[tokio::test]
+    async fn get_file_info_returns_existing_file_meta() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("info.md");
+        std::fs::write(&file_path, "hello world").unwrap();
+
+        let info = get_file_info(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(info.exists);
+        assert!(!info.readonly);
+        assert_eq!(info.size, "hello world".len() as u64);
+        assert!(info.mtime_ms > 0);
+    }
+
+    #[tokio::test]
+    async fn get_file_info_reports_missing_as_not_exists() {
+        let info = get_file_info("/nonexistent/file.md".to_string())
+            .await
+            .unwrap();
+        assert!(!info.exists);
+    }
+
+    #[tokio::test]
+    async fn get_file_info_reports_readonly_flag() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("roinfo.md");
+        std::fs::write(&file_path, "x").unwrap();
+        let mut perms = std::fs::metadata(&file_path).unwrap().permissions();
+        perms.set_readonly(true);
+        std::fs::set_permissions(&file_path, perms).unwrap();
+
+        let info = get_file_info(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(info.exists);
+        assert!(info.readonly);
+    }
+
+    #[tokio::test]
+    async fn get_file_info_detects_size_change() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("size.md");
+        std::fs::write(&file_path, "small").unwrap();
+        let info1 = get_file_info(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        std::fs::write(&file_path, "much larger content").unwrap();
+        let info2 = get_file_info(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(info2.size > info1.size);
     }
 
     // --- get_file_mtime ---

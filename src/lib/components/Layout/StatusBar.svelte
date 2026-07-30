@@ -11,6 +11,7 @@
   <div class="statusbar-left">
     <span class="file-name" title={fileState.currentFile || 'Untitled'}>
       {fileName}
+      {#if fileState.isReadOnly}{'\u{1F512}'}{/if}
       {#if editorState.isModified}*{/if}
     </span>
   </div>

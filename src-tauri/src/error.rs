@@ -8,6 +8,12 @@ pub enum AppError {
     #[error("Not found: {0}")]
     #[allow(dead_code)]
     NotFound(String),
+    #[error("File is read-only: {0}")]
+    ReadOnly(String),
+    #[error("File already exists: {0}")]
+    AlreadyExists(String),
+    #[error("Encoding error: {0}")]
+    Encoding(String),
 }
 
 impl Serialize for AppError {
@@ -54,5 +60,37 @@ mod tests {
         let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
         let app_err: AppError = io_err.into();
         assert!(app_err.to_string().contains("denied"));
+    }
+
+    #[test]
+    fn readonly_error_displays_path() {
+        let err = AppError::ReadOnly("/tmp/ro.md".to_string());
+        assert_eq!(err.to_string(), "File is read-only: /tmp/ro.md");
+    }
+
+    #[test]
+    fn already_exists_error_displays_path() {
+        let err = AppError::AlreadyExists("/tmp/exists.md".to_string());
+        assert_eq!(err.to_string(), "File already exists: /tmp/exists.md");
+    }
+
+    #[test]
+    fn encoding_error_displays_message() {
+        let err = AppError::Encoding("invalid UTF-8".to_string());
+        assert_eq!(err.to_string(), "Encoding error: invalid UTF-8");
+    }
+
+    #[test]
+    fn readonly_error_serializes_to_string() {
+        let err = AppError::ReadOnly("/ro".to_string());
+        let json = serde_json::to_string(&err).unwrap();
+        assert_eq!(json, "\"File is read-only: /ro\"");
+    }
+
+    #[test]
+    fn already_exists_error_serializes_to_string() {
+        let err = AppError::AlreadyExists("/e".to_string());
+        let json = serde_json::to_string(&err).unwrap();
+        assert_eq!(json, "\"File already exists: /e\"");
     }
 }

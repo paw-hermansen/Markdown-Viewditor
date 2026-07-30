@@ -98,3 +98,6 @@ coverage/
 # AI
 .agents/
 .opencode/
+
+# Markdown Viewditor
+*.md.bak

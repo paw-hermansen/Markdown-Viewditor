@@ -12,8 +12,7 @@
       </feMerge>
     </filter>
   </defs>
-  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
-  <!-- One single element: a cursor beam -->
-  <rect x="460" y="260" width="8" height="500" rx="4" fill="#e94560" filter="url(#glow)"/>
-  <rect x="460" y="260" width="8" height="500" rx="4" fill="#e94560"/>
+  <rect width="1024" height="1024" rx="205" fill="url(#bg)"/>
+  <rect x="461" y="154" width="8" height="717" rx="5" fill="#e94560" filter="url(#glow)"/>
+  <rect x="461" y="154" width="8" height="717" rx="5" fill="#e94560"/>
 </svg>

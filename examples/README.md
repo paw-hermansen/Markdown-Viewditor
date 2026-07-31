@@ -1,4 +1,12 @@
-# Custom Themes
+# Tests and Examples
+
+Used with [Test Plan](../TEST-PLAN.md) or just to see some examples 
+of the supported markdown and extensions. For some tests the 
+custom theme [theme-kaleidoscope.css](custom_themes/theme-kaleidoscope.css) is helpful.
+Git seems not to be able to save file properties so for the tests
+with a read-only markdown file you will have to make one yourself.
+
+## Custom Themes
 
 1. Copy the example custom theme files `custom_themes/theme-bubblegum.css`
    and `custom_themes/theme-kaleidoscope.css` to the themes folder if

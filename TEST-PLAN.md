@@ -146,7 +146,7 @@ For each: select text, click the toolbar button, verify markdown output in the e
 | 7.22 | Save to read-only file        | Edit a read-only file, click Save           | Toast error: "Could not save: the file is read-only."              |
 | 7.23 | Save — .bak backup created    | Save over an existing file, check directory | `<filename>.bak` contains the previous content                     |
 | 7.24 | UTF-8 BOM stripped on read    | Open file with UTF-8 BOM                    | Content reads correctly, no BOM artifact in editor                 |
-| 7.25 | Non-UTF-8 file (Latin-1)      | Open file with Latin-1 encoding             | Content decoded losslessly, no crash or garbled text               |
+| 7.25 | Non-UTF-8 file                | Open file with ISO/IEC 8859-1 (Latin-1) encoding             | Content decoded losslessly, no crash or garbled text               |
 | 7.26 | Toast on save failure         | Save to a path that fails (e.g. permission) | Error toast appears with failure message                           |
 | 7.27 | Toast on open failure         | Open a file that fails (e.g. locked)        | Error toast appears with failure message                           |
 
@@ -166,8 +166,7 @@ For each: select text, click the toolbar button, verify markdown output in the e
 | 8.8  | Save after external deletion       | After deletion warning, press Ctrl+S                              | Save routes to Save As dialog (does not recreate at old path)    |
 | 8.9  | Save over externally modified      | Modify externally, press Ctrl+S                                   | Overwrite prompt: "Overwrite external changes?"                  |
 | 8.10 | Reload after external modification | Modify externally, press Ctrl+R                                   | If dirty: 3-button dialog (Save/Don't Save/Cancel); else reloads |
-| 8.11 | Deletion clears recents            | After deletion warning, check recent files list                   | Deleted file is removed from recent files                        |
-| 8.12 | Size-only change detected          | Edit file externally without changing mtime (e.g. `touch -r ref`) | ⚠ appears on next focus (mtime OR size comparison)               |
+| 8.11 | Size-only change detected          | Edit file externally without changing mtime (e.g. `touch -r ref`) | ⚠ appears on next focus (mtime OR size comparison)               |
 
 ---
 

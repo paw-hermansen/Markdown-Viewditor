@@ -240,7 +240,7 @@ export function closeFile() {
   fileState.currentFile = null;
   fileState.currentFileMtime = null;
   fileState.currentFileSize = null;
-  fileState.changeStatus = "unchanged";
+  setChangeStatus("unchanged");
   fileState.isReadOnly = null;
   fileState.forceSaveAs = false;
   fileState.error = null;

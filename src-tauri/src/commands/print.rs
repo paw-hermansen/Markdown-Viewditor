@@ -1,6 +1,3 @@
-#[cfg(target_os = "macos")]
-use tauri::Manager;
-
 use crate::error::AppError;
 
 #[cfg(target_os = "macos")]
@@ -11,6 +8,7 @@ mod platform {
     use objc2::rc::Retained;
     use objc2_foundation::NSData;
     use objc2_web_kit::WKWebView;
+    use tauri::Manager;
 
     use crate::error::AppError;
 

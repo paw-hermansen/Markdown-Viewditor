@@ -43,14 +43,12 @@ fn updater_enabled() -> bool {
     true
 }
 
-/// Convert a `url::Url` to a filesystem path string.
-/// Handles `file:///` URLs by extracting the path component.
+/// Extract a filesystem path from a `file:///` URL.
+/// For `file:///path/to/file.md` returns `/path/to/file.md`.
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
-fn url_to_path(url: &url::Url) -> String {
+fn url_to_path(url: &tauri::Url) -> String {
     if url.scheme() == "file" {
-        url.to_file_path()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|_| url.to_string())
+        url.path().to_string()
     } else {
         url.to_string()
     }

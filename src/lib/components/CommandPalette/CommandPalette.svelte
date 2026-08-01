@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ViewMode } from '$lib/types';
+  import { modLabel } from '$lib/utils/keyboard';
 
   interface Command {
     id: string;
@@ -33,17 +34,17 @@
   let commandsList = $state<HTMLDivElement | undefined>();
 
   const commands: Command[] = $derived([
-    { id: 'new', label: 'New File', shortcut: 'Ctrl+N', category: 'File', action: onNew },
-    { id: 'open', label: 'Open File', shortcut: 'Ctrl+O', category: 'File', action: onOpen },
-    { id: 'save', label: 'Save', shortcut: 'Ctrl+S', category: 'File', action: onSave },
-    { id: 'save-as', label: 'Save As', shortcut: 'Ctrl+Shift+S', category: 'File', action: onSaveAs },
-    { id: 'reload', label: 'Reload from Disk', shortcut: 'Ctrl+R', category: 'File', action: onReload },
-    { id: 'quit', label: 'Quit', shortcut: 'Ctrl+Q', category: 'File', action: onQuit },
+    { id: 'new', label: 'New File', shortcut: modLabel('Ctrl+N'), category: 'File', action: onNew },
+    { id: 'open', label: 'Open File', shortcut: modLabel('Ctrl+O'), category: 'File', action: onOpen },
+    { id: 'save', label: 'Save', shortcut: modLabel('Ctrl+S'), category: 'File', action: onSave },
+    { id: 'save-as', label: 'Save As', shortcut: modLabel('Ctrl+Shift+S'), category: 'File', action: onSaveAs },
+    { id: 'reload', label: 'Reload from Disk', shortcut: modLabel('Ctrl+R'), category: 'File', action: onReload },
+    { id: 'quit', label: 'Quit', shortcut: modLabel('Ctrl+Q'), category: 'File', action: onQuit },
     { id: 'view-split', label: 'Split View', category: 'View', action: () => onViewModeChange('split') },
     { id: 'view-editor', label: 'Editor Only', category: 'View', action: () => onViewModeChange('editor') },
     { id: 'view-viewer', label: 'Viewer Only', category: 'View', action: () => onViewModeChange('viewer') },
     ...(onCopyHtml ? [{ id: 'copy-html', label: 'Copy HTML', category: 'Edit', action: onCopyHtml }] : []),
-    ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: 'Ctrl+P', category: 'File', action: onPrint }] : []),
+    ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: modLabel('Ctrl+P'), category: 'File', action: onPrint }] : []),
     { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
   ]);
 
@@ -122,7 +123,17 @@
       onClose();
     }
   }
+
+  function handleGlobalKeydown(e: KeyboardEvent) {
+    if (!open) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleGlobalKeydown} />
 
 {#if open}
   <!-- svelte-ignore a11y_no_static_element_interactions -->

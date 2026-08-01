@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { modLabel } from '$lib/utils/keyboard';
+
   let { onFormat }: { onFormat: (format: string) => void } = $props();
 
   const formats = [
-    { id: 'bold', label: 'B', title: 'Bold (Ctrl+B)', icon: 'B' },
-    { id: 'italic', label: 'I', title: 'Italic (Ctrl+I)', icon: 'I' },
+    { id: 'bold', label: 'B', title: modLabel('Bold (Ctrl+B)'), icon: 'B' },
+    { id: 'italic', label: 'I', title: modLabel('Italic (Ctrl+I)'), icon: 'I' },
     { id: 'heading', label: 'H', title: 'Heading', icon: 'H' },
-    { id: 'link', label: '🔗', title: 'Link (Ctrl+K)', icon: '🔗' },
+    { id: 'link', label: '🔗', title: modLabel('Link (Ctrl+K)'), icon: '🔗' },
     { id: 'image', label: '🖼', title: 'Image', icon: '🖼' },
     { id: 'code', label: '`', title: 'Inline Code', icon: '`' },
     { id: 'codeblock', label: '```', title: 'Code Block', icon: '```' },

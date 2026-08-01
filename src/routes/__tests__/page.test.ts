@@ -260,4 +260,53 @@ describe("+page.svelte", () => {
       expect(mockSaveFile).toHaveBeenCalled();
     });
   });
+
+  it("triggers Save As on Ctrl+Shift+S with uppercase key", async () => {
+    mockShowSaveDialog.mockResolvedValueOnce("/test/new-file.md");
+    render(Page);
+    await fireEvent.keyDown(window, {
+      key: "S",
+      ctrlKey: true,
+      shiftKey: true,
+    });
+
+    await waitFor(() => {
+      expect(mockShowSaveDialog).toHaveBeenCalled();
+    });
+  });
+
+  it("triggers Save As on Ctrl+Shift+S with lowercase key (macOS compat)", async () => {
+    mockShowSaveDialog.mockResolvedValueOnce("/test/new-file.md");
+    render(Page);
+    await fireEvent.keyDown(window, {
+      key: "s",
+      ctrlKey: true,
+      shiftKey: true,
+    });
+
+    await waitFor(() => {
+      expect(mockShowSaveDialog).toHaveBeenCalled();
+    });
+  });
+
+  it("does not trigger Save As on Ctrl+S without Shift", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(false);
+    mockFileState.currentFile = "/test/file.md";
+    render(Page);
+    await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockShowSaveDialog).not.toHaveBeenCalled();
+    });
+  });
+
+  it("triggers Quit on Ctrl+Q", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(false);
+    render(Page);
+    await fireEvent.keyDown(window, { key: "q", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("save_window_state");
+    });
+  });
 });

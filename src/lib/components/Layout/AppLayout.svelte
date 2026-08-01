@@ -3,6 +3,7 @@
   import type { ViewMode } from '$lib/types';
   import { settingsState, updateSplitRatio } from '$lib/stores/settings.svelte';
   import { fileState } from '$lib/stores/file.svelte';
+  import { modLabel } from '$lib/utils/keyboard';
   import ViewToggle from './ViewToggle.svelte';
   import StatusBar from './StatusBar.svelte';
 
@@ -120,19 +121,19 @@
 <div class="app-layout">
   <header class="toolbar">
     <div class="toolbar-left">
-      <button class="toolbar-btn" onclick={onNew} title="New file (Ctrl+N)" disabled={isLoading}>
+      <button class="toolbar-btn" onclick={onNew} title={modLabel('New file (Ctrl+N)')} disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M3 1h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3h3" stroke="currentColor" stroke-width="1.5"/>
           <path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <button class="toolbar-btn" onclick={onOpen} title="Open file (Ctrl+O)" disabled={isLoading}>
+      <button class="toolbar-btn" onclick={onOpen} title={modLabel('Open file (Ctrl+O)')} disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M2 4h4l2 2h6v7a1 1 0 01-1 1H2V4z" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <button class="toolbar-btn" onclick={onSave} title="Save (Ctrl+S)" disabled={isLoading}>
+      <button class="toolbar-btn" onclick={onSave} title={modLabel('Save (Ctrl+S)')} disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M12 15H3a1 1 0 01-1-1V2a1 1 0 011-1h8l3 3v10a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3H5V1M5 10h6" stroke="currentColor" stroke-width="1.5"/>
@@ -141,7 +142,7 @@
           <span class="modified-dot">●</span>
         {/if}
       </button>
-      <button class="toolbar-btn" onclick={onSaveAs} title="Save As (Ctrl+Shift+S)" disabled={isLoading}>
+      <button class="toolbar-btn" onclick={onSaveAs} title={modLabel('Save As (Ctrl+Shift+S)')} disabled={isLoading}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M12 15H3a1 1 0 01-1-1V2a1 1 0 011-1h8l3 3v10a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3H5V1" stroke="currentColor" stroke-width="1.5"/>
@@ -149,7 +150,7 @@
         </svg>
       </button>
       <span class="separator"></span>
-      <button class="toolbar-btn" onclick={onReload} title="Reload from Disk (Ctrl+R)" disabled={isLoading || !fileName}>
+      <button class="toolbar-btn" onclick={onReload} title={modLabel('Reload from Disk (Ctrl+R)')} disabled={isLoading || !fileName}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M2 8a6 6 0 0110.47-4M14 8a6 6 0 01-10.47 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           <path d="M12 1v3h-3M4 15v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>

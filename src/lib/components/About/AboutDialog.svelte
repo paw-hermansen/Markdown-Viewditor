@@ -3,6 +3,7 @@
   import { relaunch } from '@tauri-apps/plugin-process';
   import { check } from '@tauri-apps/plugin-updater';
   import { openUrl } from '@tauri-apps/plugin-opener';
+  import { modLabel } from '$lib/utils/keyboard';
   import licenseText from '../../../../LICENSE?raw';
 
   interface Props {
@@ -410,7 +411,7 @@
         {#if activeTab === 'shortcuts'}
           <section>
             <h2>Command Palette</h2>
-            <p>Press <kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
+            <p>Press <kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
           </section>
 
           <section>
@@ -420,13 +421,13 @@
                 <tr><th>Action</th><th>Shortcut</th></tr>
               </thead>
               <tbody>
-                <tr><td>New File</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">N</kbd></td></tr>
-                <tr><td>Open File</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">O</kbd></td></tr>
-                <tr><td>Save</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
-                <tr><td>Save As</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
-                <tr><td>Reload from Disk</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">R</kbd></td></tr>
-                <tr><td>Quit</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Q</kbd></td></tr>
-                <tr><td>Print / Create PDF</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
+                <tr><td>New File</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">N</kbd></td></tr>
+                <tr><td>Open File</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">O</kbd></td></tr>
+                <tr><td>Save</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
+                <tr><td>Save As</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
+                <tr><td>Reload from Disk</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">R</kbd></td></tr>
+                <tr><td>Quit</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Q</kbd></td></tr>
+                <tr><td>Print / Create PDF</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
               </tbody>
             </table>
           </section>
@@ -438,9 +439,9 @@
                 <tr><th>Action</th><th>Shortcut</th></tr>
               </thead>
               <tbody>
-                <tr><td>Bold</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">B</kbd></td></tr>
-                <tr><td>Italic</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
-                <tr><td>Insert Link</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">K</kbd></td></tr>
+                <tr><td>Bold</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">B</kbd></td></tr>
+                <tr><td>Italic</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
+                <tr><td>Insert Link</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">K</kbd></td></tr>
               </tbody>
             </table>
           </section>

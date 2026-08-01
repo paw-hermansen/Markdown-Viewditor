@@ -19,6 +19,7 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { save } from '@tauri-apps/plugin-dialog';
   import { createScrollSync } from '$lib/utils/scroll-sync';
+  import { modLabel } from '$lib/utils/keyboard';
   import { onMount, onDestroy } from 'svelte';
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
@@ -290,58 +291,59 @@
     if (fileState.isLoading) return;
 
     const isMod = e.metaKey || e.ctrlKey;
+    const key = e.key.toLowerCase();
 
-    if (e.key === 'F1') {
+    if (key === 'f1') {
       e.preventDefault();
       showAbout = !showAbout;
       return;
     }
 
-    if (isMod && e.key === 's' && !e.shiftKey) {
-      e.preventDefault();
-      handleSave();
-      return;
-    }
-
-    if (isMod && e.key === 'S' && e.shiftKey) {
+    if (isMod && e.shiftKey && key === 's') {
       e.preventDefault();
       handleSaveAs();
       return;
     }
 
-    if (isMod && e.key === 'n') {
+    if (isMod && !e.shiftKey && key === 's') {
       e.preventDefault();
-      handleNew();
+      handleSave();
       return;
     }
 
-    if (isMod && e.key === 'o') {
-      e.preventDefault();
-      handleOpen();
-      return;
-    }
-
-    if (isMod && e.key === 'r') {
-      e.preventDefault();
-      handleReload();
-      return;
-    }
-
-    if (isMod && (e.key === 'q' || e.key === 'Q')) {
-      e.preventDefault();
-      handleExit();
-      return;
-    }
-
-    if (isMod && e.shiftKey && e.key === 'P') {
+    if (isMod && e.shiftKey && key === 'p') {
       e.preventDefault();
       showCommandPalette = !showCommandPalette;
       return;
     }
 
-    if (isMod && e.key === 'p') {
+    if (isMod && !e.shiftKey && key === 'p') {
       e.preventDefault();
       handlePrint();
+      return;
+    }
+
+    if (isMod && key === 'n') {
+      e.preventDefault();
+      handleNew();
+      return;
+    }
+
+    if (isMod && key === 'o') {
+      e.preventDefault();
+      handleOpen();
+      return;
+    }
+
+    if (isMod && key === 'r') {
+      e.preventDefault();
+      handleReload();
+      return;
+    }
+
+    if (isMod && key === 'q') {
+      e.preventDefault();
+      handleExit();
       return;
     }
   }
@@ -462,7 +464,7 @@
         onCopyHtml={handleCopyHtml}
         onPrint={handlePrint}
         printLabel={isMacOS ? 'Create PDF' : 'Print'}
-        printTitle={isMacOS ? 'Create PDF (Ctrl+P)' : 'Print (Ctrl+P)'}
+        printTitle={isMacOS ? modLabel('Create PDF (Ctrl+P)') : modLabel('Print (Ctrl+P)')}
       />
       <Viewer
         bind:this={viewerComponent}

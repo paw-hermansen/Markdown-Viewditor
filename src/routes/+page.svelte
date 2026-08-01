@@ -231,10 +231,20 @@
     printDiv.innerHTML = viewerContent.innerHTML;
     document.body.appendChild(printDiv);
 
-    try {
-      await invoke('print_window');
-    } catch (e) {
-      console.error('Print failed:', e);
+    const isMacOS = navigator.userAgent.includes('Macintosh');
+    if (isMacOS) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+      try {
+        await invoke('print_window');
+      } catch (e) {
+        console.error('Print failed:', e);
+      }
+    } else {
+      window.print();
     }
 
     printDiv.remove();

@@ -222,7 +222,7 @@
     }
   }
 
-  function handlePrint() {
+  async function handlePrint() {
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
 
@@ -230,7 +230,13 @@
     printDiv.classList.add('print-content');
     printDiv.innerHTML = viewerContent.innerHTML;
     document.body.appendChild(printDiv);
-    window.print();
+
+    try {
+      await invoke('print_window');
+    } catch (e) {
+      console.error('Print failed:', e);
+    }
+
     printDiv.remove();
   }
 

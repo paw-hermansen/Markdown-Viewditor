@@ -7,6 +7,7 @@ use std::env;
 use tauri::Manager;
 
 use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, get_initial_file, is_file_writable, list_files, read_file, write_file};
+use commands::print::print_window;
 use commands::window::{force_close_window, save_window_state, save_window_state_debounced};
 use state::{InitialFile, WindowState};
 
@@ -76,7 +77,8 @@ pub fn run() {
             is_file_writable,
             get_initial_file,
             save_window_state,
-            force_close_window
+            force_close_window,
+            print_window
         ])
         .setup(|app| {
             // Restore window state before frontend loads

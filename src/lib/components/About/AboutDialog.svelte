@@ -426,7 +426,7 @@
                 <tr><td>Save As</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
                 <tr><td>Reload from Disk</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">R</kbd></td></tr>
                 <tr><td>Quit</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">Q</kbd></td></tr>
-                <tr><td>Print Preview</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
+                <tr><td>Print / Create PDF</td><td><kbd class="shortcut-key">Ctrl</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
               </tbody>
             </table>
           </section>

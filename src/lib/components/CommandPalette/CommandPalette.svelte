@@ -22,9 +22,10 @@
     onAbout: () => void;
     onCopyHtml?: () => void;
     onPrint?: () => void;
+    printLabel?: string;
   }
 
-  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, onViewModeChange, onAbout, onCopyHtml, onPrint }: Props = $props();
+  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, onViewModeChange, onAbout, onCopyHtml, onPrint, printLabel = 'Print Preview' }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
@@ -42,7 +43,7 @@
     { id: 'view-editor', label: 'Editor Only', category: 'View', action: () => onViewModeChange('editor') },
     { id: 'view-viewer', label: 'Viewer Only', category: 'View', action: () => onViewModeChange('viewer') },
     ...(onCopyHtml ? [{ id: 'copy-html', label: 'Copy HTML', category: 'Edit', action: onCopyHtml }] : []),
-    ...(onPrint ? [{ id: 'print', label: 'Print Preview', shortcut: 'Ctrl+P', category: 'File', action: onPrint }] : []),
+    ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: 'Ctrl+P', category: 'File', action: onPrint }] : []),
     { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
   ]);
 

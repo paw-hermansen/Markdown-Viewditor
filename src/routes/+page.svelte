@@ -17,8 +17,11 @@
   import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { save } from '@tauri-apps/plugin-dialog';
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { onMount, onDestroy } from 'svelte';
+
+  const isMacOS = navigator.userAgent.includes('Macintosh');
 
   let viewMode = $state<ViewMode>(settingsState.viewMode);
   let editorComponent = $state<Editor | undefined>(undefined);
@@ -226,13 +229,23 @@
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
 
-    const printDiv = document.createElement('div');
-    printDiv.classList.add('print-content');
-    printDiv.innerHTML = viewerContent.innerHTML;
-    document.body.appendChild(printDiv);
-
-    const isMacOS = navigator.userAgent.includes('Macintosh');
     if (isMacOS) {
+      const defaultName = fileState.currentFile
+        ? getFileName(fileState.currentFile).replace(/\.[^.]+$/, '') + '.pdf'
+        : 'Untitled.pdf';
+      const defaultDir = fileState.currentFile
+        ? fileState.currentFile.replace(/[^/\\]+$/, '')
+        : undefined;
+      const savePath = await save({
+        defaultPath: defaultDir ? defaultDir + defaultName : defaultName,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+      if (!savePath) return;
+
+      const printDiv = document.createElement('div');
+      printDiv.classList.add('print-content');
+      printDiv.innerHTML = viewerContent.innerHTML;
+      document.body.appendChild(printDiv);
       document.body.classList.add('pdf-export');
 
       await new Promise<void>((resolve) => {
@@ -242,19 +255,23 @@
       });
 
       try {
-        await invoke('print_pdf');
-        toast.info('PDF opened in Preview', 'Press Cmd+P in Preview to print');
+        await invoke('create_pdf', { savePath });
+        toast.info('PDF saved', savePath);
       } catch (e) {
-        console.error('Print failed:', e);
-        toast.error('Print failed', String(e));
+        console.error('Create PDF failed:', e);
+        toast.error('Create PDF failed', String(e));
       }
 
       document.body.classList.remove('pdf-export');
+      printDiv.remove();
     } else {
+      const printDiv = document.createElement('div');
+      printDiv.classList.add('print-content');
+      printDiv.innerHTML = viewerContent.innerHTML;
+      document.body.appendChild(printDiv);
       window.print();
+      printDiv.remove();
     }
-
-    printDiv.remove();
   }
 
   function handleAbout() {
@@ -441,7 +458,12 @@
 
   {#if viewMode === 'split' || viewMode === 'viewer'}
     <div class="viewer-pane">
-      <ViewerToolbar onCopyHtml={handleCopyHtml} onPrint={handlePrint} />
+      <ViewerToolbar
+        onCopyHtml={handleCopyHtml}
+        onPrint={handlePrint}
+        printLabel={isMacOS ? 'Create PDF' : 'Print'}
+        printTitle={isMacOS ? 'Create PDF (Ctrl+P)' : 'Print (Ctrl+P)'}
+      />
       <Viewer
         bind:this={viewerComponent}
         content={editorState.content}
@@ -465,6 +487,7 @@
   onAbout={handleAbout}
   onCopyHtml={handleCopyHtml}
   onPrint={handlePrint}
+  printLabel={isMacOS ? 'Create PDF' : 'Print Preview'}
 />
 
 <ConfirmDialog />

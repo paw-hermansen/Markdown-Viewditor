@@ -54,31 +54,6 @@ mod platform {
 
 #[cfg(target_os = "macos")]
 #[tauri::command]
-pub async fn print_pdf(app: tauri::AppHandle) -> Result<(), AppError> {
-    let bytes = platform::generate_pdf_bytes(&app)?;
-
-    let temp_dir = std::env::temp_dir();
-    let temp_path = temp_dir.join("markdown-viewditor-print.pdf");
-    std::fs::write(&temp_path, &bytes).map_err(AppError::Io)?;
-
-    std::process::Command::new("open")
-        .arg(&temp_path)
-        .spawn()
-        .map_err(|e| AppError::Encoding(format!("failed to open PDF: {e}")))?;
-
-    Ok(())
-}
-
-#[cfg(not(target_os = "macos"))]
-#[tauri::command]
-pub async fn print_pdf(_app: tauri::AppHandle) -> Result<(), AppError> {
-    Err(AppError::Encoding(
-        "print_pdf is only supported on macOS".into(),
-    ))
-}
-
-#[cfg(target_os = "macos")]
-#[tauri::command]
 pub async fn create_pdf(app: tauri::AppHandle, save_path: String) -> Result<(), AppError> {
     let bytes = platform::generate_pdf_bytes(&app)?;
     std::fs::write(&save_path, &bytes).map_err(AppError::Io)?;

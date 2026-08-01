@@ -182,6 +182,13 @@
           </section>
 
           <section>
+            <h2>Project</h2>
+            <p>
+              <button class="link" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor')}>github.com/paw-hermansen/Markdown-Viewditor</button>
+            </p>
+          </section>
+
+          <section>
             <h2>AI-Assisted Development</h2>
             <p>
               This application was built with the help of

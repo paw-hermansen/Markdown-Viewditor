@@ -28,7 +28,7 @@ pub struct FileInfoMeta {
     pub readonly: bool,
 }
 
-pub struct InitialFile(pub Mutex<Option<String>>);
+pub struct OpenedUrls(pub Mutex<Vec<String>>);
 
 #[cfg(test)]
 mod tests {
@@ -138,17 +138,20 @@ mod tests {
     }
 
     #[test]
-    fn initial_file_returns_some_on_first_take() {
-        let initial = InitialFile(Mutex::new(Some("/path/to/file.md".to_string())));
-        let result = initial.0.lock().unwrap().take();
-        assert_eq!(result, Some("/path/to/file.md".to_string()));
+    fn opened_urls_returns_and_clears() {
+        let urls = OpenedUrls(Mutex::new(vec![
+            "/path/to/a.md".to_string(),
+            "/path/to/b.md".to_string(),
+        ]));
+        let result = urls.0.lock().unwrap().drain(..).collect::<Vec<_>>();
+        assert_eq!(result, vec!["/path/to/a.md", "/path/to/b.md"]);
+        assert!(urls.0.lock().unwrap().is_empty());
     }
 
     #[test]
-    fn initial_file_returns_none_on_second_take() {
-        let initial = InitialFile(Mutex::new(Some("/path/to/file.md".to_string())));
-        let _ = initial.0.lock().unwrap().take();
-        let result = initial.0.lock().unwrap().take();
-        assert_eq!(result, None);
+    fn opened_urls_returns_empty_when_none() {
+        let urls = OpenedUrls(Mutex::new(vec![]));
+        let result = urls.0.lock().unwrap().drain(..).collect::<Vec<_>>();
+        assert!(result.is_empty());
     }
 }

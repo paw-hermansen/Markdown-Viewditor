@@ -6,10 +6,10 @@ mod state;
 use std::env;
 use tauri::Manager;
 
-use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, get_initial_file, is_file_writable, list_files, read_file, write_file};
+use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, opened_urls, is_file_writable, list_files, read_file, write_file};
 use commands::print::create_pdf;
 use commands::window::{force_close_window, save_window_state, save_window_state_debounced};
-use state::{InitialFile, WindowState};
+use state::{OpenedUrls, WindowState};
 
 #[cfg(target_os = "linux")]
 fn configure_platform() {
@@ -43,10 +43,23 @@ fn updater_enabled() -> bool {
     true
 }
 
+/// Convert a `url::Url` to a filesystem path string.
+/// Handles `file:///` URLs by extracting the path component.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+fn url_to_path(url: &url::Url) -> String {
+    if url.scheme() == "file" {
+        url.to_file_path()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| url.to_string())
+    } else {
+        url.to_string()
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     configure_platform();
-    let initial_file = env::args().nth(1);
+    let cli_file: Vec<String> = env::args().nth(1).into_iter().collect();
 
     let mut builder = tauri::Builder::default()
         .register_asynchronous_uri_scheme_protocol(
@@ -64,8 +77,8 @@ pub fn run() {
     }
     builder = builder.plugin(tauri_plugin_process::init());
 
-    builder
-        .manage(InitialFile(std::sync::Mutex::new(initial_file)))
+    let app = builder
+        .manage(OpenedUrls(std::sync::Mutex::new(cli_file)))
         .invoke_handler(tauri::generate_handler![
             read_file,
             write_file,
@@ -75,7 +88,7 @@ pub fn run() {
             get_file_mtime,
             get_file_info,
             is_file_writable,
-            get_initial_file,
+            opened_urls,
             save_window_state,
             force_close_window,
             create_pdf
@@ -124,6 +137,16 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|_app, _event| {
+        #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+        if let tauri::RunEvent::Opened { urls } = _event {
+            use tauri::Emitter;
+            let paths: Vec<String> = urls.iter().map(url_to_path).collect();
+            _app.state::<OpenedUrls>().0.lock().unwrap().extend(paths.clone());
+            let _ = _app.emit("open-file", paths);
+        }
+    });
 }

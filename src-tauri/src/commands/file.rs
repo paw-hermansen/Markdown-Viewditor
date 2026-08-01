@@ -5,11 +5,11 @@ use std::path::Path;
 use tauri::State;
 
 use crate::error::AppError;
-use crate::state::{FileInfo, FileInfoMeta, InitialFile};
+use crate::state::{FileInfo, FileInfoMeta, OpenedUrls};
 
 #[tauri::command]
-pub fn get_initial_file(state: State<InitialFile>) -> Option<String> {
-    state.0.lock().unwrap().take()
+pub fn opened_urls(state: State<OpenedUrls>) -> Vec<String> {
+    state.0.lock().unwrap().drain(..).collect()
 }
 
 /// Decode raw bytes to a String, handling a UTF-8 BOM and falling back to a

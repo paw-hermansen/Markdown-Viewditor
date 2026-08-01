@@ -17,6 +17,7 @@
   import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { listen } from '@tauri-apps/api/event';
   import { save } from '@tauri-apps/plugin-dialog';
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { modLabel } from '$lib/utils/keyboard';
@@ -34,6 +35,7 @@
   let showCommandPalette = $state(false);
   let unlistenCloseRequested: (() => void) | undefined;
   let unlistenFocusChanged: (() => void) | undefined;
+  let unlistenOpenFile: (() => void) | undefined;
   let isCheckingExternalChanges = false;
   let isSaving = false;
 
@@ -407,9 +409,9 @@
       }
     });
 
-    const initialFile = await invoke<string | null>('get_initial_file');
-    if (initialFile) {
-      const content = await readFile(initialFile);
+    const initialUrls = await invoke<string[]>('opened_urls');
+    if (initialUrls.length > 0) {
+      const content = await readFile(initialUrls[0]);
       if (content !== null) {
         editorState.content = content;
         updateWordCount(content);
@@ -425,11 +427,25 @@
         markSaved();
       }
     }
+
+    // Listen for files opened while app is running (macOS Finder, markdown links)
+    unlistenOpenFile = await listen<string[]>('open-file', async (event) => {
+      if (event.payload.length > 0) {
+        const content = await readFile(event.payload[0]);
+        if (content !== null) {
+          editorState.content = content;
+          updateWordCount(content);
+          editorComponent?.setContent(content);
+          markSaved();
+        }
+      }
+    });
   });
 
   onDestroy(() => {
     unlistenCloseRequested?.();
     unlistenFocusChanged?.();
+    unlistenOpenFile?.();
     if (scrollSync) {
       scrollSync.destroy();
     }

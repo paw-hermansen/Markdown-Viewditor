@@ -80,6 +80,25 @@
     }
   }
 
+  async function handleLocalMarkdownOpen(path: string) {
+    if (hasUnsavedChanges()) {
+      const choice = await confirmSaveDiscardCancel(MSG.openUnsaved);
+      if (choice !== 'save' && choice !== 'discard') return;
+      if (choice === 'save') {
+        const saved = await handleSave();
+        if (!saved) return;
+      }
+    }
+
+    const content = await readFile(path);
+    if (content !== null) {
+      editorState.content = content;
+      updateWordCount(content);
+      editorComponent?.setContent(content);
+      markSaved();
+    }
+  }
+
   /** Returns true when the document was saved (or nothing needed saving), false on cancel/failure. */
   async function handleSave(): Promise<boolean> {
     if (
@@ -409,6 +428,21 @@
       }
     });
 
+    // Register the open-file listener BEFORE draining opened_urls so that no
+    // RunEvent::Opened delivery (macOS Apple Event) is lost between the drain
+    // and listener registration.
+    unlistenOpenFile = await listen<string[]>('open-file', async (event) => {
+      if (event.payload.length > 0) {
+        const content = await readFile(event.payload[0]);
+        if (content !== null) {
+          editorState.content = content;
+          updateWordCount(content);
+          editorComponent?.setContent(content);
+          markSaved();
+        }
+      }
+    });
+
     const initialUrls = await invoke<string[]>('opened_urls');
     if (initialUrls.length > 0) {
       const content = await readFile(initialUrls[0]);
@@ -427,19 +461,6 @@
         markSaved();
       }
     }
-
-    // Listen for files opened while app is running (macOS Finder, markdown links)
-    unlistenOpenFile = await listen<string[]>('open-file', async (event) => {
-      if (event.payload.length > 0) {
-        const content = await readFile(event.payload[0]);
-        if (content !== null) {
-          editorState.content = content;
-          updateWordCount(content);
-          editorComponent?.setContent(content);
-          markSaved();
-        }
-      }
-    });
   });
 
   onDestroy(() => {
@@ -486,6 +507,7 @@
         bind:this={viewerComponent}
         content={editorState.content}
         onViewerReady={handleViewerReady}
+        onLocalMarkdownOpen={handleLocalMarkdownOpen}
       />
     </div>
   {/if}

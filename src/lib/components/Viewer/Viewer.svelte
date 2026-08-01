@@ -7,12 +7,20 @@
   import { openUrl, openPath } from '@tauri-apps/plugin-opener';
   import type { Frontmatter } from '$lib/types';
 
+  const isMacOS = typeof navigator !== 'undefined' && navigator.userAgent.includes('Macintosh');
+
+  function isMarkdownFile(path: string): boolean {
+    const lower = path.toLowerCase();
+    return lower.endsWith('.md') || lower.endsWith('.markdown');
+  }
+
   interface Props {
     content: string;
     onViewerReady?: (element: HTMLDivElement) => void;
+    onLocalMarkdownOpen?: (path: string) => void;
   }
 
-  let { content, onViewerReady }: Props = $props();
+  let { content, onViewerReady, onLocalMarkdownOpen }: Props = $props();
 
   let html = $state('');
   let frontmatter: Frontmatter | null = $state(null);
@@ -91,7 +99,11 @@
       }
       case 'local-path': {
         try {
-          await openPath(resolved.path);
+          if (isMacOS && isMarkdownFile(resolved.path) && onLocalMarkdownOpen) {
+            onLocalMarkdownOpen(resolved.path);
+          } else {
+            await openPath(resolved.path);
+          }
         } catch (err) {
           console.warn('Failed to open path:', err);
         }

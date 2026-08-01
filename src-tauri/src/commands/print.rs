@@ -23,14 +23,10 @@ mod platform {
         let webview_window = app
             .get_webview_window("main")
             .ok_or_else(|| AppError::NotFound("main window".into()))?;
-        let webview = webview_window
-            .as_ref()
-            .webview()
-            .ok_or_else(|| AppError::NotFound("main webview".into()))?;
 
         let (tx, rx) = mpsc::channel::<Result<Vec<u8>, String>>();
 
-        webview
+        webview_window
             .with_webview(move |wv| {
                 unsafe {
                     let wk: &WKWebView = &*wv.inner().cast();

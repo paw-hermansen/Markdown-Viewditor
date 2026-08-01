@@ -233,16 +233,22 @@
 
     const isMacOS = navigator.userAgent.includes('Macintosh');
     if (isMacOS) {
+      document.body.classList.add('pdf-export');
+
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => resolve());
         });
       });
+
       try {
-        await invoke('print_window');
+        await invoke('print_pdf');
       } catch (e) {
         console.error('Print failed:', e);
+        toast.error('Print failed', String(e));
       }
+
+      document.body.classList.remove('pdf-export');
     } else {
       window.print();
     }

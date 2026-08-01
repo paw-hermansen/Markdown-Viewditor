@@ -243,6 +243,7 @@
 
       try {
         await invoke('print_pdf');
+        toast.info('PDF opened in Preview', 'Press Cmd+P in Preview to print');
       } catch (e) {
         console.error('Print failed:', e);
         toast.error('Print failed', String(e));

@@ -62,10 +62,9 @@ pub async fn print_pdf(app: tauri::AppHandle) -> Result<(), AppError> {
     std::fs::write(&temp_path, &bytes).map_err(AppError::Io)?;
 
     std::process::Command::new("open")
-        .arg("-p")
         .arg(&temp_path)
         .spawn()
-        .map_err(|e| AppError::Encoding(format!("failed to open print dialog: {e}")))?;
+        .map_err(|e| AppError::Encoding(format!("failed to open PDF: {e}")))?;
 
     Ok(())
 }

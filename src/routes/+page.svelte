@@ -191,19 +191,16 @@
 
   async function handleReload() {
     if (!fileState.currentFile || fileState.isLoading) return;
-    if (hasUnsavedChanges()) {
-      const choice = await confirmSaveDiscardCancel(MSG.reloadUnsaved);
-      if (choice !== 'save' && choice !== 'discard') return;
-      if (choice === 'save') {
-        const saved = await handleSave();
-        if (!saved) return;
-      }
-    }
 
     const status = await checkExternalModification();
     if (status === 'deleted') {
       await confirmOk(MSG.externalDeleted, 'warning');
       return;
+    }
+
+    if (hasUnsavedChanges()) {
+      const reload = await confirmReload(MSG.reloadUnsaved, true);
+      if (!reload) return;
     }
 
     const content = await readFile(fileState.currentFile);

@@ -103,7 +103,7 @@ export function confirmReload(
     message,
     [
       { label: "Cancel", value: "no", variant: "default" },
-      { label: isDirty ? "Yes, And Discard My Changes" : "Reload", value: "yes", variant: "primary" },
+      { label: isDirty ? "Yes, Discard My Changes" : "Reload", value: "yes", variant: "primary" },
     ],
     kind,
   ).then((v) => v === "yes");

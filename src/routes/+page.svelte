@@ -408,7 +408,7 @@
           const message = hasUnsavedChanges()
             ? MSG.externalModifiedDirty
             : MSG.externalModifiedClean;
-          const reload = await confirmReload(message);
+          const reload = await confirmReload(message, hasUnsavedChanges());
           if (reload) {
             const content = await readFile(fileState.currentFile);
             if (content !== null) {

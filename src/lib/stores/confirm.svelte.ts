@@ -56,8 +56,8 @@ export function confirmSaveDiscardCancel(
     message,
     [
       { label: "Cancel", value: "cancel", variant: "default" },
-      { label: "Discard", value: "discard", variant: "default" },
-      { label: "Save", value: "save", variant: "primary" },
+      { label: "Yes, And Discard My Changes", value: "discard", variant: "default" },
+      { label: "Save First", value: "save", variant: "primary" },
     ],
     kind,
   ) as Promise<"save" | "discard" | "cancel" | null>;
@@ -71,8 +71,8 @@ export function confirmOverwrite(
   return open(
     message,
     [
-      { label: "Keep External Changes", value: "no", variant: "default" },
-      { label: "Overwrite", value: "yes", variant: "primary" },
+      { label: "Cancel", value: "no", variant: "default" },
+      { label: "Overwrite External Changes", value: "yes", variant: "primary" },
     ],
     kind,
   ).then((v) => v === "yes");
@@ -86,8 +86,8 @@ export function confirmReplace(
   return open(
     message,
     [
-      { label: "Keep Existing", value: "no", variant: "default" },
-      { label: "Replace", value: "yes", variant: "primary" },
+      { label: "Cancel", value: "no", variant: "default" },
+      { label: "Replace File", value: "yes", variant: "primary" },
     ],
     kind,
   ).then((v) => v === "yes");
@@ -96,13 +96,14 @@ export function confirmReplace(
 /** Reload from disk (external changes detected)? Returns true if user chose Reload. */
 export function confirmReload(
   message: string,
+  isDirty: boolean,
   kind: ConfirmKind = "warning",
 ): Promise<boolean> {
   return open(
     message,
     [
-      { label: "Keep Current Version", value: "no", variant: "default" },
-      { label: "Reload", value: "yes", variant: "primary" },
+      { label: "Cancel", value: "no", variant: "default" },
+      { label: isDirty ? "Yes, And Discard My Changes" : "Reload", value: "yes", variant: "primary" },
     ],
     kind,
   ).then((v) => v === "yes");

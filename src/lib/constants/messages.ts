@@ -6,7 +6,7 @@ export const MSG = {
   reloadUnsaved:
     "You have unsaved changes. Reload from disk and discard your changes?",
   exitUnsaved:
-    "You have unsaved changes. Do you want to save them before quitting?",
+    "You have unsaved changes. Close the application and discard your changes?",
   reloadUpToDate: "The file is already up to date.",
   externalOverwrite:
     "This file has been modified by another application since it was last saved. Overwrite the external changes?",

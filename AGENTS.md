@@ -30,9 +30,14 @@ npm run check
 cargo clippy
 
 # Versioning
-npm run version:patch    # 0.1.0 → 0.1.1
-npm run version:minor    # 0.1.0 → 0.2.0
-npm run version:major    # 0.1.0 → 1.0.0
+
+Releases are fully automated via GitHub Actions:
+
+1. Go to **Actions → Version Bump → Run workflow** and select bump type (patch/minor/major)
+2. Review and merge the auto-created PR
+3. The release builds automatically on Linux, Windows, and macOS
+
+The `release` environment restricts who can trigger version bumps.
 ```
 
 ## Coding Conventions

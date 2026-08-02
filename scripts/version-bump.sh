@@ -1,17 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BUMP_TYPE="${1:-}"
+FILES_ONLY=false
+BUMP_TYPE=""
 
 usage() {
-  echo "Usage: $0 <patch|minor|major>"
+  echo "Usage: $0 [--files-only] <patch|minor|major>"
   echo ""
-  echo "Bumps the version in package.json, Cargo.toml, and tauri.conf.json,"
-  echo "updates CHANGELOG.md, commits, and creates a git tag."
+  echo "Bumps the version in package.json, Cargo.toml, and tauri.conf.json"
+  echo "and updates CHANGELOG.md."
+  echo ""
+  echo "Options:"
+  echo "  --files-only  Only update files, skip git operations (commit, tag)"
   exit 1
 }
 
-if [[ -z "$BUMP_TYPE" ]] || [[ ! "$BUMP_TYPE" =~ ^(patch|minor|major)$ ]]; then
+for arg in "$@"; do
+  case "$arg" in
+    --files-only)
+      FILES_ONLY=true
+      ;;
+    patch|minor|major)
+      BUMP_TYPE="$arg"
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+if [[ -z "$BUMP_TYPE" ]]; then
   usage
 fi
 
@@ -95,6 +113,13 @@ else
   } > "$CHANGELOG_FILE"
 fi
 echo "  Updated CHANGELOG.md"
+
+if [ "$FILES_ONLY" = true ]; then
+  echo ""
+  echo "Done! Updated files for v$NEW_VERSION (git operations skipped)"
+  echo "NEW_VERSION=$NEW_VERSION"
+  exit 0
+fi
 
 # Stage, commit, and tag
 git -C "$ROOT" add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json CHANGELOG.md

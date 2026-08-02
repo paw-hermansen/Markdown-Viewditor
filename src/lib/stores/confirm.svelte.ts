@@ -26,10 +26,6 @@ export const confirmState = $state<{ current: PendingRequest | null }>({
   current: null,
 });
 
-export function isConfirmOpen(): boolean {
-  return confirmState.current !== null;
-}
-
 function open(
   message: string,
   buttons: ConfirmButton[],

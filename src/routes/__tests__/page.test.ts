@@ -98,7 +98,6 @@ vi.mock("$lib/stores/confirm.svelte", () => ({
   confirmReplace: mockConfirmReplace,
   confirmReload: mockConfirmReload,
   confirmOk: mockConfirmOk,
-  isConfirmOpen: () => false,
   resolveConfirm: vi.fn(),
 }));
 

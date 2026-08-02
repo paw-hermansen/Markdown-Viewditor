@@ -23,7 +23,10 @@ const {
   mockConfirmOk,
   mockFileState,
 } = vi.hoisted(() => ({
-  mockInvoke: vi.fn().mockResolvedValue(null),
+  mockInvoke: vi.fn().mockImplementation((cmd: string) => {
+    if (cmd === "opened_urls") return Promise.resolve([]);
+    return Promise.resolve(null);
+  }),
   mockOpenFile: vi.fn().mockResolvedValue(null),
   mockSaveFile: vi.fn().mockResolvedValue(true),
   mockSaveFileAs: vi.fn().mockResolvedValue(null),
@@ -54,6 +57,9 @@ const {
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }));
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(vi.fn()),
+}));
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
   save: vi.fn(),
@@ -212,10 +218,10 @@ describe("+page.svelte", () => {
   });
 
   it("loads initial file from Tauri on mount", async () => {
-    mockInvoke.mockResolvedValueOnce("/home/user/initial.md");
+    mockInvoke.mockResolvedValueOnce(["/home/user/initial.md"]);
     render(Page);
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("get_initial_file");
+      expect(mockInvoke).toHaveBeenCalledWith("opened_urls");
     });
   });
 

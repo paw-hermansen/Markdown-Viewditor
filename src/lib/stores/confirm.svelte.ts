@@ -56,23 +56,53 @@ export function confirmSaveDiscardCancel(
     message,
     [
       { label: "Cancel", value: "cancel", variant: "default" },
-      { label: "Don't Save", value: "discard", variant: "default" },
+      { label: "Discard", value: "discard", variant: "default" },
       { label: "Save", value: "save", variant: "primary" },
     ],
     kind,
   ) as Promise<"save" | "discard" | "cancel" | null>;
 }
 
-/** Yes / No dialog as a drop-in replacement for the Tauri `ask` plugin call. */
-export function confirmYesNo(
+/** Overwrite external changes? Returns true if user chose Overwrite. */
+export function confirmOverwrite(
   message: string,
   kind: ConfirmKind = "warning",
 ): Promise<boolean> {
   return open(
     message,
     [
-      { label: "No", value: "no", variant: "default" },
-      { label: "Yes", value: "yes", variant: "primary" },
+      { label: "Keep External Changes", value: "no", variant: "default" },
+      { label: "Overwrite", value: "yes", variant: "primary" },
+    ],
+    kind,
+  ).then((v) => v === "yes");
+}
+
+/** Replace an existing file? Returns true if user chose Replace. */
+export function confirmReplace(
+  message: string,
+  kind: ConfirmKind = "warning",
+): Promise<boolean> {
+  return open(
+    message,
+    [
+      { label: "Keep Existing", value: "no", variant: "default" },
+      { label: "Replace", value: "yes", variant: "primary" },
+    ],
+    kind,
+  ).then((v) => v === "yes");
+}
+
+/** Reload from disk (external changes detected)? Returns true if user chose Reload. */
+export function confirmReload(
+  message: string,
+  kind: ConfirmKind = "warning",
+): Promise<boolean> {
+  return open(
+    message,
+    [
+      { label: "Keep Current Version", value: "no", variant: "default" },
+      { label: "Reload", value: "yes", variant: "primary" },
     ],
     kind,
   ).then((v) => v === "yes");

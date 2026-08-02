@@ -18,9 +18,8 @@ export const MSG = {
     "This file has been modified by another application. You also have unsaved changes. Reload and discard your changes?",
   saveAsOverwrite:
     "This file has been modified by another application since it was last saved. Overwrite the external changes?",
-  readonlySave:
+  readOnlySaveFailed:
     "This file is read-only. Use Save As to save your work to a different location.",
-  readOnlySaveFailed: "Could not save: the file is read-only.",
   saveFailed: "Failed to save the file.",
   openFailed: "Failed to open the file.",
   readFailed: "Failed to read the file.",

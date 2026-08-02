@@ -158,7 +158,7 @@ export async function openFile(): Promise<string | null> {
     updateLastOpenedFile(path);
     return content;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : MSG.openFailed;
+    const msg = error instanceof Error ? error.message : String(error);
     fileState.error = msg;
     toast.error(MSG.openFailed, msg);
     return null;
@@ -168,7 +168,9 @@ export async function openFile(): Promise<string | null> {
 }
 
 function describeWriteError(error: unknown): string {
-  return error instanceof Error ? error.message : MSG.saveFailed;
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return MSG.saveFailed;
 }
 
 export async function saveFile(
@@ -227,7 +229,7 @@ export async function readFile(path: string): Promise<string | null> {
     updateLastOpenedFile(path);
     return content;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : MSG.readFailed;
+    const msg = error instanceof Error ? error.message : String(error);
     fileState.error = msg;
     toast.error(MSG.readFailed, msg);
     return null;

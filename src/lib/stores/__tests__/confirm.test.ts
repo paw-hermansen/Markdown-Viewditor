@@ -5,7 +5,9 @@ vi.mock("$lib/constants/messages", () => ({ APP_TITLE: "Markdown Viewditor" }));
 import {
   confirmState,
   confirmSaveDiscardCancel,
-  confirmYesNo,
+  confirmOverwrite,
+  confirmReplace,
+  confirmReload,
   confirmOk,
   resolveConfirm,
 } from "../confirm.svelte";
@@ -36,8 +38,8 @@ describe("confirm store", () => {
     await expect(promise).resolves.toBeNull();
   });
 
-  it("confirmYesNo resolves boolean true for yes", async () => {
-    const promise = confirmYesNo("overwrite?");
+  it("confirmOverwrite resolves boolean true for yes", async () => {
+    const promise = confirmOverwrite("overwrite?");
     expect(confirmState.current!.buttons.map((b) => b.value)).toEqual([
       "no",
       "yes",
@@ -46,8 +48,8 @@ describe("confirm store", () => {
     await expect(promise).resolves.toBe(true);
   });
 
-  it("confirmYesNo resolves boolean false for no", async () => {
-    const promise = confirmYesNo("overwrite?");
+  it("confirmOverwrite resolves boolean false for no", async () => {
+    const promise = confirmOverwrite("overwrite?");
     resolveConfirm("no");
     await expect(promise).resolves.toBe(false);
   });
@@ -63,7 +65,7 @@ describe("confirm store", () => {
     const first = confirmSaveDiscardCancel("first");
     resolveConfirm("cancel");
     await first;
-    const second = confirmYesNo("second");
+    const second = confirmOverwrite("second");
     resolveConfirm("yes");
     await expect(second).resolves.toBe(true);
     expect(confirmState.current).toBeNull();

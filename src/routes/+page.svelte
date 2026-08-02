@@ -12,7 +12,7 @@
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
-  import { confirmSaveDiscardCancel, confirmYesNo, confirmOk } from '$lib/stores/confirm.svelte';
+  import { confirmSaveDiscardCancel, confirmOverwrite, confirmReplace, confirmReload, confirmOk } from '$lib/stores/confirm.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
@@ -130,7 +130,7 @@
       return false;
     }
     if (status === 'modified') {
-      const overwrite = await confirmYesNo(MSG.externalOverwrite);
+      const overwrite = await confirmOverwrite(MSG.externalOverwrite);
       if (!overwrite) {
         return false;
       }
@@ -156,7 +156,7 @@
     const info = await getFileInfo(path);
     if (info && info.exists) {
       if (info.readonly) {
-        toast.error(MSG.readonlySave, 'This file is read-only. Choose a different location.');
+        toast.error(MSG.readOnlySaveFailed, 'This file is read-only. Choose a different location.');
         return;
       }
       if (path === fileState.currentFile) {
@@ -164,14 +164,14 @@
         if (status === 'deleted') {
           // explicit recreate at the dead path; proceed
         } else if (status === 'modified') {
-          const overwrite = await confirmYesNo(MSG.saveAsOverwrite);
+          const overwrite = await confirmOverwrite(MSG.saveAsOverwrite);
           if (!overwrite) {
             return;
           }
         }
       } else {
         const name = getFileName(path);
-        const replace = await confirmYesNo(
+        const replace = await confirmReplace(
           `A file named "${name}" already exists. Do you want to replace it?`,
         );
         if (!replace) return;
@@ -408,7 +408,7 @@
           const message = hasUnsavedChanges()
             ? MSG.externalModifiedDirty
             : MSG.externalModifiedClean;
-          const reload = await confirmYesNo(message);
+          const reload = await confirmReload(message);
           if (reload) {
             const content = await readFile(fileState.currentFile);
             if (content !== null) {

@@ -205,10 +205,20 @@
 
     const content = await readFile(fileState.currentFile);
     if (content !== null) {
-      editorState.content = content;
-      updateWordCount(content);
-      editorComponent?.setContent(content);
-      await viewerComponent?.forceRender();
+      // Pause scroll-sync for the duration of the repopulation: the editor's
+      // scroll restore is deferred to a rAF (see Editor.setContent) and on
+      // WebView2 the editor's scrollTop is briefly clamped to 0 in the
+      // meantime, which would otherwise propagate to the viewer and
+      // overwrite the viewer's own anchor-based restore.
+      scrollSync?.pause();
+      try {
+        editorState.content = content;
+        updateWordCount(content);
+        editorComponent?.setContent(content);
+        await viewerComponent?.forceRender();
+      } finally {
+        scrollSync?.resume();
+      }
       markSaved();
     }
   }
@@ -409,9 +419,14 @@
           if (reload) {
             const content = await readFile(fileState.currentFile);
             if (content !== null) {
-              editorState.content = content;
-              updateWordCount(content);
-              editorComponent?.setContent(content);
+              scrollSync?.pause();
+              try {
+                editorState.content = content;
+                updateWordCount(content);
+                editorComponent?.setContent(content);
+              } finally {
+                scrollSync?.resume();
+              }
               markSaved();
             }
           }

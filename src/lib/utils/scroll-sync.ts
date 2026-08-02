@@ -31,6 +31,40 @@ export function createScrollSync(
   let rafId: number | null = null;
   let editorTrailingTimer: ReturnType<typeof setTimeout> | null = null;
   let viewerTrailingTimer: ReturnType<typeof setTimeout> | null = null;
+  // While paused, both scroll handlers are no-ops. Used by Reload (and the
+  // external-modification reload) to suppress sync-induced scrolls while the
+  // editor and viewer are being repopulated, so a transiently clamped scroll
+  // position on one pane (e.g. WebView2 clamping the editor to 0 before its
+  // new height is measured) cannot propagate to the other pane and overwrite
+  // its own scroll-position restore.
+  let paused = false;
+
+  function pause(): void {
+    paused = true;
+  }
+
+  function resume(): void {
+    if (!paused) return;
+    paused = false;
+    // Drop any pending trailing syncs scheduled before the pause; their
+    // captured direction/snapshot may no longer match the restored layout.
+    if (editorTrailingTimer) {
+      clearTimeout(editorTrailingTimer);
+      editorTrailingTimer = null;
+    }
+    if (viewerTrailingTimer) {
+      clearTimeout(viewerTrailingTimer);
+      viewerTrailingTimer = null;
+    }
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    // Reset sync state so the first post-resume user scroll isn't mistaken
+    // for a sync-induced scroll and dropped by the cooldown.
+    syncDirection = null;
+    lastSyncTime = 0;
+  }
 
   function getViewerPaddingTop(): number {
     return parseFloat(getComputedStyle(viewer).paddingTop) || 0;
@@ -166,6 +200,7 @@ export function createScrollSync(
   }
 
   function handleEditorScroll() {
+    if (paused) return;
     // Block sync-induced scrolls: if the last sync was viewer-to-editor
     // (i.e., the viewer moved the editor), ignore the editor's scroll
     // events for SYNC_COOLDOWN ms. This breaks the feedback loop that
@@ -202,6 +237,7 @@ export function createScrollSync(
   }
 
   function handleViewerScroll() {
+    if (paused) return;
     // Block sync-induced scrolls: if the last sync was editor-to-viewer
     // (i.e., the editor moved the viewer), ignore the viewer's scroll
     // events for SYNC_COOLDOWN ms.
@@ -249,5 +285,7 @@ export function createScrollSync(
       if (editorTrailingTimer) clearTimeout(editorTrailingTimer);
       if (viewerTrailingTimer) clearTimeout(viewerTrailingTimer);
     },
+    pause,
+    resume,
   };
 }

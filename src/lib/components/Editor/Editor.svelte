@@ -430,7 +430,19 @@
         changes: { from: 0, to: editorContent.length, insert: newContent },
         selection: { anchor: Math.min(savedHead, newContent.length) }
       });
-      editorView.scrollDOM.scrollTop = savedScrollTop;
+      // CodeMirror updates the content height on its own rAF measure cycle,
+      // not synchronously. On WebView2 (Chromium), scrollHeight is still ~0 at
+      // this point, so an immediate scrollTop assignment gets clamped to 0 and
+      // the editor jumps to the top on reload. Restore after two rAFs so the
+      // new layout has been measured and the scroll range is non-zero.
+      requestAnimationFrame(() => {
+        if (!editorView) return;
+        editorView.scrollDOM.scrollTop = savedScrollTop;
+        requestAnimationFrame(() => {
+          if (!editorView) return;
+          editorView.scrollDOM.scrollTop = savedScrollTop;
+        });
+      });
       isUpdatingFromProp = false;
     }
   }

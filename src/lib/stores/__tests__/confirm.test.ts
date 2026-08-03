@@ -71,7 +71,7 @@ describe("confirm store", () => {
   });
 
   it("confirmReload resolves true for yes when not dirty", async () => {
-    const promise = confirmReload("reload?");
+    const promise = confirmReload("reload?", false);
     expect(confirmState.current!.buttons.map((b) => b.label)).toEqual([
       "Cancel",
       "Reload",

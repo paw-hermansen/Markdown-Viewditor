@@ -89,25 +89,31 @@ fi
 
 COMMIT_LOG=$(git -C "$ROOT" log "$LOG_RANGE" --pretty=format:"- %s (%h)" --no-merges 2>/dev/null || echo "- Initial release")
 
-# Build the new changelog entry
+# Build the new changelog entry (no trailing newline; echo supplies it)
 NEW_ENTRY="## [$NEW_VERSION] - $TAG_DATE
 
-$COMMIT_LOG
-"
+$COMMIT_LOG"
 
 # Create or update CHANGELOG.md
 if [ -f "$CHANGELOG_FILE" ]; then
-  # Insert new entry after the first line (# Changelog)
-  {
-    head -1 "$CHANGELOG_FILE"
-    echo ""
-    echo "$NEW_ENTRY"
-    tail -n +2 "$CHANGELOG_FILE"
-  } > "$CHANGELOG_FILE.tmp"
+  # Insert new entry before the first release heading ("## [...]"), keeping
+  # the title and Keep a Changelog preamble above it verbatim.
+  NEW_ENTRY="$NEW_ENTRY" awk '
+    !inserted && /^## \[/ {
+      print ENVIRON["NEW_ENTRY"]
+      print ""
+      inserted=1
+    }
+    { print }
+  ' "$CHANGELOG_FILE" > "$CHANGELOG_FILE.tmp"
   mv "$CHANGELOG_FILE.tmp" "$CHANGELOG_FILE"
 else
   {
     echo "# Changelog"
+    echo ""
+    echo "All notable changes to this project will be documented in this file."
+    echo ""
+    echo "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)."
     echo ""
     echo "$NEW_ENTRY"
   } > "$CHANGELOG_FILE"

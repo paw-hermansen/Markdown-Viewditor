@@ -84,6 +84,8 @@ Contributions are welcome! Anyone may [open an issue](../../issues) (bug reports
 
 Please read the [Contributing Guide](CONTRIBUTING.md) for the PR workflow, checklists, and development setup, and the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
+For technical documentation on architecture, coding conventions, and the release pipeline, see [AGENTS.md](AGENTS.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.

@@ -38,6 +38,14 @@ Releases are fully automated via GitHub Actions:
 3. The release builds automatically on Linux, Windows, and macOS
 
 The `release` environment restricts who can trigger version bumps.
+
+### Release Pipeline
+
+The release process spans three workflows:
+
+1. **version-bump.yml** — Runs `scripts/version-bump.sh --files-only` to update version files, creates a `release/v{version}` branch, commits, and opens a PR to `main`.
+2. **tag-release.yml** — Triggered when a `release/v*` PR is merged to `main`. Creates and pushes a lightweight `v{version}` tag.
+3. **release.yml** — Triggered by the tag push. Builds platform binaries (Linux, Windows, macOS) and creates a GitHub Release.
 ```
 
 ## Coding Conventions

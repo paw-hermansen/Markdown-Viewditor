@@ -52,7 +52,11 @@ export function confirmSaveDiscardCancel(
     message,
     [
       { label: "Cancel", value: "cancel", variant: "default" },
-      { label: "Yes, And Discard My Changes", value: "discard", variant: "default" },
+      {
+        label: "Yes, And Discard My Changes",
+        value: "discard",
+        variant: "default",
+      },
       { label: "Save First", value: "save", variant: "primary" },
     ],
     kind,
@@ -99,7 +103,11 @@ export function confirmReload(
     message,
     [
       { label: "Cancel", value: "no", variant: "default" },
-      { label: isDirty ? "Yes, Discard My Changes" : "Reload", value: "yes", variant: "primary" },
+      {
+        label: isDirty ? "Yes, Discard My Changes" : "Reload",
+        value: "yes",
+        variant: "primary",
+      },
     ],
     kind,
   ).then((v) => v === "yes");

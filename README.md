@@ -33,8 +33,6 @@ or right-click the app → **Open** → **Open anyway**.
 
 The Windows, macOS, and AppImage builds check the GitHub Releases feed for
 updates and can install them in place (Help → About → Check for Updates).
-When installed inside **Flatpak** or **Snap** (future channels), the in-app
-updater is disabled — use your system updater instead.
 
 ## Features
 

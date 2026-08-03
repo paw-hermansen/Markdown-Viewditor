@@ -120,35 +120,35 @@ For each: select text, click the toolbar button, verify markdown output in the e
 
 ## 7. File Operations
 
-| #    | Test                          | Steps                                       | Expected                                                           |
-| ---- | ----------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
-| 7.1  | Open file                     | Click Open, select a `.md` file             | Content loads into editor, viewer renders it                       |
-| 7.2  | Open dialog filters           | Open dialog                                 | Shows "Markdown" and "All Files" filters                           |
-| 7.3  | Cancel open dialog            | Open dialog, cancel                         | No change to current content                                       |
-| 7.4  | Save new file                 | With "Untitled" file, click Save            | Save-as dialog appears                                             |
-| 7.5  | Save existing file            | Edit file, click Save                       | File saved, `*` indicator disappears, `.bak` backup created        |
-| 7.6  | Save As same path             | Save As to the current file's path          | If externally modified, overwrite prompt; otherwise saves directly |
-| 7.7  | Save As different path        | Save As to a new location                   | New file created, app tracks new path                              |
-| 7.8  | Save As to existing file      | Save As to a file that already exists       | Prompt: "A file named ... already exists. Replace?"                |
-| 7.9  | Save As to read-only file     | Save As to a read-only file                 | Toast: "This file is read-only. Choose a different location."      |
-| 7.10 | New file with unsaved changes | Edit content, click New                     | 3-button dialog: Save / Don't Save / Cancel                        |
-| 7.11 | New file — Save chosen        | In 3-button dialog, click Save              | Saves (Save As if untitled), then clears editor, "Untitled"        |
-| 7.12 | New file — Don't Save chosen  | In 3-button dialog, click Don't Save        | Editor clears, file name = "Untitled", changes lost                |
-| 7.13 | New file — Cancel chosen      | In 3-button dialog, click Cancel            | No change, editor content preserved                                |
-| 7.14 | Open with unsaved changes     | Edit content, click Open                    | 3-button dialog: Save / Don't Save / Cancel                        |
-| 7.15 | Reload from disk              | Edit externally, click Reload               | Content updates from disk                                          |
-| 7.16 | Reload with unsaved changes   | Edit in app, click Reload                   | 3-button dialog: Save / Don't Save / Cancel                        |
-| 7.17 | Reload unchanged file         | No edits in app or on disk, click Reload    | Reloads for example an external image that changes for each reload                           |
-| 7.18 | Reload deleted file           | Delete file externally, click Reload        | Warning: "File no longer exists. Use Save As."                     |
-| 7.19 | File name display             | Open a file                                 | File name shown in toolbar and status bar                          |
-| 7.20 | Modified indicator            | Edit content                                | `*` appears after filename, dot on Save button                     |
-| 7.21 | Read-only indicator           | Open a read-only file                       | 🔒 appears next to filename in toolbar and status bar              |
-| 7.22 | Save to read-only file        | Edit a read-only file, click Save           | Toast error: "Could not save: the file is read-only."              |
-| 7.23 | Save — .bak backup created    | Save over an existing file, check directory | `<filename>.bak` contains the previous content                     |
-| 7.24 | UTF-8 BOM stripped on read    | Open file with UTF-8 BOM                    | Content reads correctly, no BOM artifact in editor                 |
-| 7.25 | Non-UTF-8 file                | Open file with ISO/IEC 8859-1 (Latin-1) encoding             | Content decoded losslessly, no crash or garbled text               |
-| 7.26 | Toast on save failure         | Save to a path that fails (e.g. permission) | Error toast appears with failure message                           |
-| 7.27 | Toast on open failure         | Open a file that fails (e.g. locked)        | Error toast appears with failure message                           |
+| #    | Test                          | Steps                                            | Expected                                                           |
+| ---- | ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| 7.1  | Open file                     | Click Open, select a `.md` file                  | Content loads into editor, viewer renders it                       |
+| 7.2  | Open dialog filters           | Open dialog                                      | Shows "Markdown" and "All Files" filters                           |
+| 7.3  | Cancel open dialog            | Open dialog, cancel                              | No change to current content                                       |
+| 7.4  | Save new file                 | With "Untitled" file, click Save                 | Save-as dialog appears                                             |
+| 7.5  | Save existing file            | Edit file, click Save                            | File saved, `*` indicator disappears, `.bak` backup created        |
+| 7.6  | Save As same path             | Save As to the current file's path               | If externally modified, overwrite prompt; otherwise saves directly |
+| 7.7  | Save As different path        | Save As to a new location                        | New file created, app tracks new path                              |
+| 7.8  | Save As to existing file      | Save As to a file that already exists            | Prompt: "A file named ... already exists. Replace?"                |
+| 7.9  | Save As to read-only file     | Save As to a read-only file                      | Toast: "This file is read-only. Choose a different location."      |
+| 7.10 | New file with unsaved changes | Edit content, click New                          | 3-button dialog: Save / Don't Save / Cancel                        |
+| 7.11 | New file — Save chosen        | In 3-button dialog, click Save                   | Saves (Save As if untitled), then clears editor, "Untitled"        |
+| 7.12 | New file — Don't Save chosen  | In 3-button dialog, click Don't Save             | Editor clears, file name = "Untitled", changes lost                |
+| 7.13 | New file — Cancel chosen      | In 3-button dialog, click Cancel                 | No change, editor content preserved                                |
+| 7.14 | Open with unsaved changes     | Edit content, click Open                         | 3-button dialog: Save / Don't Save / Cancel                        |
+| 7.15 | Reload from disk              | Edit externally, click Reload                    | Content updates from disk                                          |
+| 7.16 | Reload with unsaved changes   | Edit in app, click Reload                        | 3-button dialog: Save / Don't Save / Cancel                        |
+| 7.17 | Reload unchanged file         | No edits in app or on disk, click Reload         | Reloads for example an external image that changes for each reload |
+| 7.18 | Reload deleted file           | Delete file externally, click Reload             | Warning: "File no longer exists. Use Save As."                     |
+| 7.19 | File name display             | Open a file                                      | File name shown in toolbar and status bar                          |
+| 7.20 | Modified indicator            | Edit content                                     | `*` appears after filename, dot on Save button                     |
+| 7.21 | Read-only indicator           | Open a read-only file                            | 🔒 appears next to filename in toolbar and status bar              |
+| 7.22 | Save to read-only file        | Edit a read-only file, click Save                | Toast error: "Could not save: the file is read-only."              |
+| 7.23 | Save — .bak backup created    | Save over an existing file, check directory      | `<filename>.bak` contains the previous content                     |
+| 7.24 | UTF-8 BOM stripped on read    | Open file with UTF-8 BOM                         | Content reads correctly, no BOM artifact in editor                 |
+| 7.25 | Non-UTF-8 file                | Open file with ISO/IEC 8859-1 (Latin-1) encoding | Content decoded losslessly, no crash or garbled text               |
+| 7.26 | Toast on save failure         | Save to a path that fails (e.g. permission)      | Error toast appears with failure message                           |
+| 7.27 | Toast on open failure         | Open a file that fails (e.g. locked)             | Error toast appears with failure message                           |
 
 ---
 

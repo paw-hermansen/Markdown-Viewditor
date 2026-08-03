@@ -33,8 +33,6 @@ or right-click the app → **Open** → **Open anyway**.
 
 The Windows, macOS, and AppImage builds check the GitHub Releases feed for
 updates and can install them in place (Help → About → Check for Updates).
-When installed inside **Flatpak** or **Snap** (future channels), the in-app
-updater is disabled — use your system updater instead.
 
 ## Features
 
@@ -83,6 +81,8 @@ Theme type (dark/light) is auto-detected from the CSS content.
 Contributions are welcome! Anyone may [open an issue](../../issues) (bug reports and suggestions alike) or submit a pull request — whether human-created, AI-created, or any mix of both. All pull requests will be reviewed and approved or denied by the maintainer.
 
 Please read the [Contributing Guide](CONTRIBUTING.md) for the PR workflow, checklists, and development setup, and the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+
+For technical documentation on architecture, coding conventions, and the release pipeline, see [AGENTS.md](AGENTS.md).
 
 ## License
 

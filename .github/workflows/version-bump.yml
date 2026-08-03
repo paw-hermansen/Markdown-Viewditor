@@ -1,0 +1,85 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run version bump
+        id: bump
+        run: |
+          bash scripts/version-bump.sh --files-only ${{ inputs.bump_type }}
+          # Read the new version from package.json
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create release branch and commit
+        run: |
+          BRANCH="release/v${{ steps.bump.outputs.version }}"
+          git checkout -b "$BRANCH"
+          git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json CHANGELOG.md
+          git commit -m "chore: release v${{ steps.bump.outputs.version }}"
+          git push origin "$BRANCH"
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+
+          # Extract changelog entry for this version
+          CHANGELOG_ENTRY=$(sed -n "/^## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | head -n -1)
+
+          # Build PR body
+          cat > /tmp/pr_body.md <<EOF
+          ## Release v${VERSION}
+
+          This PR bumps the version to **${VERSION}**.
+
+          ### Changes
+
+          ${CHANGELOG_ENTRY}
+
+          ---
+          > Merge this PR to trigger the release build.
+          EOF
+
+          # Remove leading spaces from heredoc indentation
+          sed -i 's/^          //' /tmp/pr_body.md
+
+          gh pr create \
+            --title "chore: release v${VERSION}" \
+            --body-file /tmp/pr_body.md \
+            --base main \
+            --head "release/v${VERSION}"

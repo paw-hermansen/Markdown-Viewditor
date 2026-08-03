@@ -14,10 +14,7 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:components": "vitest run --environment jsdom src/lib/components",
-    "version:patch": "bash scripts/version-bump.sh patch",
-    "version:minor": "bash scripts/version-bump.sh minor",
-    "version:major": "bash scripts/version-bump.sh major"
+    "test:components": "vitest run --environment jsdom src/lib/components"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.0",

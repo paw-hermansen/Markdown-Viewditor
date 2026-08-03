@@ -54,6 +54,48 @@ describe("confirm store", () => {
     await expect(promise).resolves.toBe(false);
   });
 
+  it("confirmReplace resolves boolean true for yes", async () => {
+    const promise = confirmReplace("replace?");
+    expect(confirmState.current!.buttons.map((b) => b.value)).toEqual([
+      "no",
+      "yes",
+    ]);
+    resolveConfirm("yes");
+    await expect(promise).resolves.toBe(true);
+  });
+
+  it("confirmReplace resolves boolean false for no", async () => {
+    const promise = confirmReplace("replace?");
+    resolveConfirm("no");
+    await expect(promise).resolves.toBe(false);
+  });
+
+  it("confirmReload resolves true for yes when not dirty", async () => {
+    const promise = confirmReload("reload?", false);
+    expect(confirmState.current!.buttons.map((b) => b.label)).toEqual([
+      "Cancel",
+      "Reload",
+    ]);
+    resolveConfirm("yes");
+    await expect(promise).resolves.toBe(true);
+  });
+
+  it("confirmReload resolves true for yes when dirty", async () => {
+    const promise = confirmReload("reload?", true);
+    expect(confirmState.current!.buttons.map((b) => b.label)).toEqual([
+      "Cancel",
+      "Yes, Discard My Changes",
+    ]);
+    resolveConfirm("yes");
+    await expect(promise).resolves.toBe(true);
+  });
+
+  it("confirmReload resolves false for no", async () => {
+    const promise = confirmReload("reload?", false);
+    resolveConfirm("no");
+    await expect(promise).resolves.toBe(false);
+  });
+
   it("confirmOk resolves true for ok", async () => {
     const promise = confirmOk("informational");
     expect(confirmState.current!.buttons).toHaveLength(1);

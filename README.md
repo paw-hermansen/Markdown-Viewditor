@@ -16,7 +16,7 @@ Pre-built binaries for Windows, macOS, and Linux are published on the
 | -------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | Windows  | `Markdown-Viewditor_*_x64-setup.exe` (NSIS) or `.msi`                   | SmartScreen may warn on first launch — click **More info → Run anyway**. |
 | macOS    | `Markdown-Viewditor_*_aarch64.dmg` (Apple Silicon)                      | See [macOS first-launch note](#macos-first-launch-note) below.           |
-| Linux    | `*.AppImage` (portable), `*.deb` (Debian/Ubuntu), `*.rpm` (Fedora/RHEL) | AppImage: `chmod +x` then run.                                           |
+| Linux    | `*.deb` (Debian/Ubuntu) or `*.rpm` (Fedora/RHEL)                       | Install via your package manager.                                        |
 
 ### macOS first-launch note
 
@@ -31,7 +31,7 @@ or right-click the app → **Open** → **Open anyway**.
 
 ### Auto-updates
 
-The Windows, macOS, and AppImage builds check the GitHub Releases feed for
+The Windows and macOS builds check the GitHub Releases feed for
 updates and can install them in place (Help → About → Check for Updates).
 
 ## Features

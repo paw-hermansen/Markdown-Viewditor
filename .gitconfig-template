@@ -1,0 +1,3 @@
+[merge "cargo-lock-merge"]
+    name = Auto-resolve Cargo.lock
+    driver = cargo generate-lockfile

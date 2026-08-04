@@ -97,7 +97,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXkgMUQxMzVFQjI3NDY4QTc3NwpSV1IzcDJoMHNsNFRIYmxwMkJLTjV3ZlhiZWVVc0RoZCsycHJRS3plcGVvS1c3VEJuZUt4d",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXkgMUQxMzVFQjI3NDY4QTc3NwpSV1IzcDJoMHNsNFRIYmxwMkJLTjV3ZlhiZWVVc0RoZCsycHJRS3plcGVvS1c3VEJuZUt4d2R5eQo=",
       "endpoints": [
         "https://github.com/paw-hermansen/Markdown-Viewditor/releases/latest/download/latest.json"
       ]

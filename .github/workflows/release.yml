@@ -29,6 +29,7 @@ jobs:
   release:
     name: Build & Release (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
+    environment: release
     strategy:
       fail-fast: false
       matrix:

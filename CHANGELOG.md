@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.5] - 2026-08-04
+
+- Release improvements (#18) (72d6666)
+
 ## [1.0.4] - 2026-08-04
 
 - Fix: Create github release from the build bundles (#15) (0655268)

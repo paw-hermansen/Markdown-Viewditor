@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.3] - 2026-08-04
+
+- Fixed my previous pub key fix (#13) (f307dcd)
+
 ## [1.0.2] - 2026-08-04
 
 - Fixed Tauri public key format (#11) (4ec3390)

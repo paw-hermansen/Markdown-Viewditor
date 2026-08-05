@@ -29,11 +29,11 @@ Also most of the documentation was written by AI.
 [Pre-built binaries for Windows, macOS, and Linux](../../releases/latest) are published on the
 Github [Releases page](../../releases/latest). Pick the file matching your platform:
 
-| Platform | File                                                  | Notes                                                                    |
-| -------- | ----------------------------------------------------- | ------------------------------------------------------------------------ |
-| Windows  | `Markdown-Viewditor_*_x64-setup.exe` (NSIS) or `.msi` | SmartScreen may warn on first launch — click **More info → Run anyway**. |
-| macOS    | `Markdown-Viewditor_*_aarch64.dmg` (Apple Silicon)    | See [macOS first-launch note](#macos-first-launch-note) below.           |
-| Linux    | `*.deb` (Debian/Ubuntu) or `*.rpm` (Fedora/RHEL)      | Install via your package manager.                                        |
+| Platform | File                                                         | Notes                                                                    |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Windows  | `Markdown-Viewditor_*_x64-setup.exe` (NSIS) or `.msi`        | SmartScreen may warn on first launch — click **More info → Run anyway**. |
+| macOS    | `Markdown-Viewditor_*_universal.dmg` (Intel & Apple Silicon) | See [macOS first-launch note](#macos-first-launch-note) below.           |
+| Linux    | `*.deb` (Debian/Ubuntu) or `*.rpm` (Fedora/RHEL)             | Install via your package manager.                                        |
 
 ### macOS first-launch note
 

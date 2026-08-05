@@ -17,6 +17,7 @@
     leadingIcon?: Snippet;
     formatLabel?: (choice: Choice<T>) => string;
     title?: string;
+    header?: string;
     align?: 'left' | 'right';
     disabled?: boolean;
   }
@@ -29,6 +30,7 @@
     leadingIcon,
     formatLabel,
     title,
+    header,
     align = 'right',
     disabled = false,
   }: Props = $props();
@@ -52,7 +54,11 @@
 
   function fire() {
     if (disabled) return;
-    onAction?.(value);
+    if (onAction) {
+      onAction(value);
+    } else {
+      toggle();
+    }
   }
 
   function onDocClick(event: MouseEvent) {
@@ -107,6 +113,9 @@
 
   {#if isOpen}
     <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu">
+      {#if header}
+        <div class="dropdown-header">{header}</div>
+      {/if}
       {#each choices as choice}
         <button
           class="dropdown-item"
@@ -241,6 +250,15 @@
 
   .dropdown.align-left {
     left: 0;
+  }
+
+  .dropdown-header {
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .dropdown-item {

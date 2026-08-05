@@ -118,8 +118,6 @@
     { name: 'thiserror', license: 'MIT / Apache-2.0', copyright: 'David Tolnay', url: 'https://github.com/dtolnay/thiserror' },
     { name: 'KaTeX', license: 'MIT', copyright: 'Khan Academy', url: 'https://katex.org' },
     { name: '@vscode/markdown-it-katex', license: 'MIT', copyright: 'Microsoft Corp.', url: 'https://github.com/microsoft/vscode-markdown-it-katex' },
-    { name: 'Inter', license: 'OFL-1.1', copyright: 'Rasmus Andersson', url: 'https://rsms.me/inter/' },
-    { name: 'JetBrains Mono', license: 'OFL-1.1', copyright: 'JetBrains s.r.o.', url: 'https://jetbrains.com/mono/' },
   ];
 </script>
 

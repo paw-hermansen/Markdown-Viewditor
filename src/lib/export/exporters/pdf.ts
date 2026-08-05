@@ -108,14 +108,6 @@ export async function exportPdf(
 
     await waitForLayout();
 
-    // Wait for all declared @font-face fonts to finish loading. Without this,
-    // font-display:swap means the browser may still be showing the system
-    // fallback when window.print() / WKWebView capture fires — producing a
-    // PDF rendered in the fallback font instead of Inter / JetBrains Mono.
-    if (typeof document !== "undefined" && document.fonts?.ready) {
-      await document.fonts.ready;
-    }
-
     if (isMacOS && savePath) {
       await invoke("create_pdf", { savePath });
       return { savedPath: savePath, warnings: [] };

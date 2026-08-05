@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - feat: export to self-contained HTML (inlined CSS, fonts, and images) and PDF (macOS WKWebView / other platforms via Print). Extensible exporter registry — new formats plug in with one file.
 - refactor: extract markdown rendering styles to `src/lib/styles/markdown.css` (shared between the Viewer and the export pipeline to prevent drift).
 - refactor: remove the "Copy HTML" toolbar action — superseded by Export as HTML (the copied HTML had no inlined CSS/fonts/images and broke math/images).
-- feat: bundle Inter (sans-serif) and JetBrains Mono (monospace) woff2 fonts so the app UI, print, and exported HTML render consistently across all platforms instead of falling through to system font defaults. Adds `scripts/download-fonts.sh` for reproducible font fetching.
+- refactor: use system fonts for all platforms (system-ui, sans-serif; monospace). Reverts bundled Inter/JetBrains Mono — WebKitGTK print path on Linux had kerning issues with the bundled woff2 files. Adds font-kerning: normal and font-feature-settings: 'kern' 1 for optimal kerning on all platforms.
 
 
 ## [1.0.5] - 2026-08-04

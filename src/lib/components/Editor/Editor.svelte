@@ -7,9 +7,12 @@
   import { tags } from '@lezer/highlight';
   import { EditorState, Compartment } from '@codemirror/state';
   import { keymap, lineNumbers, type ViewUpdate } from '@codemirror/view';
+  import { linter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
   import { settingsState } from '$lib/stores/settings.svelte';
   import { viewerState, getThemeType } from '$lib/stores/viewer.svelte';
+  import { levelState } from '$lib/stores/markdown-levels.svelte';
+  import { violationMessage } from '$lib/utils/markdown-levels';
 
   interface Props {
     content?: string;
@@ -26,6 +29,39 @@
   const themeCompartment = new Compartment();
   const lineNumbersCompartment = new Compartment();
   const wordWrapCompartment = new Compartment();
+
+  const MAX_DIAGNOSTICS = 100;
+
+  // Shared diagnostics source: used both by the `linter()` extension (which
+  // re-runs on doc changes, debounced by CodeMirror) and by the `$effect`
+  // below (which dispatches diagnostics directly when the violations list or
+  // the level preset changes without a doc edit). `forceLinting` is NOT used
+  // because it is a no-op when no lint run is pending
+  // (@codemirror/lint's `plugin.force()` early-returns on `this.set === false`).
+  function levelLinterSource(view: EditorView): readonly Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const doc = view.state.doc;
+    const level = settingsState.markdownLevel;
+    const violations = levelState.violations;
+    let count = 0;
+    for (const v of violations) {
+      for (const lineNum of v.lines) {
+        if (count >= MAX_DIAGNOSTICS) return diagnostics;
+        if (lineNum < 1 || lineNum > doc.lines) continue;
+        const line = doc.line(lineNum);
+        diagnostics.push({
+          from: line.from,
+          to: Math.max(line.to, line.from),
+          severity: 'warning',
+          message: violationMessage(v, level)
+        });
+        count++;
+      }
+    }
+    return diagnostics;
+  }
+
+  const levelLinter = linter(levelLinterSource);
 
   const lightTheme = EditorView.theme({
     '&': {
@@ -94,6 +130,7 @@
       extensions: [
         basicSetup,
         markdown(),
+        levelLinter,
         themeCompartment.of(getThemeExtension()),
         lineNumbersCompartment.of(settingsState.editorLineNumbers ? [] : lineNumbers()),
         wordWrapCompartment.of(settingsState.editorWordWrap ? EditorView.lineWrapping : []),
@@ -199,6 +236,19 @@
     editorView.dispatch({
       effects: wordWrapCompartment.reconfigure(wordWrap ? EditorView.lineWrapping : [])
     });
+  });
+
+  $effect(() => {
+    // Re-apply diagnostics whenever the violations list or the level preset
+    // changes. We dispatch `setDiagnostics` directly rather than calling
+    // `forceLinting`, because the latter is a no-op when no lint run is
+    // pending — and a level change doesn't touch the doc, so no run is.
+    void levelState.violations;
+    void settingsState.markdownLevel;
+    if (!editorView) return;
+    editorView.dispatch(
+      setDiagnostics(editorView.state, levelLinterSource(editorView)),
+    );
   });
 
   function wrapSelection(before: string, after: string) {

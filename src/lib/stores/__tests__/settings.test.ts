@@ -24,6 +24,7 @@ import {
   loadSettings,
   saveSettings,
 } from "../settings.svelte";
+import { presetFor } from "$lib/utils/markdown-levels";
 
 describe("settings store", () => {
   beforeEach(() => {
@@ -39,6 +40,8 @@ describe("settings store", () => {
     settingsState.lastOpenedFile = null;
     settingsState.recentFiles = [];
     settingsState.printStyle = "printer-friendly";
+    settingsState.markdownLevel = "advanced";
+    settingsState.enabledFeatures = presetFor("advanced");
   });
 
   describe("updateViewMode", () => {
@@ -142,6 +145,40 @@ describe("settings store", () => {
     it("should update editorLineNumbers", () => {
       updateSetting("editorLineNumbers", false);
       expect(settingsState.editorLineNumbers).toBe(false);
+    });
+
+    it("should update markdownLevel", () => {
+      updateSetting("markdownLevel", "basic");
+      expect(settingsState.markdownLevel).toBe("basic");
+    });
+
+    it("should update enabledFeatures", () => {
+      updateSetting("enabledFeatures", ["tables"]);
+      expect(settingsState.enabledFeatures).toEqual(["tables"]);
+    });
+  });
+
+  describe("markdown level defaults", () => {
+    it("defaults to the advanced preset", () => {
+      expect(settingsState.markdownLevel).toBe("advanced");
+      expect(settingsState.enabledFeatures).toEqual(presetFor("advanced"));
+    });
+
+    it("loads saved markdownLevel and enabledFeatures over defaults", async () => {
+      mockStore.get.mockResolvedValue({
+        markdownLevel: "basic",
+        enabledFeatures: [],
+      });
+      await loadSettings();
+      expect(settingsState.markdownLevel).toBe("basic");
+      expect(settingsState.enabledFeatures).toEqual([]);
+    });
+
+    it("fills in advanced defaults when saved settings omit the new keys", async () => {
+      mockStore.get.mockResolvedValue({ viewMode: "editor" });
+      await loadSettings();
+      expect(settingsState.markdownLevel).toBe("advanced");
+      expect(settingsState.enabledFeatures).toEqual(presetFor("advanced"));
     });
   });
 

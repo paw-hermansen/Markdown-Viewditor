@@ -2,6 +2,8 @@ export type ViewMode = "split" | "editor" | "viewer";
 
 export type PrintStyle = "printer-friendly" | "theme";
 
+export type MarkdownLevel = "basic" | "github" | "advanced" | "custom";
+
 export interface FileInfo {
   path: string;
   name: string;
@@ -20,6 +22,8 @@ export interface Settings {
   lastOpenedFile: string | null;
   recentFiles: string[];
   printStyle: PrintStyle;
+  markdownLevel: MarkdownLevel;
+  enabledFeatures: string[];
 }
 
 export interface EditorState {

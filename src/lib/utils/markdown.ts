@@ -9,6 +9,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { resolveLink } from "$lib/utils/path";
 
 import type { Frontmatter, RenderResult } from "$lib/types";
+import { analyzeTokens, type UsedFeature } from "$lib/utils/markdown-levels";
 
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
@@ -566,6 +567,26 @@ export async function renderMarkdown(
   } catch (error) {
     console.error("Markdown parse error:", error);
     return { html: "<p>Error rendering markdown</p>", frontmatter: null };
+  }
+}
+
+/**
+ * Parse-only analysis of a markdown document using the existing markdown-it
+ * singleton. Reuses the same parser the Viewer renders with, but skips
+ * rendering entirely — only the token stream and env are inspected by the
+ * registered feature detectors. Used by the levels store so analysis works in
+ * all view modes (the Viewer is unmounted in editor-only mode).
+ */
+export async function analyzeContent(content: string): Promise<UsedFeature[]> {
+  if (content === null || content === undefined) return [];
+  try {
+    const parser = await initMarkdownIt();
+    const env: Record<string, unknown> = {};
+    const tokens = parser.parse(content, env);
+    return analyzeTokens(tokens, env);
+  } catch (error) {
+    console.error("Markdown analyze error:", error);
+    return [];
   }
 }
 

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+- feat: markdown syntax levels (Basic / GitHub / Advanced / Custom) with editor lint warnings and a status-bar violation badge. Rendering stays full-featured; the level is a portability indicator. See PLAN-SYNTAX-LEVELS.md.
+
 ## [1.0.5] - 2026-08-04
 
 - Release improvements (#18) (72d6666)

@@ -17,6 +17,9 @@ const { mockSettingsState, mockUpdateSplitRatio } = vi.hoisted(() => ({
     viewerTheme: "github-dark",
     lastOpenedFile: null,
     recentFiles: [],
+    printStyle: "printer-friendly" as const,
+    markdownLevel: "advanced" as const,
+    enabledFeatures: [] as string[],
   },
   mockUpdateSplitRatio: vi.fn(),
 }));
@@ -24,6 +27,15 @@ const { mockSettingsState, mockUpdateSplitRatio } = vi.hoisted(() => ({
 vi.mock("$lib/stores/settings.svelte", () => ({
   settingsState: mockSettingsState,
   updateSplitRatio: mockUpdateSplitRatio,
+}));
+
+vi.mock("$lib/stores/editor.svelte", () => ({
+  editorState: { content: "" },
+}));
+
+vi.mock("$lib/stores/markdown-levels.svelte", () => ({
+  startLevelAnalysis: () => () => {},
+  levelState: { violations: [] },
 }));
 
 vi.mock("../ViewToggle.svelte", () => ({

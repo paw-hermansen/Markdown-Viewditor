@@ -3,9 +3,11 @@
   import type { ViewMode } from '$lib/types';
   import { settingsState, updateSplitRatio } from '$lib/stores/settings.svelte';
   import { fileState } from '$lib/stores/file.svelte';
+  import { startLevelAnalysis } from '$lib/stores/markdown-levels.svelte';
   import { modLabel } from '$lib/utils/keyboard';
   import ViewToggle from './ViewToggle.svelte';
   import StatusBar from './StatusBar.svelte';
+  import { onMount, onDestroy } from 'svelte';
 
   interface Props {
     viewMode: ViewMode;
@@ -31,6 +33,8 @@
   let nearEdge = $state<'left' | 'right' | 'center' | null>(null);
 
   let displayRatio = $derived(isDragging ? splitRatio : settingsState.splitRatio);
+
+  let stopLevelAnalysis: (() => void) | undefined;
 
   function getRatioFromClientX(clientX: number): number {
     const container = document.querySelector('.content');
@@ -116,6 +120,14 @@
     }
     updateSplitRatio(0.5);
   }
+
+  onMount(() => {
+    stopLevelAnalysis = startLevelAnalysis();
+  });
+
+  onDestroy(() => {
+    stopLevelAnalysis?.();
+  });
 </script>
 
 <div class="app-layout">

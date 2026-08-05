@@ -140,6 +140,44 @@ fn main() {
 <div>{@html html}</div>
 ```
 
+### Markdown Syntax Levels
+
+`src/lib/utils/markdown-levels.ts` defines a **feature-detector registry**:
+each toggleable syntax feature registers a `FeatureDetector` that walks the
+markdown-it token stream and returns occurrence line numbers. Named presets
+(basic / github / advanced) derive their `enabledFeatures` from the registry,
+so Plan 2's math detectors extend the presets automatically without touching
+the engine.
+
+- `registerFeatureDetectors(...)` — register a detector (idempotent on `id`).
+- `analyzeContent(content)` (in `markdown.ts`) — parse-only analysis reusing
+  the existing markdown-it singleton; no rendering.
+- `findViolations(used, enabledFeatures)` — used features not in the enabled set.
+- The store (`stores/markdown-levels.svelte.ts`) debounces analysis (~200 ms)
+  via `$effect.root` started from `AppLayout`, so it works in all view modes
+  (the Viewer is unmounted in editor-only mode).
+
+### CodeMirror Lint Pattern
+
+```ts
+import { linter, forceLinting, type Diagnostic } from "@codemirror/lint";
+
+const levelLinter = linter((view): readonly Diagnostic[] => {
+  // Read reactive state inside the closure (levelState is a $state proxy).
+  return diagnostics;
+});
+
+// Re-run when the underlying state changes:
+$effect(() => {
+  void levelState.violations;
+  if (!editorView) return;
+  forceLinting(editorView);
+});
+```
+
+`basicSetup` already pulls in `@codemirror/lint`'s gutter/tooltip support; we
+list it as an explicit dependency for stability.
+
 ## Common Mistakes to Avoid
 
 | Mistake                  | Solution                           |

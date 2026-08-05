@@ -1,23 +1,45 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/svelte";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/svelte";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import StatusBar from "../StatusBar.svelte";
 
-const { mockEditorState, mockFileState } = vi.hoisted(() => ({
-  mockEditorState: {
-    content: "test content",
-    cursorLine: 5,
-    cursorCol: 12,
-    wordCount: 42,
-    isModified: false,
-  },
-  mockFileState: {
-    currentFile: "/home/user/document.md" as string | null,
-    recentFiles: [] as string[],
-    isLoading: false,
-    error: null as string | null,
-  },
-}));
+const { mockEditorState, mockFileState, mockSettingsState, mockLevelState } =
+  vi.hoisted(() => ({
+    mockEditorState: {
+      content: "test content",
+      cursorLine: 5,
+      cursorCol: 12,
+      wordCount: 42,
+      isModified: false,
+    },
+    mockFileState: {
+      currentFile: "/home/user/document.md" as string | null,
+      recentFiles: [] as string[],
+      isLoading: false,
+      error: null as string | null,
+    },
+    mockSettingsState: {
+      viewMode: "split" as const,
+      markdownLevel: "advanced" as const,
+      enabledFeatures: [
+        "tables",
+        "strikethrough",
+        "task-lists",
+        "autolinks",
+        "footnotes",
+        "raw-html",
+        "frontmatter",
+      ],
+    },
+    mockLevelState: {
+      violations: [] as Array<{
+        id: string;
+        label: string;
+        presets: { github?: boolean; advanced: boolean };
+        lines: number[];
+      }>,
+    },
+  }));
 
 vi.mock("$lib/stores/editor.svelte", () => ({
   editorState: mockEditorState,
@@ -31,7 +53,97 @@ vi.mock("$lib/stores/file.svelte", () => ({
   }),
 }));
 
+vi.mock("$lib/stores/settings.svelte", () => ({
+  settingsState: mockSettingsState,
+  updateSetting: vi.fn((key: string, value: unknown) => {
+    (mockSettingsState as Record<string, unknown>)[key] = value;
+  }),
+}));
+
+vi.mock("$lib/stores/markdown-levels.svelte", () => ({
+  levelState: mockLevelState,
+}));
+
+vi.mock("$lib/utils/markdown-levels", () => ({
+  MAX_DISPLAY_LINES: 5,
+  listFeatureToggles: () => [
+    {
+      id: "tables",
+      label: "Tables",
+      presets: { github: true, advanced: true },
+    },
+    {
+      id: "strikethrough",
+      label: "Strikethrough `~~x~~`",
+      presets: { github: true, advanced: true },
+    },
+    {
+      id: "task-lists",
+      label: "Task lists `- [ ]`",
+      presets: { github: true, advanced: true },
+    },
+    {
+      id: "autolinks",
+      label: "Bare-URL autolinks",
+      presets: { github: true, advanced: true },
+    },
+    {
+      id: "footnotes",
+      label: "Footnotes `[^x]`",
+      presets: { github: true, advanced: true },
+    },
+    {
+      id: "raw-html",
+      label: "Raw HTML",
+      presets: { github: true, advanced: true },
+    },
+    {
+      id: "frontmatter",
+      label: "YAML frontmatter",
+      presets: { advanced: true },
+    },
+  ],
+  presetFor: (level: "basic" | "github" | "advanced") =>
+    level === "basic"
+      ? []
+      : level === "github"
+        ? [
+            "tables",
+            "strikethrough",
+            "task-lists",
+            "autolinks",
+            "footnotes",
+            "raw-html",
+          ]
+        : [
+            "tables",
+            "strikethrough",
+            "task-lists",
+            "autolinks",
+            "footnotes",
+            "raw-html",
+            "frontmatter",
+          ],
+  violationMessage: (v: { label: string }) => `${v.label} (warning)`,
+}));
+
 describe("StatusBar", () => {
+  beforeEach(() => {
+    mockFileState.currentFile = "/home/user/document.md";
+    mockEditorState.isModified = false;
+    mockSettingsState.markdownLevel = "advanced";
+    mockSettingsState.enabledFeatures = [
+      "tables",
+      "strikethrough",
+      "task-lists",
+      "autolinks",
+      "footnotes",
+      "raw-html",
+      "frontmatter",
+    ];
+    mockLevelState.violations = [];
+  });
+
   it("displays the filename from currentFile", () => {
     render(StatusBar);
     expect(screen.getByText("document.md")).toBeInTheDocument();
@@ -68,5 +180,71 @@ describe("StatusBar", () => {
     });
     expect(fileNameSpan.textContent).toContain("*");
     mockEditorState.isModified = false;
+  });
+
+  it("renders a level dropdown button showing the current level label", () => {
+    render(StatusBar);
+    const btn = screen.getByLabelText(
+      "Markdown compatibility level",
+    ) as HTMLButtonElement;
+    expect(btn).toBeInTheDocument();
+    // Default level is 'advanced' -> label shows "Advanced".
+    expect(btn.textContent).toContain("Advanced");
+  });
+
+  it("opens the level popover and selecting a preset calls updateSetting", async () => {
+    const { updateSetting } = await import("$lib/stores/settings.svelte");
+    render(StatusBar);
+    const levelBtn = screen.getByLabelText("Markdown compatibility level");
+    await fireEvent.click(levelBtn);
+    const basicBtn = screen.getByRole("button", { name: "Basic" });
+    await fireEvent.click(basicBtn);
+    expect(updateSetting).toHaveBeenCalledWith("enabledFeatures", []);
+    expect(updateSetting).toHaveBeenCalledWith("markdownLevel", "basic");
+  });
+
+  it("shows the feature checklist in the popover and toggling flips to custom", async () => {
+    const { updateSetting } = await import("$lib/stores/settings.svelte");
+    render(StatusBar);
+    const levelBtn = screen.getByLabelText("Markdown compatibility level");
+    await fireEvent.click(levelBtn);
+    const checkboxes = screen.getAllByRole("checkbox");
+    expect(checkboxes.length).toBe(7);
+    // Uncheck the first toggle ("tables"); the enabledFeatures array should
+    // drop "tables" and the level should flip to "custom".
+    await fireEvent.click(checkboxes[0]);
+    expect(updateSetting).toHaveBeenCalledWith("enabledFeatures", [
+      "strikethrough",
+      "task-lists",
+      "autolinks",
+      "footnotes",
+      "raw-html",
+      "frontmatter",
+    ]);
+    expect(updateSetting).toHaveBeenCalledWith("markdownLevel", "custom");
+  });
+
+  it("hides the violation badge when there are no violations", () => {
+    render(StatusBar);
+    expect(screen.queryByLabelText(/markdown feature violations/)).toBeNull();
+  });
+
+  it("shows the violation badge when violations exist and lists them", async () => {
+    mockLevelState.violations = [
+      {
+        id: "raw-html",
+        label: "Raw HTML",
+        presets: { github: true, advanced: true },
+        lines: [3],
+      },
+    ];
+    render(StatusBar);
+    const badge = screen.getByLabelText(
+      "1 markdown feature violations",
+    ) as HTMLButtonElement;
+    expect(badge).toBeInTheDocument();
+    await fireEvent.click(badge);
+    expect(screen.getByText("Raw HTML (warning)")).toBeInTheDocument();
+    expect(screen.getByText(/line: 3/)).toBeInTheDocument();
   });
 });

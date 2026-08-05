@@ -1,5 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import type { Settings, ViewMode, PrintStyle } from "$lib/types";
+import { presetFor } from "$lib/utils/markdown-levels";
 
 const STORE_FILE = "settings.json";
 
@@ -14,6 +15,8 @@ const DEFAULT_SETTINGS: Settings = {
   lastOpenedFile: null,
   recentFiles: [],
   printStyle: "printer-friendly",
+  markdownLevel: "advanced",
+  enabledFeatures: presetFor("advanced"),
 };
 
 export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });

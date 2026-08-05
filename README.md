@@ -38,12 +38,37 @@ updates and can install them in place (Help → About → Check for Updates).
 
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **GitHub-Flavored Markdown** — Tables, task lists, strikethrough, footnotes, and more
+- **Syntax Levels** — Pick a compatibility target (Basic / GitHub / Advanced / Custom) and get editor warnings when your document uses syntax the target doesn't support; rendering always stays full-featured
 - **HTML** — Use HTML along with the markdown
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **YAML Frontmatter** — for AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
+
+## Markdown Syntax Levels
+
+The status bar exposes a level selector and a per-feature checklist so you can
+target a compatibility level. When the document uses syntax that the chosen
+level doesn't enable, the editor shows a lint warning on the relevant line and
+the status bar shows an amber `⚠ N` badge. Rendering is never restricted —
+this is a portability indicator, not a hard limit.
+
+| Level    | Enabled features                                                           |
+| -------- | -------------------------------------------------------------------------- |
+| Basic    | CommonMark core only (untoggleable)                                        |
+| GitHub   | Tables, strikethrough, task lists, bare-URL autolinks, footnotes, raw HTML |
+| Advanced | All of GitHub + YAML frontmatter                                           |
+| Custom   | Whatever you toggle on (the level name becomes `Custom (n/9)`)             |
+
+**Why is raw HTML a toggle if it's CommonMark core?** It's the most practically
+relevant portability knob: GitHub sanitizes a subset, many renderers strip it,
+and it's a security surface. Default off at Basic, on at GitHub+Advanced;
+strict-CommonMark users re-enable it under Custom.
+
+The `<https://…>` autolink form is CommonMark basic and never triggers the
+"autolinks" toggle — that toggle is for bare-URL autolinks (e.g. `https://…`
+written without angle brackets, expanded by the linkify rule).
 
 ## AI-Assisted Development
 

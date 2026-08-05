@@ -404,6 +404,25 @@ function resolveHtmlImagePaths(html: string, filePath: string): string {
   );
 }
 
+function createLinkTooltipPlugin() {
+  return function linkTooltipPlugin(md: MarkdownIt) {
+    const defaultLinkOpen =
+      md.renderer.rules.link_open ||
+      function (tokens, idx, options, _env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+
+    md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      const href = token.attrGet("href");
+      if (href) {
+        token.attrSet("data-href", href);
+      }
+      return defaultLinkOpen(tokens, idx, options, env, self);
+    };
+  };
+}
+
 function createLocalImagePlugin() {
   return function localImagePlugin(md: MarkdownIt) {
     const defaultImageRenderer =
@@ -521,6 +540,7 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
         tabIndex: false,
       })
       .use(createLocalImagePlugin())
+      .use(createLinkTooltipPlugin())
       .use(taskLists)
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
   }

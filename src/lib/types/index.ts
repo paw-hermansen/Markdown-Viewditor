@@ -1,5 +1,7 @@
 export type ViewMode = "split" | "editor" | "viewer";
 
+export type PrintStyle = "printer-friendly" | "theme";
+
 export interface FileInfo {
   path: string;
   name: string;
@@ -17,6 +19,7 @@ export interface Settings {
   splitRatio: number;
   lastOpenedFile: string | null;
   recentFiles: string[];
+  printStyle: PrintStyle;
 }
 
 export interface EditorState {

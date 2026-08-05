@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ViewMode } from '$lib/types';
+  import type { ViewMode, PrintStyle } from '$lib/types';
   import AppLayout from '$lib/components/Layout/AppLayout.svelte';
   import Editor from '$lib/components/Editor/Editor.svelte';
   import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
@@ -20,7 +20,6 @@
   import { listen } from '@tauri-apps/api/event';
   import { save } from '@tauri-apps/plugin-dialog';
   import { createScrollSync } from '$lib/utils/scroll-sync';
-  import { modLabel } from '$lib/utils/keyboard';
   import { onMount, onDestroy } from 'svelte';
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
@@ -254,53 +253,71 @@
     }
   }
 
-  async function handlePrint() {
+  async function handlePrint(style: PrintStyle = settingsState.printStyle) {
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
 
+    const themeMode = style === 'theme';
+
+    let savePath: string | null = null;
     if (isMacOS) {
-      const defaultName = fileState.currentFile
-        ? getFileName(fileState.currentFile).replace(/\.[^.]+$/, '') + '.pdf'
-        : 'Untitled.pdf';
-      const defaultDir = fileState.currentFile
-        ? fileState.currentFile.replace(/[^/\\]+$/, '')
-        : undefined;
-      const savePath = await save({
-        defaultPath: defaultDir ? defaultDir + defaultName : defaultName,
-        filters: [{ name: 'PDF', extensions: ['pdf'] }],
-      });
+      savePath = await getSavePath();
       if (!savePath) return;
+    }
 
-      const printDiv = document.createElement('div');
-      printDiv.classList.add('print-content');
-      printDiv.innerHTML = viewerContent.innerHTML;
-      document.body.appendChild(printDiv);
-      document.body.classList.add('pdf-export');
+    const printDiv = document.createElement('div');
+    printDiv.classList.add('print-content');
+    printDiv.innerHTML = viewerContent.innerHTML;
+    document.body.appendChild(printDiv);
 
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve());
-        });
+    if (themeMode) {
+      printDiv.id = 'viewer-content';
+      viewerContent.id = '';
+    }
+
+    const exportClass = themeMode ? 'theme-export' : 'print-friendly';
+    document.documentElement.classList.add('exporting', exportClass);
+    document.body.classList.add('exporting', exportClass);
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
       });
+    });
 
+    if (isMacOS && savePath) {
       try {
         await invoke('create_pdf', { savePath });
         toast.info('PDF saved', savePath);
       } catch (e) {
         console.error('Create PDF failed:', e);
-        toast.error('Create PDF failed', String(e));
+        toast.error('Create PDF failed:', String(e));
       }
-
-      document.body.classList.remove('pdf-export');
-      printDiv.remove();
-    } else {
-      const printDiv = document.createElement('div');
-      printDiv.classList.add('print-content');
-      printDiv.innerHTML = viewerContent.innerHTML;
-      document.body.appendChild(printDiv);
+    } else if (!isMacOS) {
       window.print();
-      printDiv.remove();
     }
+
+    cleanupExport(printDiv, viewerContent, themeMode);
+  }
+
+  async function getSavePath(): Promise<string | null> {
+    const defaultName = fileState.currentFile
+      ? getFileName(fileState.currentFile).replace(/\.[^.]+$/, '') + '.pdf'
+      : 'Untitled.pdf';
+    const defaultDir = fileState.currentFile
+      ? fileState.currentFile.replace(/[^/\\]+$/, '')
+      : undefined;
+    return await save({
+      defaultPath: defaultDir ? defaultDir + defaultName : defaultName,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+  }
+
+  function cleanupExport(printDiv: HTMLDivElement, viewerContent: HTMLElement, themeMode: boolean) {
+    document.documentElement.classList.remove('exporting', 'print-friendly', 'theme-export');
+    document.body.classList.remove('exporting', 'print-friendly', 'theme-export');
+    printDiv.remove();
+    if (themeMode) viewerContent.id = 'viewer-content';
   }
 
   function handleAbout() {
@@ -512,8 +529,6 @@
       <ViewerToolbar
         onCopyHtml={handleCopyHtml}
         onPrint={handlePrint}
-        printLabel={isMacOS ? 'Create PDF' : 'Print'}
-        printTitle={isMacOS ? modLabel('Create PDF (Ctrl+P)') : modLabel('Print (Ctrl+P)')}
       />
       <Viewer
         bind:this={viewerComponent}

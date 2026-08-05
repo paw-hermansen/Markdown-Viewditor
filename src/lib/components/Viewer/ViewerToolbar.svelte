@@ -1,15 +1,51 @@
 <script lang="ts">
   import ThemeSelector from './ThemeSelector.svelte';
+  import DropdownButton, { type Choice } from '$lib/components/DropdownButton.svelte';
+  import { settingsState, updatePrintStyle } from '$lib/stores/settings.svelte';
+  import { getThemeLabel } from '$lib/utils/themes';
+  import { viewerState } from '$lib/stores/viewer.svelte';
+  import type { PrintStyle } from '$lib/types';
+  import { modLabel } from '$lib/utils/keyboard';
 
   interface Props {
-    onPrint?: () => void;
+    onPrint?: (style: PrintStyle) => void;
     onCopyHtml?: () => void;
-    printLabel?: string;
-    printTitle?: string;
   }
 
-  let { onPrint, onCopyHtml, printLabel = 'Print', printTitle = 'Print (Ctrl+P)' }: Props = $props();
-  let isPdf = $derived(printLabel.includes('PDF'));
+  let { onPrint, onCopyHtml }: Props = $props();
+
+  const isMacOS = navigator.userAgent.includes('Macintosh');
+  const prefix = isMacOS ? 'Create PDF' : 'Print';
+
+  const themeLabel = $derived(getThemeLabel(viewerState.theme));
+
+  const choices: Choice<PrintStyle>[] = [
+    {
+      value: 'printer-friendly',
+      label: 'Printer-friendly',
+      description: 'Clean black-on-white layout',
+    },
+    {
+      value: 'theme',
+      label: 'Current theme',
+      description: 'Use the selected viewer theme (enable "Background graphics" in the print dialog for colored backgrounds)',
+    },
+  ];
+
+  function handleSelect(style: PrintStyle) {
+    updatePrintStyle(style);
+  }
+
+  function handleAction(style: PrintStyle) {
+    onPrint?.(style);
+  }
+
+  function formatLabel(choice: Choice<PrintStyle>): string {
+    if (choice.value === 'theme') {
+      return `${prefix}: ${themeLabel}`;
+    }
+    return `${prefix}: ${choice.label}`;
+  }
 </script>
 
 <div class="viewer-toolbar">
@@ -17,29 +53,37 @@
     {#if onCopyHtml}
       <button class="toolbar-button" onclick={onCopyHtml} title="Copy HTML">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
         <span>Copy HTML</span>
       </button>
     {/if}
 
     {#if onPrint}
-      <button class="toolbar-button" onclick={onPrint} title={printTitle}>
-        {#if isPdf}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-        {:else}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 6 2 18 2 18 9"/>
-            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-            <rect x="6" y="14" width="12" height="8"/>
-          </svg>
-        {/if}
-        <span>{printLabel}</span>
-      </button>
+      <DropdownButton
+        {choices}
+        bind:value={settingsState.printStyle}
+        onAction={handleAction}
+        onSelect={handleSelect}
+        title={modLabel(`${prefix} (Ctrl+P)`)}
+        {formatLabel}
+      >
+        {#snippet leadingIcon()}
+          {#if isMacOS}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          {:else}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+          {/if}
+        {/snippet}
+      </DropdownButton>
     {/if}
 
     <ThemeSelector />

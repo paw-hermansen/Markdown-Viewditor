@@ -16,6 +16,7 @@ import {
   settingsState,
   updateViewMode,
   updateTheme,
+  updatePrintStyle,
   updateRecentFiles,
   updateLastOpenedFile,
   updateSplitRatio,
@@ -37,6 +38,7 @@ describe("settings store", () => {
     settingsState.splitRatio = 0.5;
     settingsState.lastOpenedFile = null;
     settingsState.recentFiles = [];
+    settingsState.printStyle = "printer-friendly";
   });
 
   describe("updateViewMode", () => {
@@ -61,6 +63,17 @@ describe("settings store", () => {
     it("should update viewerTheme in state", () => {
       updateTheme("monokai");
       expect(settingsState.viewerTheme).toBe("monokai");
+    });
+  });
+
+  describe("updatePrintStyle", () => {
+    it("should update printStyle in state", () => {
+      updatePrintStyle("theme");
+      expect(settingsState.printStyle).toBe("theme");
+    });
+
+    it("should default to printer-friendly", () => {
+      expect(settingsState.printStyle).toBe("printer-friendly");
     });
   });
 

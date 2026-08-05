@@ -12,11 +12,26 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
+- **Math Formulas** — KaTeX rendering across all AI-engine delimiters (`$…$`, `\(…\)`, `$$…$$`, `\[…\]`, bare `\begin{…}`, ` ```math `). See [Math-Example.md](examples/Math-Example.md).
+- **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF (macOS WKWebView / Print on other platforms)
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
 - **HTML** — Use HTML along with the markdown
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
+
+### Math delimiter compatibility
+
+| Engine           | Typical math output                | Covered by                               |
+| ---------------- | ---------------------------------- | ---------------------------------------- |
+| ChatGPT          | `\( … \)`, `\[ … \]`               | bracket rules                            |
+| Copilot / GitHub | `$…$`, `$$…$$`                     | @vscode/markdown-it-katex (pandoc rules) |
+| Gemini           | `$…$`, `$$…$$`                     | @vscode/markdown-it-katex                |
+| Claude           | `$$…$$`, `\( … \)`, `\[ … \]`      | both                                     |
+| Any              | bare `\begin{align}…`, ` ```math ` | plugin options                           |
+
+Pandoc delimiter rules (opening `$` not followed by space; closing `$` not
+followed by digit) prevent false positives with prices like `$5 and $10`.
 
 ## AI-Assisted Development
 

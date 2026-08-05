@@ -1,52 +1,71 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent } from "@testing-library/svelte";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ViewerToolbar from "../ViewerToolbar.svelte";
+import {
+  registerExporter,
+  unregisterExporter,
+} from "$lib/export/registry.svelte";
 
 vi.mock("../ThemeSelector.svelte", () => ({
   default: () => "ThemeSelector",
 }));
 
+// The toolbar exposes two controls (plus the theme selector): a single
+// "Export as HTML" button (registry-fed) and a "Print: <style>" dropdown whose
+// main button fires Print immediately and whose caret opens the 2-style menu.
+// jsdom's navigator.userAgent is not Macintosh, so the print prefix is
+// "Print" (on macOS it would be "Create PDF").
+
+const FAKE_EXPORTER = {
+  id: "test-html",
+  label: "Export as HTML",
+  extension: "html",
+  export: vi.fn(async () => ({ warnings: [] })),
+};
+
 describe("ViewerToolbar", () => {
-  it("renders Copy HTML button when onCopyHtml is provided", () => {
-    render(ViewerToolbar, {
-      props: { onCopyHtml: vi.fn(), onPrint: vi.fn() },
-    });
-    expect(screen.getByTitle("Copy HTML")).toBeInTheDocument();
+  beforeEach(() => {
+    registerExporter(FAKE_EXPORTER);
   });
 
-  it("renders Print button when onPrint is provided", () => {
-    render(ViewerToolbar, {
-      props: { onCopyHtml: vi.fn(), onPrint: vi.fn() },
-    });
+  afterEach(() => {
+    unregisterExporter("test-html");
+  });
+
+  it("renders the Export button when an exporter is registered", () => {
+    render(ViewerToolbar, { props: { onExport: vi.fn() } });
+    expect(screen.getByTitle("Export as HTML")).toBeInTheDocument();
+  });
+
+  it("renders the Print dropdown when onPrint is provided", () => {
+    render(ViewerToolbar, { props: { onPrint: vi.fn() } });
     expect(screen.getByTitle("Print (Ctrl+P)")).toBeInTheDocument();
   });
 
-  it("does not render Copy HTML button when onCopyHtml is not provided", () => {
+  it("does not render the Export button when onExport is not provided", () => {
     render(ViewerToolbar, { props: { onPrint: vi.fn() } });
-    expect(screen.queryByTitle("Copy HTML")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Export as HTML")).not.toBeInTheDocument();
   });
 
-  it("does not render Print button when onPrint is not provided", () => {
-    render(ViewerToolbar, { props: { onCopyHtml: vi.fn() } });
+  it("does not render the Print dropdown when onPrint is not provided", () => {
+    render(ViewerToolbar, { props: { onExport: vi.fn() } });
     expect(screen.queryByTitle("Print (Ctrl+P)")).not.toBeInTheDocument();
   });
 
-  it("calls onCopyHtml on Copy HTML click", async () => {
-    const onCopyHtml = vi.fn();
-    render(ViewerToolbar, {
-      props: { onCopyHtml, onPrint: vi.fn() },
-    });
-    await fireEvent.click(screen.getByTitle("Copy HTML"));
-    expect(onCopyHtml).toHaveBeenCalled();
+  it("calls onExport when the Export button is clicked", async () => {
+    const onExport = vi.fn();
+    render(ViewerToolbar, { props: { onExport } });
+    await fireEvent.click(screen.getByTitle("Export as HTML"));
+    expect(onExport).toHaveBeenCalledWith("test-html");
   });
 
-  it("calls onPrint on Print click", async () => {
+  it("calls onPrint with the current style when the Print main button is clicked", async () => {
     const onPrint = vi.fn();
-    render(ViewerToolbar, {
-      props: { onCopyHtml: vi.fn(), onPrint },
-    });
+    render(ViewerToolbar, { props: { onPrint } });
+    // The main button carries the title; clicking it fires onAction(value)
+    // with the currently-selected style (default 'printer-friendly').
     await fireEvent.click(screen.getByTitle("Print (Ctrl+P)"));
-    expect(onPrint).toHaveBeenCalled();
+    expect(onPrint).toHaveBeenCalledWith("printer-friendly");
   });
 });

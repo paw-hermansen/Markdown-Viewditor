@@ -1,3 +1,40 @@
+/* === Bundled UI fonts ===
+   Inter (sans-serif) and JetBrains Mono (monospace) woff2 files, fetched by
+   scripts/download-fonts.sh. font-display: swap shows the system fallback
+   immediately and swaps once the bundled font loads. */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./lib/styles/fonts/Inter-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./lib/styles/fonts/Inter-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./lib/styles/fonts/Inter-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./lib/styles/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+}
+
 :root {
   /* Dark theme (default) */
   --bg-primary: #1a1a2e;
@@ -17,7 +54,7 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  --font-mono: "JetBrains Mono", monospace;
   --viewer-bg: var(--bg-primary);
 }
 
@@ -107,6 +144,12 @@ body {
 
   .app-layout {
     display: none !important;
+  }
+
+  /* Keep block math from being split across pages. */
+  .katex-block,
+  .katex-display {
+    break-inside: avoid;
   }
 }
 

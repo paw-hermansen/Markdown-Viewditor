@@ -6,13 +6,14 @@
   import { viewerState } from '$lib/stores/viewer.svelte';
   import type { PrintStyle } from '$lib/types';
   import { modLabel } from '$lib/utils/keyboard';
+  import { listExporters } from '$lib/export/registry.svelte';
 
   interface Props {
     onPrint?: (style: PrintStyle) => void;
-    onCopyHtml?: () => void;
+    onExport?: (id: string) => void;
   }
 
-  let { onPrint, onCopyHtml }: Props = $props();
+  let { onPrint, onExport }: Props = $props();
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
   const prefix = isMacOS ? 'Create PDF' : 'Print';
@@ -32,12 +33,24 @@
     },
   ];
 
+  // Export dropdown is registry-fed: any exporter registered via
+  // `registerExporter` shows up here automatically. With a single exporter
+  // (the built-in HTML exporter) this renders as one button; a future second
+  // format (DOCX/EPUB) automatically becomes a dropdown.
+  const exportChoices = $derived(
+    listExporters().map((e) => ({ value: e.id, label: e.label })),
+  );
+
   function handleSelect(style: PrintStyle) {
     updatePrintStyle(style);
   }
 
   function handleAction(style: PrintStyle) {
     onPrint?.(style);
+  }
+
+  function handleExportAction(id: string) {
+    onExport?.(id);
   }
 
   function formatLabel(choice: Choice<PrintStyle>): string {
@@ -50,14 +63,34 @@
 
 <div class="viewer-toolbar">
   <div class="toolbar-right">
-    {#if onCopyHtml}
-      <button class="toolbar-button" onclick={onCopyHtml} title="Copy HTML">
+    {#if onExport && exportChoices.length === 1}
+      <button
+        class="toolbar-button"
+        onclick={() => handleExportAction(exportChoices[0].value)}
+        title={exportChoices[0].label}
+      >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
-        <span>Copy HTML</span>
+        <span>{exportChoices[0].label}</span>
       </button>
+    {:else if onExport && exportChoices.length > 1}
+      <DropdownButton
+        choices={exportChoices}
+        value={exportChoices[0]?.value ?? ''}
+        onAction={handleExportAction}
+        title="Export document"
+      >
+        {#snippet leadingIcon()}
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        {/snippet}
+      </DropdownButton>
     {/if}
 
     {#if onPrint}

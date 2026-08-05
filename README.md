@@ -86,7 +86,7 @@ To make a new custom theme available in the app, copy a custom theme `.css` file
 | macOS    | `~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/` |
 | Windows  | `%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\`                     |
 
-Theme type (dark/light) is auto-detected from the CSS content. 
+Theme type (dark/light) is auto-detected from the CSS content.
 
 ## Project Quick Start
 

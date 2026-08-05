@@ -491,10 +491,38 @@
   .viewer-content :global(a) {
     color: var(--accent);
     text-decoration: none;
+    position: relative;
   }
 
   .viewer-content :global(a:hover) {
     text-decoration: underline;
+  }
+
+  .viewer-content :global(a[data-href]::after) {
+    content: attr(data-href);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-family: monospace;
+    white-space: nowrap;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    visibility: hidden;
+    text-decoration: none;
+  }
+
+  .viewer-content :global(a[data-href]:hover::after) {
+    visibility: visible;
   }
 
   .viewer-content :global(img) {

@@ -13,7 +13,7 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
 - **Math Formulas** — Advanced mathematical formulas using [KaTeX](https://katex.org)
-- **Chemical Formulas** — Chemical equations and physical units using [mhchem](https://mhchem.github.io/MathJax-mhchem/) (`$\ce{H2O}$`)
+- **Chemical Formulas** — Chemical equations and physical units using [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF/Print
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
@@ -96,7 +96,7 @@ followed by digit) prevent false positives with prices like `$5 and $10`.
 
 ## Chemical Formulas
 
-See [Chemistry-Example.md](examples/Chemistry-Example.md) for examples.
+See [Chemistry-Example.md](examples/ChemLab-Example.md) and [ChemLab-Example.md](examples/Chemistry-Example.md) for examples.
 
 Markdown Viewditor includes [mhchem](https://mhchem.github.io/MathJax-mhchem/) for writing chemical equations and physical units. Use the `\ce{…}` command inside any math delimiter:
 

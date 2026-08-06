@@ -221,10 +221,13 @@ fences. If you touch this, the monotonicity test in
   inlines `url()` fonts and `localimg://` images to data URIs (via
   `assets.ts`), and wraps the body in `.viewer-content`.
 - `exporters/pdf.ts` shares `buildPrintContainer()` with the in-app Print
-  button; macOS uses `invoke('create_pdf')` (an `NSPrintOperation` —
-  WebKit's real paged print layout — configured via `NSPrintInfo` to save to
-  PDF without panels), other platforms use `window.print()`. Both paths run
-  the same print-media rendering, so pagination and wrapping match.
+  button; macOS uses `invoke('create_pdf')` (WKWebView
+  `createPDFWithConfiguration` with a nil configuration — an async capture
+  of the laid-out page that paginates the full document into vector pages),
+  other platforms use `window.print()`. The macOS path does NOT use
+  `NSPrintOperation`: that rasterizes WKWebView's layer tree at Retina
+  resolution (hundreds-of-MB files) and `runOperation` deadlocks the main
+  run loop when called from inside `with_webview`.
 - `src/lib/styles/markdown.css` is the single source of truth for markdown
   rendering styles — including the frontmatter/skill card — imported by
   `Viewer.svelte` and applied to the print clone, which carries the
@@ -247,13 +250,15 @@ The print clone reproduces the Viewer exactly, then scales to paper:
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
-  macOS sets the same A4 size and margins on the `NSPrintInfo` passed to the
-  print operation.
+  The macOS `createPDF` capture paginates at the webview's page bounds, so
+  its page size is the viewport, not A4 — accepted, since WKWebView can't
+  honor `@page` size and the rect-based alternative yields only one page.
 - Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
-  inline `background` on `html`/`body` (page content area everywhere) and an
-  injected `@page { background: … }` rule (Chromium extends it over the
-  margins too; WebKit can't paint the physical margin ring — engine
-  limitation, same on Linux and macOS). `print-color-adjust: exact` on
+  inline `background` on `html`/`body` (page content area everywhere; whole
+  captured page on macOS, which has no physical margins) and an injected
+  `@page { background: … }` rule (Chromium extends it over the margins too;
+  WebKit can't paint the physical margin ring — engine limitation, same on
+  Linux and macOS). `print-color-adjust: exact` on
   `html.exporting`/`body.exporting`/`.print-content` makes backgrounds print
   without the dialog's "Background graphics" option.
 - Printer-friendly mode is fully theme-independent: a small CSS-variable

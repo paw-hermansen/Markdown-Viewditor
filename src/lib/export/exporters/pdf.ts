@@ -8,8 +8,9 @@ import { fileState } from "$lib/stores/file.svelte";
  * PDF exporter. Reuses the in-app print path on every platform: it builds
  * the print container, then on Linux/Windows calls `window.print()` (the
  * user picks "Save as PDF" in the browser dialog) and on macOS calls
- * `invoke('create_pdf', …)`, which runs an NSPrintOperation — WebKit's real
- * paged print layout — configured to save to a PDF file without panels.
+ * `invoke('create_pdf', …)`, which runs WKWebView's
+ * `createPDFWithConfiguration` — an async capture of the laid-out page that
+ * paginates the full document into vector pages.
  *
  * Fidelity contract (see also the export section in app.css): the print
  * container carries the `.viewer-content` class — and in theme mode the
@@ -325,10 +326,10 @@ export async function exportPdf(
     await waitForLayout();
 
     if (isMacOS && savePath) {
-      await invoke("create_pdf", {
-        savePath,
-        jobTitle: fileName || "Untitled",
-      });
+      // The capture paginates the full document from its top, so make sure
+      // the live view isn't scrolled.
+      window.scrollTo(0, 0);
+      await invoke("create_pdf", { savePath });
       return { savedPath: savePath, warnings: [] };
     }
     if (!isMacOS) {

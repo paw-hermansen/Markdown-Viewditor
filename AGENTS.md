@@ -251,8 +251,9 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
   The macOS `createPDF` capture paginates at the webview's page bounds, so
-  its page size is the viewport, not A4 — accepted, since WKWebView can't
-  honor `@page` size and the rect-based alternative yields only one page.
+  its page size is the viewport, not A4 — the layout is scaled to fill the
+  webview width so content fills the PDF edge-to-edge. The capture produces
+  one long page (WKWebView can't tile a nil rect); that's accepted.
 - Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
   inline `background` on `html`/`body` (page content area everywhere; whole
   captured page on macOS, which has no physical margins) and an injected

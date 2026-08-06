@@ -10,7 +10,8 @@ import { fileState } from "$lib/stores/file.svelte";
  * user picks "Save as PDF" in the browser dialog) and on macOS calls
  * `invoke('create_pdf', …)`, which runs WKWebView's
  * `createPDFWithConfiguration` — an async capture of the laid-out page that
- * paginates the full document into vector pages.
+ * produces vector output. The macOS capture paginates the full document as
+ * one long page (WKWebView can't tile a nil rect); that's accepted.
  *
  * Fidelity contract (see also the export section in app.css): the print
  * container carries the `.viewer-content` class — and in theme mode the
@@ -35,18 +36,19 @@ export interface PrintLayout {
 }
 
 /* ===== Page geometry =====
-   The paper target is A4 with 10mm margins on every platform. On the
-   `window.print()` path the @page rule in app.css makes A4 the preselected
-   default in the print dialog and sizes the printable area in CSS px
-   (96 dpi); the macOS NSPrintInfo sets the same A4 size and margins in
-   points (72 dpi). Both map the laid-out width onto the same physical 190mm,
-   so output is identical across platforms. */
+   On Linux/Windows the paper target is A4 with 10mm margins: the @page rule
+   in app.css makes A4 the preselected default in the print dialog and sizes
+   the printable area in CSS px (96 dpi). On macOS the capture page is the
+   webview's bounds (not A4 — WKWebView can't honor @page size), so the
+   layout is scaled to fill the webview width instead. Both compute zoom so
+   the laid-out 832px maps onto the target width, preserving the viewer's
+   wrapping. */
 const A4_WIDTH_MM = 210;
 const PAGE_MARGIN_MM = 10;
 const MM_PER_INCH = 25.4;
 const CSS_PX_PER_INCH = 96;
 
-/** Printable width inside the A4 margins, in CSS px. */
+/** Printable width inside the A4 margins, in CSS px (Linux/Windows). */
 const PRINT_CONTENT_WIDTH_PX =
   ((A4_WIDTH_MM - 2 * PAGE_MARGIN_MM) / MM_PER_INCH) * CSS_PX_PER_INCH;
 
@@ -292,9 +294,14 @@ export async function exportPdf(
     style === "printer-friendly" ? await injectPrinterFriendlySyntax() : null;
 
   const layoutWidthPx = computeViewerLayoutWidth(viewerContentElement);
+  // macOS captures the page at the webview's bounds, so scale the laid-out
+  // width up to fill the webview width (content fills the PDF edge-to-edge,
+  // wrapping still computed at the viewer's 800px column). Other platforms
+  // print to A4, so scale to the A4 printable width instead.
+  const targetWidthPx = isMacOS ? window.innerWidth : PRINT_CONTENT_WIDTH_PX;
   const layout: PrintLayout = {
     layoutWidthPx,
-    zoom: PRINT_CONTENT_WIDTH_PX / layoutWidthPx,
+    zoom: targetWidthPx / layoutWidthPx,
   };
   const handle = buildPrintContainer(
     viewerHtml,

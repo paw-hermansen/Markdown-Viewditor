@@ -22,7 +22,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 9 toggles from plans 1 and 2", () => {
+  it("registers the 10 toggles from plans 1, 2, and mhchem", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -34,6 +34,7 @@ describe("markdown-levels registry & presets", () => {
       "frontmatter",
       "math-dollar",
       "math-latex",
+      "chemical-formulas",
     ]);
   });
 
@@ -55,7 +56,7 @@ describe("markdown-levels registry & presets", () => {
     );
   });
 
-  it("advanced preset enables all 9 toggles", () => {
+  it("advanced preset enables all 10 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -67,6 +68,7 @@ describe("markdown-levels registry & presets", () => {
         "frontmatter",
         "math-dollar",
         "math-latex",
+        "chemical-formulas",
       ].sort(),
     );
   });

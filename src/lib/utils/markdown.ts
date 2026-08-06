@@ -21,6 +21,11 @@ import mathBracketsPlugin, {
 // `default-src 'self'`, which the emitted same-origin font assets satisfy.
 import "$lib/styles/katex/katex.woff2.css";
 
+// Side-effect: register the mhchem \ce and \pu macros on the global katex
+// instance so chemical formulas (e.g. $\ce{H2O}$) and physical units
+// (e.g. $\pu{123 kJ/mol}$) render. Ships inside katex; no extra dependency.
+import "katex/contrib/mhchem";
+
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
 import python from "highlight.js/lib/languages/python";

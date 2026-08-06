@@ -5,10 +5,11 @@ import { settingsState } from "$lib/stores/settings.svelte";
 import { fileState } from "$lib/stores/file.svelte";
 
 /**
- * PDF exporter. Reuses the in-app print path: on macOS it builds the print
- * container and calls `invoke('create_pdf', …)` (WKWebView `createPDF` with an
- * A4-sized capture rect); on other platforms it falls back to `window.print()`
- * so the user picks "Save as PDF" in the browser dialog.
+ * PDF exporter. Reuses the in-app print path on every platform: it builds
+ * the print container, then on Linux/Windows calls `window.print()` (the
+ * user picks "Save as PDF" in the browser dialog) and on macOS calls
+ * `invoke('create_pdf', …)`, which runs an NSPrintOperation — WebKit's real
+ * paged print layout — configured to save to a PDF file without panels.
  *
  * Fidelity contract (see also the export section in app.css): the print
  * container carries the `.viewer-content` class — and in theme mode the
@@ -30,38 +31,23 @@ export interface PrintLayout {
   layoutWidthPx: number;
   /** CSS zoom factor mapping the laid-out width onto the paper. */
   zoom: number;
-  /**
-   * When set (macOS capture path), constrain the page body to this width in
-   * CSS px so the WKWebView capture rect maps 1:1 onto the document.
-   */
-  pageWidthPx?: number;
 }
 
 /* ===== Page geometry =====
-   The paper target is A4 with 10mm margins on every path. On the
+   The paper target is A4 with 10mm margins on every platform. On the
    `window.print()` path the @page rule in app.css makes A4 the preselected
    default in the print dialog and sizes the printable area in CSS px
-   (96 dpi); on the macOS capture path the Rust side passes an A4 rect (in
-   points, 72 dpi) to WKPDFConfiguration. Both map the same laid-out width
-   onto the same physical 190mm, so output is identical across platforms. */
+   (96 dpi); the macOS NSPrintInfo sets the same A4 size and margins in
+   points (72 dpi). Both map the laid-out width onto the same physical 190mm,
+   so output is identical across platforms. */
 const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
 const PAGE_MARGIN_MM = 10;
 const MM_PER_INCH = 25.4;
 const CSS_PX_PER_INCH = 96;
-const PT_PER_INCH = 72;
 
-/** Printable width inside the A4 margins, in CSS px (for window.print()). */
+/** Printable width inside the A4 margins, in CSS px. */
 const PRINT_CONTENT_WIDTH_PX =
   ((A4_WIDTH_MM - 2 * PAGE_MARGIN_MM) / MM_PER_INCH) * CSS_PX_PER_INCH;
-
-/** A4 page size in PDF points (for the macOS WKPDFConfiguration rect). */
-export const A4_PAGE_WIDTH_PT = (A4_WIDTH_MM / MM_PER_INCH) * PT_PER_INCH;
-export const A4_PAGE_HEIGHT_PT = (A4_HEIGHT_MM / MM_PER_INCH) * PT_PER_INCH;
-
-/** Printable width inside the A4 margins, in points (macOS capture). */
-const MAC_CAPTURE_CONTENT_WIDTH_PT =
-  A4_PAGE_WIDTH_PT - 2 * ((PAGE_MARGIN_MM / MM_PER_INCH) * PT_PER_INCH);
 
 /* ===== Viewer geometry =====
    Defaults mirror the Viewer: markdown.css caps .viewer-content at 800px and
@@ -198,9 +184,6 @@ export function buildPrintContainer(
   pageStyleEl.id = "print-page-background";
   pageStyleEl.textContent = pageRule;
   document.head.appendChild(pageStyleEl);
-  if (layout.pageWidthPx !== undefined) {
-    document.body.style.width = `${layout.pageWidthPx}px`;
-  }
 
   return {
     printDiv,
@@ -217,7 +200,6 @@ export function buildPrintContainer(
       );
       document.documentElement.style.background = "";
       document.body.style.background = "";
-      document.body.style.width = "";
       pageStyleEl.remove();
       printDiv.remove();
       if (themeMode && viewerContentElement) {
@@ -309,16 +291,10 @@ export async function exportPdf(
     style === "printer-friendly" ? await injectPrinterFriendlySyntax() : null;
 
   const layoutWidthPx = computeViewerLayoutWidth(viewerContentElement);
-  const layout: PrintLayout = isMacOS
-    ? {
-        layoutWidthPx,
-        zoom: MAC_CAPTURE_CONTENT_WIDTH_PT / layoutWidthPx,
-        pageWidthPx: A4_PAGE_WIDTH_PT,
-      }
-    : {
-        layoutWidthPx,
-        zoom: PRINT_CONTENT_WIDTH_PX / layoutWidthPx,
-      };
+  const layout: PrintLayout = {
+    layoutWidthPx,
+    zoom: PRINT_CONTENT_WIDTH_PX / layoutWidthPx,
+  };
   const handle = buildPrintContainer(
     viewerHtml,
     style,
@@ -349,13 +325,9 @@ export async function exportPdf(
     await waitForLayout();
 
     if (isMacOS && savePath) {
-      // The capture rect is in web page coordinates starting at the document
-      // origin; make sure the live view isn't scrolled.
-      window.scrollTo(0, 0);
       await invoke("create_pdf", {
         savePath,
-        pageWidth: A4_PAGE_WIDTH_PT,
-        pageHeight: A4_PAGE_HEIGHT_PT,
+        jobTitle: fileName || "Untitled",
       });
       return { savedPath: savePath, warnings: [] };
     }

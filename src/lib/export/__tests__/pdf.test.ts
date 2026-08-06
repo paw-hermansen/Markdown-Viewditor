@@ -110,16 +110,6 @@ describe("buildPrintContainer", () => {
     expect(document.getElementById("print-page-background")).toBeNull();
   });
 
-  it("sets the body width when the layout constrains the page (macOS)", () => {
-    const handle = buildPrintContainer("<p>hi</p>", "printer-friendly", {
-      ...layout,
-      pageWidthPx: 595.28,
-    });
-    expect(document.body.style.width).toBe("595.28px");
-    handle.cleanup();
-    expect(document.body.style.width).toBe("");
-  });
-
   it("cleanup removes the clone, classes, and inline styles", () => {
     const handle = buildPrintContainer("<p>hi</p>", "printer-friendly", layout);
     handle.cleanup();

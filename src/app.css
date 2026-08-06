@@ -121,13 +121,15 @@ body {
   }
 }
 
-/* The macOS WKWebView capture path is NOT inside @media print, so the
-   shell-hiding rules are mirrored for the live capture via the `exporting`
-   classes. The page background is applied by the exporter (theme background
+/* The macOS NSPrintOperation path renders with @media print like the other
+   platforms; the `exporting` classes drive the on-screen state while the
+   export is prepared and keep working if a platform renders without print
+   media. The page background is applied by the exporter (theme background
    or white) through two channels: inline on html/body (propagates to the
-   page content area everywhere and paints the whole macOS capture) and via
-   an injected `@page { background: … }` rule (Chromium extends it over the
-   full sheet including the @page margin areas = full bleed on Windows).
+   page content area everywhere) and via an injected `@page { background: … }`
+   rule (Chromium extends it over the full sheet including the @page margin
+   areas = full bleed on Windows; WebKit ignores it and paints the margin
+   ring white — engine limitation, same on Linux and macOS).
    print-color-adjust: exact makes Chromium/WebKit honor those backgrounds
    even when the print dialog's "Background graphics" option is off. */
 html.exporting,

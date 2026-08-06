@@ -89,247 +89,94 @@ body {
 }
 
 /* ===== Print / PDF export layout =====
-   The export clones the viewer's HTML into a `.print-content` div and adds a
-   `body` class to drive the styling. Two style modes are supported:
+   The export clones the viewer's HTML into a `.print-content` div that also
+   carries the `.viewer-content` class (and, in theme mode, the
+   `#viewer-content` id), so markdown.css and the active theme CSS apply
+   exactly as they do in the on-screen Viewer — markdown.css is the single
+   source of truth for content styling. This file only provides the export
+   shell: page setup, hiding the app chrome, geometry, and color modes.
 
-   - `body.print-friendly`   — clean black-on-white layout (default).
-   - `body.theme-export`     — keep the currently-selected viewer theme.
+   Geometry contract: the clone is laid out at the viewer's maximum content
+   width (800px column + 2x16px gutters = 832px by default; computed from the
+   live viewer at export time, see exporters/pdf.ts) and then scaled to the
+   paper via CSS `zoom` on the clone. Because layout happens at the identical
+   width with identical fonts, line wrapping in the PDF matches the viewer
+   word-for-word; zoom only rescales the result. `@page` fixes the default
+   paper size to A4 so the zoom factor is deterministic (the print dialog can
+   still override it; wrapping is unaffected, only the fill ratio). */
 
-   Structural rules (sizing, margins, colorless borders) live in the plain
-   `.print-content` block below so they apply in every context: the
-   `@media print` path (Linux/Windows, `window.print()`) and the macOS
-   WKWebView capture path (which is NOT inside `@media print`). The
-   `@media print` and `body.exporting` blocks only hide the app shell. */
+@page {
+  size: A4;
+  margin: 10mm;
+}
 
 @media print {
   html,
   body {
-    background: white;
     height: auto;
   }
 
   .app-layout {
     display: none !important;
   }
-
-  /* Keep block math from being split across pages. */
-  .katex-block,
-  .katex-display {
-    break-inside: avoid;
-  }
 }
 
-/* macOS WKWebView capture path is NOT inside @media print, so mirror the
-   structural rules for the live capture. The export classes are added to both
-   `html` and `body` (see handlePrint) so the root element paints a white page
-   background instead of the dark app `--bg-primary`, which would otherwise
-   render as a frame around the centered `.print-content`. */
+/* The macOS WKWebView capture path is NOT inside @media print, so the
+   shell-hiding rules are mirrored for the live capture via the `exporting`
+   classes. The page background is applied by the exporter (theme background
+   or white) through two channels: inline on html/body (propagates to the
+   page content area everywhere and paints the whole macOS capture) and via
+   an injected `@page { background: … }` rule (Chromium extends it over the
+   full sheet including the @page margin areas = full bleed on Windows).
+   print-color-adjust: exact makes Chromium/WebKit honor those backgrounds
+   even when the print dialog's "Background graphics" option is off. */
 html.exporting,
 body.exporting {
-  background: white;
   height: auto;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 body.exporting .app-layout {
   display: none !important;
 }
 
-/* Structural layout for the exported content. Borders are declared without a
-   color so they default to `currentColor`; this lets `body.print-friendly`
-   override the color and, in theme mode, the theme CSS (`#viewer-content …`)
-   set `border-*-color` while still getting a visible border. */
-.print-content {
-  font-family: var(--font-sans);
-  font-size: 12pt;
-  line-height: 1.6;
-  max-width: 800px;
+/* Export geometry only — all content styling comes from markdown.css via the
+   .viewer-content class. The explicit width and zoom are set inline by the
+   exporter; max-width: none neutralizes markdown.css's 800px cap so the
+   explicit width (which already includes the gutters) wins. */
+body.exporting .print-content {
+  box-sizing: border-box;
+  max-width: none;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 16px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
-.print-content h1 {
-  font-size: 2em;
-  margin-bottom: 0.5em;
-  border-bottom: 1px solid;
-  padding-bottom: 0.3em;
+/* Keep block math from being split across pages (both print and capture). */
+.print-content .katex-block,
+.print-content .katex-display {
+  break-inside: avoid;
 }
 
-.print-content h2 {
-  font-size: 1.5em;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-}
-
-.print-content h3 {
-  font-size: 1.25em;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-}
-
-.print-content p {
-  margin-bottom: 1em;
-}
-
-.print-content code {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-}
-
-.print-content pre {
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-  margin-bottom: 1em;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.print-content pre code {
-  padding: 0;
-}
-
-.print-content ul,
-.print-content ol {
-  margin-bottom: 1em;
-  padding-left: 2em;
-}
-
-.print-content li {
-  margin-bottom: 0.25em;
-}
-
-.print-content blockquote {
-  border-left: 4px solid;
-  padding-left: 1em;
-  margin-left: 0;
-  margin-bottom: 1em;
-}
-
-.print-content img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-}
-
-.print-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1em;
-}
-
-.print-content th,
-.print-content td {
-  border: 1px solid;
-  padding: 8px 12px;
-  text-align: left;
-}
-
-.print-content th {
-  font-weight: 600;
-}
-
-.print-content hr {
-  border: none;
-  border-top: 1px solid;
-  margin: 2em 0;
-}
-
-.print-content strong {
-  font-weight: 600;
-}
-
-.print-content em {
-  font-style: italic;
-}
-
-.print-content .frontmatter-card {
-  border: 1px solid;
-  border-radius: 8px;
-  padding: 16px 24px;
-  margin-bottom: 24px;
-}
-
-.print-content .skill-badge {
-  display: inline-block;
-  font-size: 0.7em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-
-.print-content .skill-name {
-  font-size: 1.25em;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.print-content .skill-description {
-  margin: 0 0 12px 0;
-}
-
-.print-content .frontmatter-title {
-  font-size: 0.75em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 8px;
-}
-
-.print-content .skill-meta {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 16px;
-  margin: 0;
-}
-
-.print-content .skill-meta dt {
-  font-weight: 600;
-}
-
-.print-content .skill-meta dd {
-  margin: 0;
-  word-break: break-word;
+/* The link-URL tooltip is hover-only screen UI; never export it. */
+body.exporting .print-content a[data-href]::after {
+  display: none !important;
 }
 
 /* ===== Printer-friendly color overrides =====
-   White background, black text, neutral gray borders/backgrounds. These are
-   non-media rules so they cascade into `@media print` on Linux/Windows
-   automatically and apply directly during the macOS capture. They override
-   the colorless structural borders above. */
-body.print-friendly {
-  background: white;
-  color: black;
-}
-
+   Neutral black-on-white palette, fully independent of the selected viewer
+   theme: structural colors come from these CSS-variable overrides (consumed
+   by markdown.css), and syntax highlighting comes from GitHub Light token
+   rules injected and scoped to the export container by exporters/pdf.ts. */
 body.print-friendly .print-content {
+  --border: #ccc;
+  --bg-tertiary: #f5f5f5;
+  --accent: #333;
+  --text-secondary: #333;
   color: black;
   background: white;
-}
-
-body.print-friendly .print-content h1 {
-  border-bottom-color: #ccc;
-}
-
-body.print-friendly .print-content code {
-  background: #f5f5f5;
-}
-
-body.print-friendly .print-content pre {
-  background: #f5f5f5;
-}
-
-body.print-friendly .print-content pre code {
-  background: none;
-}
-
-body.print-friendly .print-content blockquote {
-  border-left-color: #ccc;
-  color: #333;
 }
 
 body.print-friendly .print-content a {
@@ -337,22 +184,9 @@ body.print-friendly .print-content a {
   text-decoration: underline;
 }
 
-body.print-friendly .print-content th,
-body.print-friendly .print-content td {
-  border-color: #ccc;
-}
-
-body.print-friendly .print-content th {
-  background: #f5f5f5;
-}
-
-body.print-friendly .print-content hr {
-  border-top-color: #ccc;
-}
-
-body.print-friendly .print-content .frontmatter-card {
-  border-color: #ccc;
-  background: #f5f5f5;
+body.print-friendly .print-content blockquote {
+  border-left-color: #ccc;
+  color: #333;
 }
 
 body.print-friendly .print-content .skill-badge {
@@ -360,25 +194,7 @@ body.print-friendly .print-content .skill-badge {
   background: #333;
 }
 
-body.print-friendly .print-content .skill-description {
-  color: #333;
-}
-
-body.print-friendly .print-content .frontmatter-title {
-  color: #666;
-}
-
+body.print-friendly .print-content .frontmatter-title,
 body.print-friendly .print-content .skill-meta dt {
   color: #666;
-}
-
-/* ===== Theme export mode =====
-   Preserve the selected viewer theme's colors. The print div carries the
-   `#viewer-content` id (the original's id is cleared during export) so the
-   theme CSS injected via `<style id="hljs-theme">` applies. Force backgrounds
-   to render in the browser print dialog (Linux/Windows); macOS WKWebView
-   capture already renders them. */
-body.theme-export .print-content {
-  print-color-adjust: exact;
-  -webkit-print-color-adjust: exact;
 }

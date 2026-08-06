@@ -221,10 +221,45 @@ fences. If you touch this, the monotonicity test in
   inlines `url()` fonts and `localimg://` images to data URIs (via
   `assets.ts`), and wraps the body in `.viewer-content`.
 - `exporters/pdf.ts` shares `buildPrintContainer()` with the in-app Print
-  button; macOS uses `invoke('create_pdf')`, other platforms use
-  `window.print()`.
+  button; macOS uses `invoke('create_pdf')` (WKWebView capture with an
+  A4-sized `WKPDFConfiguration` rect), other platforms use `window.print()`.
 - `src/lib/styles/markdown.css` is the single source of truth for markdown
-  rendering styles, imported by both `Viewer.svelte` and the export pipeline.
+  rendering styles — including the frontmatter/skill card — imported by
+  `Viewer.svelte` and applied to the print clone, which carries the
+  `.viewer-content` class (and the `#viewer-content` id in theme mode).
+
+### Print/PDF Fidelity Contract
+
+The print clone reproduces the Viewer exactly, then scales to paper:
+
+- The clone is laid out at the viewer's maximum content width (default
+  800px column + 2×16px gutters = 832px; `computeViewerLayoutWidth()` reads
+  the live viewer's computed `max-width` and container padding so custom
+  themes that change them still match). CSS `zoom` on the clone then maps
+  that width onto the paper. Because layout (fonts, widths, line breaking)
+  happens identically to the viewer and zoom only rescales, **line wrapping
+  in the PDF matches the viewer word-for-word**. Never scale via
+  `transform: scale()` (doesn't affect layout/pagination) and never
+  re-declare content styles for print (that's why app.css holds only shell,
+  geometry, and color-mode rules).
+- Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
+  in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
+  uses the system paper size — wrapping is unaffected, only the fill ratio).
+  macOS passes an A4 rect (595.28×841.89pt) to `create_pdf` and constrains
+  the body width to match.
+- Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
+  inline `background` on `html`/`body` (page content area everywhere; whole
+  capture on macOS) and an injected `@page { background: … }` rule (Chromium
+  extends it over the margins too; WebKitGTK can't paint the physical margin
+  ring — engine limitation). `print-color-adjust: exact` on
+  `html.exporting`/`body.exporting`/`.print-content` makes backgrounds print
+  without the dialog's "Background graphics" option.
+- Printer-friendly mode is fully theme-independent: a small CSS-variable
+  override palette in app.css plus GitHub Light `.hljs` token rules re-scoped
+  to `body.print-friendly .print-content` at export time
+  (`scopeSyntaxCssForPrint()`), which outranks the active theme's global
+  hljs rules. Custom themes are assumed to scope rules to `#viewer-content`
+  (like the built-ins); bare global selectors would leak into the app shell.
 
 ## Common Mistakes to Avoid
 

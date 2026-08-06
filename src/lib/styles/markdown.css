@@ -189,6 +189,68 @@
   margin-left: 0.25em;
 }
 
+/* ===== Frontmatter card =====
+   Lives here (not in Viewer.svelte) so the export pipeline's print clone —
+   which carries the .viewer-content class but not Viewer.svelte's scoped
+   styles — renders the card identically to the on-screen Viewer. */
+.viewer-content .frontmatter-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  padding: 16px 24px;
+  margin-bottom: 24px;
+}
+
+.viewer-content .skill-badge {
+  display: inline-block;
+  font-size: 0.7em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--bg-primary);
+  background: var(--accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.viewer-content .skill-name {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.viewer-content .skill-description {
+  margin: 0 0 12px 0;
+  color: var(--text-secondary);
+}
+
+.viewer-content .frontmatter-title {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.viewer-content .skill-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.viewer-content .skill-meta dt {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.viewer-content .skill-meta dd {
+  margin: 0;
+  word-break: break-word;
+}
+
 /* ===== Math (KaTeX) =====
    .katex-block is the @vscode/markdown-it-katex wrapper <p> for block math
    (including `\[ ... \]`, `$$ ... $$`, bare `\begin{...}`, and ```math

@@ -364,65 +364,8 @@
     color: var(--text-primary);
   }
 
-  /* .viewer-content and the markdown element styles live in
-     src/lib/styles/markdown.css, shared with the export pipeline so exported
-     HTML/PDF doesn't drift from the in-app look. */
-
-  .frontmatter-card {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg-tertiary);
-    padding: 16px 24px;
-    margin-bottom: 24px;
-  }
-
-  .skill-badge {
-    display: inline-block;
-    font-size: 0.7em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--bg-primary);
-    background: var(--accent);
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-  }
-
-  .skill-name {
-    font-size: 1.25em;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .skill-description {
-    margin: 0 0 12px 0;
-    color: var(--text-secondary);
-  }
-
-  .frontmatter-title {
-    font-size: 0.75em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-  }
-
-  .skill-meta {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 4px 16px;
-    margin: 0;
-  }
-
-  .skill-meta dt {
-    font-weight: 600;
-    color: var(--text-secondary);
-  }
-
-  .skill-meta dd {
-    margin: 0;
-    word-break: break-word;
-  }
+  /* .viewer-content and the markdown element styles — including the
+     frontmatter-card/skill-* rules — live in src/lib/styles/markdown.css,
+     shared with the export pipeline so exported HTML/PDF doesn't drift from
+     the in-app look. */
 </style>

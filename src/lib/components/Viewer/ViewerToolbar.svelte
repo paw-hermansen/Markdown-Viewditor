@@ -29,7 +29,7 @@
     {
       value: 'theme',
       label: 'Current theme',
-      description: 'Use the selected viewer theme (enable "Background graphics" in the print dialog for colored backgrounds)',
+      description: 'Use the selected viewer theme, including colors and background',
     },
   ];
 

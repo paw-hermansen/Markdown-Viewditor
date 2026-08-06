@@ -20,19 +20,6 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
-### Math delimiter compatibility
-
-| Engine           | Typical math output                | Covered by                               |
-| ---------------- | ---------------------------------- | ---------------------------------------- |
-| ChatGPT          | `\( … \)`, `\[ … \]`               | bracket rules                            |
-| Copilot / GitHub | `$…$`, `$$…$$`                     | @vscode/markdown-it-katex (pandoc rules) |
-| Gemini           | `$…$`, `$$…$$`                     | @vscode/markdown-it-katex                |
-| Claude           | `$$…$$`, `\( … \)`, `\[ … \]`      | both                                     |
-| Any              | bare `\begin{align}…`, ` ```math ` | plugin options                           |
-
-Pandoc delimiter rules (opening `$` not followed by space; closing `$` not
-followed by digit) prevent false positives with prices like `$5 and $10`.
-
 ## AI-Assisted Development
 
 This application was built with the help of [OpenCode](https://opencode.ai), an AI-powered coding assistant. Development used multiple AI models.
@@ -89,6 +76,20 @@ strict-CommonMark users re-enable it under Custom.
 The `<https://…>` autolink form is CommonMark basic and never triggers the
 "autolinks" toggle — that toggle is for bare-URL autolinks (e.g. `https://…`
 written without angle brackets, expanded by the linkify rule).
+
+## Mathematics Formulas
+
+Markdown Viewer has [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
+
+| Delimiter (inline) | Delimiter (block) | As used by |
+| --- | --- | --- |
+| `\( … \)` | `\[`<br>&thinsp; `…` <br>`\]` | ChatGPT, Claude |
+| `$ … $` | `$$`<br>&thinsp; `…` <br>`$$` | Copilot / Github, Gemini, Claude |
+| | `\begin{align}`<br>&thinsp; `…` <br>`\end{align}` | Many |
+| | ` ```math`<br>&thinsp; `…` <br>` ``` ` | Many |
+
+Pandoc delimiter rules (opening `$` not followed by space; closing `$` not
+followed by digit) prevent false positives with prices like `$5 and $10`.
 
 ## Custom Themes
 

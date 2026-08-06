@@ -81,12 +81,12 @@ written without angle brackets, expanded by the linkify rule).
 
 Markdown Viewer has [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
 
-| Delimiter (inline) | Delimiter (block) | As used by |
-| --- | --- | --- |
-| `\( … \)` | `\[`<br>&thinsp; `…` <br>`\]` | ChatGPT, Claude |
-| `$ … $` | `$$`<br>&thinsp; `…` <br>`$$` | Copilot / Github, Gemini, Claude |
-| | `\begin{align}`<br>&thinsp; `…` <br>`\end{align}` | Many |
-| | ` ```math`<br>&thinsp; `…` <br>` ``` ` | Many |
+| Delimiter (inline) | Delimiter (block)                                 | As used by                       |
+| ------------------ | ------------------------------------------------- | -------------------------------- |
+| `\( … \)`          | `\[`<br>&thinsp; `…` <br>`\]`                     | ChatGPT, Claude                  |
+| `$ … $`            | `$$`<br>&thinsp; `…` <br>`$$`                     | Copilot / Github, Gemini, Claude |
+|                    | `\begin{align}`<br>&thinsp; `…` <br>`\end{align}` | Many                             |
+|                    | ` ```math`<br>&thinsp; `…` <br>` ``` `            | Many                             |
 
 Pandoc delimiter rules (opening `$` not followed by space; closing `$` not
 followed by digit) prevent false positives with prices like `$5 and $10`.

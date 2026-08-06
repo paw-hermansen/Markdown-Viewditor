@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ViewMode } from '$lib/types';
   import { modLabel } from '$lib/utils/keyboard';
+  import { listExporters } from '$lib/export/registry.svelte';
 
   interface Command {
     id: string;
@@ -21,17 +22,30 @@
     onQuit: () => void;
     onViewModeChange: (mode: ViewMode) => void;
     onAbout: () => void;
-    onCopyHtml?: () => void;
     onPrint?: () => void;
+    onExport?: (id: string) => void;
     printLabel?: string;
   }
 
-  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, onViewModeChange, onAbout, onCopyHtml, onPrint, printLabel = 'Print Preview' }: Props = $props();
+  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, onViewModeChange, onAbout, onPrint, onExport, printLabel = 'Print Preview' }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
   let searchInput = $state<HTMLInputElement | undefined>();
   let commandsList = $state<HTMLDivElement | undefined>();
+
+  // Export commands are registry-fed: any exporter registered via
+  // `registerExporter` appears here automatically (File category).
+  const exportCommands = $derived(
+    onExport
+      ? listExporters().map((e) => ({
+          id: `export-${e.id}`,
+          label: e.label,
+          category: 'File',
+          action: () => onExport(e.id),
+        }))
+      : [],
+  );
 
   const commands: Command[] = $derived([
     { id: 'new', label: 'New File', shortcut: modLabel('Ctrl+N'), category: 'File', action: onNew },
@@ -40,10 +54,10 @@
     { id: 'save-as', label: 'Save As', shortcut: modLabel('Ctrl+Shift+S'), category: 'File', action: onSaveAs },
     { id: 'reload', label: 'Reload from Disk', shortcut: modLabel('Ctrl+R'), category: 'File', action: onReload },
     { id: 'quit', label: 'Quit', shortcut: modLabel('Ctrl+Q'), category: 'File', action: onQuit },
+    ...exportCommands,
     { id: 'view-split', label: 'Split View', category: 'View', action: () => onViewModeChange('split') },
     { id: 'view-editor', label: 'Editor Only', category: 'View', action: () => onViewModeChange('editor') },
     { id: 'view-viewer', label: 'Viewer Only', category: 'View', action: () => onViewModeChange('viewer') },
-    ...(onCopyHtml ? [{ id: 'copy-html', label: 'Copy HTML', category: 'Edit', action: onCopyHtml }] : []),
     ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: modLabel('Ctrl+P'), category: 'File', action: onPrint }] : []),
     { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
   ]);

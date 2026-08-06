@@ -116,6 +116,8 @@
     { name: 'serde', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://serde.rs' },
     { name: 'serde_json', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://github.com/serde-rs/json' },
     { name: 'thiserror', license: 'MIT / Apache-2.0', copyright: 'David Tolnay', url: 'https://github.com/dtolnay/thiserror' },
+    { name: 'KaTeX', license: 'MIT', copyright: 'Khan Academy', url: 'https://katex.org' },
+    { name: '@vscode/markdown-it-katex', license: 'MIT', copyright: 'Microsoft Corp.', url: 'https://github.com/microsoft/vscode-markdown-it-katex' },
   ];
 </script>
 

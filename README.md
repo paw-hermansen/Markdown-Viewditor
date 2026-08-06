@@ -12,6 +12,8 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
+- **Math Formulas** — Advanced mathematical formulas using [KaTeX](https://katex.org)
+- **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF/Print
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
 - **HTML** — Use HTML along with the markdown
@@ -74,6 +76,22 @@ strict-CommonMark users re-enable it under Custom.
 The `<https://…>` autolink form is CommonMark basic and never triggers the
 "autolinks" toggle — that toggle is for bare-URL autolinks (e.g. `https://…`
 written without angle brackets, expanded by the linkify rule).
+
+## Mathematics Formulas
+
+See [Math-Example.md](examples/Math-Example.md) for examples.
+
+Markdown Viewer includes [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
+
+| Delimiter (inline) | Delimiter (block)                                 | As used by                       |
+| ------------------ | ------------------------------------------------- | -------------------------------- |
+| `\( … \)`          | `\[`<br>&thinsp; `…` <br>`\]`                     | ChatGPT, Claude                  |
+| `$ … $`            | `$$`<br>&thinsp; `…` <br>`$$`                     | Copilot / Github, Gemini, Claude |
+|                    | `\begin{align}`<br>&thinsp; `…` <br>`\end{align}` | Many                             |
+|                    | ` ```math`<br>&thinsp; `…` <br>` ``` `            | Many                             |
+
+Pandoc delimiter rules (opening `$` not followed by space; closing `$` not
+followed by digit) prevent false positives with prices like `$5 and $10`.
 
 ## Custom Themes
 

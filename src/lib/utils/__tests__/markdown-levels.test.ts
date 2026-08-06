@@ -22,7 +22,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 7 toggles from this plan", () => {
+  it("registers the 9 toggles from plans 1 and 2", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -32,6 +32,8 @@ describe("markdown-levels registry & presets", () => {
       "footnotes",
       "raw-html",
       "frontmatter",
+      "math-dollar",
+      "math-latex",
     ]);
   });
 
@@ -39,7 +41,7 @@ describe("markdown-levels registry & presets", () => {
     expect(presetFor("basic")).toEqual([]);
   });
 
-  it("github preset enables toggles #1-6 (not frontmatter)", () => {
+  it("github preset enables toggles #1-6 and math-dollar (not frontmatter, not math-latex)", () => {
     expect(presetFor("github").sort()).toEqual(
       [
         "tables",
@@ -48,11 +50,12 @@ describe("markdown-levels registry & presets", () => {
         "autolinks",
         "footnotes",
         "raw-html",
+        "math-dollar",
       ].sort(),
     );
   });
 
-  it("advanced preset enables all 7 toggles", () => {
+  it("advanced preset enables all 9 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -62,6 +65,8 @@ describe("markdown-levels registry & presets", () => {
         "footnotes",
         "raw-html",
         "frontmatter",
+        "math-dollar",
+        "math-latex",
       ].sort(),
     );
   });

@@ -7,9 +7,19 @@ import anchor from "markdown-it-anchor";
 import { load as yamlLoad } from "js-yaml";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { resolveLink } from "$lib/utils/path";
+import vscodeKatex from "@vscode/markdown-it-katex";
 
 import type { Frontmatter, RenderResult } from "$lib/types";
 import { analyzeTokens, type UsedFeature } from "$lib/utils/markdown-levels";
+import { memoizedKatex } from "$lib/utils/katex-cache";
+import mathBracketsPlugin, {
+  makeDollarRulesBacktickSafe,
+} from "$lib/utils/math-brackets";
+
+// Side-effect: load the woff2-only KaTeX stylesheet so the rendered math
+// picks up fonts and layout. Bundled by Vite; CSP `font-src` falls back to
+// `default-src 'self'`, which the emitted same-origin font assets satisfy.
+import "$lib/styles/katex/katex.woff2.css";
 
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
@@ -522,6 +532,64 @@ function githubSlugify(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Inject `data-line="${line}"` into the first opening tag of `html` so
+ * scroll-sync can anchor the rendered element to its source line. Used for
+ * math output (`<p class="katex-block">…`) which the line-numbers plugin
+ * can't tag (its fence wrapper only injects into `<pre`, and `math_block`
+ * has no `renderToken`-based rule to attrSet on). Deterministic regardless of
+ * plugin registration order: called after every `.use()`, so the katex
+ * renderers are already in place.
+ *
+ * If the html already carries a `data-line` (e.g. the line-numbers fence
+ * wrapper already tagged `<pre data-line="…">` for a non-math fence), the
+ * injection is a no-op so we don't double-tag.
+ */
+function injectDataLine(html: string, line: number): string {
+  if (html.includes('data-line="')) return html;
+  const m = html.match(/<([a-zA-Z][\w-]*)/);
+  if (!m || m.index === undefined) {
+    return `<div data-line="${line}">${html}</div>`;
+  }
+  const insertPos = m.index + m[0].length;
+  return (
+    html.slice(0, insertPos) + ` data-line="${line}"` + html.slice(insertPos)
+  );
+}
+
+/**
+ * Wrap `math_block` and `fence` renderers to inject `data-line` on math
+ * output. Must run AFTER every plugin `.use()` so the katex fence wrapper
+ * (installed when `enableFencedBlocks: true`) and the @vscode `math_block`
+ * renderer are already in place. See PLAN-MATH-SUPPORT.md sync §2 for the
+ * plugin-order traps this sidesteps.
+ */
+function wrapMathAnchorRenderers(md: MarkdownIt): void {
+  const mathBlockRule = md.renderer.rules.math_block;
+  if (mathBlockRule) {
+    md.renderer.rules.math_block = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      const html = mathBlockRule(tokens, idx, options, env, self);
+      if (token.map) {
+        return injectDataLine(html, token.map[0] + 1);
+      }
+      return html;
+    };
+  }
+
+  const fenceRule = md.renderer.rules.fence;
+  if (fenceRule) {
+    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      const html = fenceRule(tokens, idx, options, env, self);
+      if (token.map) {
+        return injectDataLine(html, token.map[0] + 1);
+      }
+      return html;
+    };
+  }
+}
+
 async function initMarkdownIt(): Promise<MarkdownIt> {
   if (!md) {
     md = new MarkdownIt({
@@ -542,7 +610,28 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       .use(createLocalImagePlugin())
       .use(createLinkTooltipPlugin())
       .use(taskLists)
-      .use(highlightjs, { hljs, auto: true, ignoreIllegals: true });
+      .use(highlightjs, { hljs, auto: true, ignoreIllegals: true })
+      .use(vscodeKatex, {
+        // Memoized katex keeps whole-document re-renders ~free for unchanged
+        // formulas (sync §4). throwOnError:false renders compact .katex-error
+        // spans instead of throwing mid-render (sync §5).
+        katex: memoizedKatex,
+        throwOnError: false,
+        errorColor: "#cc0000",
+        enableBareBlocks: true,
+        enableFencedBlocks: true,
+        // enableMathBlockInHtml / enableMathInlineInHtml stay DISABLED — those
+        // splice math tokens into html_block content with map:null, which
+        // strips data-line anchors and degrades scroll-sync (sync §3).
+      })
+      .use(mathBracketsPlugin);
+    // Replace the @vscode dollar inline rules with backtick-aware versions so
+    // a `$` inside `` `$` `` is never claimed as a math closer (which would
+    // swallow the text in between as a math_inline token and render it as
+    // italic KaTeX variables). Must run after the @vscode plugin registers
+    // the rules.
+    makeDollarRulesBacktickSafe(md);
+    wrapMathAnchorRenderers(md);
   }
   return md;
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ViewMode, PrintStyle } from '$lib/types';
+  import type { ViewMode } from '$lib/types';
   import AppLayout from '$lib/components/Layout/AppLayout.svelte';
   import Editor from '$lib/components/Editor/Editor.svelte';
   import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
@@ -18,9 +18,11 @@
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
-  import { save } from '@tauri-apps/plugin-dialog';
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { onMount, onDestroy } from 'svelte';
+  import { renderMarkdown } from '$lib/utils/markdown';
+  import { runExporter, registerBuiltinExporters } from '$lib/export/registry.svelte';
+  import { exportPdf } from '$lib/export/exporters/pdf';
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
 
@@ -246,78 +248,67 @@
     updateViewMode(mode);
   }
 
-  function handleCopyHtml() {
+  /**
+   * Print / Create PDF. Refactored to share the print-container builder with
+   * the PDF exporter (see src/lib/export/exporters/pdf.ts). Preserves the
+   * macOS `invoke('create_pdf')` branch and the `print-friendly` /
+   * `theme-export` body classes that app.css keys off of.
+   */
+  async function handlePrint() {
     const viewerContent = viewerComponent?.getViewerContentElement();
-    if (viewerContent) {
-      navigator.clipboard.writeText(viewerContent.innerHTML);
+    if (!viewerContent) return;
+    try {
+      const result = await exportPdf(
+        viewerContent.innerHTML,
+        fileName,
+        viewerContent,
+      );
+      if (result.savedPath) {
+        toast.info('PDF saved', result.savedPath);
+      }
+      for (const w of result.warnings) toast.error('Export warning', w);
+    } catch (e) {
+      console.error('Print/PDF failed:', e);
+      toast.error(isMacOS ? 'Create PDF failed' : 'Print failed', String(e));
     }
   }
 
-  async function handlePrint(style: PrintStyle = settingsState.printStyle) {
+  /**
+   * Registry-fed export entry point. Used by the ViewerToolbar "Export ▾"
+   * dropdown and the CommandPalette export commands. 'pdf' routes through
+   * the same path as handlePrint; 'html' builds a self-contained standalone
+   * document.
+   */
+  async function handleExport(id: string) {
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
 
-    const themeMode = style === 'theme';
-
-    let savePath: string | null = null;
-    if (isMacOS) {
-      savePath = await getSavePath();
-      if (!savePath) return;
+    if (id === 'pdf') {
+      await handlePrint();
+      return;
     }
 
-    const printDiv = document.createElement('div');
-    printDiv.classList.add('print-content');
-    printDiv.innerHTML = viewerContent.innerHTML;
-    document.body.appendChild(printDiv);
-
-    if (themeMode) {
-      printDiv.id = 'viewer-content';
-      viewerContent.id = '';
-    }
-
-    const exportClass = themeMode ? 'theme-export' : 'print-friendly';
-    document.documentElement.classList.add('exporting', exportClass);
-    document.body.classList.add('exporting', exportClass);
-
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
+    try {
+      // Render a fresh copy for export so it's not affected by the Viewer's
+      // cache-busting image query params (which would break data-URI inlining).
+      const { html, frontmatter } = await renderMarkdown(
+        editorState.content,
+        fileState.currentFile,
+      );
+      const result = await runExporter(id, {
+        markdown: editorState.content,
+        html,
+        frontmatter,
+        fileName,
       });
-    });
-
-    if (isMacOS && savePath) {
-      try {
-        await invoke('create_pdf', { savePath });
-        toast.info('PDF saved', savePath);
-      } catch (e) {
-        console.error('Create PDF failed:', e);
-        toast.error('Create PDF failed:', String(e));
+      if (result.savedPath) {
+        toast.info('Exported', result.savedPath);
       }
-    } else if (!isMacOS) {
-      window.print();
+      for (const w of result.warnings) toast.error('Export warning', w);
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error('Export failed', String(e));
     }
-
-    cleanupExport(printDiv, viewerContent, themeMode);
-  }
-
-  async function getSavePath(): Promise<string | null> {
-    const defaultName = fileState.currentFile
-      ? getFileName(fileState.currentFile).replace(/\.[^.]+$/, '') + '.pdf'
-      : 'Untitled.pdf';
-    const defaultDir = fileState.currentFile
-      ? fileState.currentFile.replace(/[^/\\]+$/, '')
-      : undefined;
-    return await save({
-      defaultPath: defaultDir ? defaultDir + defaultName : defaultName,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }],
-    });
-  }
-
-  function cleanupExport(printDiv: HTMLDivElement, viewerContent: HTMLElement, themeMode: boolean) {
-    document.documentElement.classList.remove('exporting', 'print-friendly', 'theme-export');
-    document.body.classList.remove('exporting', 'print-friendly', 'theme-export');
-    printDiv.remove();
-    if (themeMode) viewerContent.id = 'viewer-content';
   }
 
   function handleAbout() {
@@ -416,6 +407,10 @@
   });
 
   onMount(async () => {
+    // Register the built-in exporters (HTML, PDF) so the toolbar dropdown
+    // and command palette can list them. Idempotent.
+    void registerBuiltinExporters();
+
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async (event) => {
       event.preventDefault();
       await handleExit();
@@ -527,8 +522,8 @@
   {#if viewMode === 'split' || viewMode === 'viewer'}
     <div class="viewer-pane">
       <ViewerToolbar
-        onCopyHtml={handleCopyHtml}
         onPrint={handlePrint}
+        onExport={handleExport}
       />
       <Viewer
         bind:this={viewerComponent}
@@ -552,8 +547,8 @@
   onQuit={handleExit}
   onViewModeChange={handleViewModeChange}
   onAbout={handleAbout}
-  onCopyHtml={handleCopyHtml}
   onPrint={handlePrint}
+  onExport={handleExport}
   printLabel={isMacOS ? 'Create PDF' : 'Print Preview'}
 />
 

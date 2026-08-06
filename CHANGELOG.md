@@ -6,7 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-- feat: markdown syntax levels (Basic / GitHub / Advanced / Custom) with editor lint warnings and a status-bar violation badge. Rendering stays full-featured; the level is a portability indicator. See PLAN-SYNTAX-LEVELS.md.
+- feat: math formula rendering via KaTeX — supports `$…$` / `$$…$$` (Copilot/Gemini/GitHub), `\(…\)` / `\[…\]` (ChatGPT/Claude), bare `\begin{…}` blocks, and ```` ```math ```` fences. See [examples/Math-Example.md](examples/Math-Example.md). Adds `math-dollar` and `math-latex` syntax-level toggles.
+- feat: export to self-contained HTML (inlined CSS, fonts, and images) and PDF (macOS WKWebView / other platforms via Print). Extensible exporter registry — new formats plug in with one file.
+- refactor: extract markdown rendering styles to `src/lib/styles/markdown.css` (shared between the Viewer and the export pipeline to prevent drift).
+- refactor: remove the "Copy HTML" toolbar action — superseded by Export as HTML (the copied HTML had no inlined CSS/fonts/images and broke math/images).
+- refactor: use system fonts for all platforms (system-ui, sans-serif; monospace). Reverts bundled Inter/JetBrains Mono — WebKitGTK print path on Linux had kerning issues with the bundled woff2 files. Adds font-kerning: normal and font-feature-settings: 'kern' 1 for optimal kerning on all platforms.
+
 
 ## [1.0.5] - 2026-08-04
 

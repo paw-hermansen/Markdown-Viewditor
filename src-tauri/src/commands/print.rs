@@ -16,9 +16,13 @@ mod platform {
     ///
     /// `WKWebView.createPDFWithConfiguration:completionHandler:` captures the
     /// live composited layer tree (what is actually rendered on screen), not a
-    /// separate print layout pass. This is fundamentally different from
-    /// `printOperationWithPrintInfo:` which produces blank pages with
-    /// dynamically-injected DOM content.
+    /// separate print layout pass. With a `nil` configuration the capture uses
+    /// the web page bounds and paginates the full document into vector pages
+    /// (small, like the Linux/Windows print output); setting an explicit rect
+    /// captures only that region as a single page, so we leave it nil. The
+    /// completion handler makes the call asynchronous, so it never blocks the
+    /// main run loop. The frontend lays out the print container (zoomed to the
+    /// viewer's width) before invoking, so wrapping matches the Viewer.
     pub fn generate_pdf_bytes(app: &tauri::AppHandle) -> Result<Vec<u8>, AppError> {
         let webview_window = app
             .get_webview_window("main")

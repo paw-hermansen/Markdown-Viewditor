@@ -12,8 +12,8 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
-- **Math Formulas** — KaTeX rendering across all AI-engine delimiters (`$…$`, `\(…\)`, `$$…$$`, `\[…\]`, bare `\begin{…}`, ` ```math `). See [Math-Example.md](examples/Math-Example.md).
-- **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF (macOS WKWebView / Print on other platforms)
+- **Math Formulas** — Advanced mathematical formulas using [KaTeX](https://katex.org)
+- **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF/Print
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
 - **HTML** — Use HTML along with the markdown
@@ -79,7 +79,9 @@ written without angle brackets, expanded by the linkify rule).
 
 ## Mathematics Formulas
 
-Markdown Viewer has [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
+See [Math-Example.md](examples/Math-Example.md) for examples.
+
+Markdown Viewer includes [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
 
 | Delimiter (inline) | Delimiter (block)                                 | As used by                       |
 | ------------------ | ------------------------------------------------- | -------------------------------- |

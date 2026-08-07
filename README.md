@@ -21,11 +21,38 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
-## AI-Assisted Development
+## AI-Assisted Development by Experienced Senior Software Developer
 
-This application was built with the help of [OpenCode](https://opencode.ai), an AI-powered coding assistant. Development used multiple AI models.
+This application was built with the help of [OpenCode](https://opencode.ai),
+an AI-powered coding assistant. Development used different AI models, some free
+and some paid. Also most of the documentation was written by AI.
 
-Also most of the documentation was written by AI.
+I'm a Senior Software Developer and I wrote my first software back in the
+70's. Yes, around the time when Disco music was In and years before
+the Internet. I've been building software for a living my entire career until
+I retired in 2025.
+
+I'm still coding for fun and I couldn't find a Markdown editor and viewer
+that I liked, so I used the summer 2026 to write the Markdown desktop app
+that is perfect for me and at the same time to test if AI coding assistants
+are any good.
+
+It turned out that my AI assistant is an extremely fast coder and helped me
+to finish the first version of the Markdown Viewditor in
+super-speed. My assistant is surprisingly knowledgeable and understands
+what I mean (most of the time). Sometimes my assistant lacks intelligence
+and experience and therefore it requires constant supervision
+and guidance from an experienced software developer - which is also true
+for many human programmers.
+
+As the most experienced of me and my assistant, I laid and
+continuously corrected the direction and I made the final decisions after
+many good, fact-based, and sometimes heated, discussions.
+
+This software did not end up as Slopware. It is working software that I use myself
+and that I tested by hand on three different operating systems. Does it have
+errors? Yes, that is highly probable - if you find an error then please report
+it as an issue.
 
 ## Download
 

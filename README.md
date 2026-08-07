@@ -13,6 +13,7 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
 - **Math Formulas** — Advanced mathematical formulas using [KaTeX](https://katex.org)
+- **Chemical Formulas** — Chemical equations and physical units using [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF/Print
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
@@ -92,6 +93,22 @@ Markdown Viewer includes [KaTeX](https://katex.org) / [KaTeX Docs](https://katex
 
 Pandoc delimiter rules (opening `$` not followed by space; closing `$` not
 followed by digit) prevent false positives with prices like `$5 and $10`.
+
+## Chemical Formulas
+
+See [Chemistry-Example.md](examples/ChemLab-Example.md) and [ChemLab-Example.md](examples/Chemistry-Example.md) for examples.
+
+Markdown Viewditor includes [mhchem](https://mhchem.github.io/MathJax-mhchem/) for writing chemical equations and physical units. Use the `\ce{…}` command inside any math delimiter:
+
+```
+$\ce{H2O}$           — water
+$\ce{CO2 + C -> 2CO}$ — a reaction equation
+$\ce{^{227}_{90}Th}$ — isotopes
+$\pu{123 kJ/mol}$    — physical units
+```
+
+The `\ce{…}` and `\pu{…}` commands work inside all supported math delimiters
+(`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, bare `\begin{}`, and ` ```math ` fences).
 
 ## Custom Themes
 

@@ -216,3 +216,90 @@ describe("math levels detection", () => {
     expect(used.find((u) => u.id === "math-latex")).toBeUndefined();
   });
 });
+
+describe("mhchem chemical formulas — rendering", () => {
+  it("renders \\ce{H2O} inside $...$", async () => {
+    const r = await renderMarkdown("Water: $\\ce{H2O}$.");
+    expect(r.html).toContain("katex");
+    // KaTeX renders \ce{H2O} into upright roman H₂O via mathrm
+    expect(r.html).toContain("mathrm");
+  });
+
+  it("renders \\ce in $$...$$ block", async () => {
+    const r = await renderMarkdown("$$\n\\ce{2H2 + O2 -> 2H2O}\n$$");
+    expect(r.html).toContain("katex-block");
+    expect(r.html).toContain("katex-display");
+  });
+
+  it("renders \\ce inside \\(...\\) delimiters", async () => {
+    const r = await renderMarkdown("\\(\\ce{CO2}\\)");
+    expect(r.html).toContain("katex");
+    expect(r.html).toContain("mathrm");
+  });
+
+  it("renders \\ce inside \\[...\\] block", async () => {
+    const r = await renderMarkdown("\\[\n\\ce{H2SO4}\n\\]");
+    expect(r.html).toContain("katex-block");
+  });
+
+  it("renders \\ce in ```math fenced block", async () => {
+    const r = await renderMarkdown("```math\n\\ce{CO2 + C -> 2CO}\n```");
+    expect(r.html).toContain("katex-block");
+  });
+
+  it("renders \\pu for physical units", async () => {
+    const r = await renderMarkdown("$\\pu{123 kJ/mol}$");
+    expect(r.html).toContain("katex");
+    // \pu renders units in upright roman via mathrm
+    expect(r.html).toContain("mathrm");
+  });
+
+  it("renders \\ce with isotopes", async () => {
+    const r = await renderMarkdown("$\\ce{^{227}_{90}Th+}$");
+    expect(r.html).toContain("katex");
+  });
+
+  it("renders \\ce with reaction arrows", async () => {
+    const r = await renderMarkdown("$\\ce{A -> B}$");
+    expect(r.html).toContain("katex");
+  });
+
+  it("renders invalid \\ce without throwing", async () => {
+    const r = await renderMarkdown("$\\ce{}$");
+    expect(r.html).toContain("katex");
+    expect(r.html).not.toContain("Error rendering markdown");
+  });
+});
+
+describe("mhchem chemical formulas — level detection", () => {
+  it("flags \\ce{...} as chemical-formulas", async () => {
+    const used = await analyzeContent("Water is $\\ce{H2O}$.");
+    const t = used.find((u) => u.id === "chemical-formulas");
+    expect(t).toBeDefined();
+    expect(t!.lines.length).toBeGreaterThan(0);
+  });
+
+  it("flags \\pu{...} as chemical-formulas", async () => {
+    const used = await analyzeContent("Energy: $\\pu{123 kJ/mol}$.");
+    const t = used.find((u) => u.id === "chemical-formulas");
+    expect(t).toBeDefined();
+    expect(t!.lines.length).toBeGreaterThan(0);
+  });
+
+  it("flags \\ce in $$...$$ blocks", async () => {
+    const used = await analyzeContent("$$\n\\ce{2H2 + O2 -> 2H2O}\n$$");
+    const t = used.find((u) => u.id === "chemical-formulas");
+    expect(t).toBeDefined();
+    expect(t!.lines.length).toBeGreaterThan(0);
+  });
+
+  it("does NOT flag plain math as chemical-formulas", async () => {
+    const used = await analyzeContent("$a^2 + b^2 = c^2$");
+    expect(used.find((u) => u.id === "chemical-formulas")).toBeUndefined();
+  });
+
+  it("does NOT flag plain text as chemical-formulas", async () => {
+    const used = await analyzeContent("H2O is water.");
+    expect(used.find((u) => u.id === "chemical-formulas")).toBeUndefined();
+  });
+});

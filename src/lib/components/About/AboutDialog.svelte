@@ -118,6 +118,7 @@
     { name: 'thiserror', license: 'MIT / Apache-2.0', copyright: 'David Tolnay', url: 'https://github.com/dtolnay/thiserror' },
     { name: 'KaTeX', license: 'MIT', copyright: 'Khan Academy', url: 'https://katex.org' },
     { name: '@vscode/markdown-it-katex', license: 'MIT', copyright: 'Microsoft Corp.', url: 'https://github.com/microsoft/vscode-markdown-it-katex' },
+    { name: 'mhchem (KaTeX contrib)', license: 'Apache-2.0', copyright: 'Martin Hensel, MathJax Consortium', url: 'https://github.com/mhchem/MathJax-mhchem' },
   ];
 </script>
 

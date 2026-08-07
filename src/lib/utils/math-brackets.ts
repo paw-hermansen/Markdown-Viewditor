@@ -494,4 +494,36 @@ registerFeatureDetectors(
       return lines;
     },
   },
+  {
+    id: "chemical-formulas",
+    label: "Chemical formulas `\\ce{…}`",
+    presets: { advanced: true },
+    detect(tokens) {
+      const lines: number[] = [];
+      const isChem = (content: string) =>
+        content.includes("\\ce{") ||
+        content.includes("\\pu{") ||
+        content.includes("\\tripledash");
+      for (const t of tokens) {
+        if (
+          (t.type === "math_inline" || t.type === "math_block") &&
+          t.map &&
+          isChem(t.content)
+        ) {
+          lines.push(t.map[0] + 1);
+        }
+      }
+      for (const t of tokens) {
+        if (t.type === "inline" && t.map && t.children) {
+          const line = t.map[0] + 1;
+          for (const c of t.children) {
+            if (c.type === "math_inline" && isChem(c.content)) {
+              lines.push(line);
+            }
+          }
+        }
+      }
+      return lines;
+    },
+  },
 );

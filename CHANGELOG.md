@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-08-07
+
+- Show export warnings in a summary dialog instead of individual toasts (#29) (9dd7a59)
+- Math/chem docs update (#28) (e304ca5)
+- Chemistry formulas (#27) (6959c87)
+- add hover tooltips to links in About Dialog (#26) (1e81e17)
+- Math Formulas and printing math formulas (#25) (02b8b1e)
+- feat: show link destination tooltip on hover in Viewer (#24) (10cd8b7)
+- markdown syntax levels with editor lint warnings (#23) (c47db49)
+- Add theme-aware Print/PDF export via DropdownButton (#22) (e633f16)
+- Auto resolve Cargo.lock changes (#21) (d0c8d6b)
+- Build universal macOS binary for Intel + Apple Silicon compatibility (#20) (39daa6d)
+
 ## [Unreleased]
 
 - feat: math formula rendering via KaTeX — supports `$…$` / `$$…$$` (Copilot/Gemini/GitHub), `\(…\)` / `\[…\]` (ChatGPT/Claude), bare `\begin{…}` blocks, and ```` ```math ```` fences. See [examples/Math-Example.md](examples/Math-Example.md). Adds `math-dollar` and `math-latex` syntax-level toggles.

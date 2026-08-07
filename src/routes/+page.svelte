@@ -8,11 +8,13 @@
   import AboutDialog from '$lib/components/About/AboutDialog.svelte';
   import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import WarningDialog from '$lib/components/WarningDialog.svelte';
   import Toaster from '$lib/components/Toaster.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
   import { confirmSaveDiscardCancel, confirmOverwrite, confirmReplace, confirmReload, confirmOk } from '$lib/stores/confirm.svelte';
+  import { showWarningDialog } from '$lib/stores/warning-dialog.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
@@ -301,10 +303,11 @@
         frontmatter,
         fileName,
       });
-      if (result.savedPath) {
+      if (result.warnings.length > 0) {
+        showWarningDialog(result.warnings, result.savedPath ?? '');
+      } else if (result.savedPath) {
         toast.info('Exported', result.savedPath);
       }
-      for (const w of result.warnings) toast.error('Export warning', w);
     } catch (e) {
       console.error('Export failed:', e);
       toast.error('Export failed', String(e));
@@ -553,6 +556,7 @@
 />
 
 <ConfirmDialog />
+<WarningDialog />
 <Toaster />
 
 <style>

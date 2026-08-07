@@ -74,13 +74,26 @@ type InvokeImpl = (
 ) => Promise<unknown>;
 
 /**
- * Extract the filesystem path from a `localimg://localhost/<encoded>` URL.
- * Returns null when the src is not a localimg URL.
+ * Extract the filesystem path from a Tauri local-file URL.
+ *
+ * Handles both platform variants:
+ * - Linux/macOS: `localimg://localhost/<encoded-path>`
+ * - Windows:     `http://localimg.localhost/<encoded-path>`
+ *
+ * Returns null when the src is not a recognized local-file URL.
  */
 function extractLocalImgPath(src: string): string | null {
-  const prefix = "localimg://localhost/";
-  if (!src.startsWith(prefix)) return null;
-  return decodeURIComponent(src.slice(prefix.length));
+  for (const prefix of [
+    "localimg://localhost/",
+    "http://localimg.localhost/",
+    "asset://localhost/",
+    "http://asset.localhost/",
+  ]) {
+    if (src.startsWith(prefix)) {
+      return decodeURIComponent(src.slice(prefix.length));
+    }
+  }
+  return null;
 }
 
 /**
@@ -107,7 +120,14 @@ export async function inlineImages(
   await Promise.all(
     uniqueSrcs.map(async (src) => {
       // Only inline Tauri-served local protocols; leave web URLs alone.
-      if (!/^(localimg:|asset:|https?:\/\/localhost)/i.test(src)) return;
+      // Matches: localimg://, asset://, http://localimg.localhost/,
+      // http://asset.localhost/, http(s)://localhost/
+      if (
+        !/^((localimg|asset):|https?:\/\/(localhost|localimg\.localhost|asset\.localhost)\/)/i.test(
+          src,
+        )
+      )
+        return;
 
       const localPath = extractLocalImgPath(src);
       if (localPath && invokeImpl) {

@@ -179,6 +179,46 @@ describe("inlineImages", () => {
     expect(value).toContain("localimg://localhost/");
   });
 
+  it("inlines http://localimg.localhost/ srcs via invokeImpl (Windows)", async () => {
+    const filePath = "C:/Users/paw/repos/x.png";
+    const encodedPath = encodeURIComponent(filePath);
+    const html = `<img src="http://localimg.localhost/${encodedPath}" alt="x">`;
+    const base64 = "iVBORw0=";
+    const invokeImpl = mockInvoke({
+      [`read_file_as_base64:${filePath}`]: base64,
+    });
+    const { value, warnings } = await inlineImages(
+      html,
+      unusedFetch,
+      invokeImpl,
+    );
+    expect(warnings).toEqual([]);
+    expect(value).toContain("data:image/png;base64,");
+    expect(value).not.toContain("localimg.localhost");
+    expect(invokeImpl).toHaveBeenCalledWith("read_file_as_base64", {
+      path: filePath,
+    });
+  });
+
+  it("inlines http://localimg.localhost/ srcs with unicode (Windows)", async () => {
+    const filePath =
+      "C:/Users/paw/\u4eba\u5de5\u667a\u80fd\u751f\u6210\u7684\u82b1\u6735.png";
+    const encodedPath = encodeURIComponent(filePath);
+    const html = `<img src="http://localimg.localhost/${encodedPath}" alt="x">`;
+    const base64 = "iVBORw0=";
+    const invokeImpl = mockInvoke({
+      [`read_file_as_base64:${filePath}`]: base64,
+    });
+    const { value, warnings } = await inlineImages(
+      html,
+      unusedFetch,
+      invokeImpl,
+    );
+    expect(warnings).toEqual([]);
+    expect(value).toContain("data:image/png;base64,");
+    expect(value).not.toContain("localimg.localhost");
+  });
+
   it("falls back to fetchImpl when invokeImpl is not provided for localimg://", async () => {
     const html = '<img src="localimg://localhost/x.png" alt="x">';
     const imgBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);

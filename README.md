@@ -47,7 +47,7 @@ for many human programmers.
 
 As the most experienced of me and my assistant, I laid and
 continuously corrected the direction and I made the final decisions after
-many good, and sometimes heated, discussions.
+many good, fact-based, and sometimes heated, discussions.
 
 This software did not end up as Slopware. It is working software that I use myself
 and that I tested by hand on three different operating systems. Does it have

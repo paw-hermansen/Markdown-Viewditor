@@ -28,7 +28,7 @@ an AI-powered coding assistant. Development used different AI models, some free
 and some paid. Also most of the documentation was written by AI.
 
 I'm a Senior Software Developer and I wrote my first software back in the
-70's. Yes, around the time when Disco music was in and many years before
+70's. Yes, around the time when Disco music was In and years before
 the Internet. I've been building software for a living my entire career until
 I retired in 2025.
 
@@ -40,13 +40,14 @@ are any good.
 It turned out that my AI assistant is an extremely fast coder and helped me
 to finish the first version of the Markdown Viewditor in
 super-speed. My assistant is surprisingly knowledgeable and understands
-what I mean (most of the time). Sometimes my assistant lacks a little
-intelligence and experience and therefore requires constant supervision
+what I mean (most of the time). Sometimes my assistant lacks intelligence
+and experience and therefore it requires constant supervision
 and guidance from an experienced software developer - which is also true
 for many human programmers.
 
 As the most experienced of me and my assistant, I laid and
-continuously corrected the direction and I made the final decisions.
+continuously corrected the direction and I made the final decisions after
+many good, and sometimes heated, discussions.
 
 This software did not end up as Slopware. It is working software that I use myself
 and that I tested by hand on three different operating systems. Does it have

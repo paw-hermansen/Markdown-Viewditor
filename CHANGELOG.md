@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.1] - 2026-08-07
+
+- Fixed macOS build (#31) (e30a74b)
+
 ## [1.1.0] - 2026-08-07
 
 - Show export warnings in a summary dialog instead of individual toasts (#29) (9dd7a59)

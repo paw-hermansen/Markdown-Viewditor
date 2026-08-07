@@ -45,6 +45,11 @@ function deriveTitle(
 export interface BuildStandaloneHtmlOptions {
   /** Fetch implementation (overridable for tests). Defaults to global fetch. */
   fetchImpl?: typeof fetch;
+  /** Tauri invoke implementation (overridable for tests). */
+  invokeImpl?: (
+    cmd: string,
+    args?: Record<string, unknown>,
+  ) => Promise<unknown>;
   /** Pre-collected CSS (used when document.styleSheets is unavailable, e.g. tests). */
   cssText?: string;
 }
@@ -72,6 +77,7 @@ export async function buildStandaloneHtml(
   const { value: inlinedHtml, warnings: imgWarnings } = await inlineImages(
     html,
     fetchImpl,
+    options.invokeImpl,
   );
   warnings.push(...imgWarnings);
 

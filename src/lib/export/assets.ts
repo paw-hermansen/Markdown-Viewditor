@@ -67,15 +67,48 @@ export async function inlineCssAssets(
 /** Match `src="..."` and `src='...'` in <img> tags. */
 const IMG_SRC_RE = /(<img\s[^>]*?src=)(['"])([^'"]+)\2/gi;
 
+/** Tauri `invoke` call signature. */
+type InvokeImpl = (
+  cmd: string,
+  args?: Record<string, unknown>,
+) => Promise<unknown>;
+
+/**
+ * Extract the filesystem path from a Tauri local-file URL.
+ *
+ * Handles both platform variants:
+ * - Linux/macOS: `localimg://localhost/<encoded-path>`
+ * - Windows:     `http://localimg.localhost/<encoded-path>`
+ *
+ * Returns null when the src is not a recognized local-file URL.
+ */
+function extractLocalImgPath(src: string): string | null {
+  for (const prefix of [
+    "localimg://localhost/",
+    "http://localimg.localhost/",
+    "asset://localhost/",
+    "http://asset.localhost/",
+  ]) {
+    if (src.startsWith(prefix)) {
+      return decodeURIComponent(src.slice(prefix.length));
+    }
+  }
+  return null;
+}
+
 /**
  * Inline `localimg://` / `asset://` / `http://localhost` image srcs by
- * fetching them as blobs and rewriting to `data:` URIs. http(s) and data:
- * srcs are left untouched (http would need CORS and inflate the file; data
- * is already inlined).
+ * rewriting them to `data:` URIs so the exported file has no external
+ * dependencies.
+ *
+ * `localimg://` URLs are loaded via Tauri IPC (`read_file_as_base64`)
+ * because the browser Fetch API does not support custom URI schemes.
+ * Other local URLs (`http://localhost`) still go through `fetchImpl`.
  */
 export async function inlineImages(
   html: string,
   fetchImpl: typeof fetch = fetch,
+  invokeImpl?: InvokeImpl,
 ): Promise<InlineResult<string>> {
   const warnings: string[] = [];
   const matches = [...html.matchAll(IMG_SRC_RE)];
@@ -87,20 +120,47 @@ export async function inlineImages(
   await Promise.all(
     uniqueSrcs.map(async (src) => {
       // Only inline Tauri-served local protocols; leave web URLs alone.
-      if (!/^(localimg:|asset:|https?:\/\/localhost)/i.test(src)) return;
-      try {
-        const res = await fetchImpl(src);
-        if (!res.ok) {
-          warnings.push(`Image ${src} returned ${res.status}`);
-          return;
+      // Matches: localimg://, asset://, http://localimg.localhost/,
+      // http://asset.localhost/, http(s)://localhost/
+      if (
+        !/^((localimg|asset):|https?:\/\/(localhost|localimg\.localhost|asset\.localhost)\/)/i.test(
+          src,
+        )
+      )
+        return;
+
+      const localPath = extractLocalImgPath(src);
+      if (localPath && invokeImpl) {
+        // localimg:// URLs: read the file via Tauri IPC. The Fetch API
+        // does not support custom URI schemes, so fetch() would fail.
+        try {
+          const base64 = (await invokeImpl("read_file_as_base64", {
+            path: localPath,
+          })) as string;
+          const mime = mimeFromHref(localPath);
+          dataUriMap.set(src, `data:${mime};base64,${base64}`);
+        } catch (err) {
+          warnings.push(
+            `Image ${localPath} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
+          );
         }
-        const buf = new Uint8Array(await res.arrayBuffer());
-        const mime = res.headers.get("content-type") ?? mimeFromHref(src);
-        dataUriMap.set(src, bytesToDataUri(buf, mime));
-      } catch (err) {
-        warnings.push(
-          `Image ${src} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
-        );
+      } else {
+        // http://localhost or asset:// — use fetch (works for http scheme).
+        const displayPath = localPath ?? src;
+        try {
+          const res = await fetchImpl(src);
+          if (!res.ok) {
+            warnings.push(`Image ${displayPath} returned ${res.status}`);
+            return;
+          }
+          const buf = new Uint8Array(await res.arrayBuffer());
+          const mime = res.headers.get("content-type") ?? mimeFromHref(src);
+          dataUriMap.set(src, bytesToDataUri(buf, mime));
+        } catch (err) {
+          warnings.push(
+            `Image ${displayPath} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
       }
     }),
   );

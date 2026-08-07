@@ -34,7 +34,9 @@ export async function exportHtml(
   }
 
   const { html: standalone, warnings: buildWarnings } =
-    await buildStandaloneHtml(html, frontmatter, fileName);
+    await buildStandaloneHtml(html, frontmatter, fileName, {
+      invokeImpl: invoke,
+    });
   warnings.push(...buildWarnings);
 
   await invoke("write_file", { path: savePath, content: standalone });

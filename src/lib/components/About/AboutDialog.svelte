@@ -187,7 +187,7 @@
           <section>
             <h2>Project</h2>
             <p>
-              <button class="link" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor')}>github.com/paw-hermansen/Markdown-Viewditor</button>
+              <button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor')}>github.com/paw-hermansen/Markdown-Viewditor</button>
             </p>
           </section>
 
@@ -195,7 +195,7 @@
             <h2>AI-Assisted Development</h2>
             <p>
               This application was built with the help of
-              <button class="link" onclick={() => handleLink('https://opencode.ai')}>OpenCode</button>,
+              <button class="link" data-href="https://opencode.ai" onclick={() => handleLink('https://opencode.ai')}>OpenCode</button>,
               an AI-powered coding assistant. Development used multiple AI models and
               specialized skill files for among others frontend design, documentation, and theme creation.
             </p>
@@ -479,7 +479,7 @@
               <tbody>
                 {#each dependencies as dep}
                   <tr>
-                    <td><button class="link" onclick={() => handleLink(dep.url)}>{dep.name}</button></td>
+                    <td><button class="link" data-href={dep.url} onclick={() => handleLink(dep.url)}>{dep.name}</button></td>
                     <td>{dep.license}</td>
                     <td class="muted">{dep.copyright}</td>
                   </tr>
@@ -693,10 +693,38 @@
     line-height: inherit;
     vertical-align: baseline;
     text-align: left;
+    position: relative;
   }
 
   .link:hover {
     text-decoration: underline;
+  }
+
+  .link[data-href]::after {
+    content: attr(data-href);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-family: monospace;
+    white-space: nowrap;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    visibility: hidden;
+    text-decoration: none;
+  }
+
+  .link[data-href]:hover::after {
+    visibility: visible;
   }
 
   code {

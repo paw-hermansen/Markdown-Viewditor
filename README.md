@@ -87,7 +87,7 @@ Markdown Viewer includes [KaTeX](https://katex.org) / [KaTeX Docs](https://katex
 | Delimiter (inline) | Delimiter (block)                                 | As used by                       |
 | ------------------ | ------------------------------------------------- | -------------------------------- |
 | `\( … \)`          | `\[`<br>&thinsp; `…` <br>`\]`                     | ChatGPT, Claude                  |
-| `$ … $`            | `$$`<br>&thinsp; `…` <br>`$$`                     | Copilot / Github, Gemini, Claude |
+| `$ … $`            | `$$` `…` `$$`                                     | Copilot / Github, Gemini, Claude |
 |                    | `\begin{align}`<br>&thinsp; `…` <br>`\end{align}` | Many                             |
 |                    | ` ```math`<br>&thinsp; `…` <br>` ``` `            | Many                             |
 

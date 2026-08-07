@@ -351,6 +351,18 @@ _italic text_ (emphasis)
 
 ![Missing image](./not_here.png)
 
+## Mathematics and Chemistry
+
+The **Laplacian operator**: $\frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial y^2} + \frac{\partial^2}{\partial z^2}$.
+
+\(\ce{[Pt(\eta^2-C2H4)Cl3]-}\) — Zeise's salt
+
+$$i\hbar \frac{\partial}{\partial t}\Psi(\mathbf{r},t) = \left[ -\frac{\hbar^2}{2m}\nabla^2 + V(\mathbf{r},t) \right] \Psi(\mathbf{r},t) \tag{7.a}$$
+
+\[
+\ce{Zn^2+  <=>[+ 2OH-][+ 2H+]  $\underset{\text{amphoteres Hydroxid}}{\ce{Zn(OH)2 v}}$  <=>[+ 2OH-][+ 2H+]  $\underset{\text{Hydroxozikat}}{\ce{[Zn(OH)4]^2-}}$}
+\]
+
 
 ## Additional Viewer Elements
 

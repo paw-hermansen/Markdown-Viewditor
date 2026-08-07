@@ -35,6 +35,16 @@ pub async fn read_file(path: String) -> Result<String, AppError> {
     decode_bytes(bytes).map_err(|e| AppError::Encoding(e.to_string()))
 }
 
+/// Read raw file bytes and return them as a base64-encoded string. Unlike
+/// `read_file`, this preserves binary data exactly — used by the HTML export
+/// pipeline to inline `localimg://` image srcs as `data:` URIs.
+#[tauri::command]
+pub async fn read_file_as_base64(path: String) -> Result<String, AppError> {
+    use base64::Engine;
+    let bytes = fs::read(&path)?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(&bytes))
+}
+
 /// Returns `true` if the file at `path` is writable by the current process.
 /// On Unix this also probes by opening with write intent, catching ACL/owner
 /// restrictions that `readonly()` misses.

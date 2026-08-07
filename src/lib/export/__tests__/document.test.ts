@@ -89,22 +89,28 @@ describe("buildStandaloneHtml", () => {
     expect(html).not.toContain("fonts/F.woff2");
   });
 
-  it("inlines localimg image srcs", async () => {
-    const htmlBody = '<img src="localimg://localhost/img.png" alt="x">';
-    const imgBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    const fetchImpl = vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      headers: new Map([["content-type", "image/png"]]),
-      arrayBuffer: async () => imgBytes.buffer,
-    })) as unknown as typeof fetch;
+  it("inlines localimg image srcs via invokeImpl", async () => {
+    const filePath = "/img.png";
+    const encodedPath = encodeURIComponent(filePath);
+    const htmlBody = `<img src="localimg://localhost/${encodedPath}" alt="x">`;
+    const base64 = "iVBORw0=";
+    const invokeImpl = vi.fn(async (cmd: string) => {
+      if (cmd === "read_file_as_base64") return base64;
+      throw new Error(`Unexpected: ${cmd}`);
+    }) as unknown as (
+      cmd: string,
+      args?: Record<string, unknown>,
+    ) => Promise<unknown>;
     const { html, warnings } = await buildStandaloneHtml(htmlBody, null, "d", {
       cssText: "",
-      fetchImpl,
+      invokeImpl,
     });
     expect(warnings).toEqual([]);
     expect(html).toContain("data:image/png;base64,");
     expect(html).not.toContain("localimg://");
+    expect(invokeImpl).toHaveBeenCalledWith("read_file_as_base64", {
+      path: filePath,
+    });
   });
 
   it("wraps the body in a .viewer-content container", async () => {

@@ -141,15 +141,16 @@ export async function inlineImages(
           dataUriMap.set(src, `data:${mime};base64,${base64}`);
         } catch (err) {
           warnings.push(
-            `Image ${src} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
+            `Image ${localPath} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
       } else {
         // http://localhost or asset:// — use fetch (works for http scheme).
+        const displayPath = localPath ?? src;
         try {
           const res = await fetchImpl(src);
           if (!res.ok) {
-            warnings.push(`Image ${src} returned ${res.status}`);
+            warnings.push(`Image ${displayPath} returned ${res.status}`);
             return;
           }
           const buf = new Uint8Array(await res.arrayBuffer());
@@ -157,7 +158,7 @@ export async function inlineImages(
           dataUriMap.set(src, bytesToDataUri(buf, mime));
         } catch (err) {
           warnings.push(
-            `Image ${src} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
+            `Image ${displayPath} could not be inlined: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
       }

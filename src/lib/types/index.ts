@@ -1,7 +1,5 @@
 export type ViewMode = "split" | "editor" | "viewer";
 
-export type PrintStyle = "printer-friendly" | "theme";
-
 export type MarkdownLevel = "basic" | "github" | "advanced" | "custom";
 
 export interface FileInfo {
@@ -21,7 +19,6 @@ export interface Settings {
   splitRatio: number;
   lastOpenedFile: string | null;
   recentFiles: string[];
-  printStyle: PrintStyle;
   markdownLevel: MarkdownLevel;
   enabledFeatures: string[];
 }

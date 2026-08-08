@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import type { Exporter, ExportResult } from "../types";
-import { settingsState } from "$lib/stores/settings.svelte";
 import { fileState } from "$lib/stores/file.svelte";
 
 /**
@@ -130,24 +129,19 @@ function resolvePageBackground(viewerContentElement?: HTMLElement): {
 /**
  * Build the off-screen `.print-content` container used by both the in-app
  * Print button and this exporter. The clone carries the `.viewer-content`
- * class so markdown.css applies directly (single source of truth); in theme
- * mode it also takes over the `#viewer-content` id so the theme CSS applies.
+ * class so markdown.css applies directly (single source of truth); it also
+ * takes over the `#viewer-content` id so the theme CSS applies.
  * The page background is applied inline to html/body so it propagates to the
  * full page canvas (full bleed, including @page margins).
  */
 export function buildPrintContainer(
   viewerHtml: string,
-  style: "printer-friendly" | "theme",
   layout: PrintLayout,
   viewerContentElement?: HTMLElement,
 ): PrintContainerHandle {
-  const themeMode = style === "theme";
-
   // Resolve the page background BEFORE the id swap detaches the theme rules
   // from the live viewer element.
-  const pageBackground = themeMode
-    ? resolvePageBackground(viewerContentElement)
-    : { color: "#ffffff", image: "" };
+  const pageBackground = resolvePageBackground(viewerContentElement);
 
   const printDiv = document.createElement("div");
   printDiv.classList.add("viewer-content", "print-content");
@@ -156,14 +150,13 @@ export function buildPrintContainer(
   printDiv.style.zoom = String(layout.zoom);
   document.body.appendChild(printDiv);
 
-  if (themeMode && viewerContentElement) {
+  if (viewerContentElement) {
     printDiv.id = "viewer-content";
     viewerContentElement.id = "";
   }
 
-  const exportClass = themeMode ? "theme-export" : "print-friendly";
-  document.documentElement.classList.add("exporting", exportClass);
-  document.body.classList.add("exporting", exportClass);
+  document.documentElement.classList.add("exporting", "theme-export");
+  document.body.classList.add("exporting", "theme-export");
 
   // Full-bleed page background, two complementary mechanisms:
   // 1. Inline background on html/body — the root element's background
@@ -191,85 +184,17 @@ export function buildPrintContainer(
   return {
     printDiv,
     cleanup() {
-      document.documentElement.classList.remove(
-        "exporting",
-        "print-friendly",
-        "theme-export",
-      );
-      document.body.classList.remove(
-        "exporting",
-        "print-friendly",
-        "theme-export",
-      );
+      document.documentElement.classList.remove("exporting", "theme-export");
+      document.body.classList.remove("exporting", "theme-export");
       document.documentElement.style.background = "";
       document.body.style.background = "";
       pageStyleEl.remove();
       printDiv.remove();
-      if (themeMode && viewerContentElement) {
+      if (viewerContentElement) {
         viewerContentElement.id = "viewer-content";
       }
     },
   };
-}
-
-/* ===== Printer-friendly syntax highlighting =====
-   Printer-friendly output must not depend on the selected viewer theme, but
-   the theme's global `.hljs` token rules would otherwise bleed into the
-   export. The GitHub Light rules are re-scoped to the export container with
-   higher-specificity selectors, making the printer-friendly look fully
-   deterministic. */
-
-let cachedPrinterFriendlySyntaxCss: string | null = null;
-
-/**
- * Re-scope a theme's highlight rules to the printer-friendly export
- * container. Rules targeting `#viewer-content` are dropped (structure is
- * styled by the printer-friendly palette in app.css), and the base `.hljs`
- * rule loses its background so code keeps the palette's neutral chip/panel
- * backgrounds while tokens get GitHub Light colors.
- */
-export function scopeSyntaxCssForPrint(css: string): string {
-  const scope = "body.print-friendly .print-content";
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const out: string[] = [];
-  for (const chunk of withoutComments.split("}")) {
-    const braceIndex = chunk.indexOf("{");
-    if (braceIndex === -1) continue;
-    const selectorText = chunk.slice(0, braceIndex).trim();
-    let declarations = chunk.slice(braceIndex + 1).trim();
-    if (!selectorText || !declarations) continue;
-    if (selectorText.includes("#viewer-content")) continue;
-    if (selectorText === ".hljs") {
-      declarations = declarations
-        .split(";")
-        .filter((d) => !/^\s*background(-color)?\s*:/.test(d))
-        .join(";")
-        .trim();
-      if (!declarations) continue;
-    }
-    const scoped = selectorText
-      .split(",")
-      .map((s) => `${scope} ${s.trim()}`)
-      .join(", ");
-    out.push(`${scoped} { ${declarations} }`);
-  }
-  return out.join("\n");
-}
-
-/**
- * Inject the re-scoped GitHub Light syntax rules for the duration of a
- * printer-friendly export. Returns a remover function.
- */
-async function injectPrinterFriendlySyntax(): Promise<() => void> {
-  if (cachedPrinterFriendlySyntaxCss === null) {
-    const mod = await import("$lib/styles/highlight/github-light.css?raw");
-    cachedPrinterFriendlySyntaxCss = scopeSyntaxCssForPrint(mod.default);
-  }
-  const styleEl = document.createElement("style");
-  styleEl.id = "print-friendly-syntax";
-  styleEl.textContent = cachedPrinterFriendlySyntaxCss;
-  document.head.appendChild(styleEl);
-  return () => styleEl.remove();
 }
 
 /** Wait two animation frames so the just-added .print-content has laid out. */
@@ -289,10 +214,6 @@ export async function exportPdf(
   fileName: string,
   viewerContentElement?: HTMLElement,
 ): Promise<ExportResult> {
-  const style = settingsState.printStyle;
-  const removeSyntaxStyle =
-    style === "printer-friendly" ? await injectPrinterFriendlySyntax() : null;
-
   const layoutWidthPx = computeViewerLayoutWidth(viewerContentElement);
   // macOS captures the page at the webview's bounds, so scale the laid-out
   // width up to fill the webview width (content fills the PDF edge-to-edge,
@@ -303,12 +224,7 @@ export async function exportPdf(
     layoutWidthPx,
     zoom: targetWidthPx / layoutWidthPx,
   };
-  const handle = buildPrintContainer(
-    viewerHtml,
-    style,
-    layout,
-    viewerContentElement,
-  );
+  const handle = buildPrintContainer(viewerHtml, layout, viewerContentElement);
 
   try {
     let savePath: string | null = null;
@@ -346,7 +262,6 @@ export async function exportPdf(
     return { warnings: [] };
   } finally {
     handle.cleanup();
-    removeSyntaxStyle?.();
   }
 }
 

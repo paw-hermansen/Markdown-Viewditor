@@ -12,10 +12,9 @@ vi.mock("../ThemeSelector.svelte", () => ({
 }));
 
 // The toolbar exposes two controls (plus the theme selector): a single
-// "Export as HTML" button (registry-fed) and a "Print: <style>" dropdown whose
-// main button fires Print immediately and whose caret opens the 2-style menu.
-// jsdom's navigator.userAgent is not Macintosh, so the print prefix is
-// "Print" (on macOS it would be "Create PDF").
+// "Export as HTML" button (registry-fed) and a "Print / PDF" button.
+// jsdom's navigator.userAgent is not Macintosh, so the Print button is
+// shown (on macOS it would be hidden).
 
 const FAKE_EXPORTER = {
   id: "test-html",
@@ -38,9 +37,9 @@ describe("ViewerToolbar", () => {
     expect(screen.getByTitle("Export as HTML")).toBeInTheDocument();
   });
 
-  it("renders the Print dropdown when onPrint is provided", () => {
+  it("renders the Print button when onPrint is provided", () => {
     render(ViewerToolbar, { props: { onPrint: vi.fn() } });
-    expect(screen.getByTitle("Print (Ctrl+P)")).toBeInTheDocument();
+    expect(screen.getByTitle("Print / PDF (Ctrl+P)")).toBeInTheDocument();
   });
 
   it("does not render the Export button when onExport is not provided", () => {
@@ -48,9 +47,9 @@ describe("ViewerToolbar", () => {
     expect(screen.queryByTitle("Export as HTML")).not.toBeInTheDocument();
   });
 
-  it("does not render the Print dropdown when onPrint is not provided", () => {
+  it("does not render the Print button when onPrint is not provided", () => {
     render(ViewerToolbar, { props: { onExport: vi.fn() } });
-    expect(screen.queryByTitle("Print (Ctrl+P)")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Print / PDF (Ctrl+P)")).not.toBeInTheDocument();
   });
 
   it("calls onExport when the Export button is clicked", async () => {
@@ -60,12 +59,10 @@ describe("ViewerToolbar", () => {
     expect(onExport).toHaveBeenCalledWith("test-html");
   });
 
-  it("calls onPrint with the current style when the Print main button is clicked", async () => {
+  it("calls onPrint when the Print button is clicked", async () => {
     const onPrint = vi.fn();
     render(ViewerToolbar, { props: { onPrint } });
-    // The main button carries the title; clicking it fires onAction(value)
-    // with the currently-selected style (default 'printer-friendly').
-    await fireEvent.click(screen.getByTitle("Print (Ctrl+P)"));
-    expect(onPrint).toHaveBeenCalledWith("printer-friendly");
+    await fireEvent.click(screen.getByTitle("Print / PDF (Ctrl+P)"));
+    expect(onPrint).toHaveBeenCalled();
   });
 });

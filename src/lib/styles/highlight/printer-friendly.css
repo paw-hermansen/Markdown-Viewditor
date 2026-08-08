@@ -1,0 +1,158 @@
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+code.hljs {
+  padding: 3px 5px
+}
+.hljs {
+  color: #24292e;
+  background: #ffffff
+}
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: #d73a49
+}
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: #6f42c1
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: #005cc5
+}
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: #032f62
+}
+.hljs-built_in,
+.hljs-symbol {
+  color: #e36209
+}
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: #6a737d
+}
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: #22863a
+}
+.hljs-subst {
+  color: #24292e
+}
+.hljs-section {
+  color: #005cc5;
+  font-weight: bold
+}
+.hljs-bullet {
+  color: #735c0f
+}
+.hljs-emphasis {
+  color: #24292e;
+  font-style: italic
+}
+.hljs-strong {
+  color: #24292e;
+  font-weight: bold
+}
+.hljs-addition {
+  color: #22863a;
+  background-color: #f0fff4
+}
+.hljs-deletion {
+  color: #b31d28;
+  background-color: #ffeef0
+}
+.hljs-char.escape_,
+.hljs-link,
+.hljs-params,
+.hljs-property,
+.hljs-punctuation,
+.hljs-tag {
+  
+}
+
+#viewer-content {
+  background: #ffffff;
+  color: #1f2328;
+  --border: #d1d9e0;
+  --bg-tertiary: #f6f8fa;
+  --accent: #0969da;
+  --text-secondary: #656d76;
+  --text-primary: #1f2328;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+#viewer-content h1 {
+  color: #1f2328;
+  border-bottom-color: #d1d9e0;
+}
+#viewer-content h2,
+#viewer-content h3,
+#viewer-content h4,
+#viewer-content h5,
+#viewer-content h6 {
+  color: #1f2328;
+}
+#viewer-content a {
+  color: #0969da;
+}
+#viewer-content blockquote {
+  border-left-color: #d1d9e0;
+  color: #656d76;
+}
+#viewer-content code {
+  background: #f6f8fa;
+}
+#viewer-content pre {
+  background: #f6f8fa;
+}
+#viewer-content pre code {
+  background: transparent;
+}
+#viewer-content th {
+  background: #f6f8fa;
+  color: #656d76;
+}
+#viewer-content th,
+#viewer-content td {
+  border-color: #d1d9e0;
+}
+#viewer-content hr {
+  border-top-color: #d1d9e0;
+}
+#viewer-content .frontmatter-card {
+  background: #f6f8fa;
+  border-color: #d1d9e0;
+}
+#viewer-content .skill-badge {
+  background: #0969da;
+  color: #ffffff;
+}
+#viewer-content img {
+  border-color: #d1d9e0;
+}

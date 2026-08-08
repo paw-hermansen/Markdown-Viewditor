@@ -17,7 +17,6 @@ const { mockSettingsState, mockUpdateSplitRatio } = vi.hoisted(() => ({
     viewerTheme: "github-dark",
     lastOpenedFile: null,
     recentFiles: [],
-    printStyle: "printer-friendly" as const,
     markdownLevel: "advanced" as const,
     enabledFeatures: [] as string[],
   },

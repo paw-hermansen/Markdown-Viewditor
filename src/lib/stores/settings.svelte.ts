@@ -1,5 +1,5 @@
 import { Store } from "@tauri-apps/plugin-store";
-import type { Settings, ViewMode, PrintStyle } from "$lib/types";
+import type { Settings, ViewMode } from "$lib/types";
 import { presetFor } from "$lib/utils/markdown-levels";
 
 const STORE_FILE = "settings.json";
@@ -14,7 +14,6 @@ const DEFAULT_SETTINGS: Settings = {
   splitRatio: 0.5,
   lastOpenedFile: null,
   recentFiles: [],
-  printStyle: "printer-friendly",
   markdownLevel: "advanced",
   enabledFeatures: presetFor("advanced"),
 };
@@ -68,11 +67,6 @@ export function updateViewMode(mode: ViewMode): void {
 
 export function updateTheme(theme: string): void {
   settingsState.viewerTheme = theme;
-  saveSettings();
-}
-
-export function updatePrintStyle(style: PrintStyle): void {
-  settingsState.printStyle = style;
   saveSettings();
 }
 

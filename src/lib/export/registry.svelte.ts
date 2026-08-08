@@ -56,9 +56,6 @@ export async function registerBuiltinExporters(): Promise<void> {
   builtinsRegistered = true;
   const { htmlExporter } = await import("./exporters/html");
   registerExporter(htmlExporter);
-  // Note: PDF export is handled by the existing Print button (which calls
-  // `exportPdf` directly via `handlePrint`), not by the registry — registering
-  // it here would create a second "Export as PDF" entry alongside Print in the
-  // toolbar/palette. The registry is for *additional* file formats beyond
-  // what the Print path already covers.
+  const { pdfExporter } = await import("./exporters/pdf");
+  registerExporter(pdfExporter);
 }

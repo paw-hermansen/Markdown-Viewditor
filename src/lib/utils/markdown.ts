@@ -646,7 +646,11 @@ export async function renderMarkdown(
   filePath?: string | null,
 ): Promise<RenderResult> {
   if (content === null || content === undefined) {
-    return { html: "<p>Error rendering markdown</p>", frontmatter: null };
+    return {
+      html: "<p>Error rendering markdown</p>",
+      frontmatter: null,
+      tokens: [],
+    };
   }
   try {
     const parser = await initMarkdownIt();
@@ -677,10 +681,14 @@ export async function renderMarkdown(
       }
     }
 
-    return { html, frontmatter };
+    return { html, frontmatter, tokens };
   } catch (error) {
     console.error("Markdown parse error:", error);
-    return { html: "<p>Error rendering markdown</p>", frontmatter: null };
+    return {
+      html: "<p>Error rendering markdown</p>",
+      frontmatter: null,
+      tokens: [],
+    };
   }
 }
 

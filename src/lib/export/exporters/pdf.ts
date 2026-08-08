@@ -269,6 +269,7 @@ export const pdfExporter: Exporter = {
   id: "pdf",
   label: isMacOS ? "Export as PDF" : "Export as PDF (Print…)",
   extension: "pdf",
+  themeCapable: true,
   async export(ctx) {
     return exportPdf(ctx.html, ctx.fileName);
   },

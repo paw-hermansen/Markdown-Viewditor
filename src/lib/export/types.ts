@@ -1,4 +1,5 @@
 import type { Frontmatter } from "$lib/types";
+import type Token from "markdown-it/lib/token.mjs";
 
 /**
  * Input handed to an exporter. `markdown` is the raw source; `html` is the
@@ -12,6 +13,7 @@ export interface ExportContext {
   html: string;
   frontmatter: Frontmatter | null;
   fileName: string;
+  tokens: Token[];
 }
 
 /** Result of running an exporter. */
@@ -31,6 +33,8 @@ export interface Exporter {
   label: string;
   /** File extension (without dot), used for the save dialog filter. */
   extension: string;
+  /** Whether this export uses the current viewer theme (shows confirm dialog). */
+  themeCapable?: boolean;
   /** Run the export. Returns warnings; surfaces fatal errors via throw. */
   export(ctx: ExportContext): Promise<ExportResult>;
 }

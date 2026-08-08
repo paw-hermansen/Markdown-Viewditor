@@ -293,7 +293,7 @@
     try {
       // Render a fresh copy for export so it's not affected by the Viewer's
       // cache-busting image query params (which would break data-URI inlining).
-      const { html, frontmatter } = await renderMarkdown(
+      const { html, frontmatter, tokens } = await renderMarkdown(
         editorState.content,
         fileState.currentFile,
       );
@@ -302,6 +302,7 @@
         html,
         frontmatter,
         fileName,
+        tokens,
       });
       if (result.warnings.length > 0) {
         showWarningDialog(result.warnings, result.savedPath ?? '');

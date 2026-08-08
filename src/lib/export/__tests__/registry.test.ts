@@ -47,18 +47,16 @@ describe("exporter registry", () => {
         html: "",
         frontmatter: null,
         fileName: "x",
+        tokens: [],
       }),
     ).rejects.toThrow("Unknown exporter: nope");
   });
 
-  it("registerBuiltinExporters registers html (pdf is handled by Print)", async () => {
+  it("registerBuiltinExporters registers html and pdf", async () => {
     await registerBuiltinExporters();
     const ids = listExporters().map((e) => e.id);
     expect(ids).toContain("html");
-    // PDF export is handled by the Print button (exportPdf directly), NOT the
-    // registry — registering it here would duplicate the Print entry in the
-    // toolbar/palette.
-    expect(ids).not.toContain("pdf");
+    expect(ids).toContain("pdf");
   });
 });
 
@@ -79,6 +77,7 @@ describe("html exporter", () => {
       html: "<h1>Hi</h1>",
       frontmatter: null,
       fileName: "doc",
+      tokens: [],
     });
 
     expect(save).toHaveBeenCalledWith(
@@ -101,6 +100,7 @@ describe("html exporter", () => {
       html: "",
       frontmatter: null,
       fileName: "d",
+      tokens: [],
     });
     expect(result.savedPath).toBeUndefined();
     expect(invoke).not.toHaveBeenCalled();

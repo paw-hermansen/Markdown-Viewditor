@@ -48,6 +48,7 @@ export const htmlExporter: Exporter = {
   id: "html",
   label: "Export as HTML",
   extension: "html",
+  themeCapable: true,
   async export(ctx) {
     return exportHtml(ctx.markdown, ctx.html, ctx.frontmatter, ctx.fileName);
   },

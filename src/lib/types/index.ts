@@ -46,4 +46,5 @@ export interface Frontmatter {
 export interface RenderResult {
   html: string;
   frontmatter: Frontmatter | null;
+  tokens: import("markdown-it/lib/token.mjs").default[];
 }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from "@testing-library/svelte";
+import { render, screen, fireEvent, within } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ViewerToolbar from "../ViewerToolbar.svelte";
 import {
@@ -11,15 +11,19 @@ vi.mock("../ThemeSelector.svelte", () => ({
   default: () => "ThemeSelector",
 }));
 
-// The toolbar exposes two controls (plus the theme selector): a single
-// "Export as HTML" button (registry-fed) and a "Print / PDF" button.
-// jsdom's navigator.userAgent is not Macintosh, so the Print button is
-// shown (on macOS it would be hidden).
-
 const FAKE_EXPORTER = {
   id: "test-html",
   label: "Export as HTML",
   extension: "html",
+  themeCapable: true,
+  export: vi.fn(async () => ({ warnings: [] })),
+};
+
+const FAKE_EXPORTER_2 = {
+  id: "test-pdf",
+  label: "Export as PDF",
+  extension: "pdf",
+  themeCapable: true,
   export: vi.fn(async () => ({ warnings: [] })),
 };
 
@@ -30,6 +34,7 @@ describe("ViewerToolbar", () => {
 
   afterEach(() => {
     unregisterExporter("test-html");
+    unregisterExporter("test-pdf");
   });
 
   it("renders the Export button when an exporter is registered", () => {
@@ -64,5 +69,44 @@ describe("ViewerToolbar", () => {
     render(ViewerToolbar, { props: { onPrint } });
     await fireEvent.click(screen.getByTitle("Print / PDF (Ctrl+P)"));
     expect(onPrint).toHaveBeenCalled();
+  });
+
+  describe("with multiple exporters (dropdown)", () => {
+    beforeEach(() => {
+      registerExporter(FAKE_EXPORTER_2);
+    });
+
+    it("renders a dropdown with title attribute", () => {
+      render(ViewerToolbar, { props: { onExport: vi.fn() } });
+      expect(screen.getByTitle("Export document")).toBeInTheDocument();
+    });
+
+    it("opens dropdown and shows export choices", async () => {
+      render(ViewerToolbar, { props: { onExport: vi.fn() } });
+      const caret = screen.getByLabelText("More options");
+      await fireEvent.click(caret);
+      const dropdown = screen.getByRole("menu");
+      expect(within(dropdown).getByText("Export as HTML")).toBeInTheDocument();
+      expect(within(dropdown).getByText("Export as PDF")).toBeInTheDocument();
+    });
+
+    it("shows footer toggle in dropdown", async () => {
+      render(ViewerToolbar, { props: { onExport: vi.fn() } });
+      const caret = screen.getByLabelText("More options");
+      await fireEvent.click(caret);
+      expect(
+        screen.getByText("Show export and print confirmation"),
+      ).toBeInTheDocument();
+    });
+
+    it("calls onExport when a dropdown item is clicked", async () => {
+      const onExport = vi.fn();
+      render(ViewerToolbar, { props: { onExport } });
+      const caret = screen.getByLabelText("More options");
+      await fireEvent.click(caret);
+      const dropdown = screen.getByRole("menu");
+      await fireEvent.click(within(dropdown).getByText("Export as HTML"));
+      expect(onExport).toHaveBeenCalledWith("test-html");
+    });
   });
 });

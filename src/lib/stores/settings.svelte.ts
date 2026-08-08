@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: Settings = {
   recentFiles: [],
   markdownLevel: "advanced",
   enabledFeatures: presetFor("advanced"),
+  exportConfirmDismissed: false,
 };
 
 export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });

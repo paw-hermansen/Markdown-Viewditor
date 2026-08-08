@@ -3,6 +3,7 @@
   import DropdownButton from '$lib/components/DropdownButton.svelte';
   import { getThemeLabel } from '$lib/utils/themes';
   import { viewerState } from '$lib/stores/viewer.svelte';
+  import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
   import { modLabel } from '$lib/utils/keyboard';
   import { listExporters } from '$lib/export/registry.svelte';
 
@@ -17,10 +18,6 @@
 
   const themeLabel = $derived(getThemeLabel(viewerState.theme));
 
-  // Export dropdown is registry-fed: any exporter registered via
-  // `registerExporter` shows up here automatically. With a single exporter
-  // (the built-in HTML exporter) this renders as one button; a future second
-  // format (DOCX/EPUB) automatically becomes a dropdown.
   const exportChoices = $derived(
     listExporters().map((e) => ({ value: e.id, label: e.label })),
   );
@@ -49,8 +46,9 @@
       <DropdownButton
         choices={exportChoices}
         value={exportChoices[0]?.value ?? ''}
-        onAction={handleExportAction}
+        onSelect={handleExportAction}
         title="Export document"
+        header={themeLabel}
       >
         {#snippet leadingIcon()}
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -58,6 +56,16 @@
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
+        {/snippet}
+        {#snippet footer()}
+          <label>
+            <input
+              type="checkbox"
+              checked={!settingsState.exportConfirmDismissed}
+              onchange={() => updateSetting('exportConfirmDismissed', !settingsState.exportConfirmDismissed)}
+            />
+            {isMacOS ? 'Show export confirmation' : 'Show export and print confirmation'}
+          </label>
         {/snippet}
       </DropdownButton>
     {/if}

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import MarkdownIt from "markdown-it";
 import footnote from "markdown-it-footnote";
 import { walkTokens, type TokenWalkerCallbacks } from "../token-walker";
@@ -255,7 +255,6 @@ describe("walkTokens", () => {
   });
 
   it("handles inline tokens with no children gracefully", () => {
-    const tokens = parseMd("hello");
     // Manually create an inline token with null children
     const md = new MarkdownIt();
     const parsed = md.parse("hello", {});

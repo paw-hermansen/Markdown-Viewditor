@@ -9,10 +9,12 @@
   import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import WarningDialog from '$lib/components/WarningDialog.svelte';
+  import ExportConfirmDialog from '$lib/components/ExportConfirmDialog.svelte';
   import Toaster from '$lib/components/Toaster.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
-  import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
+  import { settingsState, updateViewMode, updateSetting } from '$lib/stores/settings.svelte';
+  import { viewerState } from '$lib/stores/viewer.svelte';
   import { confirmSaveDiscardCancel, confirmOverwrite, confirmReplace, confirmReload, confirmOk } from '$lib/stores/confirm.svelte';
   import { showWarningDialog } from '$lib/stores/warning-dialog.svelte';
   import { toast } from '$lib/stores/toast.svelte';
@@ -23,8 +25,10 @@
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { onMount, onDestroy } from 'svelte';
   import { renderMarkdown } from '$lib/utils/markdown';
-  import { runExporter, registerBuiltinExporters } from '$lib/export/registry.svelte';
+  import { runExporter, registerBuiltinExporters, getExporter } from '$lib/export/registry.svelte';
   import { exportPdf } from '$lib/export/exporters/pdf';
+  import { getThemeLabel } from '$lib/utils/themes';
+  import { showExportConfirmDialog } from '$lib/stores/export-confirm-dialog.svelte';
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
 
@@ -257,6 +261,18 @@
    * `theme-export` body classes that app.css keys off of.
    */
   async function handlePrint() {
+    if (!settingsState.exportConfirmDismissed) {
+      const result = await showExportConfirmDialog({
+        themeLabel: getThemeLabel(viewerState.theme),
+        actionLabel: 'Print',
+        isMacOS,
+      });
+      if (!result.confirmed) return;
+      if (result.dontShowAgain) {
+        updateSetting('exportConfirmDismissed', true);
+      }
+    }
+
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
     try {
@@ -290,9 +306,20 @@
       return;
     }
 
+    const exporter = getExporter(id);
+    if (exporter?.themeCapable && !settingsState.exportConfirmDismissed) {
+      const result = await showExportConfirmDialog({
+        themeLabel: getThemeLabel(viewerState.theme),
+        actionLabel: 'Export',
+        isMacOS,
+      });
+      if (!result.confirmed) return;
+      if (result.dontShowAgain) {
+        updateSetting('exportConfirmDismissed', true);
+      }
+    }
+
     try {
-      // Render a fresh copy for export so it's not affected by the Viewer's
-      // cache-busting image query params (which would break data-URI inlining).
       const { html, frontmatter, tokens } = await renderMarkdown(
         editorState.content,
         fileState.currentFile,
@@ -558,6 +585,7 @@
 
 <ConfirmDialog />
 <WarningDialog />
+<ExportConfirmDialog />
 <Toaster />
 
 <style>

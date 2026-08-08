@@ -40,6 +40,7 @@ describe("settings store", () => {
     settingsState.recentFiles = [];
     settingsState.markdownLevel = "advanced";
     settingsState.enabledFeatures = presetFor("advanced");
+    settingsState.exportConfirmDismissed = false;
   });
 
   describe("updateViewMode", () => {

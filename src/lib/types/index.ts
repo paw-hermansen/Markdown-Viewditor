@@ -21,6 +21,7 @@ export interface Settings {
   recentFiles: string[];
   markdownLevel: MarkdownLevel;
   enabledFeatures: string[];
+  exportConfirmDismissed: boolean;
 }
 
 export interface EditorState {

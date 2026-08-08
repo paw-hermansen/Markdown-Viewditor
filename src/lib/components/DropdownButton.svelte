@@ -15,6 +15,7 @@
     onAction?: (value: T) => void;
     onSelect?: (value: T) => void;
     leadingIcon?: Snippet;
+    footer?: Snippet;
     formatLabel?: (choice: Choice<T>) => string;
     title?: string;
     header?: string;
@@ -28,6 +29,7 @@
     onAction,
     onSelect,
     leadingIcon,
+    footer,
     formatLabel,
     title,
     header,
@@ -137,6 +139,11 @@
           {/if}
         </button>
       {/each}
+      {#if footer}
+        <div class="dropdown-footer">
+          {@render footer()}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -259,6 +266,25 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+
+  .dropdown-footer {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .dropdown-footer :global(label) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .dropdown-footer :global(input[type="checkbox"]) {
+    cursor: pointer;
   }
 
   .dropdown-item {

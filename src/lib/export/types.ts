@@ -31,6 +31,8 @@ export interface ExportResult {
 export interface Exporter {
   id: string;
   label: string;
+  /** Short description shown in the export dropdown menu (e.g. "Standalone webpage"). */
+  description?: string;
   /** File extension (without dot), used for the save dialog filter. */
   extension: string;
   /** Whether this export uses the current viewer theme (shows confirm dialog). */

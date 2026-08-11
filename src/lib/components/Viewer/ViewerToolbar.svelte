@@ -19,7 +19,7 @@
   const themeLabel = $derived(getThemeLabel(viewerState.theme));
 
   const exportChoices = $derived(
-    listExporters().map((e) => ({ value: e.id, label: e.label })),
+    listExporters().map((e) => ({ value: e.id, label: e.label, description: e.description })),
   );
 
   function handleExportAction(id: string) {
@@ -45,7 +45,7 @@
     {:else if onExport && exportChoices.length > 1}
       <DropdownButton
         choices={exportChoices}
-        value={exportChoices[0]?.value ?? ''}
+        fixedLabel="Export as…"
         onSelect={handleExportAction}
         title="Export document"
         header={themeLabel}

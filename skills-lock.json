@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "odt": {
+      "source": "smithery.ai",
+      "sourceUrl": "https://smithery.ai/skills/leiverkus/odt",
+      "sourceType": "well-known",
+      "computedHash": "2ce0b05c0eca95b251c7f4eebad49961cb891cf47fabe980d10cdd01d58c95ca",
+      "wellKnownDigest": "sha256:bc86d4288d9bc6f8f132fbf3eb093f22855384c0e2e14c60af62e7e4d9e7796d"
+    }
+  }
+}

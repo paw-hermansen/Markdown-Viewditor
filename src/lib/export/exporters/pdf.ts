@@ -268,6 +268,7 @@ export async function exportPdf(
 export const pdfExporter: Exporter = {
   id: "pdf",
   label: isMacOS ? "Export as PDF" : "Export as PDF (Print…)",
+  description: "Vector document",
   extension: "pdf",
   themeCapable: true,
   async export(ctx) {

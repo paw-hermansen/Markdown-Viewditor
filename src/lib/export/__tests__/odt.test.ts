@@ -23,14 +23,31 @@ vi.mock("highlight.js", () => ({
 }));
 
 import JSZip from "jszip";
+import katex from "katex";
 import MarkdownIt from "markdown-it";
 import footnote from "markdown-it-footnote";
 import taskLists from "markdown-it-task-lists";
+import vscodeKatex from "@vscode/markdown-it-katex";
+import mathBracketsPlugin from "$lib/utils/math-brackets";
 import { odtExporter } from "../exporters/odt";
 import type { ExportContext } from "../types";
 
 function makeTokens(src: string) {
   const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
+  return md.parse(src, {});
+}
+
+function makeMathTokens(src: string) {
+  const md = new MarkdownIt({ html: true })
+    .use(footnote)
+    .use(taskLists)
+    .use(vscodeKatex, {
+      katex,
+      throwOnError: false,
+      enableBareBlocks: true,
+      enableFencedBlocks: true,
+    })
+    .use(mathBracketsPlugin);
   return md.parse(src, {});
 }
 
@@ -524,5 +541,186 @@ After list`;
     const zip = await JSZip.loadAsync(buffer);
     const manifest = await zip.file("META-INF/manifest.xml")!.async("text");
     expect(manifest).toContain('media-type="image/svg+xml"');
+  });
+
+  // ── Math (KaTeX → ODF formula sub-packages) ──
+
+  it("embeds inline math $x^2$ as draw:object in content.xml", async () => {
+    const ctx: ExportContext = {
+      markdown: "$x^2$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$x^2$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain("<draw:frame");
+    expect(xml).toContain("<draw:object");
+  });
+
+  it("embeds display math $$\\int x dx$$ as draw:object in content.xml", async () => {
+    const ctx: ExportContext = {
+      markdown: "$$\n\\int x dx\n$$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$$\n\\int x dx\n$$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain("<draw:frame");
+    expect(xml).toContain("<draw:object");
+  });
+
+  it("creates MathML sub-packages for math formulas", async () => {
+    const ctx: ExportContext = {
+      markdown: "$x^2$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$x^2$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
+    expect(mathXml).toContain("<math");
+    expect(mathXml).toContain("</math>");
+    expect(mathXml).toContain("msup");
+  });
+
+  it("registers formula sub-packages in manifest", async () => {
+    const ctx: ExportContext = {
+      markdown: "$x^2$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$x^2$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const manifest = await zip.file("META-INF/manifest.xml")!.async("text");
+    expect(manifest).toContain(
+      'media-type="application/vnd.oasis.opendocument.formula"',
+    );
+  });
+
+  it("renders \\ce{H2O} as valid MathML (mhchem)", async () => {
+    const ctx: ExportContext = {
+      markdown: "$\\ce{H2O}$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$\\ce{H2O}$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
+    expect(mathXml).toContain("<math");
+    expect(mathXml).toContain("</math>");
+    expect(mathXml).not.toContain("katex-error");
+  });
+
+  it("renders Zeise salt as valid MathML with sanitization", async () => {
+    const ctx: ExportContext = {
+      markdown: "$\\ce{[Pt(\\eta^2-C2H4)Cl3]-}$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$\\ce{[Pt(\\eta^2-C2H4)Cl3]-}$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
+    expect(mathXml).toContain("<math");
+    expect(mathXml).toContain("</math>");
+    expect(mathXml).not.toContain("katex-error");
+    expect(mathXml).not.toContain("<mphantom>");
+    expect(mathXml).toContain("<mrow/>");
+  });
+
+  it("renders \\ce{Zn^2+} with trailing + fix for LibreOffice", async () => {
+    const ctx: ExportContext = {
+      markdown: "$$\\ce{Zn^2+}$$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$$\\ce{Zn^2+}$$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
+    expect(mathXml).toContain("<math");
+    expect(mathXml).toContain("</math>");
+    expect(mathXml).not.toContain("katex-error");
+    expect(mathXml).not.toContain("<mphantom>");
+    // Trailing + must have <mrow/> appended for LibreOffice
+    expect(mathXml).toMatch(/<mo[^>]*>\+<\/mo><mrow\/><\/mrow>/);
+  });
+
+  it("sanitizes MathML for \\ce with nested \\underset", async () => {
+    const ctx: ExportContext = {
+      markdown:
+        "$$\\ce{Zn^2+ $\\underset{\\text{label}}{\\ce{Zn(OH)2 v}}$}$$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens(
+        "$$\\ce{Zn^2+ $\\underset{\\text{label}}{\\ce{Zn(OH)2 v}}$}$$",
+      ),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
+    expect(mathXml).toContain("<math");
+    expect(mathXml).toContain("</math>");
+    expect(mathXml).not.toContain("katex-error");
+    expect(mathXml).toContain("<munder>");
+    expect(mathXml).toContain("<mtext>label</mtext>");
+    expect(mathXml).not.toMatch(/<\/munder>\s*<\/mi>/);
+    expect(mathXml).not.toContain("<mphantom>");
+    expect(mathXml).toContain("<mrow/>");
   });
 });

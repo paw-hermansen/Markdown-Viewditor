@@ -1,6 +1,13 @@
 {
   "version": 1,
   "skills": {
+    "docx": {
+      "source": "smithery.ai",
+      "sourceUrl": "https://smithery.ai/skills/anthropics/docx",
+      "sourceType": "well-known",
+      "computedHash": "3eaa9d82fdbcd34032c09854e110432f09e2ab387766ec81fdb79f71a94c26f7",
+      "wellKnownDigest": "sha256:743da687e044ade92b736f3eecd0e142993f70863a34f84745bd19012ca985ae"
+    },
     "odt": {
       "source": "smithery.ai",
       "sourceUrl": "https://smithery.ai/skills/leiverkus/odt",

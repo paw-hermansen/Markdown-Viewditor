@@ -75,10 +75,11 @@ for that kind of links:
 >
 > And can have text after nested levels
 
-> The next block quote has a list
-> - row 1
-> - row 2
-> - row 3
+> This block quote has a nested list
+> 1. row 1
+>     - **nested** row
+>         - *nested* row
+> 1. row 2
 
 
 ## Tables with aligned columns

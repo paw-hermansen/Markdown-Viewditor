@@ -234,6 +234,9 @@ describe("odtExporter", () => {
     expect(styles).toContain("NumberList");
     expect(styles).toContain("TaskList");
     expect(styles).toContain("Blockquote");
+    expect(styles).toContain("QuoteTable");
+    expect(styles).toContain("QuoteTableCell");
+    expect(styles).toContain("QuoteList_20_1");
   });
 
   it("blockquote wraps content in Blockquote-styled paragraphs", async () => {
@@ -257,6 +260,83 @@ describe("odtExporter", () => {
     expect(xml).toContain("Blockquote");
     expect(xml).toContain("line one");
     expect(xml).toContain("line two");
+  });
+
+  it("consecutive blockquotes are separated by a spacer paragraph", async () => {
+    const xml = await getContentXml(
+      "> first blockquote\n\n> second blockquote",
+    );
+    expect(xml).toContain("first blockquote");
+    expect(xml).toContain("second blockquote");
+    // A Standard (unbordered) paragraph separates the two blockquotes
+    // to break the visual border continuity
+    const afterFirst = xml.split("first blockquote")[1];
+    expect(afterFirst).toContain('text:style-name="Standard"');
+    expect(afterFirst).toContain("<text:s/>");
+    expect(afterFirst).toContain("second blockquote");
+  });
+
+  it("paragraphs within a single blockquote do not get a spacer", async () => {
+    const xml = await getContentXml("> line one\n>\n> line two");
+    const between = xml.substring(
+      xml.indexOf("line one"),
+      xml.indexOf("line two"),
+    );
+    // No Standard paragraph with text:s/ between paragraphs of the same blockquote
+    const spacerCount = (between.match(/text:style-name="Standard"/g) || [])
+      .length;
+    expect(spacerCount).toBe(0);
+  });
+
+  it("blockquote containing a bullet list applies quote style to list items", async () => {
+    const xml = await getContentXml(
+      "> This block quote has a list\n> - row 1\n> - row 2\n> - row 3",
+    );
+    expect(xml).toContain("Blockquote_20_1");
+    expect(xml).toContain("BulletList");
+    expect(xml).toContain("This block quote has a list");
+    expect(xml).toContain("row 1");
+    expect(xml).toContain("row 2");
+    expect(xml).toContain("row 3");
+    // List items inside the blockquote should use the quote style
+    const listItemBlock = xml.match(
+      /<text:list-item>[\s\S]*?<text:p text:style-name="(.*?)">.*?row 1/,
+    );
+    expect(listItemBlock).not.toBeNull();
+    expect(listItemBlock![1]).toContain("QuoteList_20_1");
+  });
+
+  it("blockquote containing an ordered list applies quote style", async () => {
+    const xml = await getContentXml(
+      "> Steps to reproduce\n> 1. first step\n> 2. second step",
+    );
+    expect(xml).toContain("Blockquote_20_1");
+    expect(xml).toContain("NumberList");
+  });
+
+  it("blockquote containing a task list applies quote style", async () => {
+    const xml = await getContentXml(
+      "> TODO\n> - [ ] task one\n> - [x] task two",
+    );
+    expect(xml).toContain("Blockquote_20_1");
+    expect(xml).toContain("TaskList");
+    expect(xml).toContain("\u2610");
+    expect(xml).toContain("\u2611");
+  });
+
+  it("deeply nested blockquotes with a list apply correct depth", async () => {
+    const xml = await getContentXml("> > - deeply nested item");
+    expect(xml).toContain("QuoteList_20_2");
+    expect(xml).toContain("BulletList");
+  });
+
+  it("regular lists not inside blockquote still use Standard style", async () => {
+    const xml = await getContentXml("- plain list item");
+    const listItemMatch = xml.match(
+      /<text:list-item>[\s\S]*?<text:p text:style-name="(.*?)">plain list item/,
+    );
+    expect(listItemMatch).not.toBeNull();
+    expect(listItemMatch![1]).toBe("Standard");
   });
 
   it("nested lists produce nested text:list elements", async () => {

@@ -662,16 +662,45 @@ function generateStylesXml(): string {
     </style:style>
 ${Array.from({ length: 9 }, (_, i) => {
   const lvl = i + 1;
-  const indent = (lvl * 0.4).toFixed(1);
+  const marginLeft = ((lvl - 1) * 0.4).toFixed(4);
   return `
     <style:style style:name="${S.quote(lvl)}" style:family="paragraph" style:class="text">
       <style:paragraph-properties
-        fo:margin-left="${indent}in"
-        fo:margin-right="0.4in"
+        fo:margin-left="${marginLeft}in"
         fo:margin-top="0.05in"
-        fo:margin-bottom="0.05in"
+        fo:margin-bottom="0.05in"/>
+      <style:text-properties fo:color="#656d76"/>
+    </style:style>`;
+}).join("")}
+    <style:style style:name="QuoteTable" style:family="table">
+      <style:table-properties
+        fo:margin-left="0.4000in"
+        fo:padding-left="0.1000in"
+        fo:margin-right="0.4000in"
+        fo:margin-top="0.05in"
+        fo:margin-bottom="0.05in"/>
+    </style:style>
+    <style:style style:name="QuoteTableCell" style:family="table-cell">
+      <style:table-cell-properties
+        fo:border-top="none"
+        fo:border-bottom="none"
+        fo:border-right="none"
         fo:border-left="2pt solid #d1d9e0"
-        fo:padding-left="0.2in"/>
+        fo:padding-left="0.1000in"
+        fo:padding-top="0"
+        fo:padding-bottom="0"
+        fo:padding-right="0"
+        fo:background-color="#f6f8fa"/>
+    </style:style>
+${Array.from({ length: 9 }, (_, i) => {
+  const lvl = i + 1;
+  const marginLeft = ((lvl - 1) * 0.4).toFixed(4);
+  return `
+    <style:style style:name="QuoteList_20_${lvl}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties
+        fo:margin-left="${marginLeft}in"
+        fo:margin-top="0"
+        fo:margin-bottom="0"/>
       <style:text-properties fo:color="#656d76"/>
     </style:style>`;
 }).join("")}
@@ -853,12 +882,21 @@ async function buildDocument(
 
   function paragraphStyle(): string {
     let quoteDepth = 0;
-    for (let j = contextStack.length - 1; j >= 0; j--) {
+    for (let j = 0; j < contextStack.length; j++) {
       if (contextStack[j] === "blockquote") quoteDepth++;
-      else break;
     }
     if (quoteDepth > 0) return S.quote(Math.min(quoteDepth, 9));
     return S.body;
+  }
+
+  function listItemParagraphStyle(): string {
+    let quoteDepth = 0;
+    for (let j = 0; j < contextStack.length; j++) {
+      if (contextStack[j] === "blockquote") quoteDepth++;
+    }
+    return quoteDepth > 0
+      ? `QuoteList_20_${Math.min(quoteDepth, 9)}`
+      : "Standard";
   }
 
   /** Detect inline SVG in markdown-it text/softbreak tokens and reassemble. */
@@ -1401,7 +1439,7 @@ async function buildDocument(
           firstParagraph = false;
         }
         const closeIdx = findClosing(liInner, i, "paragraph_close");
-        result += `<text:p text:style-name="Standard">${content}</text:p>\n`;
+        result += `<text:p text:style-name="${listItemParagraphStyle()}">${content}</text:p>\n`;
         i = closeIdx >= 0 ? closeIdx + 1 : i + 1;
         continue;
       }
@@ -1412,7 +1450,7 @@ async function buildDocument(
           content = esc(checkboxPrefix) + content;
           firstParagraph = false;
         }
-        result += `<text:p text:style-name="Standard">${content}</text:p>\n`;
+        result += `<text:p text:style-name="${listItemParagraphStyle()}">${content}</text:p>\n`;
         i++;
         continue;
       }
@@ -1511,11 +1549,23 @@ async function buildDocument(
         case "blockquote_open": {
           const closeIdx = findClosing(tokens, i, "blockquote_close");
           if (closeIdx >= 0) {
+            const isTopLevel = !contextStack.includes("blockquote");
             contextStack.push("blockquote");
             const innerXml = await renderTokens(tokens.slice(i + 1, closeIdx));
-            parts.push(innerXml);
             contextStack.pop();
+            if (isTopLevel) {
+              parts.push(
+                `<table:table table:style-name="QuoteTable">\n  <table:table-column/>\n  <table:table-row>\n    <table:table-cell table:style-name="QuoteTableCell">\n${innerXml}\n    </table:table-cell>\n  </table:table-row>\n</table:table>`,
+              );
+            } else {
+              parts.push(innerXml);
+            }
             i = closeIdx + 1;
+            if (i < tokens.length && tokens[i].type === "blockquote_open") {
+              parts.push(
+                '<text:p text:style-name="Standard"><text:s/></text:p>',
+              );
+            }
           } else {
             i++;
           }

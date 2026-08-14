@@ -186,6 +186,8 @@
   }
 
   .btn.primary:hover:not(:disabled) {
-    opacity: 0.9;
+    background: var(--accent);
+    border-color: var(--accent);
+    opacity: 0.85;
   }
 </style>

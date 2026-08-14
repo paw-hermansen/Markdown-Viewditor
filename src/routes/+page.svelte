@@ -11,6 +11,7 @@
   import WarningDialog from '$lib/components/WarningDialog.svelte';
   import ExportConfirmDialog from '$lib/components/ExportConfirmDialog.svelte';
   import Toaster from '$lib/components/Toaster.svelte';
+  import ExportOverlay from '$lib/components/ExportOverlay.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
   import { settingsState, updateViewMode, updateSetting } from '$lib/stores/settings.svelte';
@@ -18,6 +19,7 @@
   import { confirmSaveDiscardCancel, confirmOverwrite, confirmReplace, confirmReload, confirmOk } from '$lib/stores/confirm.svelte';
   import { showWarningDialog } from '$lib/stores/warning-dialog.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { startExporting, stopExporting, exportingState } from '$lib/stores/exporting.svelte';
   import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -278,6 +280,7 @@
 
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
+    startExporting();
     try {
       const result = await exportPdf(
         viewerContent.innerHTML,
@@ -291,6 +294,8 @@
     } catch (e) {
       console.error('Print/PDF failed:', e);
       toast.error(isMacOS ? 'Create PDF failed' : 'Print failed', String(e));
+    } finally {
+      stopExporting();
     }
   }
 
@@ -360,6 +365,7 @@
       }
     }
 
+    startExporting();
     try {
       const { html, frontmatter, tokens } = await renderMarkdown(
         editorState.content,
@@ -381,6 +387,8 @@
     } catch (e) {
       console.error('Export failed:', e);
       toast.error('Export failed', String(e));
+    } finally {
+      stopExporting();
     }
   }
 
@@ -407,7 +415,7 @@
         updateSetting('odtRasterizeSvg', !!value);
         break;
       case 'odt.rasterResolution':
-        if (value === 1 || value === 2 || value === 3) {
+        if (value === 1 || value === 2 || value === 3 || value === 4) {
           updateSetting('odtRasterResolution', value);
         }
         break;
@@ -427,7 +435,7 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
-    if (fileState.isLoading) return;
+    if (fileState.isLoading || exportingState.active) return;
 
     const isMod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
@@ -658,6 +666,7 @@
 <ConfirmDialog />
 <WarningDialog />
 <ExportConfirmDialog />
+<ExportOverlay />
 <Toaster />
 
 <style>

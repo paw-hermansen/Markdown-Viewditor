@@ -3,7 +3,7 @@ export type ViewMode = "split" | "editor" | "viewer";
 export type MarkdownLevel = "basic" | "github" | "advanced" | "custom";
 
 /** Image resolution multiplier for rasterized ODT outputs (1×/96, 2×/192, 3×/288 DPI). */
-export type OdtRasterResolution = 1 | 2 | 3;
+export type OdtRasterResolution = 1 | 2 | 3 | 4;
 
 export interface FileInfo {
   path: string;

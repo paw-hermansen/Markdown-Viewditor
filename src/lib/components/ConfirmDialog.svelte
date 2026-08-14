@@ -162,7 +162,9 @@
   }
 
   .btn.primary:hover:not(:disabled) {
-    opacity: 0.9;
+    background: var(--accent);
+    border-color: var(--accent);
+    opacity: 0.85;
   }
 
   .btn.danger {
@@ -172,6 +174,8 @@
   }
 
   .btn.danger:hover:not(:disabled) {
-    opacity: 0.9;
+    background: #e06c75;
+    border-color: #e06c75;
+    opacity: 0.85;
   }
 </style>

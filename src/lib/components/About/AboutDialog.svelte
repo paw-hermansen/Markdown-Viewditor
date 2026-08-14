@@ -119,6 +119,17 @@
     { name: 'KaTeX', license: 'MIT', copyright: 'Khan Academy', url: 'https://katex.org' },
     { name: '@vscode/markdown-it-katex', license: 'MIT', copyright: 'Microsoft Corp.', url: 'https://github.com/microsoft/vscode-markdown-it-katex' },
     { name: 'mhchem (KaTeX contrib)', license: 'Apache-2.0', copyright: 'Martin Hensel, MathJax Consortium', url: 'https://github.com/mhchem/MathJax-mhchem' },
+    { name: 'jszip', license: 'MIT / GPL-3.0', copyright: 'Stuart Knightley, David Duponchel, Franz Buchinger, António Afonso', url: 'https://github.com/Stuk/jszip' },
+    { name: 'mime_guess', license: 'MIT', copyright: 'Austin Bonander', url: 'https://github.com/abonander/mime_guess' },
+    { name: 'percent-encoding', license: 'MIT / Apache-2.0', copyright: 'The rust-url developers', url: 'https://github.com/servo/rust-url' },
+    { name: 'base64', license: 'MIT / Apache-2.0', copyright: 'Alice Maz', url: 'https://github.com/marshallpierce/rust-base64' },
+    { name: 'resvg', license: 'Apache-2.0 / MIT', copyright: 'the Resvg Authors', url: 'https://github.com/linebender/resvg' },
+    { name: 'usvg', license: 'Apache-2.0 / MIT', copyright: 'the Resvg Authors', url: 'https://github.com/linebender/resvg' },
+    { name: 'tiny-skia', license: 'BSD 3-Clause', copyright: 'Google Inc., Yevhenii Reizner', url: 'https://github.com/linebender/tiny-skia' },
+    { name: 'objc2', license: 'MIT', copyright: 'Mads Marquart', url: 'https://github.com/madsmtm/objc2' },
+    { name: 'objc2-web-kit', license: 'MIT / Apache-2.0 / Zlib', copyright: 'Mads Marquart', url: 'https://github.com/madsmtm/objc2' },
+    { name: 'objc2-foundation', license: 'MIT', copyright: 'Mads Marquart', url: 'https://github.com/madsmtm/objc2' },
+    { name: 'block2', license: 'MIT', copyright: 'Mads Marquart', url: 'https://github.com/madsmtm/objc2' },
   ];
 </script>
 

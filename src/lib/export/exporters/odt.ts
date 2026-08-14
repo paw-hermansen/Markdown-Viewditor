@@ -13,9 +13,101 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import hljs from "highlight.js";
 import type Token from "markdown-it/lib/token.mjs";
-import type { Exporter, ExportResult, ExportContext } from "../types";
-import { renderMathToMathml } from "../math-render";
+import type {
+  Exporter,
+  ExportResult,
+  ExportContext,
+  OptionGroup,
+} from "../types";
+import { renderMathToMathml, renderMathToPng } from "../math-render";
+import { rasterizeSvg } from "../svg-rasterize";
 import { fileState } from "$lib/stores/file.svelte";
+
+/* ─────────────────────── option ids / helpers ─────────────────────────── */
+
+export const OPTION_RASTERIZE_MATH = "odt.rasterizeMath";
+export const OPTION_RASTERIZE_SVG = "odt.rasterizeSvg";
+export const OPTION_RASTER_RESOLUTION = "odt.rasterResolution";
+
+export interface ExportOptions {
+  [OPTION_RASTERIZE_MATH]?: boolean;
+  [OPTION_RASTERIZE_SVG]?: boolean;
+  [OPTION_RASTER_RESOLUTION]?: 1 | 2 | 3 | 4;
+}
+
+function asBool(v: unknown, fallback: boolean): boolean {
+  return typeof v === "boolean" ? v : fallback;
+}
+function asRes(v: unknown, fallback: 1 | 2 | 3 | 4): 1 | 2 | 3 | 4 {
+  return v === 1 || v === 2 || v === 3 || v === 4 ? v : fallback;
+}
+
+function readOptions(opts: Record<string, unknown> | undefined): ExportOptions {
+  return {
+    [OPTION_RASTERIZE_MATH]: asBool(opts?.[OPTION_RASTERIZE_MATH], false),
+    [OPTION_RASTERIZE_SVG]: asBool(opts?.[OPTION_RASTERIZE_SVG], false),
+    [OPTION_RASTER_RESOLUTION]: asRes(opts?.[OPTION_RASTER_RESOLUTION], 2),
+  };
+}
+
+/**
+ * Declare the per-export option groups the confirmation dialog renders.
+ * Empty for non-ODT exporters (HTML/PDF return `[]`).
+ */
+export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
+  // We only declare the shape of options today; future per-export logic
+  // (e.g. size-aware defaults) can read from `ctx` without an API change.
+  void ctx;
+  return [
+    {
+      id: "math",
+      label: "Math formulas",
+      options: [
+        {
+          id: OPTION_RASTERIZE_MATH,
+          label: "Rasterize as PNG images",
+          hint: "Smaller file, renders everywhere. Native MathML is editable in LibreOffice but may not render in all viewers.",
+          kind: "toggle",
+          value: false,
+        },
+      ],
+    },
+    {
+      id: "svg",
+      label: "SVG images",
+      options: [
+        {
+          id: OPTION_RASTERIZE_SVG,
+          label: "Rasterize as PNG images",
+          hint: "Applies to inline <svg>, <img src=*.svg>, and markdown ![…](*.svg). PNG: wider compatibility. SVG: vector, may not render in all viewers.",
+          kind: "toggle",
+          value: false,
+        },
+      ],
+    },
+    {
+      id: "resolution",
+      label: "Image resolution",
+      options: [
+        {
+          id: OPTION_RASTER_RESOLUTION,
+          label: "Resolution",
+          hint: "Applies only when math or SVG rasterization is on. Higher = sharper print, larger file.",
+          kind: "select",
+          value: 2,
+          choices: [
+            { value: 1, label: "1× (96 DPI)" },
+            { value: 2, label: "2× (192 DPI)" },
+            { value: 3, label: "3× (288 DPI)" },
+            { value: 4, label: "4× (384 DPI)" },
+          ],
+          disabledWhen: (current) =>
+            !current[OPTION_RASTERIZE_MATH] && !current[OPTION_RASTERIZE_SVG],
+        },
+      ],
+    },
+  ];
+}
 
 /* ─────────────────────── hljs color map (printer-friendly theme) ──────── */
 
@@ -69,6 +161,7 @@ const S = {
   listTask: "TaskList",
   cell: "Table_20_Contents",
   cellHead: "Table_20_Heading",
+  mathDisplay: "Math_20_Display",
 } as const;
 
 /* ─────────────────────── XML escaping ─────────────────────────────────── */
@@ -640,6 +733,9 @@ function generateStylesXml(): string {
     <style:style style:name="${S.body}" style:family="paragraph" style:class="text">
       <style:paragraph-properties fo:margin-top="0.08in" fo:margin-bottom="0.08in"/>
     </style:style>
+    <style:style style:name="${S.mathDisplay}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="center" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
     ${[1, 2, 3, 4, 5, 6]
       .map(
         (l) => `
@@ -831,6 +927,7 @@ async function buildDocument(
   tokens: Token[],
   invokeImpl: InvokeImpl,
   warnings: string[],
+  options: ExportOptions,
 ): Promise<BuildResult> {
   const autoStyles: Map<string, string> = new Map();
   const images = new Map<string, ResolvedImage>();
@@ -838,6 +935,10 @@ async function buildDocument(
   const mathObjects: MathObject[] = [];
   let mathCounter = 0;
   const footnoteBodies = new Map<string, string>();
+
+  const rasterizeMath = !!options[OPTION_RASTERIZE_MATH];
+  const rasterizeSvgFlag = !!options[OPTION_RASTERIZE_SVG];
+  const rasterScale = options[OPTION_RASTER_RESOLUTION] ?? 2;
 
   // ── inline formatter state ──
   let boldActive = false;
@@ -878,6 +979,85 @@ async function buildDocument(
     if (flags === "P" && position === "") return null;
 
     return `Char_${flags}${position}`;
+  }
+
+  /** Register a rasterized PNG (post rasterization helper). */
+  function addRasterImage(
+    data: Uint8Array,
+    widthPx: number,
+    heightPx: number,
+    srcLabel: string,
+  ): string {
+    const name = `Pictures/image${imageCounter.n++}.png`;
+    images.set(name, {
+      name,
+      mime: "image/png",
+      data,
+      widthPx,
+      heightPx,
+    });
+    let sizeAttrs = "";
+    if (widthPx > 0 && heightPx > 0) {
+      sizeAttrs = ` svg:width="${(widthPx / 96).toFixed(4)}in" svg:height="${(heightPx / 96).toFixed(4)}in"`;
+    }
+    void srcLabel;
+    return `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
+  }
+
+  /** Add a raw SVG as a Pictures/ entry and return its ODF XML. */
+  function addSvgImage(
+    svgXml: string,
+    dims: { width: number; height: number },
+    srcLabel: string,
+  ): string {
+    const bytes = new TextEncoder().encode(svgXml);
+    const name = `Pictures/image${imageCounter.n++}.svg`;
+    images.set(name, {
+      name,
+      mime: "image/svg+xml",
+      data: bytes,
+      widthPx: dims.width,
+      heightPx: dims.height,
+    });
+    let sizeAttrs = "";
+    if (dims.width > 0 && dims.height > 0) {
+      sizeAttrs = ` svg:width="${(dims.width / 96).toFixed(4)}in" svg:height="${(dims.height / 96).toFixed(4)}in"`;
+    }
+    void srcLabel;
+    return `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame>`;
+  }
+
+  /**
+   * Convert an SVG to PNG if the rasterizeSvg option is on and the SVG has
+   * parseable dimensions. Returns the resulting XML on success or null on
+   * failure (caller falls back to the vector SVG).
+   */
+  async function tryRasterizeSvg(
+    svgXml: string,
+    dims: { width: number; height: number },
+    srcLabel: string,
+  ): Promise<string | null> {
+    if (!rasterizeSvgFlag) return null;
+    if (dims.width <= 0 || dims.height <= 0) {
+      warnings.push(
+        `SVG ${srcLabel}: cannot rasterize without dimensions; embedded as vector SVG.`,
+      );
+      return null;
+    }
+    try {
+      const png = await rasterizeSvg(
+        svgXml,
+        dims.width,
+        dims.height,
+        rasterScale,
+      );
+      return addRasterImage(png, dims.width, dims.height, srcLabel);
+    } catch (err) {
+      warnings.push(
+        `SVG ${srcLabel} rasterization failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
   }
 
   function paragraphStyle(): string {
@@ -978,25 +1158,14 @@ async function buildDocument(
         case "text": {
           const svg = tryExtractInlineSvg(children, ci);
           if (svg) {
-            const bytes = new TextEncoder().encode(svg.svgXml);
-            const name = `Pictures/image${imageCounter.n++}.svg`;
+            const label = `inline-svg(text@${ci})`;
             const dims = sniffSvgDimensions(
-              bytes,
-              `inline-svg(${name})`,
+              new TextEncoder().encode(svg.svgXml),
+              label,
               warnings,
             ) ?? { width: 0, height: 0 };
-            images.set(name, {
-              name,
-              mime: "image/svg+xml",
-              data: bytes,
-              widthPx: dims.width,
-              heightPx: dims.height,
-            });
-            let sizeAttrs = "";
-            if (dims.width > 0 && dims.height > 0) {
-              sizeAttrs = ` svg:width="${(dims.width / 96).toFixed(4)}in" svg:height="${(dims.height / 96).toFixed(4)}in"`;
-            }
-            xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame>`;
+            const rasterized = await tryRasterizeSvg(svg.svgXml, dims, label);
+            xml += rasterized ?? addSvgImage(svg.svgXml, dims, label);
             ci += svg.consumedCount - 1;
             break;
           }
@@ -1060,6 +1229,23 @@ async function buildDocument(
           );
           if (resolvedSrc !== src) {
             const img = images.get(resolvedSrc);
+            // If rasterizeSvg is on and the resolved image is an SVG, swap
+            // the vector file for a PNG raster.
+            if (rasterizeSvgFlag && img && img.mime === "image/svg+xml") {
+              const rasterized = await tryRasterizeSvg(
+                new TextDecoder().decode(img.data),
+                { width: img.widthPx, height: img.heightPx },
+                `image(${src})`,
+              );
+              if (rasterized) {
+                xml += rasterized;
+                // resolveImage already added the SVG to `images`; drop it
+                // so it isn't packaged unused alongside its PNG raster.
+                images.delete(resolvedSrc);
+                break;
+              }
+              // Fall through to vector embed on rasterization failure.
+            }
             let sizeAttrs = "";
             // Calculate dimensions from pixel size at 96 DPI (CSS reference)
             if (widthAttr) {
@@ -1120,6 +1306,27 @@ async function buildDocument(
           break;
         }
         case "math_inline": {
+          if (rasterizeMath) {
+            try {
+              const { png, widthPx, heightPx } = await renderMathToPng(
+                child.content,
+                false,
+                rasterScale,
+              );
+              xml += addRasterImage(
+                png,
+                widthPx,
+                heightPx,
+                `inline-math(${child.content.slice(0, 40)})`,
+              );
+              break;
+            } catch (err) {
+              warnings.push(
+                `Inline math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
+              );
+              // Fall through to MathML embedding.
+            }
+          }
           try {
             const mathMl = renderMathToMathml(child.content, false);
             const objId = `Object ${++mathCounter}`;
@@ -1148,25 +1355,18 @@ async function buildDocument(
           if (lower.startsWith("<svg")) {
             const svgRes = tryExtractInlineHtmlSvg(children, ci);
             if (svgRes) {
-              const bytes = new TextEncoder().encode(svgRes.svgXml);
-              const name = `Pictures/image${imageCounter.n++}.svg`;
+              const label = `html_inline-svg(text@${ci})`;
               const dims = sniffSvgDimensions(
-                bytes,
-                `html_inline-svg(${name})`,
+                new TextEncoder().encode(svgRes.svgXml),
+                label,
                 warnings,
               ) ?? { width: 0, height: 0 };
-              images.set(name, {
-                name,
-                mime: "image/svg+xml",
-                data: bytes,
-                widthPx: dims.width,
-                heightPx: dims.height,
-              });
-              let sizeAttrs = "";
-              if (dims.width > 0 && dims.height > 0) {
-                sizeAttrs = ` svg:width="${(dims.width / 96).toFixed(4)}in" svg:height="${(dims.height / 96).toFixed(4)}in"`;
-              }
-              xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame>`;
+              const rasterized = await tryRasterizeSvg(
+                svgRes.svgXml,
+                dims,
+                label,
+              );
+              xml += rasterized ?? addSvgImage(svgRes.svgXml, dims, label);
               ci += svgRes.consumedCount - 1;
               break;
             }
@@ -1283,8 +1483,23 @@ async function buildDocument(
                 warnings,
               );
               if (resolvedSrc !== src) {
-                let sizeAttrs = "";
                 const img = images.get(resolvedSrc);
+                // Same rasterization branch as the markdown-image token.
+                if (rasterizeSvgFlag && img && img.mime === "image/svg+xml") {
+                  const rasterized = await tryRasterizeSvg(
+                    new TextDecoder().decode(img.data),
+                    { width: img.widthPx, height: img.heightPx },
+                    `html_img(${src})`,
+                  );
+                  if (rasterized) {
+                    xml += rasterized;
+                    // Drop the eagerly-added SVG entry so it isn't
+                    // packaged unused alongside its PNG raster.
+                    images.delete(resolvedSrc);
+                    break;
+                  }
+                }
+                let sizeAttrs = "";
                 if (widthMatch) {
                   const w = widthMatch[1].endsWith("px")
                     ? (parseFloat(widthMatch[1]) / 96).toFixed(4) + "in"
@@ -1728,26 +1943,16 @@ async function buildDocument(
               '      <text:p text:style-name="Horizontal_20_Rule"> </text:p>',
             );
           } else if (html.startsWith("<svg") && /<\/svg>\s*$/i.test(html)) {
-            const bytes = new TextEncoder().encode(html);
-            const name = `Pictures/image${imageCounter.n++}.svg`;
+            const label = `html_block-svg(token@${i})`;
             const dims = sniffSvgDimensions(
-              bytes,
-              `html_block-svg(${name})`,
+              new TextEncoder().encode(html),
+              label,
               warnings,
             ) ?? { width: 0, height: 0 };
-            images.set(name, {
-              name,
-              mime: "image/svg+xml",
-              data: bytes,
-              widthPx: dims.width,
-              heightPx: dims.height,
-            });
-            let sizeAttrs = "";
-            if (dims.width > 0 && dims.height > 0) {
-              sizeAttrs = ` svg:width="${(dims.width / 96).toFixed(4)}in" svg:height="${(dims.height / 96).toFixed(4)}in"`;
-            }
+            const rasterized = await tryRasterizeSvg(html, dims, label);
+            const inner = rasterized ?? addSvgImage(html, dims, label);
             parts.push(
-              `      <text:p text:style-name="${paragraphStyle()}"><draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame></text:p>`,
+              `      <text:p text:style-name="${paragraphStyle()}">${inner}</text:p>`,
             );
           }
           i++;
@@ -1756,6 +1961,31 @@ async function buildDocument(
 
         // ── Math block ──
         case "math_block": {
+          if (rasterizeMath) {
+            try {
+              const { png, widthPx, heightPx } = await renderMathToPng(
+                token.content,
+                true,
+                rasterScale,
+              );
+              const inner = addRasterImage(
+                png,
+                widthPx,
+                heightPx,
+                `block-math(${token.content.slice(0, 40)})`,
+              );
+              parts.push(
+                `      <text:p text:style-name="${S.mathDisplay}">${inner}</text:p>`,
+              );
+              i++;
+              break;
+            } catch (err) {
+              warnings.push(
+                `Block math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
+              );
+              // Fall through to MathML embedding.
+            }
+          }
           try {
             const mathMl = renderMathToMathml(token.content, true);
             const objId = `Object ${++mathCounter}`;
@@ -1920,10 +2150,13 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
   const warnings: string[] = [];
   const invokeImpl: InvokeImpl = (cmd, args) => invoke(cmd, args);
 
+  const opts = readOptions(ctx.options);
+
   const { bodyXml, autoStyles, images, mathObjects } = await buildDocument(
     ctx.tokens,
     invokeImpl,
     warnings,
+    opts,
   );
 
   const title = ctx.frontmatter?.name ?? ctx.fileName ?? "";
@@ -2003,10 +2236,16 @@ ${mathObj.mathml}`;
 
 export const odtExporter: Exporter = {
   id: "odt",
-  label: "Export as ODT (Neutral Style)",
+  label: "Export as ODT",
   description: "OpenDocument format",
   extension: "odt",
-  themeCapable: false,
+  /**
+   * ODT always renders in a neutral theme. The confirmation dialog still
+   * appears for this exporter — not for the theme warning, but to surface
+   * the per-export options (math/SVG rasterization, image resolution).
+   */
+  themeCapable: true,
+  optionGroups: odtOptionGroups,
   async export(ctx) {
     return exportOdt(ctx);
   },

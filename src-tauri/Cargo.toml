@@ -27,6 +27,17 @@ mime_guess = "2"
 percent-encoding = "2"
 base64 = "0.22"
 
+# SVG rasterization for ODT export. WebKitGTK on Linux refuses to decode
+# SVG data URIs through the image element, so we fall back to a pure-Rust
+# resvg pipeline. Default features (text + filter + pattern) are kept so
+# the rasterizer matches the browser's fidelity on every SVG construct.
+# Only linked into Linux bundles — Windows/macOS continue using the
+# WebView's native SVG-as-image support via the JS-only Image fallback.
+[target.'cfg(target_os = "linux")'.dependencies]
+resvg = "0.48"
+usvg = "0.48"
+tiny-skia = "0.12"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-web-kit = "0.3"

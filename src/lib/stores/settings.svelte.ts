@@ -17,6 +17,9 @@ const DEFAULT_SETTINGS: Settings = {
   markdownLevel: "advanced",
   enabledFeatures: presetFor("advanced"),
   exportConfirmDismissed: false,
+  odtRasterizeMath: false,
+  odtRasterizeSvg: false,
+  odtRasterResolution: 2,
 };
 
 export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });

@@ -263,9 +263,12 @@
   async function handlePrint() {
     if (!settingsState.exportConfirmDismissed) {
       const result = await showExportConfirmDialog({
+        themeKind: 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: 'Print',
         isMacOS,
+        optionGroups: [],
+        currentOptions: {},
       });
       if (!result.confirmed) return;
       if (result.dontShowAgain) {
@@ -295,7 +298,7 @@
    * Registry-fed export entry point. Used by the ViewerToolbar "Export ▾"
    * dropdown and the CommandPalette export commands. 'pdf' routes through
    * the same path as handlePrint; 'html' builds a self-contained standalone
-   * document.
+   * document; 'odt' surfaces the per-export options dialog.
    */
   async function handleExport(id: string) {
     const viewerContent = viewerComponent?.getViewerContentElement();
@@ -307,15 +310,53 @@
     }
 
     const exporter = getExporter(id);
-    if (exporter?.themeCapable && !settingsState.exportConfirmDismissed) {
+    if (!exporter) return;
+
+    // Always show the dialog for exporters that expose options, even when
+    // the user has dismissed the theme warning — options need a UI. Theme-
+    // capable exporters with no options still respect the dismiss flag.
+    const optionGroups = exporter.optionGroups?.({
+      markdown: '',
+      html: '',
+      frontmatter: null,
+      fileName,
+      tokens: [],
+    }) ?? [];
+    const hasOptions = optionGroups.length > 0;
+    const shouldShowDialog =
+      (exporter.themeCapable && !settingsState.exportConfirmDismissed) ||
+      hasOptions;
+
+    let resolvedOptions: Record<string, unknown> | undefined;
+
+    if (shouldShowDialog) {
+      // Pre-fill the option values from settings.
+      const currentOptions: Record<string, unknown> = {};
+      for (const group of optionGroups) {
+        for (const opt of group.options) {
+          currentOptions[opt.id] = readSettingForOption(opt.id, opt.value);
+        }
+      }
+      const isNeutral = id === 'odt';
       const result = await showExportConfirmDialog({
+        themeKind: isNeutral ? 'neutral' : 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: 'Export',
         isMacOS,
+        optionGroups,
+        currentOptions,
       });
       if (!result.confirmed) return;
-      if (result.dontShowAgain) {
+      if (result.dontShowAgain && exporter.themeCapable) {
         updateSetting('exportConfirmDismissed', true);
+      }
+      // Persist the chosen option values so future exports reflect the
+      // last-used preference even when the dialog is dismissed.
+      if (result.options) {
+        for (const [k, v] of Object.entries(result.options)) {
+          persistOption(k, v);
+        }
+        resolvedOptions = result.options;
       }
     }
 
@@ -330,6 +371,7 @@
         frontmatter,
         fileName,
         tokens,
+        options: resolvedOptions,
       });
       if (result.warnings.length > 0) {
         showWarningDialog(result.warnings, result.savedPath ?? '');
@@ -339,6 +381,36 @@
     } catch (e) {
       console.error('Export failed:', e);
       toast.error('Export failed', String(e));
+    }
+  }
+
+  /** Read a setting by its option-id suffix; falls back to the default. */
+  function readSettingForOption(id: string, fallback: unknown): unknown {
+    switch (id) {
+      case 'odt.rasterizeMath':
+        return settingsState.odtRasterizeMath;
+      case 'odt.rasterizeSvg':
+        return settingsState.odtRasterizeSvg;
+      case 'odt.rasterResolution':
+        return settingsState.odtRasterResolution;
+      default:
+        return fallback;
+    }
+  }
+
+  function persistOption(id: string, value: unknown) {
+    switch (id) {
+      case 'odt.rasterizeMath':
+        updateSetting('odtRasterizeMath', !!value);
+        break;
+      case 'odt.rasterizeSvg':
+        updateSetting('odtRasterizeSvg', !!value);
+        break;
+      case 'odt.rasterResolution':
+        if (value === 1 || value === 2 || value === 3) {
+          updateSetting('odtRasterResolution', value);
+        }
+        break;
     }
   }
 

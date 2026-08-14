@@ -2,6 +2,9 @@ export type ViewMode = "split" | "editor" | "viewer";
 
 export type MarkdownLevel = "basic" | "github" | "advanced" | "custom";
 
+/** Image resolution multiplier for rasterized ODT outputs (1×/96, 2×/192, 3×/288 DPI). */
+export type OdtRasterResolution = 1 | 2 | 3;
+
 export interface FileInfo {
   path: string;
   name: string;
@@ -22,6 +25,12 @@ export interface Settings {
   markdownLevel: MarkdownLevel;
   enabledFeatures: string[];
   exportConfirmDismissed: boolean;
+  /** Render math formulas as PNG images instead of editable MathML formulas. */
+  odtRasterizeMath: boolean;
+  /** Render all SVGs (inline, `<img>`, markdown image) as PNG images instead of vector SVG. */
+  odtRasterizeSvg: boolean;
+  /** Pixel-scale multiplier for rasterized images (applies only when rasterization is on). */
+  odtRasterResolution: OdtRasterResolution;
 }
 
 export interface EditorState {

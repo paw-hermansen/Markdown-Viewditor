@@ -1,10 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Mock the rasterization helpers so tests don't need a real DOM/canvas.
+// Tests that exercise rasterization override these with their own behavior.
+const { mockRasterizeSvg, mockRenderMathToPng } = vi.hoisted(() => ({
+  mockRasterizeSvg: vi.fn(async () => new Uint8Array([1, 2, 3])),
+  mockRenderMathToPng: vi.fn(async () => ({
+    png: new Uint8Array([1, 2, 3]),
+    widthPx: 32,
+    heightPx: 16,
+  })),
+}));
+
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
 vi.mock("$lib/stores/file.svelte", () => ({
   fileState: { currentFile: null },
 }));
+
+// Pull the mocked fileState so tests can override per-test settings
+// (e.g. simulating an editor with a file open for relative-path
+// resolution).
+import { fileState } from "$lib/stores/file.svelte";
 vi.mock("highlight.js", () => ({
   default: {
     highlight: vi.fn((code: string) => ({
@@ -21,6 +37,16 @@ vi.mock("highlight.js", () => ({
     })),
   },
 }));
+vi.mock("../svg-rasterize", () => ({
+  rasterizeSvg: mockRasterizeSvg,
+}));
+vi.mock("../math-render", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../math-render")>();
+  return {
+    ...original,
+    renderMathToPng: mockRenderMathToPng,
+  };
+});
 
 import JSZip from "jszip";
 import katex from "katex";
@@ -51,7 +77,11 @@ function makeMathTokens(src: string) {
   return md.parse(src, {});
 }
 
-async function runOdtExport(src: string, fileName = "test") {
+async function runOdtExport(
+  src: string,
+  fileName = "test",
+  options?: Record<string, unknown>,
+) {
   const tokens = makeTokens(src);
   const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
   const html = md.render(src);
@@ -61,16 +91,94 @@ async function runOdtExport(src: string, fileName = "test") {
     frontmatter: null,
     fileName,
     tokens,
+    options,
   };
   return odtExporter.export(ctx);
 }
 
-async function getContentXml(src: string): Promise<string> {
+async function runOdtExportWithMath(
+  src: string,
+  options?: Record<string, unknown>,
+) {
+  const tokens = makeMathTokens(src);
+  const md = new MarkdownIt({ html: true })
+    .use(footnote)
+    .use(taskLists)
+    .use(vscodeKatex, {
+      katex,
+      throwOnError: false,
+      enableBareBlocks: true,
+      enableFencedBlocks: true,
+    })
+    .use(mathBracketsPlugin);
+  const html = md.render(src);
+  const ctx: ExportContext = {
+    markdown: src,
+    html,
+    frontmatter: null,
+    fileName: "test",
+    tokens,
+    options,
+  };
+  return odtExporter.export(ctx);
+}
+
+async function getContentXml(
+  src: string,
+  options?: Record<string, unknown>,
+): Promise<string> {
   const { save } = await import("@tauri-apps/plugin-dialog");
   const { invoke } = await import("@tauri-apps/api/core");
   vi.mocked(save).mockResolvedValue("/tmp/test.odt");
   vi.mocked(invoke).mockResolvedValue(undefined);
-  await runOdtExport(src);
+  await runOdtExport(src, "test", options);
+  const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+  const buffer = new Uint8Array(content.content);
+  const zip = await JSZip.loadAsync(buffer);
+  return zip.file("content.xml")!.async("text");
+}
+
+/**
+ * Return the list of file paths inside the exported ODT ZIP.
+ * `readStubs` (optional) maps additional `invoke` commands to canned
+ * responses — used by tests that hit the relative-path branch in
+ * `resolveImage` which calls `read_file_as_base64`.
+ */
+async function getZipFileList(
+  src: string,
+  options?: Record<string, unknown>,
+  readStubs?: Record<string, unknown>,
+): Promise<string[]> {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const { invoke } = await import("@tauri-apps/api/core");
+  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+  vi.mocked(invoke).mockReset();
+  vi.mocked(invoke).mockImplementation(async (cmd) => {
+    if (readStubs && cmd in readStubs) return readStubs[cmd];
+    return undefined;
+  });
+  await runOdtExport(src, "test", options);
+  // The ODT exporter writes via `write_file_binary`; find that call
+  // regardless of any earlier `read_file_as_base64` etc.
+  const writeCall = vi
+    .mocked(invoke)
+    .mock.calls.find((call) => call[0] === "write_file_binary");
+  if (!writeCall) throw new Error("write_file_binary was never invoked");
+  const args = writeCall[1] as { content: number[] };
+  const buffer = new Uint8Array(args.content);
+  const zip = await JSZip.loadAsync(buffer);
+  return Object.keys(zip.files);
+}
+
+async function getMathContentXml(
+  src: string,
+  options?: Record<string, unknown>,
+): Promise<string> {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const { invoke } = await import("@tauri-apps/api/core");
+  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+  vi.mocked(invoke).mockResolvedValue(undefined);
+  await runOdtExportWithMath(src, options);
   const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
   const buffer = new Uint8Array(content.content);
   const zip = await JSZip.loadAsync(buffer);
@@ -97,8 +205,47 @@ describe("odtExporter", () => {
   it("has correct metadata", () => {
     expect(odtExporter.id).toBe("odt");
     expect(odtExporter.extension).toBe("odt");
-    expect(odtExporter.themeCapable).toBe(false);
-    expect(odtExporter.label).toContain("ODT");
+    // ODT now goes through the confirmation dialog to surface its
+    // per-export options (themeCapable = true even though it ignores the
+    // viewer's theme).
+    expect(odtExporter.themeCapable).toBe(true);
+    expect(odtExporter.label).toBe("Export as ODT");
+  });
+
+  it("declares three option groups", () => {
+    const groups =
+      odtExporter.optionGroups?.({
+        markdown: "",
+        html: "",
+        frontmatter: null,
+        fileName: "test",
+        tokens: [],
+      }) ?? [];
+    expect(groups.length).toBe(3);
+    const labels = groups.map((g) => g.label);
+    expect(labels).toContain("Math formulas");
+    expect(labels).toContain("SVG images");
+    expect(labels).toContain("Image resolution");
+  });
+
+  it("disables resolution option when neither rasterization is on", () => {
+    const groups =
+      odtExporter.optionGroups?.({
+        markdown: "",
+        html: "",
+        frontmatter: null,
+        fileName: "test",
+        tokens: [],
+      }) ?? [];
+    const resolutionGroup = groups.find((g) => g.label === "Image resolution");
+    const resolutionOpt = resolutionGroup?.options[0];
+    expect(resolutionOpt?.disabledWhen?.({})).toBe(true);
+    expect(
+      resolutionOpt?.disabledWhen?.({
+        "odt.rasterizeMath": true,
+        "odt.rasterizeSvg": false,
+      }),
+    ).toBe(false);
   });
 
   it("returns empty warnings when user cancels save dialog", async () => {
@@ -697,8 +844,7 @@ After list`;
 
   it("sanitizes MathML for \\ce with nested \\underset", async () => {
     const ctx: ExportContext = {
-      markdown:
-        "$$\\ce{Zn^2+ $\\underset{\\text{label}}{\\ce{Zn(OH)2 v}}$}$$",
+      markdown: "$$\\ce{Zn^2+ $\\underset{\\text{label}}{\\ce{Zn(OH)2 v}}$}$$",
       html: "",
       frontmatter: null,
       fileName: "test",
@@ -722,5 +868,267 @@ After list`;
     expect(mathXml).not.toMatch(/<\/munder>\s*<\/mi>/);
     expect(mathXml).not.toContain("<mphantom>");
     expect(mathXml).toContain("<mrow/>");
+  });
+});
+
+describe("ODT rasterization options", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRasterizeSvg.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    mockRenderMathToPng.mockResolvedValue({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 64,
+      heightPx: 24,
+    });
+  });
+
+  it("embeds inline SVG as PNG when rasterizeSvg is on", async () => {
+    const xml = await getContentXml(
+      '<svg width="64" height="32"><rect width="64" height="32" fill="green"/></svg>',
+      { "odt.rasterizeSvg": true, "odt.rasterResolution": 1 },
+    );
+    expect(mockRasterizeSvg).toHaveBeenCalled();
+    expect(xml).toContain('draw:mime-type="image/png"');
+    expect(xml).not.toContain('draw:mime-type="image/svg+xml"');
+    expect(xml).not.toContain("<draw:object");
+  });
+
+  it("keeps SVG as vector when rasterizeSvg is off", async () => {
+    mockRasterizeSvg.mockClear();
+    const xml = await getContentXml(
+      '<svg width="64" height="32"><rect width="64" height="32" fill="green"/></svg>',
+      { "odt.rasterizeSvg": false },
+    );
+    expect(mockRasterizeSvg).not.toHaveBeenCalled();
+    expect(xml).toContain('draw:mime-type="image/svg+xml"');
+  });
+
+  it("rasterizes inline math as PNG when rasterizeMath is on", async () => {
+    const xml = await getMathContentXml("$x^2$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 2,
+    });
+    expect(mockRenderMathToPng).toHaveBeenCalled();
+    expect(xml).toContain('draw:mime-type="image/png"');
+    expect(xml).not.toContain("<draw:object");
+  });
+
+  it("keeps math as MathML when rasterizeMath is off", async () => {
+    mockRenderMathToPng.mockClear();
+    const xml = await getMathContentXml("$x^2$", {
+      "odt.rasterizeMath": false,
+    });
+    expect(mockRenderMathToPng).not.toHaveBeenCalled();
+    expect(xml).toContain("<draw:object");
+  });
+
+  it("falls back to MathML when rasterization throws", async () => {
+    mockRenderMathToPng.mockRejectedValueOnce(new Error("DOM missing"));
+    const xml = await getMathContentXml("$x^2$", {
+      "odt.rasterizeMath": true,
+    });
+    // Falls back to the existing MathML embed path.
+    expect(xml).toContain("<draw:object");
+  });
+
+  it("falls back to vector SVG when rasterization throws", async () => {
+    mockRasterizeSvg.mockRejectedValueOnce(new Error("canvas unavailable"));
+    const xml = await getContentXml(
+      '<svg width="64" height="32"><rect width="64" height="32" fill="green"/></svg>',
+      { "odt.rasterizeSvg": true },
+    );
+    expect(xml).toContain('draw:mime-type="image/svg+xml"');
+  });
+
+  it("rasterizes an <img src=*.svg> when rasterizeSvg is on", async () => {
+    const svg =
+      '<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="blue"/></svg>';
+    // btoa is available in jsdom; no Buffer dependency needed.
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    // Wrap in a paragraph so markdown-it emits an inline token (a bare
+    // <img> at the start of a block becomes an html_block instead).
+    const xml = await getContentXml(`see <img src="${dataUri}" alt="svg"/>`, {
+      "odt.rasterizeSvg": true,
+    });
+    expect(mockRasterizeSvg).toHaveBeenCalled();
+    expect(xml).toContain('draw:mime-type="image/png"');
+  });
+
+  it("passes the chosen resolution scale to rasterizeSvg", async () => {
+    await getContentXml(
+      '<svg width="10" height="10"><rect width="10" height="10"/></svg>',
+      { "odt.rasterizeSvg": true, "odt.rasterResolution": 3 },
+    );
+    const args = mockRasterizeSvg.mock.calls[0] as unknown[];
+    expect(args[3]).toBe(3); // scale argument
+  });
+
+  it("passes the 4× resolution scale to rasterizeSvg", async () => {
+    await getContentXml(
+      '<svg width="10" height="10"><rect width="10" height="10"/></svg>',
+      { "odt.rasterizeSvg": true, "odt.rasterResolution": 4 },
+    );
+    const args = mockRasterizeSvg.mock.calls[0] as unknown[];
+    expect(args[3]).toBe(4); // scale argument
+  });
+
+  it("passes the chosen resolution scale to renderMathToPng", async () => {
+    await getMathContentXml("$x^2$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 3,
+    });
+    const args = mockRenderMathToPng.mock.calls[0] as unknown[];
+    expect(args[2]).toBe(3); // scale argument
+  });
+
+  it("passes the 4× resolution scale to renderMathToPng", async () => {
+    await getMathContentXml("$x^2$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 4,
+    });
+    const args = mockRenderMathToPng.mock.calls[0] as unknown[];
+    expect(args[2]).toBe(4); // scale argument
+  });
+
+  it("centers the paragraph that wraps a rasterized math block", async () => {
+    // Regression: previously the `math_block` rasterized branch reused
+    // the body paragraph style, which left `fo:text-align` at the ODF
+    // default ("start"/left) — so block math rendered flush left even
+    // though the markdown preview centers it. The fix introduces a
+    // `Math_20_Display` paragraph style with `fo:text-align="center"`.
+    const xml = await getMathContentXml("$$\nx^2\n$$", {
+      "odt.rasterizeMath": true,
+    });
+    // The rasterized frame must sit inside a paragraph whose style is
+    // the dedicated display-math style.
+    expect(xml).toMatch(/<text:p[^>]*text:style-name="Math_20_Display"/);
+    // And the paragraph immediately before/around the PNG frame must
+    // NOT be the body paragraph (which would imply the new style
+    // wasn't used).
+    expect(xml).not.toMatch(
+      /<text:p[^>]*text:style-name="Text_20_body"[^>]*>[^<]*<draw:frame[^>]*draw:mime-type="image\/png"/,
+    );
+    // Confirm the style itself defines centering in styles.xml.
+    // styles.xml is built once and doesn't depend on per-content
+    // options, so any source works here.
+    const styles = await getStylesXml("$$x^2$$");
+    expect(styles).toContain('style:name="Math_20_Display"');
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Math_20_Display"[\s\S]*?fo:text-align="center"[\s\S]*?<\/style:style>/,
+    );
+  });
+
+  it("does not center the paragraph that wraps a rasterized inline formula", async () => {
+    // Inline math lives inside the prose text flow; centering its
+    // paragraph would misalign the surrounding sentence.
+    const xml = await getMathContentXml("inline $x^2$ math", {
+      "odt.rasterizeMath": true,
+    });
+    expect(xml).not.toContain('text:style-name="Math_20_Display"');
+  });
+
+  it("captures display math at page-content width so the formula centers and the tag lands at the right page-edge", async () => {
+    // Regression: previously the host had no width constraint, so
+    // `.katex-display` filled the viewport and `.tag { right: 0 }`
+    // landed at the viewport edge — the captured widthPx was ~20 in
+    // and ODT consumers either clipped the tag or shrink-to-fit-
+    // collapsed it onto the formula. The fix pins the host width to
+    // a page-content value (600 px = 6.25 in) so the formula centers
+    // within the captured PNG and the tag lands at the right edge of
+    // the page.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 600, // = 6.25 in at 96 DPI (page-content width)
+      heightPx: 32,
+    });
+    const xml = await getMathContentXml("$$x^2 \\tag{7.a}$$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 2, // must NOT multiply to 1200
+    });
+    expect(mockRenderMathToPng).toHaveBeenCalledWith(
+      expect.stringContaining("\\tag{7.a}"),
+      true,
+      2,
+    );
+    // Width should be 600/96 = 6.25 in. If the dimension-fix
+    // regresses (returns post-scale dimensions or measures viewport)
+    // this number balloons.
+    expect(xml).toContain('svg:width="6.2500in"');
+    expect(xml).toContain('svg:height="0.3333in"');
+    // Sanity: must NOT be the page-spanning 20 in the old bug produced.
+    expect(xml).not.toMatch(/svg:width="20\./);
+    // The frame must sit in a centered paragraph so the page-edge
+    // alignment matches the markdown preview.
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Math_20_Display"[^>]*>[\s\S]*?svg:width="6\.2500in"/,
+    );
+  });
+
+  it("does not package the original SVG when rasterizing a markdown image", async () => {
+    // The example markdown uses `![svg from a file](./weird.svg)` which
+    // goes through resolveImage → invoke.read_file → tryRasterizeSvg.
+    // Stub the read so relative-path resolution finds the SVG bytes.
+    const svg =
+      '<svg width="64" height="32" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="64" height="32" fill="green"/></svg>';
+    // Pretend the editor has a file open so the relative path resolves.
+    fileState.currentFile = "/tmp/example.md";
+    try {
+      const files = await getZipFileList(
+        `![svg](./weird.svg)`,
+        { "odt.rasterizeSvg": true },
+        { read_file_as_base64: btoa(svg) },
+      );
+      expect(files.some((f) => f.endsWith(".png"))).toBe(true);
+      expect(files.some((f) => f.endsWith(".svg"))).toBe(false);
+    } finally {
+      fileState.currentFile = null;
+    }
+  });
+
+  it("does not package the original SVG when rasterizing an <img src=*.svg>", async () => {
+    const svg =
+      '<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">' +
+      '<circle cx="20" cy="20" r="18" fill="blue"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const files = await getZipFileList(
+      `see <img src="${dataUri}" alt="svg"/>`,
+      {
+        "odt.rasterizeSvg": true,
+      },
+    );
+    expect(files.some((f) => f.endsWith(".png"))).toBe(true);
+    expect(files.some((f) => f.endsWith(".svg"))).toBe(false);
+  });
+
+  it("still packages SVGs as vectors when rasterization is off", async () => {
+    const svg =
+      '<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="40" height="40"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const files = await getZipFileList(
+      `see <img src="${dataUri}" alt="svg"/>`,
+      {
+        "odt.rasterizeSvg": false,
+      },
+    );
+    expect(files.some((f) => f.endsWith(".svg"))).toBe(true);
+  });
+
+  it("packages the SVG when rasterization fails", async () => {
+    // Forcing rasterizeSvg to throw makes the fallback vector embed kick in.
+    mockRasterizeSvg.mockRejectedValueOnce(new Error("boom"));
+    const svg =
+      '<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="40" height="40"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const files = await getZipFileList(
+      `see <img src="${dataUri}" alt="svg"/>`,
+      {
+        "odt.rasterizeSvg": true,
+      },
+    );
+    expect(files.some((f) => f.endsWith(".svg"))).toBe(true);
+    expect(files.some((f) => f.endsWith(".png"))).toBe(false);
   });
 });

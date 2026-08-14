@@ -14,7 +14,9 @@
 //! so the rasterized output matches the browser's fidelity on every SVG
 //! construct, including `<text>` and `<filter>`.
 
+#[cfg(target_os = "linux")]
 use resvg::tiny_skia;
+#[cfg(target_os = "linux")]
 use usvg::{Options, Tree};
 
 use crate::error::AppError;

@@ -317,9 +317,9 @@
     const exporter = getExporter(id);
     if (!exporter) return;
 
-    // Always show the dialog for exporters that expose options, even when
-    // the user has dismissed the theme warning — options need a UI. Theme-
-    // capable exporters with no options still respect the dismiss flag.
+    // Respect the user's "don't show again" preference for all exporters,
+    // including those that expose per-export options. When the dialog is
+    // skipped, saved option values are read from settings automatically.
     const optionGroups = exporter.optionGroups?.({
       markdown: '',
       html: '',
@@ -329,10 +329,21 @@
     }) ?? [];
     const hasOptions = optionGroups.length > 0;
     const shouldShowDialog =
-      (exporter.themeCapable && !settingsState.exportConfirmDismissed) ||
-      hasOptions;
+      !settingsState.exportConfirmDismissed &&
+      (exporter.themeCapable || hasOptions);
 
     let resolvedOptions: Record<string, unknown> | undefined;
+
+    if (!shouldShowDialog && hasOptions) {
+      for (const group of optionGroups) {
+        for (const opt of group.options) {
+          (resolvedOptions ??= {})[opt.id] = readSettingForOption(
+            opt.id,
+            opt.value,
+          );
+        }
+      }
+    }
 
     if (shouldShowDialog) {
       // Pre-fill the option values from settings.

@@ -306,7 +306,7 @@
     justify-content: space-between;
     gap: 12px;
     width: 100%;
-    padding: 8px 12px;
+    padding: 5px 12px;
     border: none;
     background: transparent;
     color: var(--text-primary);

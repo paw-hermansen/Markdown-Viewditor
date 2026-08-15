@@ -55,6 +55,9 @@ describe("AppLayout", () => {
     onOpen: vi.fn(),
     onNew: vi.fn(),
     onAbout: vi.fn(),
+    onUpdateClick: vi.fn(),
+    updateAvailable: false,
+    updateVersion: "",
     isModified: false,
     fileName: "test.md",
   };
@@ -115,5 +118,39 @@ describe("AppLayout", () => {
       props: { ...defaultProps, children: snippet() },
     });
     expect(document.querySelector(".resize-handle")).toBeInTheDocument();
+  });
+
+  it("does not show update icon when updateAvailable is false", () => {
+    render(AppLayout, {
+      props: { ...defaultProps, updateAvailable: false, children: snippet() },
+    });
+    expect(screen.queryByTitle(/Update available/)).not.toBeInTheDocument();
+  });
+
+  it("shows update icon when updateAvailable is true", () => {
+    render(AppLayout, {
+      props: {
+        ...defaultProps,
+        updateAvailable: true,
+        updateVersion: "1.2.0",
+        children: snippet(),
+      },
+    });
+    expect(screen.getByTitle("Update available: v1.2.0")).toBeInTheDocument();
+  });
+
+  it("calls onUpdateClick when update icon is clicked", async () => {
+    const onUpdateClick = vi.fn();
+    render(AppLayout, {
+      props: {
+        ...defaultProps,
+        updateAvailable: true,
+        updateVersion: "1.2.0",
+        onUpdateClick,
+        children: snippet(),
+      },
+    });
+    await fireEvent.click(screen.getByTitle("Update available: v1.2.0"));
+    expect(onUpdateClick).toHaveBeenCalled();
   });
 });

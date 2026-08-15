@@ -31,6 +31,8 @@ export interface Settings {
   odtRasterizeSvg: boolean;
   /** Pixel-scale multiplier for rasterized images (applies only when rasterization is on). */
   odtRasterResolution: OdtRasterResolution;
+  /** Automatically check for app updates on startup. */
+  autoCheckUpdates: boolean;
 }
 
 export interface EditorState {

@@ -31,6 +31,7 @@
   import { exportPdf } from '$lib/export/exporters/pdf';
   import { getThemeLabel } from '$lib/utils/themes';
   import { showExportConfirmDialog } from '$lib/stores/export-confirm-dialog.svelte';
+  import { updateStatus, checkForUpdates } from '$lib/stores/update.svelte';
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
 
@@ -607,6 +608,10 @@
         markSaved();
       }
     }
+
+    if (settingsState.autoCheckUpdates) {
+      setTimeout(() => { void checkForUpdates(); }, 3000);
+    }
   });
 
   onDestroy(() => {
@@ -630,6 +635,9 @@
   onOpen={handleOpen}
   onNew={handleNew}
   onAbout={handleAbout}
+  onUpdateClick={handleAbout}
+  updateAvailable={updateStatus.available}
+  updateVersion={updateStatus.version}
   isModified={editorState.isModified}
   isLoading={fileState.isLoading}
   {fileName}

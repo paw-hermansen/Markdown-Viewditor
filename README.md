@@ -14,7 +14,7 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Scroll Sync** — Editor and view stay synchronized
 - **Math Formulas** — Advanced mathematical formulas using [KaTeX](https://katex.org)
 - **Chemical Formulas** — Chemical equations and physical units using [mhchem](https://mhchem.github.io/MathJax-mhchem/)
-- **Export** — Self-contained HTML (inlined CSS/fonts/images) and PDF/Print
+- **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
 - **HTML** — Use HTML along with the markdown

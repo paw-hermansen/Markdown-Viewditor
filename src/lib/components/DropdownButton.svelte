@@ -11,10 +11,12 @@
 
   interface Props {
     choices: Choice<T>[];
-    value: T;
+    value?: T;
+    fixedLabel?: string;
     onAction?: (value: T) => void;
     onSelect?: (value: T) => void;
     leadingIcon?: Snippet;
+    footer?: Snippet;
     formatLabel?: (choice: Choice<T>) => string;
     title?: string;
     header?: string;
@@ -25,9 +27,11 @@
   let {
     choices,
     value = $bindable(),
+    fixedLabel,
     onAction,
     onSelect,
     leadingIcon,
+    footer,
     formatLabel,
     title,
     header,
@@ -38,8 +42,9 @@
   let isOpen = $state(false);
   let rootRef: HTMLDivElement | undefined = $state(undefined);
 
-  let current = $derived(choices.find((c) => c.value === value) ?? choices[0]);
-  let label = $derived(formatLabel ? formatLabel(current) : current.label);
+  let current = $derived(value !== undefined ? choices.find((c) => c.value === value) ?? choices[0] : undefined);
+  let label = $derived(fixedLabel ?? (current ? (formatLabel ? formatLabel(current) : current.label) : ''));
+  let isMenuMode = $derived(fixedLabel !== undefined);
 
   function toggle() {
     if (disabled) return;
@@ -47,15 +52,19 @@
   }
 
   function pick(v: T) {
-    value = v;
+    if (!isMenuMode) {
+      value = v;
+    }
     isOpen = false;
     onSelect?.(v);
   }
 
   function fire() {
     if (disabled) return;
-    if (onAction) {
-      onAction(value);
+    if (isMenuMode) {
+      toggle();
+    } else if (onAction) {
+      onAction(value!);
     } else {
       toggle();
     }
@@ -81,7 +90,7 @@
   });
 </script>
 
-<div class="dropdown-button" bind:this={rootRef}>
+<div class="dropdown-button" class:menu-mode={isMenuMode} bind:this={rootRef}>
   <button
     class="main-button"
     onclick={fire}
@@ -98,18 +107,20 @@
     <span class="label">{label}</span>
   </button>
 
-  <button
-    class="caret-button"
-    onclick={toggle}
-    disabled={disabled}
-    aria-label="More options"
-    aria-haspopup="menu"
-    aria-expanded={isOpen}
-  >
-    <svg class="chevron" class:open={isOpen} xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  </button>
+  {#if !isMenuMode}
+    <button
+      class="caret-button"
+      onclick={toggle}
+      disabled={disabled}
+      aria-label="More options"
+      aria-haspopup="menu"
+      aria-expanded={isOpen}
+    >
+      <svg class="chevron" class:open={isOpen} xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
+  {/if}
 
   {#if isOpen}
     <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu">
@@ -119,7 +130,7 @@
       {#each choices as choice}
         <button
           class="dropdown-item"
-          class:active={choice.value === value}
+          class:active={!isMenuMode && choice.value === value}
           onclick={() => pick(choice.value)}
           role="menuitemradio"
           aria-checked={choice.value === value}
@@ -130,13 +141,18 @@
               <span class="item-description">{choice.description}</span>
             {/if}
           </span>
-          {#if choice.value === value}
+          {#if !isMenuMode && choice.value === value}
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           {/if}
         </button>
       {/each}
+      {#if footer}
+        <div class="dropdown-footer">
+          {@render footer()}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -171,6 +187,10 @@
   .main-button:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+
+  .menu-mode .main-button {
+    border-radius: 6px;
   }
 
   .caret-button {
@@ -261,13 +281,32 @@
     letter-spacing: 0.5px;
   }
 
+  .dropdown-footer {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .dropdown-footer :global(label) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .dropdown-footer :global(input[type="checkbox"]) {
+    cursor: pointer;
+  }
+
   .dropdown-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     width: 100%;
-    padding: 8px 12px;
+    padding: 5px 12px;
     border: none;
     background: transparent;
     color: var(--text-primary);

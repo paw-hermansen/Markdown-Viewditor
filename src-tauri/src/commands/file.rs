@@ -113,6 +113,47 @@ pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
     }
 }
 
+/// Atomically write binary `content` to `path`, leaving a `<path>.bak`
+/// backup of the previous version when it existed. Same logic as `write_file`
+/// but for opaque binary data (ODT, EPUB, etc.).
+#[tauri::command]
+pub async fn write_file_binary(path: String, content: Vec<u8>) -> Result<(), AppError> {
+    let p = Path::new(&path);
+
+    if let Ok(metadata) = fs::metadata(p) {
+        if metadata.permissions().readonly() {
+            return Err(AppError::ReadOnly(path));
+        }
+        #[cfg(unix)]
+        {
+            use std::fs::OpenOptions;
+            if OpenOptions::new().write(true).open(p).is_err() {
+                return Err(AppError::ReadOnly(path));
+            }
+        }
+
+        let bak = format!("{}.bak", path);
+        let _ = fs::copy(p, &bak);
+    }
+
+    let tmp = format!("{}.tmp.{}", path, std::process::id());
+    fs::write(&tmp, &content)?;
+
+    match fs::rename(&tmp, p) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            let _ = fs::remove_file(&tmp);
+            match e.raw_os_error() {
+                Some(18) => {
+                    fs::write(p, &content)?;
+                    Ok(())
+                }
+                _ => Err(AppError::Io(e)),
+            }
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn list_files(dir: String) -> Result<Vec<FileInfo>, AppError> {
     let entries = std::fs::read_dir(&dir)?;

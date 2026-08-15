@@ -9,13 +9,17 @@
   import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import WarningDialog from '$lib/components/WarningDialog.svelte';
+  import ExportConfirmDialog from '$lib/components/ExportConfirmDialog.svelte';
   import Toaster from '$lib/components/Toaster.svelte';
+  import ExportOverlay from '$lib/components/ExportOverlay.svelte';
   import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
   import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
-  import { settingsState, updateViewMode } from '$lib/stores/settings.svelte';
+  import { settingsState, updateViewMode, updateSetting } from '$lib/stores/settings.svelte';
+  import { viewerState } from '$lib/stores/viewer.svelte';
   import { confirmSaveDiscardCancel, confirmOverwrite, confirmReplace, confirmReload, confirmOk } from '$lib/stores/confirm.svelte';
   import { showWarningDialog } from '$lib/stores/warning-dialog.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { startExporting, stopExporting, exportingState } from '$lib/stores/exporting.svelte';
   import { MSG } from '$lib/constants/messages';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -23,8 +27,10 @@
   import { createScrollSync } from '$lib/utils/scroll-sync';
   import { onMount, onDestroy } from 'svelte';
   import { renderMarkdown } from '$lib/utils/markdown';
-  import { runExporter, registerBuiltinExporters } from '$lib/export/registry.svelte';
+  import { runExporter, registerBuiltinExporters, getExporter } from '$lib/export/registry.svelte';
   import { exportPdf } from '$lib/export/exporters/pdf';
+  import { getThemeLabel } from '$lib/utils/themes';
+  import { showExportConfirmDialog } from '$lib/stores/export-confirm-dialog.svelte';
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
 
@@ -257,8 +263,24 @@
    * `theme-export` body classes that app.css keys off of.
    */
   async function handlePrint() {
+    if (!settingsState.exportConfirmDismissed) {
+      const result = await showExportConfirmDialog({
+        themeKind: 'viewer',
+        themeLabel: getThemeLabel(viewerState.theme),
+        actionLabel: 'Print',
+        isMacOS,
+        optionGroups: [],
+        currentOptions: {},
+      });
+      if (!result.confirmed) return;
+      if (result.dontShowAgain) {
+        updateSetting('exportConfirmDismissed', true);
+      }
+    }
+
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
+    startExporting();
     try {
       const result = await exportPdf(
         viewerContent.innerHTML,
@@ -272,6 +294,8 @@
     } catch (e) {
       console.error('Print/PDF failed:', e);
       toast.error(isMacOS ? 'Create PDF failed' : 'Print failed', String(e));
+    } finally {
+      stopExporting();
     }
   }
 
@@ -279,7 +303,7 @@
    * Registry-fed export entry point. Used by the ViewerToolbar "Export ▾"
    * dropdown and the CommandPalette export commands. 'pdf' routes through
    * the same path as handlePrint; 'html' builds a self-contained standalone
-   * document.
+   * document; 'odt' surfaces the per-export options dialog.
    */
   async function handleExport(id: string) {
     const viewerContent = viewerComponent?.getViewerContentElement();
@@ -290,10 +314,71 @@
       return;
     }
 
+    const exporter = getExporter(id);
+    if (!exporter) return;
+
+    // Respect the user's "don't show again" preference for all exporters,
+    // including those that expose per-export options. When the dialog is
+    // skipped, saved option values are read from settings automatically.
+    const optionGroups = exporter.optionGroups?.({
+      markdown: '',
+      html: '',
+      frontmatter: null,
+      fileName,
+      tokens: [],
+    }) ?? [];
+    const hasOptions = optionGroups.length > 0;
+    const shouldShowDialog =
+      !settingsState.exportConfirmDismissed &&
+      (exporter.themeCapable || hasOptions);
+
+    let resolvedOptions: Record<string, unknown> | undefined;
+
+    if (!shouldShowDialog && hasOptions) {
+      for (const group of optionGroups) {
+        for (const opt of group.options) {
+          (resolvedOptions ??= {})[opt.id] = readSettingForOption(
+            opt.id,
+            opt.value,
+          );
+        }
+      }
+    }
+
+    if (shouldShowDialog) {
+      // Pre-fill the option values from settings.
+      const currentOptions: Record<string, unknown> = {};
+      for (const group of optionGroups) {
+        for (const opt of group.options) {
+          currentOptions[opt.id] = readSettingForOption(opt.id, opt.value);
+        }
+      }
+      const isNeutral = id === 'odt';
+      const result = await showExportConfirmDialog({
+        themeKind: isNeutral ? 'neutral' : 'viewer',
+        themeLabel: getThemeLabel(viewerState.theme),
+        actionLabel: 'Export',
+        isMacOS,
+        optionGroups,
+        currentOptions,
+      });
+      if (!result.confirmed) return;
+      if (result.dontShowAgain && exporter.themeCapable) {
+        updateSetting('exportConfirmDismissed', true);
+      }
+      // Persist the chosen option values so future exports reflect the
+      // last-used preference even when the dialog is dismissed.
+      if (result.options) {
+        for (const [k, v] of Object.entries(result.options)) {
+          persistOption(k, v);
+        }
+        resolvedOptions = result.options;
+      }
+    }
+
+    startExporting();
     try {
-      // Render a fresh copy for export so it's not affected by the Viewer's
-      // cache-busting image query params (which would break data-URI inlining).
-      const { html, frontmatter } = await renderMarkdown(
+      const { html, frontmatter, tokens } = await renderMarkdown(
         editorState.content,
         fileState.currentFile,
       );
@@ -302,6 +387,8 @@
         html,
         frontmatter,
         fileName,
+        tokens,
+        options: resolvedOptions,
       });
       if (result.warnings.length > 0) {
         showWarningDialog(result.warnings, result.savedPath ?? '');
@@ -311,6 +398,38 @@
     } catch (e) {
       console.error('Export failed:', e);
       toast.error('Export failed', String(e));
+    } finally {
+      stopExporting();
+    }
+  }
+
+  /** Read a setting by its option-id suffix; falls back to the default. */
+  function readSettingForOption(id: string, fallback: unknown): unknown {
+    switch (id) {
+      case 'odt.rasterizeMath':
+        return settingsState.odtRasterizeMath;
+      case 'odt.rasterizeSvg':
+        return settingsState.odtRasterizeSvg;
+      case 'odt.rasterResolution':
+        return settingsState.odtRasterResolution;
+      default:
+        return fallback;
+    }
+  }
+
+  function persistOption(id: string, value: unknown) {
+    switch (id) {
+      case 'odt.rasterizeMath':
+        updateSetting('odtRasterizeMath', !!value);
+        break;
+      case 'odt.rasterizeSvg':
+        updateSetting('odtRasterizeSvg', !!value);
+        break;
+      case 'odt.rasterResolution':
+        if (value === 1 || value === 2 || value === 3 || value === 4) {
+          updateSetting('odtRasterResolution', value);
+        }
+        break;
     }
   }
 
@@ -327,7 +446,7 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
-    if (fileState.isLoading) return;
+    if (fileState.isLoading || exportingState.active) return;
 
     const isMod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
@@ -557,6 +676,8 @@
 
 <ConfirmDialog />
 <WarningDialog />
+<ExportConfirmDialog />
+<ExportOverlay />
 <Toaster />
 
 <style>

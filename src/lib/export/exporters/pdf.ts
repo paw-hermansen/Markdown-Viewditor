@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import type { Exporter, ExportResult } from "../types";
-import { settingsState } from "$lib/stores/settings.svelte";
 import { fileState } from "$lib/stores/file.svelte";
 
 /**
@@ -20,11 +19,32 @@ import { fileState } from "$lib/stores/file.svelte";
  * viewer's maximum content width and then scaled to the paper with CSS
  * `zoom`, so line wrapping in the PDF matches the viewer word-for-word.
  * KaTeX fonts are loaded in-document, so math prints correctly.
+ *
+ * Print mode is deferred until the moment of capture (see `beginPrint()` on
+ * `PrintContainerHandle`): `buildPrintContainer()` only stages the clone
+ * and the page background, leaving the live viewer styled and the
+ * export-overlay spinner visible during the build phase (font loading,
+ * layout settling). `exportPdf()` calls `beginPrint()` right before
+ * `window.print()` / `invoke('create_pdf')`, which (a) swaps the
+ * `#viewer-content` id to the clone so the active theme applies to it,
+ * (b) adds `body.exporting` so the app shell hides and the clone becomes
+ * the visible content, and (c) lets the `body.exporting .backdrop` rule
+ * in app.css hide the spinner so it isn't captured into the PDF.
  */
 
 export interface PrintContainerHandle {
   printDiv: HTMLDivElement;
-  /** Restore the document to its pre-export state (remove the clone, etc.). */
+  /**
+   * Switch the document into print mode: swap the `#viewer-content` id from
+   * the live viewer to the clone, then add the `exporting` classes (which
+   * hide the app shell, reveal the clone, and hide the export-overlay
+   * spinner via the `body.exporting .backdrop` rule in app.css). Call
+   * once, immediately before the actual print/capture, so the live viewer
+   * keeps its theme styling and the spinner stays visible during the
+   * build phase. Idempotent.
+   */
+  beginPrint: () => void;
+  /** Restore the document to its pre-export state. Idempotent. */
   cleanup: () => void;
 }
 
@@ -130,24 +150,23 @@ function resolvePageBackground(viewerContentElement?: HTMLElement): {
 /**
  * Build the off-screen `.print-content` container used by both the in-app
  * Print button and this exporter. The clone carries the `.viewer-content`
- * class so markdown.css applies directly (single source of truth); in theme
- * mode it also takes over the `#viewer-content` id so the theme CSS applies.
- * The page background is applied inline to html/body so it propagates to the
- * full page canvas (full bleed, including @page margins).
+ * class so markdown.css applies directly (single source of truth); it
+ * takes over the `#viewer-content` id (and the `exporting` classes) only
+ * when `beginPrint()` is called, so the live viewer keeps its theme
+ * styling (and the export-overlay spinner stays visible) during the
+ * build phase. The page background is applied inline to html/body now
+ * because the clone already needs to size to the printed page area; the
+ * inline value on html/body is hidden behind the app shell until
+ * `beginPrint()` reveals the clone.
  */
 export function buildPrintContainer(
   viewerHtml: string,
-  style: "printer-friendly" | "theme",
   layout: PrintLayout,
   viewerContentElement?: HTMLElement,
 ): PrintContainerHandle {
-  const themeMode = style === "theme";
-
-  // Resolve the page background BEFORE the id swap detaches the theme rules
-  // from the live viewer element.
-  const pageBackground = themeMode
-    ? resolvePageBackground(viewerContentElement)
-    : { color: "#ffffff", image: "" };
+  // Resolve the page background now — the value comes from the live
+  // viewer, which still owns the #viewer-content id until beginPrint().
+  const pageBackground = resolvePageBackground(viewerContentElement);
 
   const printDiv = document.createElement("div");
   printDiv.classList.add("viewer-content", "print-content");
@@ -155,15 +174,6 @@ export function buildPrintContainer(
   printDiv.style.width = `${layout.layoutWidthPx}px`;
   printDiv.style.zoom = String(layout.zoom);
   document.body.appendChild(printDiv);
-
-  if (themeMode && viewerContentElement) {
-    printDiv.id = "viewer-content";
-    viewerContentElement.id = "";
-  }
-
-  const exportClass = themeMode ? "theme-export" : "print-friendly";
-  document.documentElement.classList.add("exporting", exportClass);
-  document.body.classList.add("exporting", exportClass);
 
   // Full-bleed page background, two complementary mechanisms:
   // 1. Inline background on html/body — the root element's background
@@ -188,88 +198,34 @@ export function buildPrintContainer(
   pageStyleEl.textContent = pageRule;
   document.head.appendChild(pageStyleEl);
 
+  let inPrintMode = false;
+
   return {
     printDiv,
+    beginPrint() {
+      if (inPrintMode) return;
+      inPrintMode = true;
+      if (viewerContentElement) {
+        printDiv.id = "viewer-content";
+        viewerContentElement.id = "";
+      }
+      document.documentElement.classList.add("exporting", "theme-export");
+      document.body.classList.add("exporting", "theme-export");
+    },
     cleanup() {
-      document.documentElement.classList.remove(
-        "exporting",
-        "print-friendly",
-        "theme-export",
-      );
-      document.body.classList.remove(
-        "exporting",
-        "print-friendly",
-        "theme-export",
-      );
+      if (inPrintMode) {
+        document.documentElement.classList.remove("exporting", "theme-export");
+        document.body.classList.remove("exporting", "theme-export");
+      }
+      if (viewerContentElement) {
+        viewerContentElement.id = "viewer-content";
+      }
       document.documentElement.style.background = "";
       document.body.style.background = "";
       pageStyleEl.remove();
       printDiv.remove();
-      if (themeMode && viewerContentElement) {
-        viewerContentElement.id = "viewer-content";
-      }
     },
   };
-}
-
-/* ===== Printer-friendly syntax highlighting =====
-   Printer-friendly output must not depend on the selected viewer theme, but
-   the theme's global `.hljs` token rules would otherwise bleed into the
-   export. The GitHub Light rules are re-scoped to the export container with
-   higher-specificity selectors, making the printer-friendly look fully
-   deterministic. */
-
-let cachedPrinterFriendlySyntaxCss: string | null = null;
-
-/**
- * Re-scope a theme's highlight rules to the printer-friendly export
- * container. Rules targeting `#viewer-content` are dropped (structure is
- * styled by the printer-friendly palette in app.css), and the base `.hljs`
- * rule loses its background so code keeps the palette's neutral chip/panel
- * backgrounds while tokens get GitHub Light colors.
- */
-export function scopeSyntaxCssForPrint(css: string): string {
-  const scope = "body.print-friendly .print-content";
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const out: string[] = [];
-  for (const chunk of withoutComments.split("}")) {
-    const braceIndex = chunk.indexOf("{");
-    if (braceIndex === -1) continue;
-    const selectorText = chunk.slice(0, braceIndex).trim();
-    let declarations = chunk.slice(braceIndex + 1).trim();
-    if (!selectorText || !declarations) continue;
-    if (selectorText.includes("#viewer-content")) continue;
-    if (selectorText === ".hljs") {
-      declarations = declarations
-        .split(";")
-        .filter((d) => !/^\s*background(-color)?\s*:/.test(d))
-        .join(";")
-        .trim();
-      if (!declarations) continue;
-    }
-    const scoped = selectorText
-      .split(",")
-      .map((s) => `${scope} ${s.trim()}`)
-      .join(", ");
-    out.push(`${scoped} { ${declarations} }`);
-  }
-  return out.join("\n");
-}
-
-/**
- * Inject the re-scoped GitHub Light syntax rules for the duration of a
- * printer-friendly export. Returns a remover function.
- */
-async function injectPrinterFriendlySyntax(): Promise<() => void> {
-  if (cachedPrinterFriendlySyntaxCss === null) {
-    const mod = await import("$lib/styles/highlight/github-light.css?raw");
-    cachedPrinterFriendlySyntaxCss = scopeSyntaxCssForPrint(mod.default);
-  }
-  const styleEl = document.createElement("style");
-  styleEl.id = "print-friendly-syntax";
-  styleEl.textContent = cachedPrinterFriendlySyntaxCss;
-  document.head.appendChild(styleEl);
-  return () => styleEl.remove();
 }
 
 /** Wait two animation frames so the just-added .print-content has laid out. */
@@ -289,10 +245,6 @@ export async function exportPdf(
   fileName: string,
   viewerContentElement?: HTMLElement,
 ): Promise<ExportResult> {
-  const style = settingsState.printStyle;
-  const removeSyntaxStyle =
-    style === "printer-friendly" ? await injectPrinterFriendlySyntax() : null;
-
   const layoutWidthPx = computeViewerLayoutWidth(viewerContentElement);
   // macOS captures the page at the webview's bounds, so scale the laid-out
   // width up to fill the webview width (content fills the PDF edge-to-edge,
@@ -303,12 +255,7 @@ export async function exportPdf(
     layoutWidthPx,
     zoom: targetWidthPx / layoutWidthPx,
   };
-  const handle = buildPrintContainer(
-    viewerHtml,
-    style,
-    layout,
-    viewerContentElement,
-  );
+  const handle = buildPrintContainer(viewerHtml, layout, viewerContentElement);
 
   try {
     let savePath: string | null = null;
@@ -330,6 +277,18 @@ export async function exportPdf(
     // pagination, so wrapping is computed with final font metrics. (The
     // optional chaining only guards non-browser test environments.)
     await document.fonts?.ready;
+
+    // Switch to print mode right before the capture (macOS createPDF or
+    // Linux/Windows window.print). Up to this point the live viewer keeps
+    // its theme styling and the export-overlay spinner stays visible.
+    // beginPrint() swaps the #viewer-content id to the clone and adds
+    // body.exporting — which hides the app shell, reveals the clone, and
+    // (via the body.exporting .backdrop rule in app.css) hides the
+    // spinner so it isn't captured into the PDF.
+    handle.beginPrint();
+
+    // Wait for the just-applied print rules (max-width, padding, etc.) to
+    // take effect and for the layout to settle before the capture fires.
     await waitForLayout();
 
     if (isMacOS && savePath) {
@@ -346,14 +305,15 @@ export async function exportPdf(
     return { warnings: [] };
   } finally {
     handle.cleanup();
-    removeSyntaxStyle?.();
   }
 }
 
 export const pdfExporter: Exporter = {
   id: "pdf",
   label: isMacOS ? "Export as PDF" : "Export as PDF (Print…)",
+  description: "Vector document",
   extension: "pdf",
+  themeCapable: true,
   async export(ctx) {
     return exportPdf(ctx.html, ctx.fileName);
   },

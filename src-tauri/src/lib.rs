@@ -6,8 +6,9 @@ mod state;
 use std::env;
 use tauri::Manager;
 
-use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, opened_urls, is_file_writable, list_files, read_file, read_file_as_base64, write_file};
+use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, opened_urls, is_file_writable, list_files, read_file, read_file_as_base64, write_file, write_file_binary};
 use commands::print::create_pdf;
+use commands::svg::rasterize_svg;
 use commands::window::{force_close_window, save_window_state, save_window_state_debounced};
 use state::{OpenedUrls, WindowState};
 
@@ -81,6 +82,7 @@ pub fn run() {
             read_file,
             read_file_as_base64,
             write_file,
+            write_file_binary,
             list_files,
             create_file,
             delete_file,
@@ -90,7 +92,8 @@ pub fn run() {
             opened_urls,
             save_window_state,
             force_close_window,
-            create_pdf
+            create_pdf,
+            rasterize_svg
         ])
         .setup(|app| {
             // Restore window state before frontend loads

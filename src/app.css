@@ -103,7 +103,18 @@ body {
    width with identical fonts, line wrapping in the PDF matches the viewer
    word-for-word; zoom only rescales the result. `@page` fixes the default
    paper size to A4 so the zoom factor is deterministic (the print dialog can
-   still override it; wrapping is unaffected, only the fill ratio). */
+   still override it; wrapping is unaffected, only the fill ratio).
+
+   Print mode is deferred: `buildPrintContainer()` in pdf.ts stages the
+   clone and the page background, then `beginPrint()` (called right before
+   the capture) swaps the `#viewer-content` id to the clone and adds the
+   `exporting` classes. That class is what hides the app shell and (via the
+   `.backdrop` rule below) the export-overlay spinner — both must be gone
+   from the live render tree at the moment of capture (macOS
+   `createPDFWithConfiguration` takes the live composited layer; Chromium's
+   print dialog renders with `@media print` matching). The overlay stays
+   visible until `beginPrint()` fires, so the user gets feedback during the
+   build phase. */
 
 @page {
   size: A4;
@@ -143,6 +154,15 @@ body.exporting .app-layout {
   display: none !important;
 }
 
+/* Hide the in-app export-overlay spinner (the "Exporting…" pill) at the
+   moment of capture so it isn't baked into the PDF. body.exporting is only
+   added by `beginPrint()` right before `window.print()` / `invoke('create_pdf')`,
+   so the spinner stays visible during the build phase (font loading,
+   layout settling) and disappears for the capture itself. */
+body.exporting .backdrop {
+  display: none !important;
+}
+
 /* Export geometry only — all content styling comes from markdown.css via the
    .viewer-content class. The explicit width and zoom are set inline by the
    exporter; max-width: none neutralizes markdown.css's 800px cap so the
@@ -165,38 +185,4 @@ body.exporting .print-content {
 /* The link-URL tooltip is hover-only screen UI; never export it. */
 body.exporting .print-content a[data-href]::after {
   display: none !important;
-}
-
-/* ===== Printer-friendly color overrides =====
-   Neutral black-on-white palette, fully independent of the selected viewer
-   theme: structural colors come from these CSS-variable overrides (consumed
-   by markdown.css), and syntax highlighting comes from GitHub Light token
-   rules injected and scoped to the export container by exporters/pdf.ts. */
-body.print-friendly .print-content {
-  --border: #ccc;
-  --bg-tertiary: #f5f5f5;
-  --accent: #333;
-  --text-secondary: #333;
-  color: black;
-  background: white;
-}
-
-body.print-friendly .print-content a {
-  color: #333;
-  text-decoration: underline;
-}
-
-body.print-friendly .print-content blockquote {
-  border-left-color: #ccc;
-  color: #333;
-}
-
-body.print-friendly .print-content .skill-badge {
-  color: white;
-  background: #333;
-}
-
-body.print-friendly .print-content .frontmatter-title,
-body.print-friendly .print-content .skill-meta dt {
-  color: #666;
 }

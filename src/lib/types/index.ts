@@ -1,8 +1,9 @@
 export type ViewMode = "split" | "editor" | "viewer";
 
-export type PrintStyle = "printer-friendly" | "theme";
-
 export type MarkdownLevel = "basic" | "github" | "advanced" | "custom";
+
+/** Image resolution multiplier for rasterized ODT outputs (1×/96, 2×/192, 3×/288 DPI). */
+export type OdtRasterResolution = 1 | 2 | 3 | 4;
 
 export interface FileInfo {
   path: string;
@@ -21,9 +22,15 @@ export interface Settings {
   splitRatio: number;
   lastOpenedFile: string | null;
   recentFiles: string[];
-  printStyle: PrintStyle;
   markdownLevel: MarkdownLevel;
   enabledFeatures: string[];
+  exportConfirmDismissed: boolean;
+  /** Render math formulas as PNG images instead of editable MathML formulas. */
+  odtRasterizeMath: boolean;
+  /** Render all SVGs (inline, `<img>`, markdown image) as PNG images instead of vector SVG. */
+  odtRasterizeSvg: boolean;
+  /** Pixel-scale multiplier for rasterized images (applies only when rasterization is on). */
+  odtRasterResolution: OdtRasterResolution;
 }
 
 export interface EditorState {
@@ -49,4 +56,5 @@ export interface Frontmatter {
 export interface RenderResult {
   html: string;
   frontmatter: Frontmatter | null;
+  tokens: import("markdown-it/lib/token.mjs").default[];
 }

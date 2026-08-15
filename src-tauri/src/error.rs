@@ -14,6 +14,8 @@ pub enum AppError {
     AlreadyExists(String),
     #[error("Encoding error: {0}")]
     Encoding(String),
+    #[error("SVG error: {0}")]
+    Svg(String),
 }
 
 impl Serialize for AppError {

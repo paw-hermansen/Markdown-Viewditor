@@ -1,9 +1,10 @@
 <script lang="ts">
   import { getVersion } from '@tauri-apps/api/app';
   import { relaunch } from '@tauri-apps/plugin-process';
-  import { check } from '@tauri-apps/plugin-updater';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { modLabel } from '$lib/utils/keyboard';
+  import { updateStatus, checkForUpdates } from '$lib/stores/update.svelte';
+  import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
   import licenseText from '../../../../LICENSE?raw';
 
   interface Props {
@@ -14,44 +15,41 @@
   let { open, onClose }: Props = $props();
   let activeTab = $state<'about' | 'themes' | 'shortcuts' | 'dependencies' | 'license'>('about');
   let appVersion = $state('');
-  let updateState = $state<'idle' | 'checking' | 'downloading' | 'installing' | 'up-to-date' | 'available' | 'error'>('idle');
+  let uiState = $state<'idle' | 'checking' | 'downloading' | 'installing' | 'up-to-date' | 'error'>('idle');
   let updateMessage = $state('');
-  let pendingUpdate = $state<Awaited<ReturnType<typeof check>>>(null);
 
   $effect(() => {
     if (open) {
       getVersion().then((v) => (appVersion = v)).catch(() => (appVersion = '0.1.0'));
+      if (updateStatus.available) {
+        uiState = 'idle';
+        updateMessage = `Version ${updateStatus.version} is available`;
+      }
     }
   });
 
   async function handleCheckForUpdates() {
-    if (updateState === 'checking' || updateState === 'downloading' || updateState === 'installing') return;
-    updateState = 'checking';
+    if (uiState === 'checking' || uiState === 'downloading' || uiState === 'installing') return;
+    uiState = 'checking';
     updateMessage = '';
-    try {
-      const update = await check();
-      pendingUpdate = update;
-      if (update?.available) {
-        updateState = 'available';
-        updateMessage = `Version ${update.version} is available`;
-      } else {
-        updateState = 'up-to-date';
-        updateMessage = 'You are on the latest version';
-      }
-    } catch (err) {
-      updateState = 'error';
-      updateMessage = err instanceof Error ? err.message : String(err);
+    const found = await checkForUpdates();
+    if (found) {
+      uiState = 'idle';
+      updateMessage = `Version ${updateStatus.version} is available`;
+    } else {
+      uiState = 'up-to-date';
+      updateMessage = 'You are on the latest version';
     }
   }
 
   async function handleDownloadAndInstall() {
-    if (!pendingUpdate) return;
+    if (!updateStatus.pendingUpdate) return;
     try {
-      updateState = 'downloading';
+      uiState = 'downloading';
       updateMessage = 'Downloading...';
       let total = 0;
       let downloaded = 0;
-      await pendingUpdate.downloadAndInstall((event) => {
+      await updateStatus.pendingUpdate.downloadAndInstall((event) => {
         if (event.event === 'Started' && event.data.contentLength) {
           total = event.data.contentLength;
         } else if (event.event === 'Progress') {
@@ -61,11 +59,11 @@
           }
         }
       });
-      updateState = 'installing';
+      uiState = 'installing';
       updateMessage = 'Installing...';
       await relaunch();
     } catch (err) {
-      updateState = 'error';
+      uiState = 'error';
       updateMessage = err instanceof Error ? err.message : String(err);
     }
   }
@@ -166,27 +164,35 @@
               <button
                 class="update-btn"
                 onclick={handleCheckForUpdates}
-                disabled={updateState === 'checking' || updateState === 'downloading' || updateState === 'installing'}
+                disabled={uiState === 'checking' || uiState === 'downloading' || uiState === 'installing'}
               >
-                {#if updateState === 'checking'}
+                {#if uiState === 'checking'}
                   Checking...
-                {:else if updateState === 'downloading'}
+                {:else if uiState === 'downloading'}
                   Downloading
-                {:else if updateState === 'installing'}
+                {:else if uiState === 'installing'}
                   Installing
                 {:else}
                   Check for Updates
                 {/if}
               </button>
-              {#if updateState === 'available'}
-                <button class="update-btn primary" onclick={handleDownloadAndInstall}>
-                  Download &amp; Install {pendingUpdate?.version}
+              {#if updateStatus.available}
+                <button class="update-btn primary" onclick={handleDownloadAndInstall} disabled={uiState === 'downloading' || uiState === 'installing'}>
+                  Download &amp; Install {updateStatus.version}
                 </button>
               {/if}
               {#if updateMessage}
-                <span class="update-msg" class:error={updateState === 'error'}>{updateMessage}</span>
+                <span class="update-msg" class:error={uiState === 'error'}>{updateMessage}</span>
               {/if}
             </div>
+            <label class="auto-check-toggle">
+              <input
+                type="checkbox"
+                checked={settingsState.autoCheckUpdates}
+                onchange={() => updateSetting('autoCheckUpdates', !settingsState.autoCheckUpdates)}
+              />
+              <span>Auto-check for updates on startup</span>
+            </label>
             <p class="muted">In-app updates are disabled when running inside Flatpak or Snap — use your system updater there.</p>
           </section>
 
@@ -629,6 +635,21 @@
 
   .update-msg.error {
     color: #e06c75;
+  }
+
+  .auto-check-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .auto-check-toggle input {
+    accent-color: var(--accent);
+    cursor: pointer;
   }
 
   .tabs {

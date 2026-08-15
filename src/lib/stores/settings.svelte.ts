@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: Settings = {
   odtRasterizeMath: false,
   odtRasterizeSvg: false,
   odtRasterResolution: 2,
+  autoCheckUpdates: false,
 };
 
 export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });

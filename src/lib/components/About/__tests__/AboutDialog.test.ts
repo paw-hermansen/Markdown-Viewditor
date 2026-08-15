@@ -11,6 +11,34 @@ vi.mock("../../../../LICENSE?raw", () => ({
   default: "MIT License\n\nCopyright (c) 2026 Paw Hermansen",
 }));
 
+const { mockUpdateStatus, mockCheckForUpdates } = vi.hoisted(() => ({
+  mockUpdateStatus: {
+    available: false,
+    version: "",
+    pendingUpdate: null as unknown,
+  },
+  mockCheckForUpdates: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock("$lib/stores/update.svelte", () => ({
+  updateStatus: mockUpdateStatus,
+  checkForUpdates: mockCheckForUpdates,
+}));
+
+const { mockSettingsState, mockUpdateSetting } = vi.hoisted(() => ({
+  mockSettingsState: {
+    autoCheckUpdates: false,
+  },
+  mockUpdateSetting: vi.fn((_key: string, value: boolean) => {
+    mockSettingsState.autoCheckUpdates = value;
+  }),
+}));
+
+vi.mock("$lib/stores/settings.svelte", () => ({
+  settingsState: mockSettingsState,
+  updateSetting: mockUpdateSetting,
+}));
+
 describe("AboutDialog", () => {
   it("does not render when open is false", () => {
     render(AboutDialog, { props: { open: false, onClose: vi.fn() } });
@@ -86,5 +114,18 @@ describe("AboutDialog", () => {
     const dialog = screen.getByRole("dialog");
     await fireEvent.click(dialog);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("shows auto-check for updates toggle", () => {
+    render(AboutDialog, { props: { open: true, onClose: vi.fn() } });
+    expect(
+      screen.getByText("Auto-check for updates on startup"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+  });
+
+  it("shows Check for Updates button", () => {
+    render(AboutDialog, { props: { open: true, onClose: vi.fn() } });
+    expect(screen.getByText("Check for Updates")).toBeInTheDocument();
   });
 });

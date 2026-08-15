@@ -18,13 +18,16 @@
     onOpen: () => void;
     onNew: () => void;
     onAbout: () => void;
+    onUpdateClick: () => void;
+    updateAvailable: boolean;
+    updateVersion: string;
     isModified: boolean;
     isLoading?: boolean;
     fileName?: string;
     children: Snippet;
   }
 
-  let { viewMode, onViewModeChange, onSave, onSaveAs, onReload, onOpen, onNew, onAbout, isModified, isLoading = false, fileName, children }: Props = $props();
+  let { viewMode, onViewModeChange, onSave, onSaveAs, onReload, onOpen, onNew, onAbout, onUpdateClick, updateAvailable, updateVersion, isModified, isLoading = false, fileName, children }: Props = $props();
 
   const EDGE_THRESHOLD = 0.05;
 
@@ -177,6 +180,15 @@
       <ViewToggle {viewMode} onchange={onViewModeChange} />
     </div>
     <div class="toolbar-right">
+      {#if updateAvailable}
+        <button class="toolbar-btn update-available" onclick={onUpdateClick} title="Update available: v{updateVersion}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v8"/>
+            <path d="M8 14l4 4 4-4"/>
+          </svg>
+        </button>
+      {/if}
       <button class="toolbar-btn" onclick={onAbout} title="About (F1)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
@@ -289,6 +301,21 @@
     opacity: 0.4;
     cursor: not-allowed;
     pointer-events: none;
+  }
+
+  .update-available {
+    color: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .update-available:hover {
+    color: var(--accent);
+    background: var(--bg-hover);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
   }
 
   .modified-dot {

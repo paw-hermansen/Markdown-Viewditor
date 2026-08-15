@@ -169,11 +169,30 @@ const S = {
 function esc(s: string | null | undefined): string {
   if (s == null) return "";
   return String(s)
+    .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/&/g, "&amp;");
+    .replace(/>/g, "&gt;");
+}
+
+/* ─────────────────────── HTML entity decoding ────────────────────────── */
+
+const HTML_ENTITIES: Record<string, string> = {
+  "&quot;": '"',
+  "&apos;": "'",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&#x27;": "'",
+  "&#39;": "'",
+  "&amp;": "&",
+};
+
+function decodeHtmlEntities(s: string): string {
+  return s.replace(
+    /&quot;|&apos;|&lt;|&gt;|&#x27;|&#39;|&amp;/g,
+    (m) => HTML_ENTITIES[m] ?? m,
+  );
 }
 
 /* ─────────────────────── leading-space ODF encoding ───────────────────── */
@@ -214,7 +233,7 @@ function hljsToSpans(code: string, language: string): HljsSpan[] {
   while ((m = tagRe.exec(result.value)) !== null) {
     if (m[2] !== undefined) {
       spans.push({
-        text: m[2],
+        text: decodeHtmlEntities(m[2]),
         color:
           stack.length > 0
             ? (HLJS_COLORS[stack[stack.length - 1]] ?? null)
@@ -247,6 +266,10 @@ function renderHighlightedLine(
 
     if (takeLen <= 0) continue;
 
+    const chunk = line.slice(srcPos, srcPos + takeLen);
+    // Use escWithSpaces for the first chunk to preserve leading whitespace
+    const escFn = srcPos === 0 ? escWithSpaces : esc;
+
     if (span.color) {
       const safeName = `T_hljs_${span.color.replace(/[^a-zA-Z0-9]/g, "_")}`;
       if (!styles.has(safeName)) {
@@ -255,16 +278,17 @@ function renderHighlightedLine(
           `<style:style style:name="${safeName}" style:family="text"><style:text-properties fo:color="${esc(span.color)}"/></style:style>`,
         );
       }
-      xml += `<text:span text:style-name="${safeName}">${esc(line.slice(srcPos, srcPos + takeLen))}</text:span>`;
+      xml += `<text:span text:style-name="${safeName}">${escFn(chunk)}</text:span>`;
     } else {
-      xml += esc(line.slice(srcPos, srcPos + takeLen));
+      xml += escFn(chunk);
     }
     srcPos += takeLen;
   }
 
   // Remaining characters not covered by spans
   if (srcPos < line.length) {
-    xml += esc(line.slice(srcPos));
+    const escFn = srcPos === 0 ? escWithSpaces : esc;
+    xml += escFn(line.slice(srcPos));
   }
 
   return xml;
@@ -750,7 +774,8 @@ function generateStylesXml(): string {
       .join("")}
     <style:style style:name="${S.pre}" style:family="paragraph" style:class="text">
       <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0"
-        fo:background-color="#f6f8fa" fo:padding="0.1in"/>
+        fo:background-color="#f6f8fa" fo:padding="0.1in"
+        fo:wrap-option="no-wrap"/>
       <style:text-properties
         fo:font-family="monospace"
         fo:font-size="9pt"

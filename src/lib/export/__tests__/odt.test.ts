@@ -27,13 +27,17 @@ vi.mock("highlight.js", () => ({
       value: code
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;"),
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;"),
     })),
     highlightAuto: vi.fn((code: string) => ({
       value: code
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;"),
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;"),
     })),
   },
 }));
@@ -366,6 +370,55 @@ describe("odtExporter", () => {
     expect(xml).toContain("const x = 1");
   });
 
+  it("fenced code blocks preserve leading indentation", async () => {
+    const xml = await getContentXml(
+      "```js\nfunction foo() {\n  return 1;\n}\n```",
+    );
+    expect(xml).toContain('<text:s text:c="2"/>');
+    expect(xml).toContain("return 1;");
+  });
+
+  it("indented code blocks preserve leading indentation", async () => {
+    // markdown-it strips the 4-space indent syntax, leaving internal indentation
+    const xml = await getContentXml(
+      "    function foo() {\n      return 1;\n    }",
+    );
+    expect(xml).toContain('<text:s text:c="2"/>');
+    expect(xml).toContain("return 1;");
+  });
+
+  it("code blocks with special characters decode HTML entities", async () => {
+    const xml = await getContentXml('```js\nconst x = "hello";\n```');
+    // The double quote should appear as &quot; in XML (proper escaping),
+    // not as &amp;quot; (double-escaped entity)
+    expect(xml).toContain("&quot;hello&quot;");
+    expect(xml).not.toContain("&amp;quot;");
+  });
+
+  it("code blocks with angle brackets decode HTML entities", async () => {
+    const xml = await getContentXml(
+      '```html\n<div class="test">content</div>\n```',
+    );
+    expect(xml).toContain("&lt;div");
+    expect(xml).toContain("&gt;content&lt;/div&gt;");
+    // Should NOT have double-encoded entities
+    expect(xml).not.toContain("&amp;lt;");
+    expect(xml).not.toContain("&amp;gt;");
+  });
+
+  it("code blocks with ampersand decode HTML entities", async () => {
+    const xml = await getContentXml("```js\nconst x = a && b;\n```");
+    expect(xml).toContain("&amp;&amp;");
+    expect(xml).not.toContain("&amp;amp;");
+  });
+
+  it("code blocks with apostrophe decode HTML entities", async () => {
+    const xml = await getContentXml("```js\nconst x = 'hello';\n```");
+    expect(xml).toContain("&apos;hello&apos;");
+    expect(xml).not.toContain("&#x27;");
+    expect(xml).not.toContain("&amp;apos;");
+  });
+
   it("links use T_link auto-style with xlink:href", async () => {
     const xml = await getContentXml("[click](https://example.com)");
     expect(xml).toContain('xlink:href="https://example.com"');
@@ -401,6 +454,11 @@ describe("odtExporter", () => {
     expect(styles).toContain("QuoteTable");
     expect(styles).toContain("QuoteTableCell");
     expect(styles).toContain("QuoteList_20_1");
+  });
+
+  it("styles.xml Preformatted_20_Text has no-wrap for whitespace preservation", async () => {
+    const styles = await getStylesXml("# Hello");
+    expect(styles).toContain('fo:wrap-option="no-wrap"');
   });
 
   it("blockquote wraps content in Blockquote-styled paragraphs", async () => {

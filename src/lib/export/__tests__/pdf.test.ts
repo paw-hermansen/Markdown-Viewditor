@@ -35,14 +35,26 @@ describe("buildPrintContainer", () => {
     handle.cleanup();
   });
 
-  it("marks html/body as exporting with theme-export class", () => {
+  it("does not add html/body exporting classes until beginPrint() is called", () => {
     const handle = buildPrintContainer("<p>hi</p>", layout);
+    expect(document.documentElement.classList.contains("exporting")).toBe(
+      false,
+    );
+    expect(document.documentElement.classList.contains("theme-export")).toBe(
+      false,
+    );
+    expect(document.body.classList.contains("exporting")).toBe(false);
+    expect(document.body.classList.contains("theme-export")).toBe(false);
+
+    handle.beginPrint();
+
     expect(document.documentElement.classList.contains("exporting")).toBe(true);
     expect(document.documentElement.classList.contains("theme-export")).toBe(
       true,
     );
     expect(document.body.classList.contains("exporting")).toBe(true);
     expect(document.body.classList.contains("theme-export")).toBe(true);
+
     handle.cleanup();
   });
 
@@ -66,13 +78,17 @@ describe("buildPrintContainer", () => {
     expect(document.getElementById("print-page-background")).toBeNull();
   });
 
-  it("swaps the #viewer-content id and restores it on cleanup", () => {
+  it("does not swap the #viewer-content id until beginPrint() is called", () => {
     const live = document.createElement("div");
     live.id = "viewer-content";
     document.body.appendChild(live);
 
     const handle = buildPrintContainer("<p>hi</p>", layout, live);
-    const div = document.querySelector(".print-content") as HTMLDivElement;
+    const div = handle.printDiv;
+    expect(live.id).toBe("viewer-content");
+    expect(div.id).toBe("");
+
+    handle.beginPrint();
     expect(div.id).toBe("viewer-content");
     expect(live.id).toBe("");
 
@@ -81,11 +97,41 @@ describe("buildPrintContainer", () => {
     expect(document.querySelector(".print-content")).toBeNull();
   });
 
-  it("cleanup removes the clone, classes, and inline styles", () => {
+  it("beginPrint is idempotent", () => {
     const handle = buildPrintContainer("<p>hi</p>", layout);
+    handle.beginPrint();
+    expect(() => handle.beginPrint()).not.toThrow();
+    expect(document.body.classList.contains("exporting")).toBe(true);
+    handle.cleanup();
+  });
+
+  it("cleanup is safe when beginPrint was never called", () => {
+    const live = document.createElement("div");
+    live.id = "viewer-content";
+    document.body.appendChild(live);
+
+    const handle = buildPrintContainer("<p>hi</p>", layout, live);
+    expect(() => handle.cleanup()).not.toThrow();
+    expect(document.querySelector(".print-content")).toBeNull();
+    expect(document.documentElement.classList.contains("exporting")).toBe(
+      false,
+    );
+    expect(document.body.classList.contains("exporting")).toBe(false);
+    expect(document.documentElement.style.background).toBe("");
+    expect(document.body.style.background).toBe("");
+    expect(live.id).toBe("viewer-content");
+    expect(document.getElementById("print-page-background")).toBeNull();
+  });
+
+  it("cleanup removes the clone, classes (after beginPrint), and inline styles", () => {
+    const handle = buildPrintContainer("<p>hi</p>", layout);
+    handle.beginPrint();
     handle.cleanup();
     expect(document.querySelector(".print-content")).toBeNull();
     expect(document.documentElement.classList.contains("exporting")).toBe(
+      false,
+    );
+    expect(document.documentElement.classList.contains("theme-export")).toBe(
       false,
     );
     expect(document.body.classList.contains("theme-export")).toBe(false);

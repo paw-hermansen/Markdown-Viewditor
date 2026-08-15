@@ -19,11 +19,32 @@ import { fileState } from "$lib/stores/file.svelte";
  * viewer's maximum content width and then scaled to the paper with CSS
  * `zoom`, so line wrapping in the PDF matches the viewer word-for-word.
  * KaTeX fonts are loaded in-document, so math prints correctly.
+ *
+ * Print mode is deferred until the moment of capture (see `beginPrint()` on
+ * `PrintContainerHandle`): `buildPrintContainer()` only stages the clone
+ * and the page background, leaving the live viewer styled and the
+ * export-overlay spinner visible during the build phase (font loading,
+ * layout settling). `exportPdf()` calls `beginPrint()` right before
+ * `window.print()` / `invoke('create_pdf')`, which (a) swaps the
+ * `#viewer-content` id to the clone so the active theme applies to it,
+ * (b) adds `body.exporting` so the app shell hides and the clone becomes
+ * the visible content, and (c) lets the `body.exporting .backdrop` rule
+ * in app.css hide the spinner so it isn't captured into the PDF.
  */
 
 export interface PrintContainerHandle {
   printDiv: HTMLDivElement;
-  /** Restore the document to its pre-export state (remove the clone, etc.). */
+  /**
+   * Switch the document into print mode: swap the `#viewer-content` id from
+   * the live viewer to the clone, then add the `exporting` classes (which
+   * hide the app shell, reveal the clone, and hide the export-overlay
+   * spinner via the `body.exporting .backdrop` rule in app.css). Call
+   * once, immediately before the actual print/capture, so the live viewer
+   * keeps its theme styling and the spinner stays visible during the
+   * build phase. Idempotent.
+   */
+  beginPrint: () => void;
+  /** Restore the document to its pre-export state. Idempotent. */
   cleanup: () => void;
 }
 
@@ -129,18 +150,22 @@ function resolvePageBackground(viewerContentElement?: HTMLElement): {
 /**
  * Build the off-screen `.print-content` container used by both the in-app
  * Print button and this exporter. The clone carries the `.viewer-content`
- * class so markdown.css applies directly (single source of truth); it also
- * takes over the `#viewer-content` id so the theme CSS applies.
- * The page background is applied inline to html/body so it propagates to the
- * full page canvas (full bleed, including @page margins).
+ * class so markdown.css applies directly (single source of truth); it
+ * takes over the `#viewer-content` id (and the `exporting` classes) only
+ * when `beginPrint()` is called, so the live viewer keeps its theme
+ * styling (and the export-overlay spinner stays visible) during the
+ * build phase. The page background is applied inline to html/body now
+ * because the clone already needs to size to the printed page area; the
+ * inline value on html/body is hidden behind the app shell until
+ * `beginPrint()` reveals the clone.
  */
 export function buildPrintContainer(
   viewerHtml: string,
   layout: PrintLayout,
   viewerContentElement?: HTMLElement,
 ): PrintContainerHandle {
-  // Resolve the page background BEFORE the id swap detaches the theme rules
-  // from the live viewer element.
+  // Resolve the page background now — the value comes from the live
+  // viewer, which still owns the #viewer-content id until beginPrint().
   const pageBackground = resolvePageBackground(viewerContentElement);
 
   const printDiv = document.createElement("div");
@@ -149,14 +174,6 @@ export function buildPrintContainer(
   printDiv.style.width = `${layout.layoutWidthPx}px`;
   printDiv.style.zoom = String(layout.zoom);
   document.body.appendChild(printDiv);
-
-  if (viewerContentElement) {
-    printDiv.id = "viewer-content";
-    viewerContentElement.id = "";
-  }
-
-  document.documentElement.classList.add("exporting", "theme-export");
-  document.body.classList.add("exporting", "theme-export");
 
   // Full-bleed page background, two complementary mechanisms:
   // 1. Inline background on html/body — the root element's background
@@ -181,18 +198,32 @@ export function buildPrintContainer(
   pageStyleEl.textContent = pageRule;
   document.head.appendChild(pageStyleEl);
 
+  let inPrintMode = false;
+
   return {
     printDiv,
+    beginPrint() {
+      if (inPrintMode) return;
+      inPrintMode = true;
+      if (viewerContentElement) {
+        printDiv.id = "viewer-content";
+        viewerContentElement.id = "";
+      }
+      document.documentElement.classList.add("exporting", "theme-export");
+      document.body.classList.add("exporting", "theme-export");
+    },
     cleanup() {
-      document.documentElement.classList.remove("exporting", "theme-export");
-      document.body.classList.remove("exporting", "theme-export");
+      if (inPrintMode) {
+        document.documentElement.classList.remove("exporting", "theme-export");
+        document.body.classList.remove("exporting", "theme-export");
+      }
+      if (viewerContentElement) {
+        viewerContentElement.id = "viewer-content";
+      }
       document.documentElement.style.background = "";
       document.body.style.background = "";
       pageStyleEl.remove();
       printDiv.remove();
-      if (viewerContentElement) {
-        viewerContentElement.id = "viewer-content";
-      }
     },
   };
 }
@@ -246,6 +277,18 @@ export async function exportPdf(
     // pagination, so wrapping is computed with final font metrics. (The
     // optional chaining only guards non-browser test environments.)
     await document.fonts?.ready;
+
+    // Switch to print mode right before the capture (macOS createPDF or
+    // Linux/Windows window.print). Up to this point the live viewer keeps
+    // its theme styling and the export-overlay spinner stays visible.
+    // beginPrint() swaps the #viewer-content id to the clone and adds
+    // body.exporting — which hides the app shell, reveals the clone, and
+    // (via the body.exporting .backdrop rule in app.css) hides the
+    // spinner so it isn't captured into the PDF.
+    handle.beginPrint();
+
+    // Wait for the just-applied print rules (max-width, padding, etc.) to
+    // take effect and for the layout to settle before the capture fires.
     await waitForLayout();
 
     if (isMacOS && savePath) {

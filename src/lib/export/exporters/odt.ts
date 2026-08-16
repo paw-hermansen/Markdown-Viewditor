@@ -1947,6 +1947,52 @@ async function buildDocument(
         // ── Fence (code block with language) ──
         case "fence": {
           const language = token.info.trim();
+          // Fenced math blocks (```math ... ```) stay as fence tokens
+          // because @vscode/markdown-it-katex only overrides the HTML
+          // renderer, not the token type. Route them to math rendering.
+          if (language.toLowerCase() === "math") {
+            if (rasterizeMath) {
+              try {
+                const { png, widthPx, heightPx } = await renderMathToPng(
+                  token.content,
+                  true,
+                  rasterScale,
+                );
+                const inner = addRasterImage(
+                  png,
+                  widthPx,
+                  heightPx,
+                  `block-math(${token.content.slice(0, 40)})`,
+                );
+                parts.push(
+                  `      <text:p text:style-name="${S.mathDisplay}">${inner}</text:p>`,
+                );
+                i++;
+                break;
+              } catch (err) {
+                warnings.push(
+                  `Block math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
+                );
+              }
+            }
+            try {
+              const mathMl = renderMathToMathml(token.content, true);
+              const objId = `Object ${++mathCounter}`;
+              mathObjects.push({ id: objId, mathml: mathMl });
+              parts.push(
+                `      <text:p text:style-name="${S.body}"><draw:frame draw:style-name="fr1" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
+              );
+            } catch {
+              warnings.push(
+                `Math rendering failed for: ${token.content.slice(0, 50)}…`,
+              );
+              parts.push(
+                `      <text:p text:style-name="${S.body}">${esc(token.content)}</text:p>`,
+              );
+            }
+            i++;
+            break;
+          }
           const code = token.content.trimEnd();
           const lines = code.split("\n");
           for (const line of lines) {

@@ -832,6 +832,77 @@ After list`;
     );
   });
 
+  it("embeds fenced math block ```math ... ``` as draw:object in content.xml", async () => {
+    const ctx: ExportContext = {
+      markdown: "```math\n\\sum_{n=1}^{\\infty} \\frac{1}{n^2}\n```",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens(
+        "```math\n\\sum_{n=1}^{\\infty} \\frac{1}{n^2}\n```",
+      ),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain("<draw:frame");
+    expect(xml).toContain("<draw:object");
+    // Must NOT render as preformatted code
+    expect(xml).not.toContain("Preformatted_20_Text");
+    expect(xml).not.toContain("sum_");
+  });
+
+  it("creates MathML sub-packages for fenced math blocks", async () => {
+    const ctx: ExportContext = {
+      markdown: "```math\nx^2\n```",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("```math\nx^2\n```"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
+    expect(mathXml).toContain("<math");
+    expect(mathXml).toContain("</math>");
+    expect(mathXml).toContain("msup");
+  });
+
+  it("rasterizes fenced math blocks as PNG when rasterizeMath is on", async () => {
+    const ctx: ExportContext = {
+      markdown: "```math\nx^2\n```",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("```math\nx^2\n```"),
+      options: {
+        "odt.rasterizeMath": true,
+        "odt.rasterResolution": 2,
+      },
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(mockRenderMathToPng).toHaveBeenCalled();
+    expect(xml).toContain('draw:mime-type="image/png"');
+    expect(xml).not.toContain("<draw:object");
+  });
+
   it("renders \\ce{H2O} as valid MathML (mhchem)", async () => {
     const ctx: ExportContext = {
       markdown: "$\\ce{H2O}$",

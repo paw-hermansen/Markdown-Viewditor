@@ -257,6 +257,30 @@ describe("renderMathToPng", () => {
     }
   });
 
+  it("requests the bundled KaTeX font faces before capture", async () => {
+    const load = vi.fn(async () => []);
+    const fonts = {
+      load,
+      ready: Promise.resolve(),
+    } as unknown as FontFaceSet;
+    const originalFonts = (document as unknown as { fonts?: unknown }).fonts;
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: fonts,
+    });
+
+    try {
+      await renderMathToPng("a+b=c", false, 1);
+      expect(load).toHaveBeenCalledWith("normal 16px KaTeX_Main");
+      expect(load).toHaveBeenCalledWith("italic 16px KaTeX_Math");
+    } finally {
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: originalFonts,
+      });
+    }
+  });
+
   it("captures display math at the host's page-content width (not the formula width)", async () => {
     // Regression: display math should be centered on the page with the
     // tag at the right page-edge, matching the markdown preview's

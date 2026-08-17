@@ -1,0 +1,235 @@
+diff --git a/node_modules/html2canvas/dist/html2canvas.esm.js b/node_modules/html2canvas/dist/html2canvas.esm.js
+index 268e9bc..703bae2 100644
+--- a/node_modules/html2canvas/dist/html2canvas.esm.js
++++ b/node_modules/html2canvas/dist/html2canvas.esm.js
+@@ -6555,14 +6555,13 @@ var FontMetrics = /** @class */ (function () {
+         this._data = {};
+         this._document = document;
+     }
+-    FontMetrics.prototype.parseMetrics = function (fontFamily, fontSize) {
++    FontMetrics.prototype.parseMetrics = function (font) {
+         var container = this._document.createElement('div');
+         var img = this._document.createElement('img');
+         var span = this._document.createElement('span');
+         var body = this._document.body;
+         container.style.visibility = 'hidden';
+-        container.style.fontFamily = fontFamily;
+-        container.style.fontSize = fontSize;
++        container.style.font = font;
+         container.style.margin = '0';
+         container.style.padding = '0';
+         container.style.whiteSpace = 'nowrap';
+@@ -6573,8 +6572,7 @@ var FontMetrics = /** @class */ (function () {
+         img.style.margin = '0';
+         img.style.padding = '0';
+         img.style.verticalAlign = 'baseline';
+-        span.style.fontFamily = fontFamily;
+-        span.style.fontSize = fontSize;
++        span.style.font = font;
+         span.style.margin = '0';
+         span.style.padding = '0';
+         span.appendChild(this._document.createTextNode(SAMPLE_TEXT));
+@@ -6589,10 +6587,10 @@ var FontMetrics = /** @class */ (function () {
+         body.removeChild(container);
+         return { baseline: baseline, middle: middle };
+     };
+-    FontMetrics.prototype.getMetrics = function (fontFamily, fontSize) {
+-        var key = fontFamily + " " + fontSize;
++    FontMetrics.prototype.getMetrics = function (font) {
++        var key = font;
+         if (typeof this._data[key] === 'undefined') {
+-            this._data[key] = this.parseMetrics(fontFamily, fontSize);
++            this._data[key] = this.parseMetrics(font);
+         }
+         return this._data[key];
+     };
+@@ -6723,15 +6721,15 @@ var CanvasRenderer = /** @class */ (function (_super) {
+     };
+     CanvasRenderer.prototype.renderTextNode = function (text, styles) {
+         return __awaiter(this, void 0, void 0, function () {
+-            var _a, font, fontFamily, fontSize, _b, baseline, middle, paintOrder;
++            var _a, font, _b, baseline, middle, paintOrder;
+             var _this = this;
+             return __generator(this, function (_c) {
+-                _a = this.createFontStyle(styles), font = _a[0], fontFamily = _a[1], fontSize = _a[2];
++                _a = this.createFontStyle(styles), font = _a[0];
+                 this.ctx.font = font;
+                 this.ctx.direction = styles.direction === 1 /* RTL */ ? 'rtl' : 'ltr';
+                 this.ctx.textAlign = 'left';
+                 this.ctx.textBaseline = 'alphabetic';
+-                _b = this.fontMetrics.getMetrics(fontFamily, fontSize), baseline = _b.baseline, middle = _b.middle;
++                _b = this.fontMetrics.getMetrics(font), baseline = _b.baseline, middle = _b.middle;
+                 paintOrder = styles.paintOrder;
+                 text.textBounds.forEach(function (text) {
+                     paintOrder.forEach(function (paintOrderLayer) {
+@@ -6909,9 +6907,9 @@ var CanvasRenderer = /** @class */ (function (_super) {
+                             }
+                         }
+                         if (isTextInputElement(container) && container.value.length) {
+-                            _b = this.createFontStyle(styles), fontFamily = _b[0], fontSize = _b[1];
+-                            baseline = this.fontMetrics.getMetrics(fontFamily, fontSize).baseline;
+-                            this.ctx.font = fontFamily;
++                            _b = this.createFontStyle(styles), font = _b[0];
++                            baseline = this.fontMetrics.getMetrics(font).baseline;
++                            this.ctx.font = font;
+                             this.ctx.fillStyle = asString(styles.color);
+                             this.ctx.textBaseline = 'alphabetic';
+                             this.ctx.textAlign = canvasTextAlign(container.styles.textAlign);
+diff --git a/node_modules/html2canvas/dist/html2canvas.js b/node_modules/html2canvas/dist/html2canvas.js
+index 3ec00e0..ff7a6e0 100644
+--- a/node_modules/html2canvas/dist/html2canvas.js
++++ b/node_modules/html2canvas/dist/html2canvas.js
+@@ -6561,14 +6561,13 @@
+             this._data = {};
+             this._document = document;
+         }
+-        FontMetrics.prototype.parseMetrics = function (fontFamily, fontSize) {
++        FontMetrics.prototype.parseMetrics = function (font) {
+             var container = this._document.createElement('div');
+             var img = this._document.createElement('img');
+             var span = this._document.createElement('span');
+             var body = this._document.body;
+             container.style.visibility = 'hidden';
+-            container.style.fontFamily = fontFamily;
+-            container.style.fontSize = fontSize;
++            container.style.font = font;
+             container.style.margin = '0';
+             container.style.padding = '0';
+             container.style.whiteSpace = 'nowrap';
+@@ -6579,8 +6578,7 @@
+             img.style.margin = '0';
+             img.style.padding = '0';
+             img.style.verticalAlign = 'baseline';
+-            span.style.fontFamily = fontFamily;
+-            span.style.fontSize = fontSize;
++            span.style.font = font;
+             span.style.margin = '0';
+             span.style.padding = '0';
+             span.appendChild(this._document.createTextNode(SAMPLE_TEXT));
+@@ -6595,10 +6593,10 @@
+             body.removeChild(container);
+             return { baseline: baseline, middle: middle };
+         };
+-        FontMetrics.prototype.getMetrics = function (fontFamily, fontSize) {
+-            var key = fontFamily + " " + fontSize;
++        FontMetrics.prototype.getMetrics = function (font) {
++            var key = font;
+             if (typeof this._data[key] === 'undefined') {
+-                this._data[key] = this.parseMetrics(fontFamily, fontSize);
++                this._data[key] = this.parseMetrics(font);
+             }
+             return this._data[key];
+         };
+@@ -6729,15 +6727,15 @@
+         };
+         CanvasRenderer.prototype.renderTextNode = function (text, styles) {
+             return __awaiter(this, void 0, void 0, function () {
+-                var _a, font, fontFamily, fontSize, _b, baseline, middle, paintOrder;
++                var _a, font, _b, baseline, middle, paintOrder;
+                 var _this = this;
+                 return __generator(this, function (_c) {
+-                    _a = this.createFontStyle(styles), font = _a[0], fontFamily = _a[1], fontSize = _a[2];
++                    _a = this.createFontStyle(styles), font = _a[0];
+                     this.ctx.font = font;
+                     this.ctx.direction = styles.direction === 1 /* RTL */ ? 'rtl' : 'ltr';
+                     this.ctx.textAlign = 'left';
+                     this.ctx.textBaseline = 'alphabetic';
+-                    _b = this.fontMetrics.getMetrics(fontFamily, fontSize), baseline = _b.baseline, middle = _b.middle;
++                    _b = this.fontMetrics.getMetrics(font), baseline = _b.baseline, middle = _b.middle;
+                     paintOrder = styles.paintOrder;
+                     text.textBounds.forEach(function (text) {
+                         paintOrder.forEach(function (paintOrderLayer) {
+@@ -6915,9 +6913,9 @@
+                                 }
+                             }
+                             if (isTextInputElement(container) && container.value.length) {
+-                                _b = this.createFontStyle(styles), fontFamily = _b[0], fontSize = _b[1];
+-                                baseline = this.fontMetrics.getMetrics(fontFamily, fontSize).baseline;
+-                                this.ctx.font = fontFamily;
++                                _b = this.createFontStyle(styles), font = _b[0];
++                                baseline = this.fontMetrics.getMetrics(font).baseline;
++                                this.ctx.font = font;
+                                 this.ctx.fillStyle = asString(styles.color);
+                                 this.ctx.textBaseline = 'alphabetic';
+                                 this.ctx.textAlign = canvasTextAlign(container.styles.textAlign);
+diff --git a/node_modules/html2canvas/dist/lib/render/canvas/canvas-renderer.js b/node_modules/html2canvas/dist/lib/render/canvas/canvas-renderer.js
+index 509f0a8..e6b4b76 100644
+--- a/node_modules/html2canvas/dist/lib/render/canvas/canvas-renderer.js
++++ b/node_modules/html2canvas/dist/lib/render/canvas/canvas-renderer.js
+@@ -195,15 +195,15 @@ var CanvasRenderer = /** @class */ (function (_super) {
+     };
+     CanvasRenderer.prototype.renderTextNode = function (text, styles) {
+         return __awaiter(this, void 0, void 0, function () {
+-            var _a, font, fontFamily, fontSize, _b, baseline, middle, paintOrder;
++            var _a, font, _b, baseline, middle, paintOrder;
+             var _this = this;
+             return __generator(this, function (_c) {
+-                _a = this.createFontStyle(styles), font = _a[0], fontFamily = _a[1], fontSize = _a[2];
++                _a = this.createFontStyle(styles), font = _a[0];
+                 this.ctx.font = font;
+                 this.ctx.direction = styles.direction === 1 /* RTL */ ? 'rtl' : 'ltr';
+                 this.ctx.textAlign = 'left';
+                 this.ctx.textBaseline = 'alphabetic';
+-                _b = this.fontMetrics.getMetrics(fontFamily, fontSize), baseline = _b.baseline, middle = _b.middle;
++                _b = this.fontMetrics.getMetrics(font), baseline = _b.baseline, middle = _b.middle;
+                 paintOrder = styles.paintOrder;
+                 text.textBounds.forEach(function (text) {
+                     paintOrder.forEach(function (paintOrderLayer) {
+@@ -381,9 +381,9 @@ var CanvasRenderer = /** @class */ (function (_super) {
+                             }
+                         }
+                         if (isTextInputElement(container) && container.value.length) {
+-                            _b = this.createFontStyle(styles), fontFamily = _b[0], fontSize = _b[1];
+-                            baseline = this.fontMetrics.getMetrics(fontFamily, fontSize).baseline;
+-                            this.ctx.font = fontFamily;
++                            _b = this.createFontStyle(styles), font = _b[0];
++                            baseline = this.fontMetrics.getMetrics(font).baseline;
++                            this.ctx.font = font;
+                             this.ctx.fillStyle = color_1.asString(styles.color);
+                             this.ctx.textBaseline = 'alphabetic';
+                             this.ctx.textAlign = canvasTextAlign(container.styles.textAlign);
+diff --git a/node_modules/html2canvas/dist/lib/render/font-metrics.js b/node_modules/html2canvas/dist/lib/render/font-metrics.js
+index 345a3fb..4e053a6 100644
+--- a/node_modules/html2canvas/dist/lib/render/font-metrics.js
++++ b/node_modules/html2canvas/dist/lib/render/font-metrics.js
+@@ -8,14 +8,13 @@ var FontMetrics = /** @class */ (function () {
+         this._data = {};
+         this._document = document;
+     }
+-    FontMetrics.prototype.parseMetrics = function (fontFamily, fontSize) {
++    FontMetrics.prototype.parseMetrics = function (font) {
+         var container = this._document.createElement('div');
+         var img = this._document.createElement('img');
+         var span = this._document.createElement('span');
+         var body = this._document.body;
+         container.style.visibility = 'hidden';
+-        container.style.fontFamily = fontFamily;
+-        container.style.fontSize = fontSize;
++        container.style.font = font;
+         container.style.margin = '0';
+         container.style.padding = '0';
+         container.style.whiteSpace = 'nowrap';
+@@ -26,8 +25,7 @@ var FontMetrics = /** @class */ (function () {
+         img.style.margin = '0';
+         img.style.padding = '0';
+         img.style.verticalAlign = 'baseline';
+-        span.style.fontFamily = fontFamily;
+-        span.style.fontSize = fontSize;
++        span.style.font = font;
+         span.style.margin = '0';
+         span.style.padding = '0';
+         span.appendChild(this._document.createTextNode(SAMPLE_TEXT));
+@@ -42,10 +40,10 @@ var FontMetrics = /** @class */ (function () {
+         body.removeChild(container);
+         return { baseline: baseline, middle: middle };
+     };
+-    FontMetrics.prototype.getMetrics = function (fontFamily, fontSize) {
+-        var key = fontFamily + " " + fontSize;
++    FontMetrics.prototype.getMetrics = function (font) {
++        var key = font;
+         if (typeof this._data[key] === 'undefined') {
+-            this._data[key] = this.parseMetrics(fontFamily, fontSize);
++            this._data[key] = this.parseMetrics(font);
+         }
+         return this._data[key];
+     };

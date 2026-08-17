@@ -155,6 +155,8 @@ export async function renderMathToPng(
   if (!host) {
     throw new Error("renderMathToPng: no DOM available");
   }
+  // html2canvas 1.4.1 is patched in patches/html2canvas+1.4.1.patch so its
+  // canvas baseline probe includes KaTeX's italic font style and weight.
   const html2canvas = (await import("html2canvas")).default;
 
   // KaTeX HTML output is a <span class="katex">…</span> (inline) or
@@ -186,7 +188,12 @@ export async function renderMathToPng(
   // text isn't captured as the fallback font's glyphs.
   if (typeof document !== "undefined" && (document as Document).fonts) {
     try {
-      await (document as Document).fonts.ready;
+      const fonts = (document as Document).fonts;
+      await Promise.all([
+        fonts.load("normal 16px KaTeX_Main"),
+        fonts.load("italic 16px KaTeX_Math"),
+        fonts.ready,
+      ]);
     } catch {
       // Some headless environments reject fonts.ready — non-fatal.
     }

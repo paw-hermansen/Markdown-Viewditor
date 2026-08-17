@@ -790,6 +790,70 @@ After list`;
     expect(xml).toContain("<draw:object");
   });
 
+  it("centers native MathML block formulas with Math_20_Display style", async () => {
+    const ctx: ExportContext = {
+      markdown: "$$\nx^2\n$$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$$\nx^2\n$$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toMatch(/<text:p[^>]*text:style-name="Math_20_Display"/);
+    expect(xml).not.toMatch(
+      /<text:p[^>]*text:style-name="Text_20_body"[^>]*>[^<]*<draw:frame[^>]*<draw:object/,
+    );
+  });
+
+  it("does not center native MathML inline formulas", async () => {
+    const ctx: ExportContext = {
+      markdown: "inline $x^2$ math",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("inline $x^2$ math"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).not.toContain('text:style-name="Math_20_Display"');
+    expect(xml).toContain('text:style-name="Text_20_body"');
+  });
+
+  it("uses Formula graphic style for native MathML objects", async () => {
+    const ctx: ExportContext = {
+      markdown: "$x^2$",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("$x^2$"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('draw:style-name="Formula"');
+    expect(xml).toContain("<draw:object");
+    // Must NOT use fr1 for MathML objects
+    expect(xml).not.toMatch(/draw:style-name="fr1"[^>]*<draw:object/);
+  });
+
   it("creates MathML sub-packages for math formulas", async () => {
     const ctx: ExportContext = {
       markdown: "$x^2$",
@@ -855,6 +919,27 @@ After list`;
     // Must NOT render as preformatted code
     expect(xml).not.toContain("Preformatted_20_Text");
     expect(xml).not.toContain("sum_");
+  });
+
+  it("centers native MathML fenced math blocks with Math_20_Display style", async () => {
+    const ctx: ExportContext = {
+      markdown: "```math\nx^2\n```",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: makeMathTokens("```math\nx^2\n```"),
+    };
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await odtExporter.export(ctx);
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toMatch(/<text:p[^>]*text:style-name="Math_20_Display"/);
+    expect(xml).toContain('draw:style-name="Formula"');
+    expect(xml).toContain("<draw:object");
   });
 
   it("creates MathML sub-packages for fenced math blocks", async () => {
@@ -1040,6 +1125,9 @@ describe("ODT rasterization options", () => {
     expect(mockRenderMathToPng).toHaveBeenCalled();
     expect(xml).toContain('draw:mime-type="image/png"');
     expect(xml).not.toContain("<draw:object");
+    // Inline math PNG must use the Formula graphic style for
+    // vertical centering (style:vertical-pos="middle").
+    expect(xml).toContain('draw:style-name="Formula"');
   });
 
   it("keeps math as MathML when rasterizeMath is off", async () => {
@@ -1190,6 +1278,26 @@ describe("ODT rasterization options", () => {
     // alignment matches the markdown preview.
     expect(xml).toMatch(
       /<text:p[^>]*text:style-name="Math_20_Display"[^>]*>[\s\S]*?svg:width="6\.2500in"/,
+    );
+  });
+
+  it("uses fr1 style (not Formula) for rasterized block math PNGs", async () => {
+    // Block math PNGs are already centered via the Math_20_Display
+    // paragraph style. They should keep fr1 for horizontal centering
+    // at the paragraph level, not the Formula style which is for
+    // inline vertical centering.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 600,
+      heightPx: 32,
+    });
+    const xml = await getMathContentXml("$$x^2$$", {
+      "odt.rasterizeMath": true,
+    });
+    // The block math PNG frame must use fr1 (horizontal centering),
+    // not Formula (vertical centering for inline).
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Math_20_Display"[^>]*>[^<]*<draw:frame[^>]*draw:style-name="fr1"/,
     );
   });
 

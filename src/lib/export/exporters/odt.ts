@@ -1012,6 +1012,7 @@ async function buildDocument(
     widthPx: number,
     heightPx: number,
     srcLabel: string,
+    graphicStyle = "fr1",
   ): string {
     const name = `Pictures/image${imageCounter.n++}.png`;
     images.set(name, {
@@ -1026,7 +1027,7 @@ async function buildDocument(
       sizeAttrs = ` svg:width="${(widthPx / 96).toFixed(4)}in" svg:height="${(heightPx / 96).toFixed(4)}in"`;
     }
     void srcLabel;
-    return `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
+    return `<draw:frame draw:style-name="${graphicStyle}" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
   }
 
   /** Add a raw SVG as a Pictures/ entry and return its ODF XML. */
@@ -1343,6 +1344,7 @@ async function buildDocument(
                 widthPx,
                 heightPx,
                 `inline-math(${child.content.slice(0, 40)})`,
+                "Formula",
               );
               break;
             } catch (err) {
@@ -1356,7 +1358,7 @@ async function buildDocument(
             const mathMl = renderMathToMathml(child.content, false);
             const objId = `Object ${++mathCounter}`;
             mathObjects.push({ id: objId, mathml: mathMl });
-            xml += `<draw:frame draw:style-name="fr1" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
+            xml += `<draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
           } catch {
             warnings.push(
               `Inline math rendering failed for: ${child.content.slice(0, 50)}…`,
@@ -1980,7 +1982,7 @@ async function buildDocument(
               const objId = `Object ${++mathCounter}`;
               mathObjects.push({ id: objId, mathml: mathMl });
               parts.push(
-                `      <text:p text:style-name="${S.body}"><draw:frame draw:style-name="fr1" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
+                `      <text:p text:style-name="${S.mathDisplay}"><draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
               );
             } catch {
               warnings.push(
@@ -2062,7 +2064,7 @@ async function buildDocument(
             const objId = `Object ${++mathCounter}`;
             mathObjects.push({ id: objId, mathml: mathMl });
             parts.push(
-              `      <text:p text:style-name="${S.body}"><draw:frame draw:style-name="fr1" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
+              `      <text:p text:style-name="${S.mathDisplay}"><draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
             );
           } catch {
             warnings.push(

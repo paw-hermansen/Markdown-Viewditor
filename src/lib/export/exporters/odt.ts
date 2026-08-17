@@ -964,6 +964,13 @@ async function buildDocument(
   const rasterizeMath = !!options[OPTION_RASTERIZE_MATH];
   const rasterizeSvgFlag = !!options[OPTION_RASTERIZE_SVG];
   const rasterScale = options[OPTION_RASTER_RESOLUTION] ?? 2;
+  // Target font size for rasterized math: the ODT body text is 10pt
+  // (≈ 13.33px at 96 DPI).  KaTeX renders at HOST_FONT_SIZE × 1.21em,
+  // so we pass 11px so the returned dimensions match 10pt:
+  // 11px × 1.21 ≈ 13.31px ≈ 10pt.  The bitmap is rendered at 16px
+  // (HOST_FONT_SIZE) for sharpness; only the reported dimensions are
+  // scaled down (supersampling).
+  const mathTargetFontSize = 11;
 
   // ── inline formatter state ──
   let boldActive = false;
@@ -1338,6 +1345,7 @@ async function buildDocument(
                 child.content,
                 false,
                 rasterScale,
+                mathTargetFontSize,
               );
               xml += addRasterImage(
                 png,
@@ -1959,6 +1967,7 @@ async function buildDocument(
                   token.content,
                   true,
                   rasterScale,
+                  mathTargetFontSize,
                 );
                 const inner = addRasterImage(
                   png,
@@ -2040,6 +2049,7 @@ async function buildDocument(
                 token.content,
                 true,
                 rasterScale,
+                mathTargetFontSize,
               );
               const inner = addRasterImage(
                 png,

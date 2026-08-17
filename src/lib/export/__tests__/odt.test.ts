@@ -1266,6 +1266,7 @@ describe("ODT rasterization options", () => {
       expect.stringContaining("\\tag{7.a}"),
       true,
       2,
+      11,
     );
     // Width should be 600/96 = 6.25 in. If the dimension-fix
     // regresses (returns post-scale dimensions or measures viewport)

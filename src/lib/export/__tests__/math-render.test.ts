@@ -357,6 +357,39 @@ describe("renderMathToPng", () => {
     }
   });
 
+  it("scales returned dimensions when targetFontSize is set (supersampling)", async () => {
+    // With host at 16px and targetFontSize=11, the returned width
+    // should be 11/16 = 0.6875× the CSS width — the bitmap stays
+    // at 16px sharpness but the ODT displays at 10pt size.
+    const FORMULA_W = 100;
+    const FORMULA_H = 20;
+    const origRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: FORMULA_H + 40,
+        right: FORMULA_W,
+        width: FORMULA_W,
+        height: FORMULA_H + 40,
+        toJSON: () => ({}),
+      } as DOMRect;
+    };
+    try {
+      const r = await renderMathToPng("x^2", false, 1, 11);
+      const expectedScale = 11 / 16;
+      // Width is directly scaled from cssW.
+      expect(r.widthPx).toBeCloseTo(FORMULA_W * expectedScale, 4);
+      // Without targetFontSize, width should be unscaled.
+      const r2 = await renderMathToPng("x^2", false, 1);
+      expect(r2.widthPx).toBe(FORMULA_W);
+    } finally {
+      Element.prototype.getBoundingClientRect = origRect;
+    }
+  });
+
   it("cropTransparentRows strips equal empty rows from top and bottom (white background)", () => {
     // Unit test for the cropping logic. jsdom doesn't implement
     // `getContext('2d').getImageData`, so we stub a fake 2D context

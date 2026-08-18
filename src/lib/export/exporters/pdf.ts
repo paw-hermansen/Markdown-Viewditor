@@ -1,7 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import type { Exporter, ExportResult } from "../types";
+import type {
+  Exporter,
+  ExportResult,
+  ExportContext,
+  OptionGroup,
+} from "../types";
 import { fileState } from "$lib/stores/file.svelte";
+import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
@@ -308,12 +314,34 @@ export async function exportPdf(
   }
 }
 
+export const PDF_OPTION_ID = `pdf.${OPTION_INCLUDE_FRONTMATTER}`;
+
+export function pdfOptionGroups(ctx: ExportContext): OptionGroup[] {
+  return [
+    {
+      id: "frontmatter",
+      label: "Frontmatter",
+      options: [
+        {
+          id: PDF_OPTION_ID,
+          label: "Include frontmatter card",
+          hint: "Show the frontmatter or skill card at the top of the exported document.",
+          kind: "toggle",
+          value: true,
+          disabledWhen: () => ctx.frontmatter === null,
+        },
+      ],
+    },
+  ];
+}
+
 export const pdfExporter: Exporter = {
   id: "pdf",
   label: isMacOS ? "Export as PDF" : "Export as PDF (Print…)",
   description: "Vector document",
   extension: "pdf",
   themeCapable: true,
+  optionGroups: pdfOptionGroups,
   async export(ctx) {
     return exportPdf(ctx.html, ctx.fileName);
   },

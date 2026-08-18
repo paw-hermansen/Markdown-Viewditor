@@ -22,17 +22,25 @@ import type {
 import { renderMathToMathml, renderMathToPng } from "../math-render";
 import { rasterizeSvg } from "../svg-rasterize";
 import { fileState } from "$lib/stores/file.svelte";
+import {
+  isSkill,
+  formatValue,
+  OPTION_INCLUDE_FRONTMATTER,
+} from "../frontmatter-card";
+import type { Frontmatter } from "$lib/types";
 
 /* ─────────────────────── option ids / helpers ─────────────────────────── */
 
 export const OPTION_RASTERIZE_MATH = "odt.rasterizeMath";
 export const OPTION_RASTERIZE_SVG = "odt.rasterizeSvg";
 export const OPTION_RASTER_RESOLUTION = "odt.rasterResolution";
+export const OPTION_ODT_INCLUDE_FRONTMATTER = `odt.${OPTION_INCLUDE_FRONTMATTER}`;
 
 export interface ExportOptions {
   [OPTION_RASTERIZE_MATH]?: boolean;
   [OPTION_RASTERIZE_SVG]?: boolean;
   [OPTION_RASTER_RESOLUTION]?: 1 | 2 | 3 | 4;
+  [OPTION_ODT_INCLUDE_FRONTMATTER]?: boolean;
 }
 
 function asBool(v: unknown, fallback: boolean): boolean {
@@ -47,6 +55,10 @@ function readOptions(opts: Record<string, unknown> | undefined): ExportOptions {
     [OPTION_RASTERIZE_MATH]: asBool(opts?.[OPTION_RASTERIZE_MATH], false),
     [OPTION_RASTERIZE_SVG]: asBool(opts?.[OPTION_RASTERIZE_SVG], false),
     [OPTION_RASTER_RESOLUTION]: asRes(opts?.[OPTION_RASTER_RESOLUTION], 2),
+    [OPTION_ODT_INCLUDE_FRONTMATTER]: asBool(
+      opts?.[OPTION_ODT_INCLUDE_FRONTMATTER],
+      true,
+    ),
   };
 }
 
@@ -59,6 +71,20 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
   // (e.g. size-aware defaults) can read from `ctx` without an API change.
   void ctx;
   return [
+    {
+      id: "frontmatter",
+      label: "Frontmatter",
+      options: [
+        {
+          id: OPTION_ODT_INCLUDE_FRONTMATTER,
+          label: "Include frontmatter card",
+          hint: "Show the frontmatter or skill card at the top of the exported document.",
+          kind: "toggle",
+          value: true,
+          disabledWhen: () => ctx.frontmatter === null,
+        },
+      ],
+    },
     {
       id: "math",
       label: "Math formulas",
@@ -79,7 +105,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "Applies to inline <svg>, <img src=*.svg>, and markdown ![…](*.svg). PNG: wider compatibility. SVG: vector, may not render in all viewers.",
+          hint: "Applies to inline <svg>, <img src=*.svg>, and markdown ![…](.svg). PNG: wider compatibility. SVG: vector, may not render in all viewers.",
           kind: "toggle",
           value: false,
         },
@@ -162,6 +188,13 @@ const S = {
   cell: "Table_20_Contents",
   cellHead: "Table_20_Heading",
   mathDisplay: "Math_20_Display",
+  fmTable: "FrontmatterTable",
+  fmCell: "FrontmatterCell",
+  fmHeading: "FrontmatterHeading",
+  fmBody: "FrontmatterBody",
+  fmDesc: "FrontmatterDesc",
+  fmMetaKey: "FrontmatterMetaKey",
+  fmMetaVal: "FrontmatterMetaVal",
 } as const;
 
 /* ─────────────────────── XML escaping ─────────────────────────────────── */
@@ -839,6 +872,43 @@ ${Array.from({ length: 9 }, (_, i) => {
         fo:border-bottom="1pt solid #d1d9e0"/>
       <style:text-properties fo:font-size="1pt"/>
     </style:style>
+    <style:style style:name="${S.fmTable}" style:family="table">
+      <style:table-properties
+        fo:margin-top="0.16in" fo:margin-bottom="0.16in"
+        fo:padding="0.08in"/>
+    </style:style>
+    <style:style style:name="${S.fmCell}" style:family="table-cell">
+      <style:table-cell-properties
+        fo:border-top="1pt solid #d1d9e0"
+        fo:border-bottom="1pt solid #d1d9e0"
+        fo:border-right="1pt solid #d1d9e0"
+        fo:border-left="3pt solid #0969da"
+        fo:padding="0.08in 0.12in"
+        fo:background-color="#f6f8fa"/>
+    </style:style>
+    <style:style style:name="${S.fmHeading}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0.06in"/>
+      <style:text-properties
+        fo:font-size="8pt"
+        fo:font-weight="bold"
+        fo:text-transform="uppercase"
+        fo:color="#656d76"
+        style:letter-spacing="0.08em"/>
+    </style:style>
+    <style:style style:name="${S.fmBody}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0.04in"/>
+    </style:style>
+    <style:style style:name="${S.fmDesc}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0.08in"/>
+      <style:text-properties fo:color="#656d76"/>
+    </style:style>
+    <style:style style:name="${S.fmMetaKey}" style:family="paragraph">
+      <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0.02in"/>
+      <style:text-properties fo:font-weight="bold" fo:color="#656d76"/>
+    </style:style>
+    <style:style style:name="${S.fmMetaVal}" style:family="paragraph">
+      <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0.04in"/>
+    </style:style>
     <style:style style:name="Formula" style:family="graphic">
       <style:graphic-properties style:vertical-pos="middle" style:vertical-rel="text"/>
     </style:style>
@@ -849,6 +919,8 @@ ${Array.from({ length: 9 }, (_, i) => {
     <style:style style:name="T_link" style:family="text"><style:text-properties fo:color="#0969da" style:text-underline-type="solid" style:text-underline-style="solid"/></style:style>
     <style:style style:name="T4" style:family="text"><style:text-properties fo:font-family="monospace" style:font-family-generic="modern" fo:background-color="#f6f8fa"/></style:style>
     <style:style style:name="T_kbd" style:family="text"><style:text-properties fo:font-family="monospace" style:font-family-generic="modern" fo:background-color="#f0f0f0" fo:padding="0.02in 0.04in" fo:border="0.5pt solid #ccc"/></style:style>
+    <style:style style:name="T_fm_accent" style:family="text"><style:text-properties fo:color="#0969da" fo:font-weight="bold" fo:font-size="7pt"/></style:style>
+    <style:style style:name="T_fm_name" style:family="text"><style:text-properties fo:font-size="14pt" fo:font-weight="bold"/></style:style>
   </office:styles>
   <office:automatic-styles>
     <style:page-layout style:name="Mpm1">
@@ -2227,6 +2299,80 @@ function findClosing(
   return -1;
 }
 
+/* ─────────────────────── frontmatter card (ODF) ──────────────────────── */
+
+/**
+ * Generate the frontmatter/skill card as ODF XML. Uses a single-column
+ * table with a blue left accent border (matching the blockquote pattern)
+ * and a light background, replicating the HTML card from Viewer.svelte.
+ */
+function generateFrontmatterCardOdf(fm: Frontmatter): string {
+  const skill = isSkill(fm);
+  const rows: string[] = [];
+
+  if (skill) {
+    // Badge row: "SKILL" in accent color, bold, uppercase.
+    rows.push(
+      `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
+        `<text:p text:style-name="${S.fmHeading}">` +
+        `<text:span text:style-name="T_fm_accent">${esc("SKILL")}</text:span>` +
+        `</text:p></table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
+    );
+    // Name row.
+    if (fm.name) {
+      rows.push(
+        `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
+          `<text:p text:style-name="${S.fmBody}"><text:span text:style-name="T_fm_name">${esc(String(fm.name))}</text:span></text:p>` +
+          `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
+      );
+    }
+    // Description row.
+    if (fm.description) {
+      rows.push(
+        `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
+          `<text:p text:style-name="${S.fmDesc}">${esc(String(fm.description))}</text:p>` +
+          `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
+      );
+    }
+    // Extra metadata rows.
+    const skip = new Set(["name", "description"]);
+    for (const [key, value] of Object.entries(fm)) {
+      if (skip.has(key)) continue;
+      rows.push(
+        `<table:table-row><table:table-cell>` +
+          `<text:p text:style-name="${S.fmMetaKey}">${esc(key)}</text:p>` +
+          `</table:table-cell><table:table-cell>` +
+          `<text:p text:style-name="${S.fmMetaVal}">${esc(formatValue(value))}</text:p>` +
+          `</table:table-cell></table:table-row>`,
+      );
+    }
+  } else {
+    // Plain frontmatter.
+    rows.push(
+      `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
+        `<text:p text:style-name="${S.fmHeading}">${esc("FRONTMATTER")}</text:p>` +
+        `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
+    );
+    for (const [key, value] of Object.entries(fm)) {
+      rows.push(
+        `<table:table-row><table:table-cell>` +
+          `<text:p text:style-name="${S.fmMetaKey}">${esc(key)}</text:p>` +
+          `</table:table-cell><table:table-cell>` +
+          `<text:p text:style-name="${S.fmMetaVal}">${esc(formatValue(value))}</text:p>` +
+          `</table:table-cell></table:table-row>`,
+      );
+    }
+  }
+
+  return (
+    `<table:table table:style-name="${S.fmTable}">` +
+    `<table:table-column/>` +
+    `<table:table-column/>` +
+    rows.join("") +
+    `</table:table>`
+  );
+}
+
 /* ─────────────────────── main export function ────────────────────────── */
 
 async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
@@ -2242,6 +2388,12 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     opts,
   );
 
+  // Prepend frontmatter/skill card if the option is enabled.
+  let finalBodyXml = bodyXml;
+  if (opts[OPTION_ODT_INCLUDE_FRONTMATTER] && ctx.frontmatter) {
+    finalBodyXml = generateFrontmatterCardOdf(ctx.frontmatter) + bodyXml;
+  }
+
   const title = ctx.frontmatter?.name ?? ctx.fileName ?? "";
 
   const zip = new JSZip();
@@ -2249,7 +2401,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
   // mimetype must be first entry, stored uncompressed
   zip.file("mimetype", generateMimetype(), { compression: "STORE" });
 
-  zip.file("content.xml", generateContentXml(bodyXml, autoStyles));
+  zip.file("content.xml", generateContentXml(finalBodyXml, autoStyles));
   zip.file("styles.xml", generateStylesXml());
   zip.file("meta.xml", generateMetaXml(title));
 

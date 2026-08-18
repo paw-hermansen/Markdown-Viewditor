@@ -109,7 +109,7 @@ export async function buildStandaloneHtml(
   // 4. Resolve viewer-content background for edge-to-edge bleed.
   const viewerBg = resolveViewerBackground();
   const bodyBgCss = viewerBg
-    ? `\nhtml, body { height: auto; }\nbody { background: ${viewerBg}; }`
+    ? `\nhtml, body { height: auto; background: ${viewerBg}; }`
     : "";
 
   const title = deriveTitle(frontmatter, fileName);

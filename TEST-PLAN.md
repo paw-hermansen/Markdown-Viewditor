@@ -10,6 +10,7 @@
   unmarked tests are platform-independent.
 
 > Notation:
+>
 > - `Ctrl` below stands for `Cmd` on macOS and `Ctrl` on Linux/Windows.
 > - GFM: **G**ithub **F**lavored **M**arkdown
 
@@ -118,56 +119,56 @@ editor and rendered output in the viewer.
 
 Use these files from `examples/`:
 
-| File                     | Purpose                                          |
-| ------------------------ | ------------------------------------------------ |
-| `Simple.md`              | Standard UTF-8, basic markdown features           |
-| `Empty.md`               | Zero-content file                                 |
-| `Large.md`               | ~5800 lines, performance testing                  |
-| `BOM_Simple.md`          | UTF-8 with Byte Order Mark                        |
-| `CRLF_Simple.md`         | Windows-style CRLF line endings                   |
-| `ISO8859-1_Simple.md`    | ISO-8859-1 (Latin-1) encoding                     |
-| `简单.md`                | Unicode (CJK) filename                            |
-| `Space Simple.md`        | Filename with spaces                              |
-| `Math-Example.md`        | Math formulas (KaTeX)                             |
-| `Chemistry-Example.md`   | Chemistry formulas (mhchem)                       |
+| File                   | Purpose                                 |
+| ---------------------- | --------------------------------------- |
+| `Simple.md`            | Standard UTF-8, basic markdown features |
+| `Empty.md`             | Zero-content file                       |
+| `Large.md`             | ~5800 lines, performance testing        |
+| `BOM_Simple.md`        | UTF-8 with Byte Order Mark              |
+| `CRLF_Simple.md`       | Windows-style CRLF line endings         |
+| `ISO8859-1_Simple.md`  | ISO-8859-1 (Latin-1) encoding           |
+| `简单.md`              | Unicode (CJK) filename                  |
+| `Space Simple.md`      | Filename with spaces                    |
+| `Math-Example.md`      | Math formulas (KaTeX)                   |
+| `Chemistry-Example.md` | Chemistry formulas (mhchem)             |
 
 ### Test Steps
 
-| #    | Test                         | Steps                                                              | Expected                                                                                                   |
-| ---- | ---------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| 7.1  | Open file                    | Click Open, select `examples/Simple.md`                            | Content loads into editor, viewer renders it; filename shown in toolbar and status bar                     |
-| 7.2  | Open dialog filters          | Open dialog                                                        | Shows "Markdown" and "All Files" filters                                                                   |
-| 7.3  | Cancel open / save-as dialog | Open any dialog, click Cancel                                      | No change to current content                                                                               |
-| 7.4  | Save new (untitled) file     | With "Untitled" file, click Save                                   | Save-as dialog appears                                                                                     |
-| 7.5  | Save existing file           | Open `examples/Simple.md`, edit content, click Save                | File saved, `*` indicator disappears, `.bak` backup created in same directory                              |
-| 7.6  | Save As same path            | Save As to the current file's path                                 | If externally modified, overwrite prompt: "This file has been modified by another application since it was last saved. Overwrite the external changes?"; otherwise saves directly |
-| 7.7  | Save As different path       | Save As to a new location (e.g. `/tmp/test-save.md`)              | New file created, app tracks new path                                                                      |
-| 7.8  | Save As to existing file     | Save As to a file that already exists (e.g. `examples/Empty.md`)   | Dialog: `A file named "Empty.md" already exists. Do you want to replace it?` with Cancel / Replace File buttons |
-| 7.9  | Save As to read-only file    | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`         |
-| 7.10 | Unsaved-change dialog — New  | Edit content, click New (toolbar or `Ctrl+N`)                      | Dialog: `"You have unsaved changes. Create a new file?"` with Cancel / Yes, And Discard My Changes / Save First |
-| 7.11 | Unsaved-change dialog — Open | Edit content, click Open (`Ctrl+O`)                                | Dialog: `"You have unsaved changes. Open a different file?"` with same three buttons                       |
-| 7.12 | Unsaved-change dialog — Reload | Edit content, click Reload (`Ctrl+R`)                            | Dialog: `"You have unsaved changes. Reload from disk and discard your changes?"` with Cancel / Yes, Discard My Changes |
-| 7.13 | Dialog — Save First (untitled) | In 3-button dialog, click Save First                             | Save-as dialog appears; on save editor clears to "Untitled"                                                |
-| 7.14 | Dialog — Save First (named)  | Open `examples/Simple.md`, edit, trigger dialog, click Save First  | File saved (no clear), action proceeds                                                                     |
-| 7.15 | Dialog — Discard             | In 3-button dialog, click Yes, And Discard My Changes              | Editor clears (only for New), action proceeds, changes lost                                                |
-| 7.16 | Dialog — Cancel              | In 3-button dialog, click Cancel                                   | No change to editor content or current file                                                                |
-| 7.17 | Reload from disk             | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk; toast `"The file is already up to date."` if unchanged              |
-| 7.18 | Reload unchanged file        | Open `examples/Simple.md`, no edits in app, click Reload           | Toast: `"The file is already up to date."`                                                                 |
-| 7.19 | Reload deleted file          | Open a temp file, delete it externally, click Reload               | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button |
-| 7.20 | File name display            | Open `examples/Simple.md`                                          | "Simple.md" shown in toolbar and status bar                                                                |
-| 7.21 | Modified indicator           | Edit content                                                       | `*` appears after filename in toolbar; dot appears on Save button                                          |
-| 7.22 | Read-only indicator          | Open a read-only file (`chmod 444`)                                | 🔒 icon appears next to filename in toolbar with tooltip "Read-only"                                       |
-| 7.23 | Save read-only file          | Open a read-only file, edit, click Save                            | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`            |
-| 7.24 | .bak backup created          | Open `examples/Simple.md`, edit, save, check directory             | `Simple.md.bak` contains the previous content                                                              |
-| 7.25 | Encoding — UTF-8 BOM         | Open `examples/BOM_Simple.md`                                      | Content reads correctly, no BOM artifact in editor, no garbled characters                                  |
-| 7.26 | Encoding — CRLF              | Open `examples/CRLF_Simple.md`                                     | Content reads correctly, no `^M` artifacts, renders normally                                               |
-| 7.27 | Encoding — Latin-1           | Open `examples/ISO8859-1_Simple.md`                                | Decoded losslessly (Æ Ø Å visible), no crash or garbled text                                              |
-| 7.28 | Encoding — Unicode filename  | Open `examples/简单.md`                                            | Opens correctly, filename displays in toolbar                                                              |
-| 7.29 | Filename with spaces         | Open `examples/Space Simple.md`                                    | Opens correctly, saves correctly                                                                           |
-| 7.30 | Empty file                   | Open `examples/Empty.md`                                           | Viewer empty, word count 0, no crash                                                                       |
-| 7.31 | Toast on save failure        | Save to a path that fails (e.g. read-only directory)               | Toast error: `"Failed to save the file."` with detail message                                              |
-| 7.32 | Toast on open failure        | Open a file that fails (e.g. permission denied)                    | Toast error: `"Failed to open the file."` with detail message                                              |
-| 7.33 | Externally modified indicator | Open file, edit in another editor, focus app but decline reload   | ⚠ icon appears next to filename in toolbar with tooltip "Externally modified"                              |
+| #    | Test                           | Steps                                                                        | Expected                                                                                                                                                                          |
+| ---- | ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7.1  | Open file                      | Click Open, select `examples/Simple.md`                                      | Content loads into editor, viewer renders it; filename shown in toolbar and status bar                                                                                            |
+| 7.2  | Open dialog filters            | Open dialog                                                                  | Shows "Markdown" and "All Files" filters                                                                                                                                          |
+| 7.3  | Cancel open / save-as dialog   | Open any dialog, click Cancel                                                | No change to current content                                                                                                                                                      |
+| 7.4  | Save new (untitled) file       | With "Untitled" file, click Save                                             | Save-as dialog appears                                                                                                                                                            |
+| 7.5  | Save existing file             | Open `examples/Simple.md`, edit content, click Save                          | File saved, `*` indicator disappears, `.bak` backup created in same directory                                                                                                     |
+| 7.6  | Save As same path              | Save As to the current file's path                                           | If externally modified, overwrite prompt: "This file has been modified by another application since it was last saved. Overwrite the external changes?"; otherwise saves directly |
+| 7.7  | Save As different path         | Save As to a new location (e.g. `/tmp/test-save.md`)                         | New file created, app tracks new path                                                                                                                                             |
+| 7.8  | Save As to existing file       | Save As to a file that already exists (e.g. `examples/Empty.md`)             | Dialog: `A file named "Empty.md" already exists. Do you want to replace it?` with Cancel / Replace File buttons                                                                   |
+| 7.9  | Save As to read-only file      | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it        | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
+| 7.10 | Unsaved-change dialog — New    | Edit content, click New (toolbar or `Ctrl+N`)                                | Dialog: `"You have unsaved changes. Create a new file?"` with Cancel / Yes, And Discard My Changes / Save First                                                                   |
+| 7.11 | Unsaved-change dialog — Open   | Edit content, click Open (`Ctrl+O`)                                          | Dialog: `"You have unsaved changes. Open a different file?"` with same three buttons                                                                                              |
+| 7.12 | Unsaved-change dialog — Reload | Edit content, click Reload (`Ctrl+R`)                                        | Dialog: `"You have unsaved changes. Reload from disk and discard your changes?"` with Cancel / Yes, Discard My Changes                                                            |
+| 7.13 | Dialog — Save First (untitled) | In 3-button dialog, click Save First                                         | Save-as dialog appears; on save editor clears to "Untitled"                                                                                                                       |
+| 7.14 | Dialog — Save First (named)    | Open `examples/Simple.md`, edit, trigger dialog, click Save First            | File saved (no clear), action proceeds                                                                                                                                            |
+| 7.15 | Dialog — Discard               | In 3-button dialog, click Yes, And Discard My Changes                        | Editor clears (only for New), action proceeds, changes lost                                                                                                                       |
+| 7.16 | Dialog — Cancel                | In 3-button dialog, click Cancel                                             | No change to editor content or current file                                                                                                                                       |
+| 7.17 | Reload from disk               | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk; toast `"The file is already up to date."` if unchanged                                                                                                 |
+| 7.18 | Reload unchanged file          | Open `examples/Simple.md`, no edits in app, click Reload                     | Toast: `"The file is already up to date."`                                                                                                                                        |
+| 7.19 | Reload deleted file            | Open a temp file, delete it externally, click Reload                         | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                               |
+| 7.20 | File name display              | Open `examples/Simple.md`                                                    | "Simple.md" shown in toolbar and status bar                                                                                                                                       |
+| 7.21 | Modified indicator             | Edit content                                                                 | `*` appears after filename in toolbar; dot appears on Save button                                                                                                                 |
+| 7.22 | Read-only indicator            | Open a read-only file (`chmod 444`)                                          | 🔒 icon appears next to filename in toolbar with tooltip "Read-only"                                                                                                              |
+| 7.23 | Save read-only file            | Open a read-only file, edit, click Save                                      | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
+| 7.24 | .bak backup created            | Open `examples/Simple.md`, edit, save, check directory                       | `Simple.md.bak` contains the previous content                                                                                                                                     |
+| 7.25 | Encoding — UTF-8 BOM           | Open `examples/BOM_Simple.md`                                                | Content reads correctly, no BOM artifact in editor, no garbled characters                                                                                                         |
+| 7.26 | Encoding — CRLF                | Open `examples/CRLF_Simple.md`                                               | Content reads correctly, no `^M` artifacts, renders normally                                                                                                                      |
+| 7.27 | Encoding — Latin-1             | Open `examples/ISO8859-1_Simple.md`                                          | Decoded losslessly (Æ Ø Å visible), no crash or garbled text                                                                                                                      |
+| 7.28 | Encoding — Unicode filename    | Open `examples/简单.md`                                                      | Opens correctly, filename displays in toolbar                                                                                                                                     |
+| 7.29 | Filename with spaces           | Open `examples/Space Simple.md`                                              | Opens correctly, saves correctly                                                                                                                                                  |
+| 7.30 | Empty file                     | Open `examples/Empty.md`                                                     | Viewer empty, word count 0, no crash                                                                                                                                              |
+| 7.31 | Toast on save failure          | Save to a path that fails (e.g. read-only directory)                         | Toast error: `"Failed to save the file."` with detail message                                                                                                                     |
+| 7.32 | Toast on open failure          | Open a file that fails (e.g. permission denied)                              | Toast error: `"Failed to open the file."` with detail message                                                                                                                     |
+| 7.33 | Externally modified indicator  | Open file, edit in another editor, focus app but decline reload              | ⚠ icon appears next to filename in toolbar with tooltip "Externally modified"                                                                                                     |
 
 ---
 
@@ -181,20 +182,20 @@ of the app) to modify the file externally.
 
 ### Test Steps
 
-| #    | Test                              | Steps                                                                             | Expected                                                                                                                                                                                                 |
-| ---- | --------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8.1  | Modified externally (clean)       | Open `/tmp/ext-test.md`, edit in another editor, focus app                        | Dialog: `"This file has been modified by another application. Do you want to reload it?"` with Cancel / Reload buttons                                                                                   |
-| 8.2  | Modified externally (dirty)       | Open `/tmp/ext-test.md`, edit in app, edit externally, focus app                  | Dialog: `"This file has been modified by another application. You also have unsaved changes. Reload and discard your changes?"` with Cancel / Yes, Discard My Changes buttons                            |
-| 8.3  | Decline reload aftermath          | Decline reload prompt (click Cancel)                                              | ⚠ icon appears on filename in toolbar (tooltip "Externally modified"); no re-prompt on later focuses until file changes again                                                                             |
-| 8.4  | Decline reload — Save still warns | Decline reload, then `Ctrl+S`                                                     | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons                                 |
-| 8.5  | Accept reload (clean)             | With no local edits, accept reload prompt (click Reload)                          | Content updates from disk, ⚠ clears, baseline reset                                                                                                                                                      |
-| 8.6  | Accept reload (dirty)             | With local edits, accept reload prompt (click Yes, Discard My Changes)            | Content updates from disk, ⚠ clears, local edits lost, baseline reset                                                                                                                                    |
-| 8.7  | File deleted externally           | Open `/tmp/ext-test.md`, delete it externally (`rm /tmp/ext-test.md`), focus app  | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                                                      |
-| 8.8  | Save after external deletion      | After deletion warning, press `Ctrl+S`                                            | Save As dialog appears (does not recreate at old path)                                                                                                                                                   |
-| 8.9  | Save over external modification   | Open file, modify externally, press `Ctrl+S`                                      | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons                                 |
-| 8.10 | Reload with external modification | Modify externally, press `Ctrl+R`                                                 | If dirty: dialog `"You have unsaved changes. Reload from disk and discard your changes?"`; else reloads content silently                                                                                                                                         |
-| 8.11 | Size-only change detected         | Edit file externally without changing mtime (e.g. `echo x >> file; touch -r ref file`) | ⚠ appears on next focus (mtime OR size comparison)                                                                                                                                                 |
-| 8.12 | Reload up-to-date                 | Open file, no external changes, press `Ctrl+R`                                    | Toast: `"The file is already up to date."`                                                                                                                                                               |
+| #    | Test                              | Steps                                                                                  | Expected                                                                                                                                                                      |
+| ---- | --------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 8.1  | Modified externally (clean)       | Open `/tmp/ext-test.md`, edit in another editor, focus app                             | Dialog: `"This file has been modified by another application. Do you want to reload it?"` with Cancel / Reload buttons                                                        |
+| 8.2  | Modified externally (dirty)       | Open `/tmp/ext-test.md`, edit in app, edit externally, focus app                       | Dialog: `"This file has been modified by another application. You also have unsaved changes. Reload and discard your changes?"` with Cancel / Yes, Discard My Changes buttons |
+| 8.3  | Decline reload aftermath          | Decline reload prompt (click Cancel)                                                   | ⚠ icon appears on filename in toolbar (tooltip "Externally modified"); no re-prompt on later focuses until file changes again                                                 |
+| 8.4  | Decline reload — Save still warns | Decline reload, then `Ctrl+S`                                                          | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
+| 8.5  | Accept reload (clean)             | With no local edits, accept reload prompt (click Reload)                               | Content updates from disk, ⚠ clears, baseline reset                                                                                                                           |
+| 8.6  | Accept reload (dirty)             | With local edits, accept reload prompt (click Yes, Discard My Changes)                 | Content updates from disk, ⚠ clears, local edits lost, baseline reset                                                                                                         |
+| 8.7  | File deleted externally           | Open `/tmp/ext-test.md`, delete it externally (`rm /tmp/ext-test.md`), focus app       | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                           |
+| 8.8  | Save after external deletion      | After deletion warning, press `Ctrl+S`                                                 | Save As dialog appears (does not recreate at old path)                                                                                                                        |
+| 8.9  | Save over external modification   | Open file, modify externally, press `Ctrl+S`                                           | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
+| 8.10 | Reload with external modification | Modify externally, press `Ctrl+R`                                                      | If dirty: dialog `"You have unsaved changes. Reload from disk and discard your changes?"`; else reloads content silently                                                      |
+| 8.11 | Size-only change detected         | Edit file externally without changing mtime (e.g. `echo x >> file; touch -r ref file`) | ⚠ appears on next focus (mtime OR size comparison)                                                                                                                            |
+| 8.12 | Reload up-to-date                 | Open file, no external changes, press `Ctrl+R`                                         | Toast: `"The file is already up to date."`                                                                                                                                    |
 
 ---
 
@@ -274,13 +275,13 @@ The viewer toolbar exposes:
 
 ### Test Files
 
-| File                     | Purpose                                        |
-| ------------------------ | ---------------------------------------------- |
-| `examples/Simple.md`     | Basic markdown, YAML frontmatter               |
-| `examples/Example.md`    | Comprehensive: images, SVG, all HTML elements  |
-| `examples/Math-Example.md` | KaTeX math formulas                          |
-| `examples/Chemistry-Example.md` | mhchem chemistry formulas             |
-| `examples/weird.svg`    | SVG file for ODT rasterization tests           |
+| File                            | Purpose                                       |
+| ------------------------------- | --------------------------------------------- |
+| `examples/Simple.md`            | Basic markdown, YAML frontmatter              |
+| `examples/Example.md`           | Comprehensive: images, SVG, all HTML elements |
+| `examples/Math-Example.md`      | KaTeX math formulas                           |
+| `examples/Chemistry-Example.md` | mhchem chemistry formulas                     |
+| `examples/weird.svg`            | SVG file for ODT rasterization tests          |
 
 ### 13.1 Export Confirm Dialog
 
@@ -377,7 +378,7 @@ ignored. The confirm dialog shows three option groups when the dialog is on.
 | 13.45 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
 | 13.46 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
 | 13.47 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
-| 13.48 | `<dc:title>` from frontmatter       | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
+| 13.48 | `<dc:title>` from frontmatter      | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
 | 13.49 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
 | 13.50 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
 | 13.51 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
@@ -393,24 +394,24 @@ All three exporters (HTML, PDF, ODT) expose an "Include frontmatter card"
 toggle in the export confirm dialog. The toggle is disabled when the document
 has no YAML frontmatter.
 
-| #     | Test                                 | Steps                                               | Expected                                                                             |
-| ----- | ------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| 13.57 | HTML — option in dialog              | With confirmation ON, export file with frontmatter   | "Include frontmatter card" toggle visible and ON                                     |
-| 13.58 | HTML — option disabled               | Export file without frontmatter                      | Toggle greyed out (disabled)                                                         |
-| 13.59 | HTML — frontmatter included (ON)     | Export with toggle ON                                | HTML contains `.frontmatter-card` element                                            |
-| 13.60 | HTML — frontmatter excluded (OFF)    | Export with toggle OFF                               | No `.frontmatter-card` in HTML                                                       |
-| 13.61 | HTML — option persisted              | Set toggle OFF, export, re-export                    | Toggle stays OFF on next export                                                      |
-| 13.62 | PDF — option in dialog               | With confirmation ON, export file with frontmatter   | "Include frontmatter card" toggle visible and ON                                     |
-| 13.63 | PDF — option disabled                | Export file without frontmatter                      | Toggle greyed out (disabled)                                                         |
-| 13.64 | PDF — frontmatter included (ON)      | Export with toggle ON                                | PDF contains frontmatter card                                                        |
-| 13.65 | PDF — frontmatter excluded (OFF)     | Export with toggle OFF                               | No frontmatter card in PDF                                                           |
-| 13.66 | PDF — option persisted               | Set toggle OFF, export, re-export                    | Toggle stays OFF on next export                                                      |
-| 13.67 | ODT — option in dialog               | With confirmation ON, export file with frontmatter   | "Include frontmatter card" toggle visible and ON                                     |
-| 13.68 | ODT — option disabled                | Export file without frontmatter                      | Toggle greyed out (disabled)                                                         |
-| 13.69 | ODT — frontmatter card included (ON) | Export with toggle ON                                | ODF body contains frontmatter card table                                             |
-| 13.70 | ODT — frontmatter card excluded (OFF)| Export with toggle OFF                               | No frontmatter card in ODF                                                           |
-| 13.71 | ODT — option persisted               | Set toggle OFF, export, re-export                    | Toggle stays OFF on next export                                                      |
-| 13.72 | ODT — `<dc:title>` always set        | Export with frontmatter card OFF                     | `meta.xml` still carries the title field (card option does not affect metadata)      |
+| #     | Test                                  | Steps                                              | Expected                                                                        |
+| ----- | ------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 13.57 | HTML — option in dialog               | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.58 | HTML — option disabled                | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.59 | HTML — frontmatter included (ON)      | Export with toggle ON                              | HTML contains `.frontmatter-card` element                                       |
+| 13.60 | HTML — frontmatter excluded (OFF)     | Export with toggle OFF                             | No `.frontmatter-card` in HTML                                                  |
+| 13.61 | HTML — option persisted               | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.62 | PDF — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.63 | PDF — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.64 | PDF — frontmatter included (ON)       | Export with toggle ON                              | PDF contains frontmatter card                                                   |
+| 13.65 | PDF — frontmatter excluded (OFF)      | Export with toggle OFF                             | No frontmatter card in PDF                                                      |
+| 13.66 | PDF — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.67 | ODT — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.68 | ODT — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.69 | ODT — frontmatter card included (ON)  | Export with toggle ON                              | ODF body contains frontmatter card table                                        |
+| 13.70 | ODT — frontmatter card excluded (OFF) | Export with toggle OFF                             | No frontmatter card in ODF                                                      |
+| 13.71 | ODT — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.72 | ODT — `<dc:title>` always set         | Export with frontmatter card OFF                   | `meta.xml` still carries the title field (card option does not affect metadata) |
 
 ---
 
@@ -428,25 +429,25 @@ has no YAML frontmatter.
 
 ### Built-in Themes Reference
 
-| Theme                       | Type  |
-| --------------------------- | ----- |
-| GitHub Dark                 | Dark  |
-| GitHub Light                | Light |
-| Atom One Dark               | Dark  |
-| Atom One Light              | Light |
-| Monokai                     | Dark  |
-| Monokai Light               | Light |
-| Nord                        | Dark  |
-| Nord Light                  | Light |
-| Printer Friendly / Neutral  | Light |
+| Theme                      | Type  |
+| -------------------------- | ----- |
+| GitHub Dark                | Dark  |
+| GitHub Light               | Light |
+| Atom One Dark              | Dark  |
+| Atom One Light             | Light |
+| Monokai                    | Dark  |
+| Monokai Light              | Light |
+| Nord                       | Dark  |
+| Nord Light                 | Light |
+| Printer Friendly / Neutral | Light |
 
 ### Custom Theme
 
-| #    | Test                 | Steps                                                | Expected                                    |
-| ---- | -------------------- | ---------------------------------------------------- | ------------------------------------------- |
-| 14.8 | Add custom theme     | Place a `.css` file in the themes directory, restart | Appears in dropdown                         |
-| 14.9 | Dark/light detection | Custom CSS with dark/light background keywords       | Badge shows "Dark"/"Light" accordingly      |
-| 14.10| Custom theme applies | Select custom theme from dropdown                    | Viewer and code highlighting use custom CSS |
+| #     | Test                 | Steps                                                | Expected                                    |
+| ----- | -------------------- | ---------------------------------------------------- | ------------------------------------------- |
+| 14.8  | Add custom theme     | Place a `.css` file in the themes directory, restart | Appears in dropdown                         |
+| 14.9  | Dark/light detection | Custom CSS with dark/light background keywords       | Badge shows "Dark"/"Light" accordingly      |
+| 14.10 | Custom theme applies | Select custom theme from dropdown                    | Viewer and code highlighting use custom CSS |
 
 ---
 
@@ -577,16 +578,16 @@ in the status bar.
 
 ## 19. Status Bar
 
-| #    | Test                        | Steps                           | Expected                                          |
-| ---- | --------------------------- | ------------------------------- | ------------------------------------------------- |
-| 19.1 | File name display           | Open a file / no file open      | Shows file name / "Untitled"                      |
-| 19.2 | Cursor position             | Click at various positions      | Shows `Line X, Col Y`                             |
-| 19.3 | Word count                  | Type content / clear all        | Updates; `0 words` when empty                     |
-| 19.4 | Document type & encoding    | Always visible                  | Shows "Markdown" / "UTF-8"                        |
-| 19.5 | Level selector              | Check status bar right side     | Shows current level (e.g. "Advanced")             |
-| 19.6 | Violation badge             | Open file with violations       | ⚠ badge with count appears next to level selector |
-| 19.7 | External modification icon  | Externally modify loaded file   | ⚠ icon on filename with tooltip "Externally modified" |
-| 19.8 | Read-only icon              | Open a read-only file           | 🔒 icon on filename with tooltip "Read-only"      |
+| #    | Test                       | Steps                         | Expected                                              |
+| ---- | -------------------------- | ----------------------------- | ----------------------------------------------------- |
+| 19.1 | File name display          | Open a file / no file open    | Shows file name / "Untitled"                          |
+| 19.2 | Cursor position            | Click at various positions    | Shows `Line X, Col Y`                                 |
+| 19.3 | Word count                 | Type content / clear all      | Updates; `0 words` when empty                         |
+| 19.4 | Document type & encoding   | Always visible                | Shows "Markdown" / "UTF-8"                            |
+| 19.5 | Level selector             | Check status bar right side   | Shows current level (e.g. "Advanced")                 |
+| 19.6 | Violation badge            | Open file with violations     | ⚠ badge with count appears next to level selector     |
+| 19.7 | External modification icon | Externally modify loaded file | ⚠ icon on filename with tooltip "Externally modified" |
+| 19.8 | Read-only icon             | Open a read-only file         | 🔒 icon on filename with tooltip "Read-only"          |
 
 ---
 

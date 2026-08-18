@@ -1,44 +1,83 @@
 <script lang="ts">
-  import type { ViewMode } from '$lib/types';
-  import AppLayout from '$lib/components/Layout/AppLayout.svelte';
-  import Editor from '$lib/components/Editor/Editor.svelte';
-  import EditorToolbar from '$lib/components/Editor/EditorToolbar.svelte';
-  import Viewer from '$lib/components/Viewer/Viewer.svelte';
-  import ViewerToolbar from '$lib/components/Viewer/ViewerToolbar.svelte';
-  import AboutDialog from '$lib/components/About/AboutDialog.svelte';
-  import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
-  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-  import WarningDialog from '$lib/components/WarningDialog.svelte';
-  import ExportConfirmDialog from '$lib/components/ExportConfirmDialog.svelte';
-  import Toaster from '$lib/components/Toaster.svelte';
-  import ExportOverlay from '$lib/components/ExportOverlay.svelte';
-  import { editorState, markSaved, resetEditor, hasUnsavedChanges, updateWordCount } from '$lib/stores/editor.svelte';
-  import { fileState, openFile, saveFile, saveFileAs, showSaveDialog, closeFile, readFile, getFileName, getFileInfo, checkExternalModification, markCurrentFileDeleted } from '$lib/stores/file.svelte';
-  import { settingsState, updateViewMode, updateSetting } from '$lib/stores/settings.svelte';
-  import { viewerState } from '$lib/stores/viewer.svelte';
-  import { confirmSaveDiscardCancel, confirmOverwrite, confirmReplace, confirmReload, confirmOk } from '$lib/stores/confirm.svelte';
-  import { showWarningDialog } from '$lib/stores/warning-dialog.svelte';
-  import { toast } from '$lib/stores/toast.svelte';
-  import { startExporting, stopExporting, exportingState } from '$lib/stores/exporting.svelte';
-  import { MSG } from '$lib/constants/messages';
-  import { invoke } from '@tauri-apps/api/core';
-  import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { listen } from '@tauri-apps/api/event';
-  import { createScrollSync } from '$lib/utils/scroll-sync';
-  import { onMount, onDestroy } from 'svelte';
-  import { renderMarkdown } from '$lib/utils/markdown';
-  import { runExporter, registerBuiltinExporters, getExporter } from '$lib/export/registry.svelte';
-  import { exportPdf } from '$lib/export/exporters/pdf';
-  import { getThemeLabel } from '$lib/utils/themes';
-  import { showExportConfirmDialog } from '$lib/stores/export-confirm-dialog.svelte';
-  import { updateStatus, checkForUpdates } from '$lib/stores/update.svelte';
+  import type { ViewMode } from "$lib/types";
+  import AppLayout from "$lib/components/Layout/AppLayout.svelte";
+  import Editor from "$lib/components/Editor/Editor.svelte";
+  import EditorToolbar from "$lib/components/Editor/EditorToolbar.svelte";
+  import Viewer from "$lib/components/Viewer/Viewer.svelte";
+  import ViewerToolbar from "$lib/components/Viewer/ViewerToolbar.svelte";
+  import AboutDialog from "$lib/components/About/AboutDialog.svelte";
+  import CommandPalette from "$lib/components/CommandPalette/CommandPalette.svelte";
+  import ConfirmDialog from "$lib/components/ConfirmDialog.svelte";
+  import WarningDialog from "$lib/components/WarningDialog.svelte";
+  import ExportConfirmDialog from "$lib/components/ExportConfirmDialog.svelte";
+  import Toaster from "$lib/components/Toaster.svelte";
+  import ExportOverlay from "$lib/components/ExportOverlay.svelte";
+  import {
+    editorState,
+    markSaved,
+    resetEditor,
+    hasUnsavedChanges,
+    updateWordCount,
+  } from "$lib/stores/editor.svelte";
+  import {
+    fileState,
+    openFile,
+    saveFile,
+    saveFileAs,
+    showSaveDialog,
+    closeFile,
+    readFile,
+    getFileName,
+    getFileInfo,
+    checkExternalModification,
+    markCurrentFileDeleted,
+  } from "$lib/stores/file.svelte";
+  import {
+    settingsState,
+    updateViewMode,
+    updateSetting,
+  } from "$lib/stores/settings.svelte";
+  import { viewerState } from "$lib/stores/viewer.svelte";
+  import {
+    confirmSaveDiscardCancel,
+    confirmOverwrite,
+    confirmReplace,
+    confirmReload,
+    confirmOk,
+  } from "$lib/stores/confirm.svelte";
+  import { showWarningDialog } from "$lib/stores/warning-dialog.svelte";
+  import { toast } from "$lib/stores/toast.svelte";
+  import {
+    startExporting,
+    stopExporting,
+    exportingState,
+  } from "$lib/stores/exporting.svelte";
+  import { MSG } from "$lib/constants/messages";
+  import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { listen } from "@tauri-apps/api/event";
+  import { createScrollSync } from "$lib/utils/scroll-sync";
+  import { onMount, onDestroy } from "svelte";
+  import { renderMarkdown } from "$lib/utils/markdown";
+  import {
+    runExporter,
+    registerBuiltinExporters,
+    getExporter,
+  } from "$lib/export/registry.svelte";
+  import { exportPdf } from "$lib/export/exporters/pdf";
+  import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
+  import { getThemeLabel } from "$lib/utils/themes";
+  import { showExportConfirmDialog } from "$lib/stores/export-confirm-dialog.svelte";
+  import { updateStatus, checkForUpdates } from "$lib/stores/update.svelte";
 
-  const isMacOS = navigator.userAgent.includes('Macintosh');
+  const isMacOS = navigator.userAgent.includes("Macintosh");
 
   let viewMode = $state<ViewMode>(settingsState.viewMode);
   let editorComponent = $state<Editor | undefined>(undefined);
   let viewerComponent = $state<Viewer | undefined>(undefined);
-  let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
+  let fileName = $derived(
+    fileState.currentFile ? getFileName(fileState.currentFile) : "Untitled",
+  );
   let scrollSync: ReturnType<typeof createScrollSync> | undefined;
   let viewerElement: HTMLDivElement | undefined;
   let showAbout = $state(false);
@@ -60,22 +99,22 @@
 
     if (hasUnsavedChanges()) {
       const choice = await confirmSaveDiscardCancel(MSG.newUnsaved);
-      if (choice !== 'save' && choice !== 'discard') return;
-      if (choice === 'save') {
+      if (choice !== "save" && choice !== "discard") return;
+      if (choice === "save") {
         const saved = await handleSave();
         if (!saved) return;
       }
     }
     resetEditor();
-    editorComponent?.setContent('');
+    editorComponent?.setContent("");
     closeFile();
   }
 
   async function handleOpen() {
     if (hasUnsavedChanges()) {
       const choice = await confirmSaveDiscardCancel(MSG.openUnsaved);
-      if (choice !== 'save' && choice !== 'discard') return;
-      if (choice === 'save') {
+      if (choice !== "save" && choice !== "discard") return;
+      if (choice === "save") {
         const saved = await handleSave();
         if (!saved) return;
       }
@@ -93,8 +132,8 @@
   async function handleLocalMarkdownOpen(path: string) {
     if (hasUnsavedChanges()) {
       const choice = await confirmSaveDiscardCancel(MSG.openUnsaved);
-      if (choice !== 'save' && choice !== 'discard') return;
-      if (choice === 'save') {
+      if (choice !== "save" && choice !== "discard") return;
+      if (choice === "save") {
         const saved = await handleSave();
         if (!saved) return;
       }
@@ -115,7 +154,7 @@
       fileState.currentFile &&
       !fileState.forceSaveAs &&
       !hasUnsavedChanges() &&
-      fileState.changeStatus === 'unchanged'
+      fileState.changeStatus === "unchanged"
     ) {
       return true;
     }
@@ -135,11 +174,11 @@
     }
 
     const status = await checkExternalModification();
-    if (status === 'deleted') {
-      await confirmOk(MSG.externalDeleted, 'warning');
+    if (status === "deleted") {
+      await confirmOk(MSG.externalDeleted, "warning");
       return false;
     }
-    if (status === 'modified') {
+    if (status === "modified") {
       const overwrite = await confirmOverwrite(MSG.externalOverwrite);
       if (!overwrite) {
         return false;
@@ -148,7 +187,10 @@
 
     isSaving = true;
     try {
-      const success = await saveFile(fileState.currentFile, editorState.content);
+      const success = await saveFile(
+        fileState.currentFile,
+        editorState.content,
+      );
       if (success) {
         markSaved();
         return true;
@@ -166,14 +208,17 @@
     const info = await getFileInfo(path);
     if (info && info.exists) {
       if (info.readonly) {
-        toast.error(MSG.readOnlySaveFailed, 'This file is read-only. Choose a different location.');
+        toast.error(
+          MSG.readOnlySaveFailed,
+          "This file is read-only. Choose a different location.",
+        );
         return;
       }
       if (path === fileState.currentFile) {
         const status = await checkExternalModification();
-        if (status === 'deleted') {
+        if (status === "deleted") {
           // explicit recreate at the dead path; proceed
-        } else if (status === 'modified') {
+        } else if (status === "modified") {
           const overwrite = await confirmOverwrite(MSG.saveAsOverwrite);
           if (!overwrite) {
             return;
@@ -203,8 +248,8 @@
     if (!fileState.currentFile || fileState.isLoading) return;
 
     const status = await checkExternalModification();
-    if (status === 'deleted') {
-      await confirmOk(MSG.externalDeleted, 'warning');
+    if (status === "deleted") {
+      await confirmOk(MSG.externalDeleted, "warning");
       return;
     }
 
@@ -237,18 +282,18 @@
   async function handleExit(): Promise<boolean> {
     if (hasUnsavedChanges()) {
       const choice = await confirmSaveDiscardCancel(MSG.exitUnsaved);
-      if (choice !== 'save' && choice !== 'discard') return false;
-      if (choice === 'save') {
+      if (choice !== "save" && choice !== "discard") return false;
+      if (choice === "save") {
         const saved = await handleSave();
         if (!saved) return false;
       }
     }
     try {
-      await invoke('save_window_state');
+      await invoke("save_window_state");
     } catch {
       // best-effort; ignore persistence failures at exit
     }
-    await invoke('force_close_window');
+    await invoke("force_close_window");
     return true;
   }
 
@@ -264,19 +309,52 @@
    * `theme-export` body classes that app.css keys off of.
    */
   async function handlePrint() {
+    // Render markdown to detect frontmatter for the option dialog.
+    const { frontmatter } = await renderMarkdown(
+      editorState.content,
+      fileState.currentFile,
+    );
+
+    const hasFrontmatter = frontmatter !== null;
+    const pdfOptionGroups = [
+      {
+        id: "frontmatter",
+        label: "Frontmatter",
+        options: [
+          {
+            id: PDF_OPTION_ID,
+            label: "Include frontmatter card",
+            hint: "Show the frontmatter or skill card at the top of the exported document.",
+            kind: "toggle" as const,
+            value: true,
+            disabledWhen: () => !hasFrontmatter,
+          },
+        ],
+      },
+    ];
+
+    let resolvedIncludeFrontmatter = settingsState.pdfIncludeFrontmatter;
+
     if (!settingsState.exportConfirmDismissed) {
+      const currentOptions: Record<string, unknown> = {
+        [PDF_OPTION_ID]: settingsState.pdfIncludeFrontmatter,
+      };
       const result = await showExportConfirmDialog({
         title: isMacOS ? 'Export PDF' : 'Print / PDF',
         themeKind: 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
-        actionLabel: 'Print',
+        actionLabel: "Print",
         isMacOS,
-        optionGroups: [],
-        currentOptions: {},
+        optionGroups: pdfOptionGroups,
+        currentOptions,
       });
       if (!result.confirmed) return;
       if (result.dontShowAgain) {
-        updateSetting('exportConfirmDismissed', true);
+        updateSetting("exportConfirmDismissed", true);
+      }
+      if (result.options) {
+        resolvedIncludeFrontmatter = !!result.options[PDF_OPTION_ID];
+        updateSetting("pdfIncludeFrontmatter", resolvedIncludeFrontmatter);
       }
     }
 
@@ -284,18 +362,20 @@
     if (!viewerContent) return;
     startExporting();
     try {
-      const result = await exportPdf(
-        viewerContent.innerHTML,
-        fileName,
-        viewerContent,
-      );
-      if (result.savedPath) {
-        toast.info('PDF saved', result.savedPath);
+      let htmlForPdf = viewerContent.innerHTML;
+      if (!resolvedIncludeFrontmatter) {
+        const clone = viewerContent.cloneNode(true) as HTMLElement;
+        clone.querySelector(".frontmatter-card")?.remove();
+        htmlForPdf = clone.innerHTML;
       }
-      for (const w of result.warnings) toast.error('Export warning', w);
+      const result = await exportPdf(htmlForPdf, fileName, viewerContent);
+      if (result.savedPath) {
+        toast.info("PDF saved", result.savedPath);
+      }
+      for (const w of result.warnings) toast.error("Export warning", w);
     } catch (e) {
-      console.error('Print/PDF failed:', e);
-      toast.error(isMacOS ? 'Create PDF failed' : 'Print failed', String(e));
+      console.error("Print/PDF failed:", e);
+      toast.error(isMacOS ? "Create PDF failed" : "Print failed", String(e));
     } finally {
       stopExporting();
     }
@@ -311,7 +391,7 @@
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
 
-    if (id === 'pdf') {
+    if (id === "pdf") {
       await handlePrint();
       return;
     }
@@ -319,16 +399,23 @@
     const exporter = getExporter(id);
     if (!exporter) return;
 
+    // Render markdown early so frontmatter is available for option groups.
+    const { html, frontmatter, tokens } = await renderMarkdown(
+      editorState.content,
+      fileState.currentFile,
+    );
+
     // Respect the user's "don't show again" preference for all exporters,
     // including those that expose per-export options. When the dialog is
     // skipped, saved option values are read from settings automatically.
-    const optionGroups = exporter.optionGroups?.({
-      markdown: '',
-      html: '',
-      frontmatter: null,
-      fileName,
-      tokens: [],
-    }) ?? [];
+    const optionGroups =
+      exporter.optionGroups?.({
+        markdown: editorState.content,
+        html,
+        frontmatter,
+        fileName,
+        tokens,
+      }) ?? [];
     const hasOptions = optionGroups.length > 0;
     const shouldShowDialog =
       !settingsState.exportConfirmDismissed &&
@@ -361,14 +448,14 @@
         title: titleMap[id] ?? (isMacOS ? 'Export' : 'Export / Print'),
         themeKind: isNeutral ? 'neutral' : 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
-        actionLabel: 'Export',
+        actionLabel: "Export",
         isMacOS,
         optionGroups,
         currentOptions,
       });
       if (!result.confirmed) return;
       if (result.dontShowAgain && exporter.themeCapable) {
-        updateSetting('exportConfirmDismissed', true);
+        updateSetting("exportConfirmDismissed", true);
       }
       // Persist the chosen option values so future exports reflect the
       // last-used preference even when the dialog is dismissed.
@@ -382,10 +469,6 @@
 
     startExporting();
     try {
-      const { html, frontmatter, tokens } = await renderMarkdown(
-        editorState.content,
-        fileState.currentFile,
-      );
       const result = await runExporter(id, {
         markdown: editorState.content,
         html,
@@ -395,13 +478,13 @@
         options: resolvedOptions,
       });
       if (result.warnings.length > 0) {
-        showWarningDialog(result.warnings, result.savedPath ?? '');
+        showWarningDialog(result.warnings, result.savedPath ?? "");
       } else if (result.savedPath) {
-        toast.info('Exported', result.savedPath);
+        toast.info("Exported", result.savedPath);
       }
     } catch (e) {
-      console.error('Export failed:', e);
-      toast.error('Export failed', String(e));
+      console.error("Export failed:", e);
+      toast.error("Export failed", String(e));
     } finally {
       stopExporting();
     }
@@ -410,12 +493,18 @@
   /** Read a setting by its option-id suffix; falls back to the default. */
   function readSettingForOption(id: string, fallback: unknown): unknown {
     switch (id) {
-      case 'odt.rasterizeMath':
+      case "odt.rasterizeMath":
         return settingsState.odtRasterizeMath;
-      case 'odt.rasterizeSvg':
+      case "odt.rasterizeSvg":
         return settingsState.odtRasterizeSvg;
-      case 'odt.rasterResolution':
+      case "odt.rasterResolution":
         return settingsState.odtRasterResolution;
+      case "html.includeFrontmatter":
+        return settingsState.htmlIncludeFrontmatter;
+      case "pdf.includeFrontmatter":
+        return settingsState.pdfIncludeFrontmatter;
+      case "odt.includeFrontmatter":
+        return settingsState.odtIncludeFrontmatter;
       default:
         return fallback;
     }
@@ -423,16 +512,25 @@
 
   function persistOption(id: string, value: unknown) {
     switch (id) {
-      case 'odt.rasterizeMath':
-        updateSetting('odtRasterizeMath', !!value);
+      case "odt.rasterizeMath":
+        updateSetting("odtRasterizeMath", !!value);
         break;
-      case 'odt.rasterizeSvg':
-        updateSetting('odtRasterizeSvg', !!value);
+      case "odt.rasterizeSvg":
+        updateSetting("odtRasterizeSvg", !!value);
         break;
-      case 'odt.rasterResolution':
+      case "odt.rasterResolution":
         if (value === 1 || value === 2 || value === 3 || value === 4) {
-          updateSetting('odtRasterResolution', value);
+          updateSetting("odtRasterResolution", value);
         }
+        break;
+      case "html.includeFrontmatter":
+        updateSetting("htmlIncludeFrontmatter", !!value);
+        break;
+      case "pdf.includeFrontmatter":
+        updateSetting("pdfIncludeFrontmatter", !!value);
+        break;
+      case "odt.includeFrontmatter":
+        updateSetting("odtIncludeFrontmatter", !!value);
         break;
     }
   }
@@ -455,55 +553,55 @@
     const isMod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
 
-    if (key === 'f1') {
+    if (key === "f1") {
       e.preventDefault();
       showAbout = !showAbout;
       return;
     }
 
-    if (isMod && e.shiftKey && key === 's') {
+    if (isMod && e.shiftKey && key === "s") {
       e.preventDefault();
       handleSaveAs();
       return;
     }
 
-    if (isMod && !e.shiftKey && key === 's') {
+    if (isMod && !e.shiftKey && key === "s") {
       e.preventDefault();
       handleSave();
       return;
     }
 
-    if (isMod && e.shiftKey && key === 'p') {
+    if (isMod && e.shiftKey && key === "p") {
       e.preventDefault();
       showCommandPalette = !showCommandPalette;
       return;
     }
 
-    if (isMod && !e.shiftKey && key === 'p') {
+    if (isMod && !e.shiftKey && key === "p") {
       e.preventDefault();
       handlePrint();
       return;
     }
 
-    if (isMod && key === 'n') {
+    if (isMod && key === "n") {
       e.preventDefault();
       handleNew();
       return;
     }
 
-    if (isMod && key === 'o') {
+    if (isMod && key === "o") {
       e.preventDefault();
       handleOpen();
       return;
     }
 
-    if (isMod && key === 'r') {
+    if (isMod && key === "r") {
       e.preventDefault();
       handleReload();
       return;
     }
 
-    if (isMod && key === 'q') {
+    if (isMod && key === "q") {
       e.preventDefault();
       handleExit();
       return;
@@ -537,51 +635,61 @@
     // and command palette can list them. Idempotent.
     void registerBuiltinExporters();
 
-    unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async (event) => {
-      event.preventDefault();
-      await handleExit();
-    });
+    unlistenCloseRequested = await getCurrentWindow().onCloseRequested(
+      async (event) => {
+        event.preventDefault();
+        await handleExit();
+      },
+    );
 
-    unlistenFocusChanged = await getCurrentWindow().onFocusChanged(async ({ payload: focused }) => {
-      if (!focused || !fileState.currentFile || isCheckingExternalChanges || isSaving) return;
-      isCheckingExternalChanges = true;
-      try {
-        const previousStatus = fileState.changeStatus;
-        const status = await checkExternalModification();
-        if (status === 'modified') {
-          if (previousStatus === 'modified') return;
-          const message = hasUnsavedChanges()
-            ? MSG.externalModifiedDirty
-            : MSG.externalModifiedClean;
-          const reload = await confirmReload(message, hasUnsavedChanges());
-          if (reload) {
-            const content = await readFile(fileState.currentFile);
-            if (content !== null) {
-              scrollSync?.pause();
-              try {
-                editorState.content = content;
-                updateWordCount(content);
-                editorComponent?.setContent(content);
-              } finally {
-                scrollSync?.resume();
+    unlistenFocusChanged = await getCurrentWindow().onFocusChanged(
+      async ({ payload: focused }) => {
+        if (
+          !focused ||
+          !fileState.currentFile ||
+          isCheckingExternalChanges ||
+          isSaving
+        )
+          return;
+        isCheckingExternalChanges = true;
+        try {
+          const previousStatus = fileState.changeStatus;
+          const status = await checkExternalModification();
+          if (status === "modified") {
+            if (previousStatus === "modified") return;
+            const message = hasUnsavedChanges()
+              ? MSG.externalModifiedDirty
+              : MSG.externalModifiedClean;
+            const reload = await confirmReload(message, hasUnsavedChanges());
+            if (reload) {
+              const content = await readFile(fileState.currentFile);
+              if (content !== null) {
+                scrollSync?.pause();
+                try {
+                  editorState.content = content;
+                  updateWordCount(content);
+                  editorComponent?.setContent(content);
+                } finally {
+                  scrollSync?.resume();
+                }
+                markSaved();
               }
-              markSaved();
             }
+          } else if (status === "deleted") {
+            if (previousStatus === "deleted") return;
+            markCurrentFileDeleted();
+            await confirmOk(MSG.externalDeleted, "warning");
           }
-        } else if (status === 'deleted') {
-          if (previousStatus === 'deleted') return;
-          markCurrentFileDeleted();
-          await confirmOk(MSG.externalDeleted, 'warning');
+        } finally {
+          isCheckingExternalChanges = false;
         }
-      } finally {
-        isCheckingExternalChanges = false;
-      }
-    });
+      },
+    );
 
     // Register the open-file listener BEFORE draining opened_urls so that no
     // RunEvent::Opened delivery (macOS Apple Event) is lost between the drain
     // and listener registration.
-    unlistenOpenFile = await listen<string[]>('open-file', async (event) => {
+    unlistenOpenFile = await listen<string[]>("open-file", async (event) => {
       if (event.payload.length > 0) {
         const content = await readFile(event.payload[0]);
         if (content !== null) {
@@ -593,7 +701,7 @@
       }
     });
 
-    const initialUrls = await invoke<string[]>('opened_urls');
+    const initialUrls = await invoke<string[]>("opened_urls");
     if (initialUrls.length > 0) {
       const content = await readFile(initialUrls[0]);
       if (content !== null) {
@@ -613,7 +721,9 @@
     }
 
     if (settingsState.autoCheckUpdates) {
-      setTimeout(() => { void checkForUpdates(); }, 3000);
+      setTimeout(() => {
+        void checkForUpdates();
+      }, 3000);
     }
   });
 
@@ -645,19 +755,16 @@
   isLoading={fileState.isLoading}
   {fileName}
 >
-  {#if viewMode === 'split' || viewMode === 'editor'}
+  {#if viewMode === "split" || viewMode === "editor"}
     <div class="editor-pane">
       <EditorToolbar onFormat={handleFormat} />
       <Editor bind:this={editorComponent} content={editorState.content} />
     </div>
   {/if}
 
-  {#if viewMode === 'split' || viewMode === 'viewer'}
+  {#if viewMode === "split" || viewMode === "viewer"}
     <div class="viewer-pane">
-      <ViewerToolbar
-        onPrint={handlePrint}
-        onExport={handleExport}
-      />
+      <ViewerToolbar onPrint={handlePrint} onExport={handleExport} />
       <Viewer
         bind:this={viewerComponent}
         content={editorState.content}
@@ -682,7 +789,7 @@
   onAbout={handleAbout}
   onPrint={handlePrint}
   onExport={handleExport}
-  printLabel={isMacOS ? 'Create PDF' : 'Print Preview'}
+  printLabel={isMacOS ? "Create PDF" : "Print Preview"}
 />
 
 <ConfirmDialog />

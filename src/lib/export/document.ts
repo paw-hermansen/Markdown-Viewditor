@@ -77,6 +77,12 @@ export interface BuildStandaloneHtmlOptions {
   ) => Promise<unknown>;
   /** Pre-collected CSS (used when document.styleSheets is unavailable, e.g. tests). */
   cssText?: string;
+  /**
+   * Pre-rendered frontmatter/skill card HTML. When provided, it is injected
+   * at the top of the viewer-content div, before the markdown body. The HTML
+   * is produced by `generateFrontmatterCardHtml()` from `frontmatter-card.ts`.
+   */
+  frontmatterCardHtml?: string;
 }
 
 export async function buildStandaloneHtml(
@@ -114,6 +120,8 @@ export async function buildStandaloneHtml(
 
   const title = deriveTitle(frontmatter, fileName);
 
+  const cardHtml = options.frontmatterCardHtml ?? "";
+
   const doc = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,7 +134,7 @@ ${inlinedCss}${bodyBgCss}
 </head>
 <body>
 <div class="viewer-content" id="viewer-content">
-${inlinedHtml}
+${cardHtml}${inlinedHtml}
 </div>
 </body>
 </html>

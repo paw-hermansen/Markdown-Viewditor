@@ -21,6 +21,9 @@ const DEFAULT_SETTINGS: Settings = {
   odtRasterizeSvg: false,
   odtRasterResolution: 2,
   autoCheckUpdates: false,
+  htmlIncludeFrontmatter: true,
+  pdfIncludeFrontmatter: true,
+  odtIncludeFrontmatter: true,
 };
 
 export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });

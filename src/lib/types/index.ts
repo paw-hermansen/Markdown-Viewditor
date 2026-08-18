@@ -33,6 +33,12 @@ export interface Settings {
   odtRasterResolution: OdtRasterResolution;
   /** Automatically check for app updates on startup. */
   autoCheckUpdates: boolean;
+  /** Include frontmatter/skill card in HTML exports. */
+  htmlIncludeFrontmatter: boolean;
+  /** Include frontmatter/skill card in PDF exports. */
+  pdfIncludeFrontmatter: boolean;
+  /** Include frontmatter/skill card in ODT exports. */
+  odtIncludeFrontmatter: boolean;
 }
 
 export interface EditorState {

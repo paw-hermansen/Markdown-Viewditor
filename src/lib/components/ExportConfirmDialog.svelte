@@ -71,12 +71,12 @@
       class="dialog"
       role="alertdialog"
       aria-modal="true"
-      aria-label={req.isMacOS ? 'Export' : 'Export / Print'}
+      aria-label={req.title}
       aria-describedby="export-confirm-message"
     >
       <div class="icon-row">
         <span class="icon" aria-hidden="true">{'\u2139'}</span>
-        <h2 class="title">{req.isMacOS ? 'Export' : 'Export / Print'}</h2>
+        <h2 class="title">{req.title}</h2>
       </div>
 
       <!-- Theme description -->

@@ -266,6 +266,7 @@
   async function handlePrint() {
     if (!settingsState.exportConfirmDismissed) {
       const result = await showExportConfirmDialog({
+        title: isMacOS ? 'Export PDF' : 'Print / PDF',
         themeKind: 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: 'Print',
@@ -355,7 +356,9 @@
         }
       }
       const isNeutral = id === 'odt';
+      const titleMap: Record<string, string> = { html: 'Export HTML', odt: 'Export ODT' };
       const result = await showExportConfirmDialog({
+        title: titleMap[id] ?? (isMacOS ? 'Export' : 'Export / Print'),
         themeKind: isNeutral ? 'neutral' : 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: 'Export',

@@ -287,30 +287,30 @@ The viewer toolbar exposes:
 Reset by un-checking "Show export confirmation" / "Do not show again"
 before each row.
 
-| #     | Test                               | Steps                                                      | Expected                                                                                                            |
-| ----- | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 13.1  | Dialog appearance (viewer theme)   | With confirmation ON, click HTML/PDF export                | Title: "Export" (macOS) / "Export / Print" (other); message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
-| 13.2  | Dialog appearance (neutral / ODT)  | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution) |
-| 13.3  | Cancel via Cancel button           | Click Cancel                                               | No export runs, dialog closes                                                                                       |
-| 13.4  | Cancel via Escape / backdrop       | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                       |
-| 13.5  | Confirm via Enter                  | Press Enter                                                | Export runs                                                                                                         |
-| 13.6  | Don't show again                   | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                 |
-| 13.7  | Re-enable confirmation             | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                        |
-| 13.8  | Options persisted (ODT)            | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                  |
+| #    | Test                              | Steps                                                      | Expected                                                                                                                                                                                                                    |
+| ---- | --------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/PDF export                | Title: "Export" (macOS) / "Export / Print" (other); message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
+| 13.2 | Dialog appearance (neutral / ODT) | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution)                                     |
+| 13.3 | Cancel via Cancel button          | Click Cancel                                               | No export runs, dialog closes                                                                                                                                                                                               |
+| 13.4 | Cancel via Escape / backdrop      | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                                                                                                                               |
+| 13.5 | Confirm via Enter                 | Press Enter                                                | Export runs                                                                                                                                                                                                                 |
+| 13.6 | Don't show again                  | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                                                                                                                         |
+| 13.7 | Re-enable confirmation            | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                                                                                                                                |
+| 13.8 | Options persisted (ODT)           | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                                                                                                                          |
 
 ### 13.2 Export as HTML
 
-| #     | Test                     | Steps                                            | Expected                                                    |
-| ----- | ------------------------ | ------------------------------------------------ | ----------------------------------------------------------- |
-| 13.9  | Save dialog defaults     | Open `examples/Simple.md`, choose Export as HTML | Save dialog opens with `Simple.html`, HTML filter           |
-| 13.10 | Standalone HTML produced | Save and open the file in a browser              | Self-contained page renders identically to the viewer       |
-| 13.11 | Theme applied            | Repeat with a dark theme active                  | Output uses the same theme                                  |
-| 13.12 | Local images inlined     | Export `examples/Example.md`                     | Relative/local images embedded as data URIs                 |
-| 13.13 | Cancel save              | Cancel the save dialog                           | No file written, no toast                                   |
-| 13.14 | Math rendered            | Export `examples/Math-Example.md`                | KaTeX formulas render from the inlined CSS                  |
-| 13.15 | Warnings surface         | Export a file referencing a missing local image  | "Export Warnings" dialog lists the failed image             |
-| 13.16 | Success toast            | Export successfully                              | Toast: "Exported" with the saved file path                  |
-| 13.17 | Error toast              | Trigger an export failure                        | Toast: "Export failed" with detail message                  |
+| #     | Test                     | Steps                                            | Expected                                              |
+| ----- | ------------------------ | ------------------------------------------------ | ----------------------------------------------------- |
+| 13.9  | Save dialog defaults     | Open `examples/Simple.md`, choose Export as HTML | Save dialog opens with `Simple.html`, HTML filter     |
+| 13.10 | Standalone HTML produced | Save and open the file in a browser              | Self-contained page renders identically to the viewer |
+| 13.11 | Theme applied            | Repeat with a dark theme active                  | Output uses the same theme                            |
+| 13.12 | Local images inlined     | Export `examples/Example.md`                     | Relative/local images embedded as data URIs           |
+| 13.13 | Cancel save              | Cancel the save dialog                           | No file written, no toast                             |
+| 13.14 | Math rendered            | Export `examples/Math-Example.md`                | KaTeX formulas render from the inlined CSS            |
+| 13.15 | Warnings surface         | Export a file referencing a missing local image  | "Export Warnings" dialog lists the failed image       |
+| 13.16 | Success toast            | Export successfully                              | Toast: "Exported" with the saved file path            |
+| 13.17 | Error toast              | Trigger an export failure                        | Toast: "Export failed" with detail message            |
 
 ### 13.3 Export as PDF / Print
 
@@ -327,15 +327,15 @@ platform-specific — split tests below.
 > too fast to notice. This is expected; the overlay is only clearly visible
 > on macOS where the save dialog + async WKWebView capture takes longer.
 
-| #     | Test                        | Steps                                                      | Expected                                                |
-| ----- | --------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
-| 13.18 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase |
+| #     | Test                        | Steps                                                      | Expected                                                                                  |
+| ----- | --------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 13.18 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase                        |
 | 13.19 | Export overlay (Linux/Win)  | On Linux/Windows, trigger PDF export                       | Overlay may flash too fast to see; the print dialog appearing confirms the export started |
-| 13.20 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible |
-| 13.21 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                     |
-| 13.22 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                 |
-| 13.23 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)          |
-| 13.24 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)     |
+| 13.20 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible                                  |
+| 13.21 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                                                       |
+| 13.22 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                                                   |
+| 13.23 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)                                            |
+| 13.24 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)                                       |
 
 #### macOS — Export as PDF
 
@@ -416,15 +416,15 @@ has no YAML frontmatter.
 
 ## 14. Theme Selector
 
-| #    | Test                           | Steps                                                | Expected                                                               |
-| ---- | ------------------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| 14.1 | Open / close dropdown          | Click theme button; click outside                    | Dropdown opens and closes                                              |
-| 14.2 | Switch dark / light theme      | Select "GitHub Dark" then "GitHub Light"              | Viewer & editor syntax colors swap accordingly                         |
-| 14.3 | App chrome follows             | Switch themes                                        | Toolbar, status bar, borders change color                              |
-| 14.4 | Active theme highlight + badge | Open dropdown                                        | Active row has accent background; shows "Dark"/"Light" badge           |
-| 14.5 | Theme persistence              | Select a theme, close, reopen                        | Same theme active                                                      |
-| 14.6 | Try all 9 built-in themes      | Select each theme in sequence                        | Each applies correctly, no visual glitches                             |
-| 14.7 | Printer Friendly theme         | Select "Printer Friendly / Neutral"                  | Light theme with neutral syntax highlighting; used by ODT export       |
+| #    | Test                           | Steps                                    | Expected                                                         |
+| ---- | ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------- |
+| 14.1 | Open / close dropdown          | Click theme button; click outside        | Dropdown opens and closes                                        |
+| 14.2 | Switch dark / light theme      | Select "GitHub Dark" then "GitHub Light" | Viewer & editor syntax colors swap accordingly                   |
+| 14.3 | App chrome follows             | Switch themes                            | Toolbar, status bar, borders change color                        |
+| 14.4 | Active theme highlight + badge | Open dropdown                            | Active row has accent background; shows "Dark"/"Light" badge     |
+| 14.5 | Theme persistence              | Select a theme, close, reopen            | Same theme active                                                |
+| 14.6 | Try all 9 built-in themes      | Select each theme in sequence            | Each applies correctly, no visual glitches                       |
+| 14.7 | Printer Friendly theme         | Select "Printer Friendly / Neutral"      | Light theme with neutral syntax highlighting; used by ODT export |
 
 ### Built-in Themes Reference
 
@@ -459,55 +459,55 @@ in the status bar.
 
 ### Levels Reference
 
-| Level    | Description                                                             |
-| -------- | ----------------------------------------------------------------------- |
-| Basic    | Only pure CommonMark is compatible. All extended features are flagged.   |
+| Level    | Description                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------ |
+| Basic    | Only pure CommonMark is compatible. All extended features are flagged.                           |
 | GitHub   | Enables: Tables, Strikethrough, Task lists, Autolinks, Footnotes, Raw HTML, Math `$…$` / `$$…$$` |
-| Advanced | Enables all features (default). Everything is allowed.                   |
-| Custom   | User manually toggles individual features on/off via checkboxes.        |
+| Advanced | Enables all features (default). Everything is allowed.                                           |
+| Custom   | User manually toggles individual features on/off via checkboxes.                                 |
 
 ### Features (10 total)
 
-| Feature             | Syntax                          | In GitHub? | In Advanced? |
-| ------------------- | ------------------------------- | ---------- | ------------ |
-| Tables              | GFM pipe tables                 | yes        | yes          |
-| Strikethrough       | `~~text~~`                      | yes        | yes          |
-| Task lists          | `- [ ]` / `- [x]`              | yes        | yes          |
-| Autolinks           | Bare URLs                       | yes        | yes          |
-| Footnotes           | `[^1]`                          | yes        | yes          |
-| Raw HTML            | `<kbd>`, `<mark>`, etc.         | yes        | yes          |
-| Frontmatter         | YAML `---` blocks               | no         | yes          |
-| Math (dollar)       | `$…$` / `$$…$$`                | yes        | yes          |
-| Math (LaTeX)        | `\(...\)`, `\[...\]`, `\begin{}`| no         | yes          |
-| Chemical formulas   | `\ce{…}`                        | no         | yes          |
+| Feature           | Syntax                           | In GitHub? | In Advanced? |
+| ----------------- | -------------------------------- | ---------- | ------------ |
+| Tables            | GFM pipe tables                  | yes        | yes          |
+| Strikethrough     | `~~text~~`                       | yes        | yes          |
+| Task lists        | `- [ ]` / `- [x]`                | yes        | yes          |
+| Autolinks         | Bare URLs                        | yes        | yes          |
+| Footnotes         | `[^1]`                           | yes        | yes          |
+| Raw HTML          | `<kbd>`, `<mark>`, etc.          | yes        | yes          |
+| Frontmatter       | YAML `---` blocks                | no         | yes          |
+| Math (dollar)     | `$…$` / `$$…$$`                  | yes        | yes          |
+| Math (LaTeX)      | `\(...\)`, `\[...\]`, `\begin{}` | no         | yes          |
+| Chemical formulas | `\ce{…}`                         | no         | yes          |
 
 ### Test Files
 
-| File                       | Features used                                        |
-| -------------------------- | ---------------------------------------------------- |
-| `examples/Simple.md`       | Tables, footnotes, raw HTML (basic+github features)  |
-| `examples/Math-Example.md` | All math delimiter styles (dollar, LaTeX, fences)    |
-| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                     |
-| `examples/Example.md`      | Everything: tables, task lists, strikethrough, HTML, math, frontmatter |
+| File                            | Features used                                                          |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `examples/Simple.md`            | Tables, footnotes, raw HTML (basic+github features)                    |
+| `examples/Math-Example.md`      | All math delimiter styles (dollar, LaTeX, fences)                      |
+| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                                            |
+| `examples/Example.md`           | Everything: tables, task lists, strikethrough, HTML, math, frontmatter |
 
 ### Test Steps
 
-| #    | Test                          | Steps                                                                            | Expected                                                                                                       |
-| ---- | ----------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| 15.1 | Default level is Advanced     | Open app, check status bar                                                       | Level button shows "Advanced"                                                                                  |
-| 15.2 | Level selector opens          | Click the level button in the status bar (right side)                            | Popover opens with four level buttons (Basic, GitHub, Advanced, Custom) and feature toggle checklist           |
-| 15.3 | Switch to Basic               | Click "Basic" in the level popover                                               | Level changes to "Basic"; no warnings for a clean CommonMark document                                          |
-| 15.4 | Basic warns on tables         | Open `examples/Simple.md` (has tables), set level to "Basic"                     | ⚠ badge appears in status bar with count; editor gutter shows warnings on table lines; clicking badge shows "Tables is above the 'basic' level (requires: github)" |
-| 15.5 | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                                 | Warnings for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry   |
-| 15.6 | Switch to GitHub              | Click "GitHub" in the level popover                                              | Level changes to "GitHub"; warnings clear for features in the GitHub set                                       |
-| 15.7 | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"                           | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                       |
-| 15.8 | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"                      | Warnings on `\ce{…}` lines (requires: advanced)                                                                |
-| 15.9 | Advanced — no warnings        | Set level to "Advanced", open any example file                                   | No warnings, no badge                                                                                          |
-| 15.10| Custom mode                   | Click "Custom", toggle features on/off                                           | Level label changes to "Custom (n/10)" showing enabled count; warnings update accordingly                      |
-| 15.11| Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses              | Warnings for that feature clear                                                                                 |
-| 15.12| Editor lint integration       | With warnings active, hover over a yellow gutter marker                          | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")            |
-| 15.13| Level persistence             | Select "GitHub", close app, reopen                                               | Level is still "GitHub"                                                                                        |
-| 15.14| Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features                   | Warnings appear after ~200ms debounce, not on every keystroke                                                  |
+| #     | Test                          | Steps                                                               | Expected                                                                                                                                                           |
+| ----- | ----------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 15.1  | Default level is Advanced     | Open app, check status bar                                          | Level button shows "Advanced"                                                                                                                                      |
+| 15.2  | Level selector opens          | Click the level button in the status bar (right side)               | Popover opens with four level buttons (Basic, GitHub, Advanced, Custom) and feature toggle checklist                                                               |
+| 15.3  | Switch to Basic               | Click "Basic" in the level popover                                  | Level changes to "Basic"; no warnings for a clean CommonMark document                                                                                              |
+| 15.4  | Basic warns on tables         | Open `examples/Simple.md` (has tables), set level to "Basic"        | ⚠ badge appears in status bar with count; editor gutter shows warnings on table lines; clicking badge shows "Tables is above the 'basic' level (requires: github)" |
+| 15.5  | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                    | Warnings for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry                                                       |
+| 15.6  | Switch to GitHub              | Click "GitHub" in the level popover                                 | Level changes to "GitHub"; warnings clear for features in the GitHub set                                                                                           |
+| 15.7  | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"              | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                                                                           |
+| 15.8  | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"         | Warnings on `\ce{…}` lines (requires: advanced)                                                                                                                    |
+| 15.9  | Advanced — no warnings        | Set level to "Advanced", open any example file                      | No warnings, no badge                                                                                                                                              |
+| 15.10 | Custom mode                   | Click "Custom", toggle features on/off                              | Level label changes to "Custom (n/10)" showing enabled count; warnings update accordingly                                                                          |
+| 15.11 | Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses | Warnings for that feature clear                                                                                                                                    |
+| 15.12 | Editor lint integration       | With warnings active, hover over a yellow gutter marker             | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")                                                                |
+| 15.13 | Level persistence             | Select "GitHub", close app, reopen                                  | Level is still "GitHub"                                                                                                                                            |
+| 15.14 | Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features     | Warnings appear after ~200ms debounce, not on every keystroke                                                                                                      |
 
 ---
 
@@ -611,13 +611,13 @@ in the status bar.
 
 ## 21. Quit Behavior
 
-| #    | Test                       | Steps                                        | Expected                                                               |
-| ---- | -------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
-| 21.1 | Quit with no changes       | Close window / `Ctrl+Q` / palette "Quit"     | App closes immediately; prompt does not appear                         |
+| #    | Test                       | Steps                                        | Expected                                                                                                                                     |
+| ---- | -------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 21.1 | Quit with no changes       | Close window / `Ctrl+Q` / palette "Quit"     | App closes immediately; prompt does not appear                                                                                               |
 | 21.2 | Quit with unsaved changes  | Edit content, then quit via any of the three | Dialog: `"You have unsaved changes. Close the application and discard your changes?"` with Cancel / Yes, And Discard My Changes / Save First |
-| 21.3 | Quit — Cancel              | Click Cancel in dialog                       | Window stays open                                                      |
-| 21.4 | Quit — Discard             | Click Yes, And Discard My Changes            | App closes, changes lost                                               |
-| 21.5 | Quit — Save (untitled)     | Click Save First (no file name)              | Save As dialog appears; on save app closes                             |
-| 21.6 | Quit — Save (named)        | Click Save First                             | File saved, app closes                                                 |
-| 21.7 | Quit — Save cancelled      | Click Save First, then cancel Save As        | Window stays open (save didn't complete)                               |
-| 21.8 | Window state saved on quit | Resize window, quit, reopen                  | Position and size restored (persisted at exit via `save_window_state`) |
+| 21.3 | Quit — Cancel              | Click Cancel in dialog                       | Window stays open                                                                                                                            |
+| 21.4 | Quit — Discard             | Click Yes, And Discard My Changes            | App closes, changes lost                                                                                                                     |
+| 21.5 | Quit — Save (untitled)     | Click Save First (no file name)              | Save As dialog appears; on save app closes                                                                                                   |
+| 21.6 | Quit — Save (named)        | Click Save First                             | File saved, app closes                                                                                                                       |
+| 21.7 | Quit — Save cancelled      | Click Save First, then cancel Save As        | Window stays open (save didn't complete)                                                                                                     |
+| 21.8 | Window state saved on quit | Resize window, quit, reopen                  | Position and size restored (persisted at exit via `save_window_state`)                                                                       |

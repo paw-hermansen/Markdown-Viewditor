@@ -340,7 +340,8 @@
         [PDF_OPTION_ID]: settingsState.pdfIncludeFrontmatter,
       };
       const result = await showExportConfirmDialog({
-        themeKind: "viewer",
+        title: isMacOS ? 'Export PDF' : 'Print / PDF',
+        themeKind: 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: "Print",
         isMacOS,
@@ -441,9 +442,11 @@
           currentOptions[opt.id] = readSettingForOption(opt.id, opt.value);
         }
       }
-      const isNeutral = id === "odt";
+      const isNeutral = id === 'odt';
+      const titleMap: Record<string, string> = { html: 'Export HTML', odt: 'Export ODT' };
       const result = await showExportConfirmDialog({
-        themeKind: isNeutral ? "neutral" : "viewer",
+        title: titleMap[id] ?? (isMacOS ? 'Export' : 'Export / Print'),
+        themeKind: isNeutral ? 'neutral' : 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: "Export",
         isMacOS,

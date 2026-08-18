@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
-A clean, simple, and modern markdown viewer and editor with **live preview** and **scroll sync** built with Tauri v2 + Svelte 5.
+A feature-rich and simple cross-platform markdown viewer and editor with live preview and scroll sync built with Tauri v2 + Svelte 5.
 
 ![Screendump](images/screendump.png)
 
@@ -12,8 +12,7 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
-- **Math Formulas** — Advanced mathematical formulas using [KaTeX](https://katex.org)
-- **Chemical Formulas** — Chemical equations and physical units using [mhchem](https://mhchem.github.io/MathJax-mhchem/)
+- **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
 - **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
@@ -21,38 +20,31 @@ A clean, simple, and modern markdown viewer and editor with **live preview** and
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
-## AI-Assisted Development by Experienced Senior Software Developer
+## AI-Augmented Development by Experienced Senior Software Developer
 
 This application was built with the help of [OpenCode](https://opencode.ai),
 an AI-powered coding assistant. Development used different AI models, some free
 and some paid. Also most of the documentation was written by AI.
 
 I'm a Senior Software Developer and I wrote my first software back in the
-70's. Yes, around the time when Disco music was In and years before
-the Internet. I've been building software for a living my entire career until
-I retired in 2025.
+1970's. Yes, around the time when smoking was normal, everyone said "10-4", were
+fascinated by Lava Lamps, and listened to Disco music. Phones were anchored to a
+geographic location instead of a person and nobody had yet invented the Internet.
+I've been building software for a living my entire career until I retired in 2025.
 
-I'm still coding for fun and I couldn't find a Markdown editor and viewer
+I'm still coding for fun and I couldn't find a Markdown viewer and editor
 that I liked, so I used the summer 2026 to write the Markdown desktop app
 that is perfect for me and at the same time to test if AI coding assistants
 are any good.
 
-It turned out that my AI assistant is an extremely fast coder and helped me
-to finish the first version of the Markdown Viewditor in
-super-speed. My assistant is surprisingly knowledgeable and understands
-what I mean (most of the time). Sometimes my assistant lacks intelligence
-and experience and therefore it requires constant supervision
-and guidance from an experienced software developer - which is also true
+It turned out that my AI assistant was surprisingly knowledgeable and understood
+what I meant (most of the time). Sometimes my assistant lacked intelligence
+and experience and therefore it required constant supervision
+and guidance from an experienced software developer - which in my experience is also true
 for many human programmers.
 
-As the most experienced of me and my assistant, I laid and
-continuously corrected the direction and I made the final decisions after
-many good, fact-based, and sometimes heated, discussions.
-
-This software did not end up as Slopware. It is working software that I use myself
-and that I tested by hand on three different operating systems. Does it have
-errors? Yes, that is highly probable - if you find an error then please report
-it as an issue.
+The desktop app did not end up as Slopware. I use it myself and I see my test
+with *AI-Augmented Development* as a great success.
 
 ## Download
 

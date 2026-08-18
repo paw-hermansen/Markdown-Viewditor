@@ -9,8 +9,9 @@
 - Tests marked **macOS**/**Linux&Windows** apply only to that platform;
   unmarked tests are platform-independent.
 
-> Notation: `Ctrl` below stands for `Cmd` on macOS and `Ctrl` on
-> Linux/Windows.
+> Notation:
+> - `Ctrl` below stands for `Cmd` on macOS and `Ctrl` on Linux/Windows.
+> - GFM: **G**ithub **F**lavored **M**arkdown
 
 ---
 

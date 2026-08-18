@@ -377,7 +377,7 @@ ignored. The confirm dialog shows three option groups when the dialog is on.
 | 13.45 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
 | 13.46 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
 | 13.47 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
-| 13.48 | Frontmatter → `<dc:title>`         | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field; "frontmatter card" not output                     |
+| 13.48 | `<dc:title>` from frontmatter       | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
 | 13.49 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
 | 13.50 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
 | 13.51 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
@@ -386,6 +386,31 @@ ignored. The confirm dialog shows three option groups when the dialog is on.
 | 13.54 | Cancel save                        | Cancel the save dialog                                     | No file written, no toast                                                             |
 | 13.55 | Success toast                      | Export ODT successfully                                    | Toast: "Exported" with the saved file path                                            |
 | 13.56 | Error toast                        | Trigger an ODT export failure                              | Toast: "Export failed" with detail message                                            |
+
+### 13.5 Frontmatter Option (All Exporters)
+
+All three exporters (HTML, PDF, ODT) expose an "Include frontmatter card"
+toggle in the export confirm dialog. The toggle is disabled when the document
+has no YAML frontmatter.
+
+| #     | Test                                 | Steps                                               | Expected                                                                             |
+| ----- | ------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 13.57 | HTML — option in dialog              | With confirmation ON, export file with frontmatter   | "Include frontmatter card" toggle visible and ON                                     |
+| 13.58 | HTML — option disabled               | Export file without frontmatter                      | Toggle greyed out (disabled)                                                         |
+| 13.59 | HTML — frontmatter included (ON)     | Export with toggle ON                                | HTML contains `.frontmatter-card` element                                            |
+| 13.60 | HTML — frontmatter excluded (OFF)    | Export with toggle OFF                               | No `.frontmatter-card` in HTML                                                       |
+| 13.61 | HTML — option persisted              | Set toggle OFF, export, re-export                    | Toggle stays OFF on next export                                                      |
+| 13.62 | PDF — option in dialog               | With confirmation ON, export file with frontmatter   | "Include frontmatter card" toggle visible and ON                                     |
+| 13.63 | PDF — option disabled                | Export file without frontmatter                      | Toggle greyed out (disabled)                                                         |
+| 13.64 | PDF — frontmatter included (ON)      | Export with toggle ON                                | PDF contains frontmatter card                                                        |
+| 13.65 | PDF — frontmatter excluded (OFF)     | Export with toggle OFF                               | No frontmatter card in PDF                                                           |
+| 13.66 | PDF — option persisted               | Set toggle OFF, export, re-export                    | Toggle stays OFF on next export                                                      |
+| 13.67 | ODT — option in dialog               | With confirmation ON, export file with frontmatter   | "Include frontmatter card" toggle visible and ON                                     |
+| 13.68 | ODT — option disabled                | Export file without frontmatter                      | Toggle greyed out (disabled)                                                         |
+| 13.69 | ODT — frontmatter card included (ON) | Export with toggle ON                                | ODF body contains frontmatter card table                                             |
+| 13.70 | ODT — frontmatter card excluded (OFF)| Export with toggle OFF                               | No frontmatter card in ODF                                                           |
+| 13.71 | ODT — option persisted               | Set toggle OFF, export, re-export                    | Toggle stays OFF on next export                                                      |
+| 13.72 | ODT — `<dc:title>` always set        | Export with frontmatter card OFF                     | `meta.xml` still carries the title field (card option does not affect metadata)      |
 
 ---
 

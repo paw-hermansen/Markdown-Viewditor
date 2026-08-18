@@ -58,7 +58,12 @@ fn url_to_path(url: &tauri::Url) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     configure_platform();
-    let cli_file: Vec<String> = env::args().nth(1).into_iter().collect();
+    let cli_file: Vec<String> = env::args()
+        .nth(1)
+        .and_then(|p| std::fs::canonicalize(&p).ok())
+        .map(|p| p.to_string_lossy().into_owned())
+        .into_iter()
+        .collect();
 
     let mut builder = tauri::Builder::default()
         .register_asynchronous_uri_scheme_protocol(

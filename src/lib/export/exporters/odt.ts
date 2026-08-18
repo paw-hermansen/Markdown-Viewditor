@@ -964,6 +964,13 @@ async function buildDocument(
   const rasterizeMath = !!options[OPTION_RASTERIZE_MATH];
   const rasterizeSvgFlag = !!options[OPTION_RASTERIZE_SVG];
   const rasterScale = options[OPTION_RASTER_RESOLUTION] ?? 2;
+  // Target font size for rasterized math: the ODT body text is 10pt
+  // (≈ 13.33px at 96 DPI).  KaTeX renders at HOST_FONT_SIZE × 1.21em,
+  // so we pass 11px so the returned dimensions match 10pt:
+  // 11px × 1.21 ≈ 13.31px ≈ 10pt.  The bitmap is rendered at 16px
+  // (HOST_FONT_SIZE) for sharpness; only the reported dimensions are
+  // scaled down (supersampling).
+  const mathTargetFontSize = 11;
 
   // ── inline formatter state ──
   let boldActive = false;
@@ -1012,6 +1019,7 @@ async function buildDocument(
     widthPx: number,
     heightPx: number,
     srcLabel: string,
+    graphicStyle = "fr1",
   ): string {
     const name = `Pictures/image${imageCounter.n++}.png`;
     images.set(name, {
@@ -1026,7 +1034,7 @@ async function buildDocument(
       sizeAttrs = ` svg:width="${(widthPx / 96).toFixed(4)}in" svg:height="${(heightPx / 96).toFixed(4)}in"`;
     }
     void srcLabel;
-    return `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
+    return `<draw:frame draw:style-name="${graphicStyle}" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
   }
 
   /** Add a raw SVG as a Pictures/ entry and return its ODF XML. */
@@ -1337,12 +1345,14 @@ async function buildDocument(
                 child.content,
                 false,
                 rasterScale,
+                mathTargetFontSize,
               );
               xml += addRasterImage(
                 png,
                 widthPx,
                 heightPx,
                 `inline-math(${child.content.slice(0, 40)})`,
+                "Formula",
               );
               break;
             } catch (err) {
@@ -1356,7 +1366,7 @@ async function buildDocument(
             const mathMl = renderMathToMathml(child.content, false);
             const objId = `Object ${++mathCounter}`;
             mathObjects.push({ id: objId, mathml: mathMl });
-            xml += `<draw:frame draw:style-name="fr1" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
+            xml += `<draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
           } catch {
             warnings.push(
               `Inline math rendering failed for: ${child.content.slice(0, 50)}…`,
@@ -1947,6 +1957,53 @@ async function buildDocument(
         // ── Fence (code block with language) ──
         case "fence": {
           const language = token.info.trim();
+          // Fenced math blocks (```math ... ```) stay as fence tokens
+          // because @vscode/markdown-it-katex only overrides the HTML
+          // renderer, not the token type. Route them to math rendering.
+          if (language.toLowerCase() === "math") {
+            if (rasterizeMath) {
+              try {
+                const { png, widthPx, heightPx } = await renderMathToPng(
+                  token.content,
+                  true,
+                  rasterScale,
+                  mathTargetFontSize,
+                );
+                const inner = addRasterImage(
+                  png,
+                  widthPx,
+                  heightPx,
+                  `block-math(${token.content.slice(0, 40)})`,
+                );
+                parts.push(
+                  `      <text:p text:style-name="${S.mathDisplay}">${inner}</text:p>`,
+                );
+                i++;
+                break;
+              } catch (err) {
+                warnings.push(
+                  `Block math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
+                );
+              }
+            }
+            try {
+              const mathMl = renderMathToMathml(token.content, true);
+              const objId = `Object ${++mathCounter}`;
+              mathObjects.push({ id: objId, mathml: mathMl });
+              parts.push(
+                `      <text:p text:style-name="${S.mathDisplay}"><draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
+              );
+            } catch {
+              warnings.push(
+                `Math rendering failed for: ${token.content.slice(0, 50)}…`,
+              );
+              parts.push(
+                `      <text:p text:style-name="${S.body}">${esc(token.content)}</text:p>`,
+              );
+            }
+            i++;
+            break;
+          }
           const code = token.content.trimEnd();
           const lines = code.split("\n");
           for (const line of lines) {
@@ -1992,6 +2049,7 @@ async function buildDocument(
                 token.content,
                 true,
                 rasterScale,
+                mathTargetFontSize,
               );
               const inner = addRasterImage(
                 png,
@@ -2016,7 +2074,7 @@ async function buildDocument(
             const objId = `Object ${++mathCounter}`;
             mathObjects.push({ id: objId, mathml: mathMl });
             parts.push(
-              `      <text:p text:style-name="${S.body}"><draw:frame draw:style-name="fr1" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
+              `      <text:p text:style-name="${S.mathDisplay}"><draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
             );
           } catch {
             warnings.push(

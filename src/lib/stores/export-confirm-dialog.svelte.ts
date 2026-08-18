@@ -1,6 +1,8 @@
 import type { OptionGroup } from "$lib/export/types";
 
 export interface ExportConfirmRequest {
+  /** Dialog title shown in the header (e.g. "Export HTML", "Print / PDF"). */
+  title: string;
   /** What kind of theme the export uses. ODT renders neutral; HTML/PDF use the viewer theme. */
   themeKind: "neutral" | "viewer";
   /** Theme label shown to the user (only meaningful when `themeKind === "viewer"`). */

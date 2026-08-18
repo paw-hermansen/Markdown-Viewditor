@@ -42,6 +42,31 @@ function deriveTitle(
   return fileName || "Untitled";
 }
 
+function isTransparent(color: string): boolean {
+  return (
+    !color ||
+    color === "transparent" ||
+    color === "rgba(0, 0, 0, 0)" ||
+    color === "rgba(0,0,0,0)"
+  );
+}
+
+/**
+ * Resolve the viewer-content background so the exported HTML can apply it
+ * to <body>, making the content background bleed edge-to-edge. Falls back
+ * to the body background, then white.
+ */
+function resolveViewerBackground(): string {
+  if (typeof document === "undefined") return "";
+  const viewerEl = document.getElementById("viewer-content");
+  if (viewerEl) {
+    const cs = getComputedStyle(viewerEl);
+    if (!isTransparent(cs.backgroundColor)) return cs.backgroundColor;
+  }
+  const bodyColor = getComputedStyle(document.body).backgroundColor;
+  return isTransparent(bodyColor) ? "#ffffff" : bodyColor;
+}
+
 export interface BuildStandaloneHtmlOptions {
   /** Fetch implementation (overridable for tests). Defaults to global fetch. */
   fetchImpl?: typeof fetch;
@@ -81,6 +106,12 @@ export async function buildStandaloneHtml(
   );
   warnings.push(...imgWarnings);
 
+  // 4. Resolve viewer-content background for edge-to-edge bleed.
+  const viewerBg = resolveViewerBackground();
+  const bodyBgCss = viewerBg
+    ? `\nhtml, body { height: auto; background: ${viewerBg}; }`
+    : "";
+
   const title = deriveTitle(frontmatter, fileName);
 
   const doc = `<!DOCTYPE html>
@@ -90,7 +121,7 @@ export async function buildStandaloneHtml(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <style>
-${inlinedCss}
+${inlinedCss}${bodyBgCss}
 </style>
 </head>
 <body>

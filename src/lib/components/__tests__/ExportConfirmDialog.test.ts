@@ -13,6 +13,7 @@ describe("export-confirm-dialog store", () => {
 
   it("sets current request when showExportConfirmDialog is called", async () => {
     const promise = showExportConfirmDialog({
+      title: "Export HTML",
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
@@ -22,6 +23,7 @@ describe("export-confirm-dialog store", () => {
     });
 
     expect(exportConfirmState.current).not.toBeNull();
+    expect(exportConfirmState.current!.title).toBe("Export HTML");
     expect(exportConfirmState.current!.themeLabel).toBe("GitHub Dark");
     expect(exportConfirmState.current!.actionLabel).toBe("Export");
     expect(exportConfirmState.current!.isMacOS).toBe(true);
@@ -34,6 +36,7 @@ describe("export-confirm-dialog store", () => {
 
   it("resolves with the provided result", async () => {
     const promise = showExportConfirmDialog({
+      title: "Print / PDF",
       themeKind: "viewer",
       themeLabel: "Monokai",
       actionLabel: "Print",
@@ -50,6 +53,7 @@ describe("export-confirm-dialog store", () => {
 
   it("clears current after resolution", async () => {
     const promise = showExportConfirmDialog({
+      title: "Export HTML",
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
@@ -65,6 +69,7 @@ describe("export-confirm-dialog store", () => {
 
   it("resolves with confirmed=false when cancelled", async () => {
     const promise = showExportConfirmDialog({
+      title: "Export HTML",
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
@@ -80,6 +85,7 @@ describe("export-confirm-dialog store", () => {
 
   it("stores platform-specific action label", async () => {
     const promise = showExportConfirmDialog({
+      title: "Print / PDF",
       themeKind: "viewer",
       themeLabel: "Nord",
       actionLabel: "Print",
@@ -97,6 +103,7 @@ describe("export-confirm-dialog store", () => {
 
   it("carries resolved options back through the promise", async () => {
     const promise = showExportConfirmDialog({
+      title: "Export ODT",
       themeKind: "neutral",
       themeLabel: "",
       actionLabel: "Export",

@@ -67,9 +67,9 @@ $\ce{[Pt(\eta^2-C2H4)Cl3]-}$ — Zeise's salt
 
 Energy: $\pu{123 kJ/mol}$
 
-Concentration: $\pu{1.5e-3 mol/L}$
+Concentration: $\pu{1.5e-3 mol\mathbin{/}L}$
 
-Speed of light: $\pu{3e8 m/s}$
+Speed of light: $\pu{3e8 m\cdot s-1}$
 
 Gas constant: $\pu{8.314 J // mol K}$
 
@@ -85,7 +85,7 @@ $\ce{Fe^n+}$ — the $n$ is italic (variable)
 ## Inline Chemistry in Sentences
 
 The combustion of methane is $\ce{CH4 + 2O2 -> CO2 + 2H2O}$, releasing
-$\pu{890 kJ/mol}$ of energy. The product $\ce{CO2}$ is a greenhouse gas.
+$\pu{890 kJ\mathbin{/}mol}$ of energy. The product $\ce{CO2}$ is a greenhouse gas.
 
 ## Block Equations
 

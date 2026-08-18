@@ -347,7 +347,13 @@ export function walkTokens(
         i++;
         break;
       case "fence":
-        callbacks.fence?.(token.content, token.info.trim(), token);
+        // Fenced math blocks (```math ... ```) stay as fence tokens
+        // in the markdown-it stream. Route them to mathBlock instead.
+        if (token.info.trim().toLowerCase() === "math") {
+          callbacks.mathBlock?.(token.content, token);
+        } else {
+          callbacks.fence?.(token.content, token.info.trim(), token);
+        }
         i++;
         break;
       case "html_block":

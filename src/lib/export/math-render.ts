@@ -99,6 +99,16 @@ export function renderMathToMathml(tex: string, displayMode = false): string {
 export const MAX_MATH_RASTER_AXIS_PX = 4096;
 
 /**
+ * The font-size (CSS px) set on the off-screen KaTeX capture host.
+ * KaTeX's `.katex { font: 1.21em ... }` multiplies this, so the actual
+ * glyph size is `HOST_FONT_SIZE × 1.21`.  Keeping this larger than the
+ * typical ODT body text (10pt ≈ 13px) and scaling the returned
+ * dimensions down gives a *supersampling* effect — the bitmap has
+ * more detail than the display size needs, producing sharp text.
+ */
+const HOST_FONT_SIZE = 16;
+
+/**
  * Vertical safety buffer (CSS px) applied above and below the KaTeX
  * render before html2canvas captures it. Sized to comfortably absorb
  * the worst-case under-reporting of `getBoundingClientRect()` for
@@ -139,11 +149,17 @@ export interface RenderedMathPng {
  * @param tex - LaTeX source (without delimiters)
  * @param displayMode - true for display math ($$...$$), false for inline ($...$)
  * @param scale - Pixel-scale multiplier (1 = 96 DPI, 2 = Retina, etc.)
+ * @param targetFontSize - If set, the returned `widthPx`/`heightPx` are
+ *   scaled down by `targetFontSize / HOST_FONT_SIZE` so the ODT image
+ *   displays at the target font size while the bitmap retains the full
+ *   sharpness of the larger host render (supersampling). Omit to get the
+ *   raw host-size dimensions.
  */
 export async function renderMathToPng(
   tex: string,
   displayMode: boolean,
   scale: number,
+  targetFontSize?: number,
 ): Promise<RenderedMathPng> {
   if (!Number.isFinite(scale) || scale <= 0) {
     throw new Error(`renderMathToPng: invalid scale ${scale}`);
@@ -155,6 +171,8 @@ export async function renderMathToPng(
   if (!host) {
     throw new Error("renderMathToPng: no DOM available");
   }
+  // html2canvas 1.4.1 is patched in patches/html2canvas+1.4.1.patch so its
+  // canvas baseline probe includes KaTeX's italic font style and weight.
   const html2canvas = (await import("html2canvas")).default;
 
   // KaTeX HTML output is a <span class="katex">…</span> (inline) or
@@ -186,7 +204,12 @@ export async function renderMathToPng(
   // text isn't captured as the fallback font's glyphs.
   if (typeof document !== "undefined" && (document as Document).fonts) {
     try {
-      await (document as Document).fonts.ready;
+      const fonts = (document as Document).fonts;
+      await Promise.all([
+        fonts.load("normal 16px KaTeX_Main"),
+        fonts.load("italic 16px KaTeX_Math"),
+        fonts.ready,
+      ]);
     } catch {
       // Some headless environments reject fonts.ready — non-fatal.
     }
@@ -248,7 +271,18 @@ export async function renderMathToPng(
   // Reset the host so the next call doesn't pick up stale content.
   host.innerHTML = "";
 
-  return { png, widthPx: cssW, heightPx: croppedCssH };
+  // Apply supersampling scale: when targetFontSize < HOST_FONT_SIZE,
+  // shrink the reported dimensions so the ODT image displays smaller
+  // while the bitmap retains the full sharpness of the host render.
+  const dimScale =
+    targetFontSize != null && targetFontSize > 0
+      ? targetFontSize / HOST_FONT_SIZE
+      : 1;
+  return {
+    png,
+    widthPx: cssW * dimScale,
+    heightPx: croppedCssH * dimScale,
+  };
 }
 
 /**
@@ -281,6 +315,9 @@ function ensureHost(): HTMLElement | null {
   // doesn't include leading that html2canvas then clips.
   host.style.fontSize = "16px";
   host.style.lineHeight = "normal";
+  // Force pure-black text so the rasterized formula isn't tinted by
+  // the app theme's --text-primary (dark-gray in light mode).
+  host.style.color = "#000";
   // Anchor `.katex-display`'s parent-width layout (see host docstring).
   host.style.width = `${MATH_HOST_WIDTH_PX}px`;
   document.body.appendChild(host);

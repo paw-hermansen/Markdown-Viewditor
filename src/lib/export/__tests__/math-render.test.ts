@@ -257,6 +257,30 @@ describe("renderMathToPng", () => {
     }
   });
 
+  it("requests the bundled KaTeX font faces before capture", async () => {
+    const load = vi.fn(async () => []);
+    const fonts = {
+      load,
+      ready: Promise.resolve(),
+    } as unknown as FontFaceSet;
+    const originalFonts = (document as unknown as { fonts?: unknown }).fonts;
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: fonts,
+    });
+
+    try {
+      await renderMathToPng("a+b=c", false, 1);
+      expect(load).toHaveBeenCalledWith("normal 16px KaTeX_Main");
+      expect(load).toHaveBeenCalledWith("italic 16px KaTeX_Math");
+    } finally {
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: originalFonts,
+      });
+    }
+  });
+
   it("captures display math at the host's page-content width (not the formula width)", async () => {
     // Regression: display math should be centered on the page with the
     // tag at the right page-edge, matching the markdown preview's
@@ -328,6 +352,39 @@ describe("renderMathToPng", () => {
     try {
       const r = await renderMathToPng("x^2", false, 1);
       expect(r.widthPx).toBe(FORMULA_W);
+    } finally {
+      Element.prototype.getBoundingClientRect = origRect;
+    }
+  });
+
+  it("scales returned dimensions when targetFontSize is set (supersampling)", async () => {
+    // With host at 16px and targetFontSize=11, the returned width
+    // should be 11/16 = 0.6875× the CSS width — the bitmap stays
+    // at 16px sharpness but the ODT displays at 10pt size.
+    const FORMULA_W = 100;
+    const FORMULA_H = 20;
+    const origRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: FORMULA_H + 40,
+        right: FORMULA_W,
+        width: FORMULA_W,
+        height: FORMULA_H + 40,
+        toJSON: () => ({}),
+      } as DOMRect;
+    };
+    try {
+      const r = await renderMathToPng("x^2", false, 1, 11);
+      const expectedScale = 11 / 16;
+      // Width is directly scaled from cssW.
+      expect(r.widthPx).toBeCloseTo(FORMULA_W * expectedScale, 4);
+      // Without targetFontSize, width should be unscaled.
+      const r2 = await renderMathToPng("x^2", false, 1);
+      expect(r2.widthPx).toBe(FORMULA_W);
     } finally {
       Element.prototype.getBoundingClientRect = origRect;
     }

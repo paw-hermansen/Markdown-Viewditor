@@ -372,12 +372,16 @@
         cursorOffset = 1;
         placeholderLen = 4;
         break;
-      case 'codeblock':
-        replacement = `\`\`\`\n${selectedText || 'code'}\n\`\`\``;
-        cursorOffset = 4;
+      case 'codeblock': {
+        const line = editorView.state.doc.lineAt(from);
+        const isAtLineStart = from === line.from;
+        const prefix = isAtLineStart ? '' : '\n';
+        replacement = `${prefix}\`\`\`\n${selectedText || 'code'}\n\`\`\``;
+        cursorOffset = prefix.length + 4;
         placeholderLen = 4;
         cursorBefore = true;
         break;
+      }
       case 'link':
         insertLink();
         return;

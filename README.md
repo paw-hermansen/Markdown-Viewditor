@@ -44,7 +44,7 @@ and guidance from an experienced software developer - which in my experience is 
 for many human programmers.
 
 The desktop app did not end up as Slopware. I use it myself and I see my test
-with *AI-Augmented Development* as a great success.
+with _AI-Augmented Development_ as a great success.
 
 ## Download
 

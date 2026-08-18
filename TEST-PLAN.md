@@ -10,6 +10,7 @@
   unmarked tests are platform-independent.
 
 > Notation:
+>
 > - `Ctrl` below stands for `Cmd` on macOS and `Ctrl` on Linux/Windows.
 > - GFM: **G**ithub **F**lavored **M**arkdown
 
@@ -118,56 +119,56 @@ editor and rendered output in the viewer.
 
 Use these files from `examples/`:
 
-| File                     | Purpose                                          |
-| ------------------------ | ------------------------------------------------ |
-| `Simple.md`              | Standard UTF-8, basic markdown features           |
-| `Empty.md`               | Zero-content file                                 |
-| `Large.md`               | ~5800 lines, performance testing                  |
-| `BOM_Simple.md`          | UTF-8 with Byte Order Mark                        |
-| `CRLF_Simple.md`         | Windows-style CRLF line endings                   |
-| `ISO8859-1_Simple.md`    | ISO-8859-1 (Latin-1) encoding                     |
-| `简单.md`                | Unicode (CJK) filename                            |
-| `Space Simple.md`        | Filename with spaces                              |
-| `Math-Example.md`        | Math formulas (KaTeX)                             |
-| `Chemistry-Example.md`   | Chemistry formulas (mhchem)                       |
+| File                   | Purpose                                 |
+| ---------------------- | --------------------------------------- |
+| `Simple.md`            | Standard UTF-8, basic markdown features |
+| `Empty.md`             | Zero-content file                       |
+| `Large.md`             | ~5800 lines, performance testing        |
+| `BOM_Simple.md`        | UTF-8 with Byte Order Mark              |
+| `CRLF_Simple.md`       | Windows-style CRLF line endings         |
+| `ISO8859-1_Simple.md`  | ISO-8859-1 (Latin-1) encoding           |
+| `简单.md`              | Unicode (CJK) filename                  |
+| `Space Simple.md`      | Filename with spaces                    |
+| `Math-Example.md`      | Math formulas (KaTeX)                   |
+| `Chemistry-Example.md` | Chemistry formulas (mhchem)             |
 
 ### Test Steps
 
-| #    | Test                         | Steps                                                              | Expected                                                                                                   |
-| ---- | ---------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| 7.1  | Open file                    | Click Open, select `examples/Simple.md`                            | Content loads into editor, viewer renders it; filename shown in toolbar and status bar                     |
-| 7.2  | Open dialog filters          | Open dialog                                                        | Shows "Markdown" and "All Files" filters                                                                   |
-| 7.3  | Cancel open / save-as dialog | Open any dialog, click Cancel                                      | No change to current content                                                                               |
-| 7.4  | Save new (untitled) file     | With "Untitled" file, click Save                                   | Save-as dialog appears                                                                                     |
-| 7.5  | Save existing file           | Open `examples/Simple.md`, edit content, click Save                | File saved, `*` indicator disappears, `.bak` backup created in same directory                              |
-| 7.6  | Save As same path            | Save As to the current file's path                                 | If externally modified, overwrite prompt: "This file has been modified by another application since it was last saved. Overwrite the external changes?"; otherwise saves directly |
-| 7.7  | Save As different path       | Save As to a new location (e.g. `/tmp/test-save.md`)              | New file created, app tracks new path                                                                      |
-| 7.8  | Save As to existing file     | Save As to a file that already exists (e.g. `examples/Empty.md`)   | Dialog: `A file named "Empty.md" already exists. Do you want to replace it?` with Cancel / Replace File buttons |
-| 7.9  | Save As to read-only file    | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`         |
-| 7.10 | Unsaved-change dialog — New  | Edit content, click New (toolbar or `Ctrl+N`)                      | Dialog: `"You have unsaved changes. Create a new file?"` with Cancel / Yes, And Discard My Changes / Save First |
-| 7.11 | Unsaved-change dialog — Open | Edit content, click Open (`Ctrl+O`)                                | Dialog: `"You have unsaved changes. Open a different file?"` with same three buttons                       |
-| 7.12 | Unsaved-change dialog — Reload | Edit content, click Reload (`Ctrl+R`)                            | Dialog: `"You have unsaved changes. Reload from disk and discard your changes?"` with Cancel / Yes, Discard My Changes |
-| 7.13 | Dialog — Save First (untitled) | In 3-button dialog, click Save First                             | Save-as dialog appears; on save editor clears to "Untitled"                                                |
-| 7.14 | Dialog — Save First (named)  | Open `examples/Simple.md`, edit, trigger dialog, click Save First  | File saved (no clear), action proceeds                                                                     |
-| 7.15 | Dialog — Discard             | In 3-button dialog, click Yes, And Discard My Changes              | Editor clears (only for New), action proceeds, changes lost                                                |
-| 7.16 | Dialog — Cancel              | In 3-button dialog, click Cancel                                   | No change to editor content or current file                                                                |
-| 7.17 | Reload from disk             | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk; toast `"The file is already up to date."` if unchanged              |
-| 7.18 | Reload unchanged file        | Open `examples/Simple.md`, no edits in app, click Reload           | Toast: `"The file is already up to date."`                                                                 |
-| 7.19 | Reload deleted file          | Open a temp file, delete it externally, click Reload               | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button |
-| 7.20 | File name display            | Open `examples/Simple.md`                                          | "Simple.md" shown in toolbar and status bar                                                                |
-| 7.21 | Modified indicator           | Edit content                                                       | `*` appears after filename in toolbar; dot appears on Save button                                          |
-| 7.22 | Read-only indicator          | Open a read-only file (`chmod 444`)                                | 🔒 icon appears next to filename in toolbar with tooltip "Read-only"                                       |
-| 7.23 | Save read-only file          | Open a read-only file, edit, click Save                            | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`            |
-| 7.24 | .bak backup created          | Open `examples/Simple.md`, edit, save, check directory             | `Simple.md.bak` contains the previous content                                                              |
-| 7.25 | Encoding — UTF-8 BOM         | Open `examples/BOM_Simple.md`                                      | Content reads correctly, no BOM artifact in editor, no garbled characters                                  |
-| 7.26 | Encoding — CRLF              | Open `examples/CRLF_Simple.md`                                     | Content reads correctly, no `^M` artifacts, renders normally                                               |
-| 7.27 | Encoding — Latin-1           | Open `examples/ISO8859-1_Simple.md`                                | Decoded losslessly (Æ Ø Å visible), no crash or garbled text                                              |
-| 7.28 | Encoding — Unicode filename  | Open `examples/简单.md`                                            | Opens correctly, filename displays in toolbar                                                              |
-| 7.29 | Filename with spaces         | Open `examples/Space Simple.md`                                    | Opens correctly, saves correctly                                                                           |
-| 7.30 | Empty file                   | Open `examples/Empty.md`                                           | Viewer empty, word count 0, no crash                                                                       |
-| 7.31 | Toast on save failure        | Save to a path that fails (e.g. read-only directory)               | Toast error: `"Failed to save the file."` with detail message                                              |
-| 7.32 | Toast on open failure        | Open a file that fails (e.g. permission denied)                    | Toast error: `"Failed to open the file."` with detail message                                              |
-| 7.33 | Externally modified indicator | Open file, edit in another editor, focus app but decline reload   | ⚠ icon appears next to filename in toolbar with tooltip "Externally modified"                              |
+| #    | Test                           | Steps                                                                        | Expected                                                                                                                                                                          |
+| ---- | ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7.1  | Open file                      | Click Open, select `examples/Simple.md`                                      | Content loads into editor, viewer renders it; filename shown in toolbar and status bar                                                                                            |
+| 7.2  | Open dialog filters            | Open dialog                                                                  | Shows "Markdown" and "All Files" filters                                                                                                                                          |
+| 7.3  | Cancel open / save-as dialog   | Open any dialog, click Cancel                                                | No change to current content                                                                                                                                                      |
+| 7.4  | Save new (untitled) file       | With "Untitled" file, click Save                                             | Save-as dialog appears                                                                                                                                                            |
+| 7.5  | Save existing file             | Open `examples/Simple.md`, edit content, click Save                          | File saved, `*` indicator disappears, `.bak` backup created in same directory                                                                                                     |
+| 7.6  | Save As same path              | Save As to the current file's path                                           | If externally modified, overwrite prompt: "This file has been modified by another application since it was last saved. Overwrite the external changes?"; otherwise saves directly |
+| 7.7  | Save As different path         | Save As to a new location (e.g. `/tmp/test-save.md`)                         | New file created, app tracks new path                                                                                                                                             |
+| 7.8  | Save As to existing file       | Save As to a file that already exists (e.g. `examples/Empty.md`)             | Dialog: `A file named "Empty.md" already exists. Do you want to replace it?` with Cancel / Replace File buttons                                                                   |
+| 7.9  | Save As to read-only file      | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it        | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
+| 7.10 | Unsaved-change dialog — New    | Edit content, click New (toolbar or `Ctrl+N`)                                | Dialog: `"You have unsaved changes. Create a new file?"` with Cancel / Yes, And Discard My Changes / Save First                                                                   |
+| 7.11 | Unsaved-change dialog — Open   | Edit content, click Open (`Ctrl+O`)                                          | Dialog: `"You have unsaved changes. Open a different file?"` with same three buttons                                                                                              |
+| 7.12 | Unsaved-change dialog — Reload | Edit content, click Reload (`Ctrl+R`)                                        | Dialog: `"You have unsaved changes. Reload from disk and discard your changes?"` with Cancel / Yes, Discard My Changes                                                            |
+| 7.13 | Dialog — Save First (untitled) | In 3-button dialog, click Save First                                         | Save-as dialog appears; on save editor clears to "Untitled"                                                                                                                       |
+| 7.14 | Dialog — Save First (named)    | Open `examples/Simple.md`, edit, trigger dialog, click Save First            | File saved (no clear), action proceeds                                                                                                                                            |
+| 7.15 | Dialog — Discard               | In 3-button dialog, click Yes, And Discard My Changes                        | Editor clears (only for New), action proceeds, changes lost                                                                                                                       |
+| 7.16 | Dialog — Cancel                | In 3-button dialog, click Cancel                                             | No change to editor content or current file                                                                                                                                       |
+| 7.17 | Reload from disk               | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk; toast `"The file is already up to date."` if unchanged                                                                                                 |
+| 7.18 | Reload unchanged file          | Open `examples/Simple.md`, no edits in app, click Reload                     | Toast: `"The file is already up to date."`                                                                                                                                        |
+| 7.19 | Reload deleted file            | Open a temp file, delete it externally, click Reload                         | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                               |
+| 7.20 | File name display              | Open `examples/Simple.md`                                                    | "Simple.md" shown in toolbar and status bar                                                                                                                                       |
+| 7.21 | Modified indicator             | Edit content                                                                 | `*` appears after filename in toolbar; dot appears on Save button                                                                                                                 |
+| 7.22 | Read-only indicator            | Open a read-only file (`chmod 444`)                                          | 🔒 icon appears next to filename in toolbar with tooltip "Read-only"                                                                                                              |
+| 7.23 | Save read-only file            | Open a read-only file, edit, click Save                                      | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
+| 7.24 | .bak backup created            | Open `examples/Simple.md`, edit, save, check directory                       | `Simple.md.bak` contains the previous content                                                                                                                                     |
+| 7.25 | Encoding — UTF-8 BOM           | Open `examples/BOM_Simple.md`                                                | Content reads correctly, no BOM artifact in editor, no garbled characters                                                                                                         |
+| 7.26 | Encoding — CRLF                | Open `examples/CRLF_Simple.md`                                               | Content reads correctly, no `^M` artifacts, renders normally                                                                                                                      |
+| 7.27 | Encoding — Latin-1             | Open `examples/ISO8859-1_Simple.md`                                          | Decoded losslessly (Æ Ø Å visible), no crash or garbled text                                                                                                                      |
+| 7.28 | Encoding — Unicode filename    | Open `examples/简单.md`                                                      | Opens correctly, filename displays in toolbar                                                                                                                                     |
+| 7.29 | Filename with spaces           | Open `examples/Space Simple.md`                                              | Opens correctly, saves correctly                                                                                                                                                  |
+| 7.30 | Empty file                     | Open `examples/Empty.md`                                                     | Viewer empty, word count 0, no crash                                                                                                                                              |
+| 7.31 | Toast on save failure          | Save to a path that fails (e.g. read-only directory)                         | Toast error: `"Failed to save the file."` with detail message                                                                                                                     |
+| 7.32 | Toast on open failure          | Open a file that fails (e.g. permission denied)                              | Toast error: `"Failed to open the file."` with detail message                                                                                                                     |
+| 7.33 | Externally modified indicator  | Open file, edit in another editor, focus app but decline reload              | ⚠ icon appears next to filename in toolbar with tooltip "Externally modified"                                                                                                     |
 
 ---
 
@@ -181,20 +182,20 @@ of the app) to modify the file externally.
 
 ### Test Steps
 
-| #    | Test                              | Steps                                                                             | Expected                                                                                                                                                                                                 |
-| ---- | --------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8.1  | Modified externally (clean)       | Open `/tmp/ext-test.md`, edit in another editor, focus app                        | Dialog: `"This file has been modified by another application. Do you want to reload it?"` with Cancel / Reload buttons                                                                                   |
-| 8.2  | Modified externally (dirty)       | Open `/tmp/ext-test.md`, edit in app, edit externally, focus app                  | Dialog: `"This file has been modified by another application. You also have unsaved changes. Reload and discard your changes?"` with Cancel / Yes, Discard My Changes buttons                            |
-| 8.3  | Decline reload aftermath          | Decline reload prompt (click Cancel)                                              | ⚠ icon appears on filename in toolbar (tooltip "Externally modified"); no re-prompt on later focuses until file changes again                                                                             |
-| 8.4  | Decline reload — Save still warns | Decline reload, then `Ctrl+S`                                                     | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons                                 |
-| 8.5  | Accept reload (clean)             | With no local edits, accept reload prompt (click Reload)                          | Content updates from disk, ⚠ clears, baseline reset                                                                                                                                                      |
-| 8.6  | Accept reload (dirty)             | With local edits, accept reload prompt (click Yes, Discard My Changes)            | Content updates from disk, ⚠ clears, local edits lost, baseline reset                                                                                                                                    |
-| 8.7  | File deleted externally           | Open `/tmp/ext-test.md`, delete it externally (`rm /tmp/ext-test.md`), focus app  | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                                                      |
-| 8.8  | Save after external deletion      | After deletion warning, press `Ctrl+S`                                            | Save As dialog appears (does not recreate at old path)                                                                                                                                                   |
-| 8.9  | Save over external modification   | Open file, modify externally, press `Ctrl+S`                                      | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons                                 |
-| 8.10 | Reload with external modification | Modify externally, press `Ctrl+R`                                                 | If dirty: dialog `"You have unsaved changes. Reload from disk and discard your changes?"`; else reloads content silently                                                                                                                                         |
-| 8.11 | Size-only change detected         | Edit file externally without changing mtime (e.g. `echo x >> file; touch -r ref file`) | ⚠ appears on next focus (mtime OR size comparison)                                                                                                                                                 |
-| 8.12 | Reload up-to-date                 | Open file, no external changes, press `Ctrl+R`                                    | Toast: `"The file is already up to date."`                                                                                                                                                               |
+| #    | Test                              | Steps                                                                                  | Expected                                                                                                                                                                      |
+| ---- | --------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 8.1  | Modified externally (clean)       | Open `/tmp/ext-test.md`, edit in another editor, focus app                             | Dialog: `"This file has been modified by another application. Do you want to reload it?"` with Cancel / Reload buttons                                                        |
+| 8.2  | Modified externally (dirty)       | Open `/tmp/ext-test.md`, edit in app, edit externally, focus app                       | Dialog: `"This file has been modified by another application. You also have unsaved changes. Reload and discard your changes?"` with Cancel / Yes, Discard My Changes buttons |
+| 8.3  | Decline reload aftermath          | Decline reload prompt (click Cancel)                                                   | ⚠ icon appears on filename in toolbar (tooltip "Externally modified"); no re-prompt on later focuses until file changes again                                                 |
+| 8.4  | Decline reload — Save still warns | Decline reload, then `Ctrl+S`                                                          | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
+| 8.5  | Accept reload (clean)             | With no local edits, accept reload prompt (click Reload)                               | Content updates from disk, ⚠ clears, baseline reset                                                                                                                           |
+| 8.6  | Accept reload (dirty)             | With local edits, accept reload prompt (click Yes, Discard My Changes)                 | Content updates from disk, ⚠ clears, local edits lost, baseline reset                                                                                                         |
+| 8.7  | File deleted externally           | Open `/tmp/ext-test.md`, delete it externally (`rm /tmp/ext-test.md`), focus app       | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                           |
+| 8.8  | Save after external deletion      | After deletion warning, press `Ctrl+S`                                                 | Save As dialog appears (does not recreate at old path)                                                                                                                        |
+| 8.9  | Save over external modification   | Open file, modify externally, press `Ctrl+S`                                           | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
+| 8.10 | Reload with external modification | Modify externally, press `Ctrl+R`                                                      | If dirty: dialog `"You have unsaved changes. Reload from disk and discard your changes?"`; else reloads content silently                                                      |
+| 8.11 | Size-only change detected         | Edit file externally without changing mtime (e.g. `echo x >> file; touch -r ref file`) | ⚠ appears on next focus (mtime OR size comparison)                                                                                                                            |
+| 8.12 | Reload up-to-date                 | Open file, no external changes, press `Ctrl+R`                                         | Toast: `"The file is already up to date."`                                                                                                                                    |
 
 ---
 
@@ -274,43 +275,43 @@ The viewer toolbar exposes:
 
 ### Test Files
 
-| File                     | Purpose                                        |
-| ------------------------ | ---------------------------------------------- |
-| `examples/Simple.md`     | Basic markdown, YAML frontmatter               |
-| `examples/Example.md`    | Comprehensive: images, SVG, all HTML elements  |
-| `examples/Math-Example.md` | KaTeX math formulas                          |
-| `examples/Chemistry-Example.md` | mhchem chemistry formulas             |
-| `examples/weird.svg`    | SVG file for ODT rasterization tests           |
+| File                            | Purpose                                       |
+| ------------------------------- | --------------------------------------------- |
+| `examples/Simple.md`            | Basic markdown, YAML frontmatter              |
+| `examples/Example.md`           | Comprehensive: images, SVG, all HTML elements |
+| `examples/Math-Example.md`      | KaTeX math formulas                           |
+| `examples/Chemistry-Example.md` | mhchem chemistry formulas                     |
+| `examples/weird.svg`            | SVG file for ODT rasterization tests          |
 
 ### 13.1 Export Confirm Dialog
 
 Reset by un-checking "Show export confirmation" / "Do not show again"
 before each row.
 
-| #     | Test                               | Steps                                                      | Expected                                                                                                            |
-| ----- | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 13.1  | Dialog appearance (viewer theme)   | With confirmation ON, click HTML/PDF export                | Title: "Export" (macOS) / "Export / Print" (other); message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
-| 13.2  | Dialog appearance (neutral / ODT)  | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution) |
-| 13.3  | Cancel via Cancel button           | Click Cancel                                               | No export runs, dialog closes                                                                                       |
-| 13.4  | Cancel via Escape / backdrop       | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                       |
-| 13.5  | Confirm via Enter                  | Press Enter                                                | Export runs                                                                                                         |
-| 13.6  | Don't show again                   | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                 |
-| 13.7  | Re-enable confirmation             | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                        |
-| 13.8  | Options persisted (ODT)            | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                  |
+| #    | Test                              | Steps                                                      | Expected                                                                                                                                                                                                                    |
+| ---- | --------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/PDF export                | Title: "Export" (macOS) / "Export / Print" (other); message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
+| 13.2 | Dialog appearance (neutral / ODT) | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution)                                     |
+| 13.3 | Cancel via Cancel button          | Click Cancel                                               | No export runs, dialog closes                                                                                                                                                                                               |
+| 13.4 | Cancel via Escape / backdrop      | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                                                                                                                               |
+| 13.5 | Confirm via Enter                 | Press Enter                                                | Export runs                                                                                                                                                                                                                 |
+| 13.6 | Don't show again                  | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                                                                                                                         |
+| 13.7 | Re-enable confirmation            | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                                                                                                                                |
+| 13.8 | Options persisted (ODT)           | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                                                                                                                          |
 
 ### 13.2 Export as HTML
 
-| #     | Test                     | Steps                                            | Expected                                                    |
-| ----- | ------------------------ | ------------------------------------------------ | ----------------------------------------------------------- |
-| 13.9  | Save dialog defaults     | Open `examples/Simple.md`, choose Export as HTML | Save dialog opens with `Simple.html`, HTML filter           |
-| 13.10 | Standalone HTML produced | Save and open the file in a browser              | Self-contained page renders identically to the viewer       |
-| 13.11 | Theme applied            | Repeat with a dark theme active                  | Output uses the same theme                                  |
-| 13.12 | Local images inlined     | Export `examples/Example.md`                     | Relative/local images embedded as data URIs                 |
-| 13.13 | Cancel save              | Cancel the save dialog                           | No file written, no toast                                   |
-| 13.14 | Math rendered            | Export `examples/Math-Example.md`                | KaTeX formulas render from the inlined CSS                  |
-| 13.15 | Warnings surface         | Export a file referencing a missing local image  | "Export Warnings" dialog lists the failed image             |
-| 13.16 | Success toast            | Export successfully                              | Toast: "Exported" with the saved file path                  |
-| 13.17 | Error toast              | Trigger an export failure                        | Toast: "Export failed" with detail message                  |
+| #     | Test                     | Steps                                            | Expected                                              |
+| ----- | ------------------------ | ------------------------------------------------ | ----------------------------------------------------- |
+| 13.9  | Save dialog defaults     | Open `examples/Simple.md`, choose Export as HTML | Save dialog opens with `Simple.html`, HTML filter     |
+| 13.10 | Standalone HTML produced | Save and open the file in a browser              | Self-contained page renders identically to the viewer |
+| 13.11 | Theme applied            | Repeat with a dark theme active                  | Output uses the same theme                            |
+| 13.12 | Local images inlined     | Export `examples/Example.md`                     | Relative/local images embedded as data URIs           |
+| 13.13 | Cancel save              | Cancel the save dialog                           | No file written, no toast                             |
+| 13.14 | Math rendered            | Export `examples/Math-Example.md`                | KaTeX formulas render from the inlined CSS            |
+| 13.15 | Warnings surface         | Export a file referencing a missing local image  | "Export Warnings" dialog lists the failed image       |
+| 13.16 | Success toast            | Export successfully                              | Toast: "Exported" with the saved file path            |
+| 13.17 | Error toast              | Trigger an export failure                        | Toast: "Export failed" with detail message            |
 
 ### 13.3 Export as PDF / Print
 
@@ -327,15 +328,15 @@ platform-specific — split tests below.
 > too fast to notice. This is expected; the overlay is only clearly visible
 > on macOS where the save dialog + async WKWebView capture takes longer.
 
-| #     | Test                        | Steps                                                      | Expected                                                |
-| ----- | --------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
-| 13.18 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase |
+| #     | Test                        | Steps                                                      | Expected                                                                                  |
+| ----- | --------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 13.18 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase                        |
 | 13.19 | Export overlay (Linux/Win)  | On Linux/Windows, trigger PDF export                       | Overlay may flash too fast to see; the print dialog appearing confirms the export started |
-| 13.20 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible |
-| 13.21 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                     |
-| 13.22 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                 |
-| 13.23 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)          |
-| 13.24 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)     |
+| 13.20 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible                                  |
+| 13.21 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                                                       |
+| 13.22 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                                                   |
+| 13.23 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)                                            |
+| 13.24 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)                                       |
 
 #### macOS — Export as PDF
 
@@ -391,37 +392,37 @@ ignored. The confirm dialog shows three option groups when the dialog is on.
 
 ## 14. Theme Selector
 
-| #    | Test                           | Steps                                                | Expected                                                               |
-| ---- | ------------------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| 14.1 | Open / close dropdown          | Click theme button; click outside                    | Dropdown opens and closes                                              |
-| 14.2 | Switch dark / light theme      | Select "GitHub Dark" then "GitHub Light"              | Viewer & editor syntax colors swap accordingly                         |
-| 14.3 | App chrome follows             | Switch themes                                        | Toolbar, status bar, borders change color                              |
-| 14.4 | Active theme highlight + badge | Open dropdown                                        | Active row has accent background; shows "Dark"/"Light" badge           |
-| 14.5 | Theme persistence              | Select a theme, close, reopen                        | Same theme active                                                      |
-| 14.6 | Try all 9 built-in themes      | Select each theme in sequence                        | Each applies correctly, no visual glitches                             |
-| 14.7 | Printer Friendly theme         | Select "Printer Friendly / Neutral"                  | Light theme with neutral syntax highlighting; used by ODT export       |
+| #    | Test                           | Steps                                    | Expected                                                         |
+| ---- | ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------- |
+| 14.1 | Open / close dropdown          | Click theme button; click outside        | Dropdown opens and closes                                        |
+| 14.2 | Switch dark / light theme      | Select "GitHub Dark" then "GitHub Light" | Viewer & editor syntax colors swap accordingly                   |
+| 14.3 | App chrome follows             | Switch themes                            | Toolbar, status bar, borders change color                        |
+| 14.4 | Active theme highlight + badge | Open dropdown                            | Active row has accent background; shows "Dark"/"Light" badge     |
+| 14.5 | Theme persistence              | Select a theme, close, reopen            | Same theme active                                                |
+| 14.6 | Try all 9 built-in themes      | Select each theme in sequence            | Each applies correctly, no visual glitches                       |
+| 14.7 | Printer Friendly theme         | Select "Printer Friendly / Neutral"      | Light theme with neutral syntax highlighting; used by ODT export |
 
 ### Built-in Themes Reference
 
-| Theme                       | Type  |
-| --------------------------- | ----- |
-| GitHub Dark                 | Dark  |
-| GitHub Light                | Light |
-| Atom One Dark               | Dark  |
-| Atom One Light              | Light |
-| Monokai                     | Dark  |
-| Monokai Light               | Light |
-| Nord                        | Dark  |
-| Nord Light                  | Light |
-| Printer Friendly / Neutral  | Light |
+| Theme                      | Type  |
+| -------------------------- | ----- |
+| GitHub Dark                | Dark  |
+| GitHub Light               | Light |
+| Atom One Dark              | Dark  |
+| Atom One Light             | Light |
+| Monokai                    | Dark  |
+| Monokai Light              | Light |
+| Nord                       | Dark  |
+| Nord Light                 | Light |
+| Printer Friendly / Neutral | Light |
 
 ### Custom Theme
 
-| #    | Test                 | Steps                                                | Expected                                    |
-| ---- | -------------------- | ---------------------------------------------------- | ------------------------------------------- |
-| 14.8 | Add custom theme     | Place a `.css` file in the themes directory, restart | Appears in dropdown                         |
-| 14.9 | Dark/light detection | Custom CSS with dark/light background keywords       | Badge shows "Dark"/"Light" accordingly      |
-| 14.10| Custom theme applies | Select custom theme from dropdown                    | Viewer and code highlighting use custom CSS |
+| #     | Test                 | Steps                                                | Expected                                    |
+| ----- | -------------------- | ---------------------------------------------------- | ------------------------------------------- |
+| 14.8  | Add custom theme     | Place a `.css` file in the themes directory, restart | Appears in dropdown                         |
+| 14.9  | Dark/light detection | Custom CSS with dark/light background keywords       | Badge shows "Dark"/"Light" accordingly      |
+| 14.10 | Custom theme applies | Select custom theme from dropdown                    | Viewer and code highlighting use custom CSS |
 
 ---
 
@@ -434,55 +435,55 @@ in the status bar.
 
 ### Levels Reference
 
-| Level    | Description                                                             |
-| -------- | ----------------------------------------------------------------------- |
-| Basic    | Only pure CommonMark is compatible. All extended features are flagged.   |
+| Level    | Description                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------ |
+| Basic    | Only pure CommonMark is compatible. All extended features are flagged.                           |
 | GitHub   | Enables: Tables, Strikethrough, Task lists, Autolinks, Footnotes, Raw HTML, Math `$…$` / `$$…$$` |
-| Advanced | Enables all features (default). Everything is allowed.                   |
-| Custom   | User manually toggles individual features on/off via checkboxes.        |
+| Advanced | Enables all features (default). Everything is allowed.                                           |
+| Custom   | User manually toggles individual features on/off via checkboxes.                                 |
 
 ### Features (10 total)
 
-| Feature             | Syntax                          | In GitHub? | In Advanced? |
-| ------------------- | ------------------------------- | ---------- | ------------ |
-| Tables              | GFM pipe tables                 | yes        | yes          |
-| Strikethrough       | `~~text~~`                      | yes        | yes          |
-| Task lists          | `- [ ]` / `- [x]`              | yes        | yes          |
-| Autolinks           | Bare URLs                       | yes        | yes          |
-| Footnotes           | `[^1]`                          | yes        | yes          |
-| Raw HTML            | `<kbd>`, `<mark>`, etc.         | yes        | yes          |
-| Frontmatter         | YAML `---` blocks               | no         | yes          |
-| Math (dollar)       | `$…$` / `$$…$$`                | yes        | yes          |
-| Math (LaTeX)        | `\(...\)`, `\[...\]`, `\begin{}`| no         | yes          |
-| Chemical formulas   | `\ce{…}`                        | no         | yes          |
+| Feature           | Syntax                           | In GitHub? | In Advanced? |
+| ----------------- | -------------------------------- | ---------- | ------------ |
+| Tables            | GFM pipe tables                  | yes        | yes          |
+| Strikethrough     | `~~text~~`                       | yes        | yes          |
+| Task lists        | `- [ ]` / `- [x]`                | yes        | yes          |
+| Autolinks         | Bare URLs                        | yes        | yes          |
+| Footnotes         | `[^1]`                           | yes        | yes          |
+| Raw HTML          | `<kbd>`, `<mark>`, etc.          | yes        | yes          |
+| Frontmatter       | YAML `---` blocks                | no         | yes          |
+| Math (dollar)     | `$…$` / `$$…$$`                  | yes        | yes          |
+| Math (LaTeX)      | `\(...\)`, `\[...\]`, `\begin{}` | no         | yes          |
+| Chemical formulas | `\ce{…}`                         | no         | yes          |
 
 ### Test Files
 
-| File                       | Features used                                        |
-| -------------------------- | ---------------------------------------------------- |
-| `examples/Simple.md`       | Tables, footnotes, raw HTML (basic+github features)  |
-| `examples/Math-Example.md` | All math delimiter styles (dollar, LaTeX, fences)    |
-| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                     |
-| `examples/Example.md`      | Everything: tables, task lists, strikethrough, HTML, math, frontmatter |
+| File                            | Features used                                                          |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `examples/Simple.md`            | Tables, footnotes, raw HTML (basic+github features)                    |
+| `examples/Math-Example.md`      | All math delimiter styles (dollar, LaTeX, fences)                      |
+| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                                            |
+| `examples/Example.md`           | Everything: tables, task lists, strikethrough, HTML, math, frontmatter |
 
 ### Test Steps
 
-| #    | Test                          | Steps                                                                            | Expected                                                                                                       |
-| ---- | ----------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| 15.1 | Default level is Advanced     | Open app, check status bar                                                       | Level button shows "Advanced"                                                                                  |
-| 15.2 | Level selector opens          | Click the level button in the status bar (right side)                            | Popover opens with four level buttons (Basic, GitHub, Advanced, Custom) and feature toggle checklist           |
-| 15.3 | Switch to Basic               | Click "Basic" in the level popover                                               | Level changes to "Basic"; no warnings for a clean CommonMark document                                          |
-| 15.4 | Basic warns on tables         | Open `examples/Simple.md` (has tables), set level to "Basic"                     | ⚠ badge appears in status bar with count; editor gutter shows warnings on table lines; clicking badge shows "Tables is above the 'basic' level (requires: github)" |
-| 15.5 | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                                 | Warnings for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry   |
-| 15.6 | Switch to GitHub              | Click "GitHub" in the level popover                                              | Level changes to "GitHub"; warnings clear for features in the GitHub set                                       |
-| 15.7 | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"                           | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                       |
-| 15.8 | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"                      | Warnings on `\ce{…}` lines (requires: advanced)                                                                |
-| 15.9 | Advanced — no warnings        | Set level to "Advanced", open any example file                                   | No warnings, no badge                                                                                          |
-| 15.10| Custom mode                   | Click "Custom", toggle features on/off                                           | Level label changes to "Custom (n/10)" showing enabled count; warnings update accordingly                      |
-| 15.11| Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses              | Warnings for that feature clear                                                                                 |
-| 15.12| Editor lint integration       | With warnings active, hover over a yellow gutter marker                          | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")            |
-| 15.13| Level persistence             | Select "GitHub", close app, reopen                                               | Level is still "GitHub"                                                                                        |
-| 15.14| Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features                   | Warnings appear after ~200ms debounce, not on every keystroke                                                  |
+| #     | Test                          | Steps                                                               | Expected                                                                                                                                                           |
+| ----- | ----------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 15.1  | Default level is Advanced     | Open app, check status bar                                          | Level button shows "Advanced"                                                                                                                                      |
+| 15.2  | Level selector opens          | Click the level button in the status bar (right side)               | Popover opens with four level buttons (Basic, GitHub, Advanced, Custom) and feature toggle checklist                                                               |
+| 15.3  | Switch to Basic               | Click "Basic" in the level popover                                  | Level changes to "Basic"; no warnings for a clean CommonMark document                                                                                              |
+| 15.4  | Basic warns on tables         | Open `examples/Simple.md` (has tables), set level to "Basic"        | ⚠ badge appears in status bar with count; editor gutter shows warnings on table lines; clicking badge shows "Tables is above the 'basic' level (requires: github)" |
+| 15.5  | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                    | Warnings for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry                                                       |
+| 15.6  | Switch to GitHub              | Click "GitHub" in the level popover                                 | Level changes to "GitHub"; warnings clear for features in the GitHub set                                                                                           |
+| 15.7  | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"              | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                                                                           |
+| 15.8  | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"         | Warnings on `\ce{…}` lines (requires: advanced)                                                                                                                    |
+| 15.9  | Advanced — no warnings        | Set level to "Advanced", open any example file                      | No warnings, no badge                                                                                                                                              |
+| 15.10 | Custom mode                   | Click "Custom", toggle features on/off                              | Level label changes to "Custom (n/10)" showing enabled count; warnings update accordingly                                                                          |
+| 15.11 | Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses | Warnings for that feature clear                                                                                                                                    |
+| 15.12 | Editor lint integration       | With warnings active, hover over a yellow gutter marker             | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")                                                                |
+| 15.13 | Level persistence             | Select "GitHub", close app, reopen                                  | Level is still "GitHub"                                                                                                                                            |
+| 15.14 | Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features     | Warnings appear after ~200ms debounce, not on every keystroke                                                                                                      |
 
 ---
 
@@ -552,16 +553,16 @@ in the status bar.
 
 ## 19. Status Bar
 
-| #    | Test                        | Steps                           | Expected                                          |
-| ---- | --------------------------- | ------------------------------- | ------------------------------------------------- |
-| 19.1 | File name display           | Open a file / no file open      | Shows file name / "Untitled"                      |
-| 19.2 | Cursor position             | Click at various positions      | Shows `Line X, Col Y`                             |
-| 19.3 | Word count                  | Type content / clear all        | Updates; `0 words` when empty                     |
-| 19.4 | Document type & encoding    | Always visible                  | Shows "Markdown" / "UTF-8"                        |
-| 19.5 | Level selector              | Check status bar right side     | Shows current level (e.g. "Advanced")             |
-| 19.6 | Violation badge             | Open file with violations       | ⚠ badge with count appears next to level selector |
-| 19.7 | External modification icon  | Externally modify loaded file   | ⚠ icon on filename with tooltip "Externally modified" |
-| 19.8 | Read-only icon              | Open a read-only file           | 🔒 icon on filename with tooltip "Read-only"      |
+| #    | Test                       | Steps                         | Expected                                              |
+| ---- | -------------------------- | ----------------------------- | ----------------------------------------------------- |
+| 19.1 | File name display          | Open a file / no file open    | Shows file name / "Untitled"                          |
+| 19.2 | Cursor position            | Click at various positions    | Shows `Line X, Col Y`                                 |
+| 19.3 | Word count                 | Type content / clear all      | Updates; `0 words` when empty                         |
+| 19.4 | Document type & encoding   | Always visible                | Shows "Markdown" / "UTF-8"                            |
+| 19.5 | Level selector             | Check status bar right side   | Shows current level (e.g. "Advanced")                 |
+| 19.6 | Violation badge            | Open file with violations     | ⚠ badge with count appears next to level selector     |
+| 19.7 | External modification icon | Externally modify loaded file | ⚠ icon on filename with tooltip "Externally modified" |
+| 19.8 | Read-only icon             | Open a read-only file         | 🔒 icon on filename with tooltip "Read-only"          |
 
 ---
 
@@ -586,13 +587,13 @@ in the status bar.
 
 ## 21. Quit Behavior
 
-| #    | Test                       | Steps                                        | Expected                                                               |
-| ---- | -------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
-| 21.1 | Quit with no changes       | Close window / `Ctrl+Q` / palette "Quit"     | App closes immediately; prompt does not appear                         |
+| #    | Test                       | Steps                                        | Expected                                                                                                                                     |
+| ---- | -------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 21.1 | Quit with no changes       | Close window / `Ctrl+Q` / palette "Quit"     | App closes immediately; prompt does not appear                                                                                               |
 | 21.2 | Quit with unsaved changes  | Edit content, then quit via any of the three | Dialog: `"You have unsaved changes. Close the application and discard your changes?"` with Cancel / Yes, And Discard My Changes / Save First |
-| 21.3 | Quit — Cancel              | Click Cancel in dialog                       | Window stays open                                                      |
-| 21.4 | Quit — Discard             | Click Yes, And Discard My Changes            | App closes, changes lost                                               |
-| 21.5 | Quit — Save (untitled)     | Click Save First (no file name)              | Save As dialog appears; on save app closes                             |
-| 21.6 | Quit — Save (named)        | Click Save First                             | File saved, app closes                                                 |
-| 21.7 | Quit — Save cancelled      | Click Save First, then cancel Save As        | Window stays open (save didn't complete)                               |
-| 21.8 | Window state saved on quit | Resize window, quit, reopen                  | Position and size restored (persisted at exit via `save_window_state`) |
+| 21.3 | Quit — Cancel              | Click Cancel in dialog                       | Window stays open                                                                                                                            |
+| 21.4 | Quit — Discard             | Click Yes, And Discard My Changes            | App closes, changes lost                                                                                                                     |
+| 21.5 | Quit — Save (untitled)     | Click Save First (no file name)              | Save As dialog appears; on save app closes                                                                                                   |
+| 21.6 | Quit — Save (named)        | Click Save First                             | File saved, app closes                                                                                                                       |
+| 21.7 | Quit — Save cancelled      | Click Save First, then cancel Save As        | Window stays open (save didn't complete)                                                                                                     |
+| 21.8 | Window state saved on quit | Resize window, quit, reopen                  | Position and size restored (persisted at exit via `save_window_state`)                                                                       |

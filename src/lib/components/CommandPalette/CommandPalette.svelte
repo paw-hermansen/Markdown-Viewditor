@@ -65,10 +65,18 @@
   let filteredCommands = $derived.by(() => {
     if (!searchQuery.trim()) return commands;
     const query = searchQuery.toLowerCase();
-    return commands.filter(cmd =>
-      cmd.label.toLowerCase().includes(query) ||
-      cmd.category.toLowerCase().includes(query)
-    );
+    const labelMatches: Command[] = [];
+    const categoryMatches: Command[] = [];
+    for (const cmd of commands) {
+      const matchesLabel = cmd.label.toLowerCase().includes(query);
+      const matchesCategory = cmd.category.toLowerCase().includes(query);
+      if (matchesLabel) {
+        labelMatches.push(cmd);
+      } else if (matchesCategory) {
+        categoryMatches.push(cmd);
+      }
+    }
+    return [...labelMatches, ...categoryMatches];
   });
 
   $effect(() => {

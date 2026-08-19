@@ -22,7 +22,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 10 toggles from plans 1, 2, and mhchem", () => {
+  it("registers the 11 toggles from plans 1, 2, mhchem, and highlight", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -32,6 +32,7 @@ describe("markdown-levels registry & presets", () => {
       "footnotes",
       "raw-html",
       "frontmatter",
+      "highlight",
       "math-dollar",
       "math-latex",
       "chemical-formulas",
@@ -56,7 +57,7 @@ describe("markdown-levels registry & presets", () => {
     );
   });
 
-  it("advanced preset enables all 10 toggles", () => {
+  it("advanced preset enables all 11 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -69,6 +70,7 @@ describe("markdown-levels registry & presets", () => {
         "math-dollar",
         "math-latex",
         "chemical-formulas",
+        "highlight",
       ].sort(),
     );
   });
@@ -180,6 +182,13 @@ describe("markdown-levels detection", () => {
       "---\nname: skill\ndescription: A skill.\n---\n\n# Body",
     );
     const t = used.find((u) => u.id === "frontmatter");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([1]);
+  });
+
+  it("detects highlight ==text==", async () => {
+    const used = await analyzeContent("this is ==highlighted== text");
+    const t = used.find((u) => u.id === "highlight");
     expect(t).toBeDefined();
     expect(t!.lines).toEqual([1]);
   });

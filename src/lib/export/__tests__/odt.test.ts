@@ -58,12 +58,21 @@ import MarkdownIt from "markdown-it";
 import footnote from "markdown-it-footnote";
 import taskLists from "markdown-it-task-lists";
 import vscodeKatex from "@vscode/markdown-it-katex";
+import mark from "markdown-it-mark";
 import mathBracketsPlugin from "$lib/utils/math-brackets";
 import { odtExporter } from "../exporters/odt";
 import type { ExportContext } from "../types";
 
 function makeTokens(src: string) {
   const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
+  return md.parse(src, {});
+}
+
+function makeMarkTokens(src: string) {
+  const md = new MarkdownIt({ html: true })
+    .use(footnote)
+    .use(taskLists)
+    .use(mark);
   return md.parse(src, {});
 }
 
@@ -88,6 +97,28 @@ async function runOdtExport(
 ) {
   const tokens = makeTokens(src);
   const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
+  const html = md.render(src);
+  const ctx: ExportContext = {
+    markdown: src,
+    html,
+    frontmatter: null,
+    fileName,
+    tokens,
+    options,
+  };
+  return odtExporter.export(ctx);
+}
+
+async function runOdtExportWithMark(
+  src: string,
+  fileName = "test",
+  options?: Record<string, unknown>,
+) {
+  const tokens = makeMarkTokens(src);
+  const md = new MarkdownIt({ html: true })
+    .use(footnote)
+    .use(taskLists)
+    .use(mark);
   const html = md.render(src);
   const ctx: ExportContext = {
     markdown: src,
@@ -136,6 +167,21 @@ async function getContentXml(
   vi.mocked(save).mockResolvedValue("/tmp/test.odt");
   vi.mocked(invoke).mockResolvedValue(undefined);
   await runOdtExport(src, "test", options);
+  const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+  const buffer = new Uint8Array(content.content);
+  const zip = await JSZip.loadAsync(buffer);
+  return zip.file("content.xml")!.async("text");
+}
+
+async function getContentXmlWithMark(
+  src: string,
+  options?: Record<string, unknown>,
+): Promise<string> {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const { invoke } = await import("@tauri-apps/api/core");
+  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+  vi.mocked(invoke).mockResolvedValue(undefined);
+  await runOdtExportWithMark(src, "test", options);
   const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
   const buffer = new Uint8Array(content.content);
   const zip = await JSZip.loadAsync(buffer);
@@ -336,6 +382,24 @@ describe("odtExporter", () => {
     const xml = await getContentXml("use `console.log`");
     expect(xml).toContain('text:style-name="T4"');
     expect(xml).toContain("console.log");
+  });
+
+  it("raw HTML <mark> uses T_mark highlight style", async () => {
+    const xml = await getContentXml("this is <mark>highlighted</mark> text");
+    expect(xml).toContain('text:style-name="T_mark"');
+    expect(xml).toContain("highlighted");
+  });
+
+  it("==highlight== syntax uses T_mark highlight style", async () => {
+    const xml = await getContentXmlWithMark("this is ==highlighted== text");
+    expect(xml).toContain('text:style-name="T_mark"');
+    expect(xml).toContain("highlighted");
+  });
+
+  it("T_mark style is defined in styles.xml", async () => {
+    const xml = await getStylesXml("hello");
+    expect(xml).toContain('style:name="T_mark"');
+    expect(xml).toContain("#fff8c5");
   });
 
   it("bullet list uses BulletList style", async () => {

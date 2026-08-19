@@ -268,4 +268,16 @@ registerFeatureDetectors(
       return [];
     },
   },
+  {
+    id: "highlight",
+    label: "Highlight `==x==`",
+    presets: { advanced: true },
+    detect(tokens) {
+      const lines: number[] = [];
+      for (const { child, line } of inlineChildren(tokens)) {
+        if (child.type === "mark_open") lines.push(line);
+      }
+      return lines;
+    },
+  },
 );

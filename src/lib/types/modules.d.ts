@@ -10,6 +10,12 @@ declare module "markdown-it-footnote" {
   export default footnote;
 }
 
+declare module "markdown-it-mark" {
+  import type MarkdownIt from "markdown-it";
+  const mark: MarkdownIt.PluginSimple;
+  export default mark;
+}
+
 declare module "*?raw" {
   const content: string;
   export default content;

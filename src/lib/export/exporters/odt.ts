@@ -919,6 +919,7 @@ ${Array.from({ length: 9 }, (_, i) => {
     <style:style style:name="T_link" style:family="text"><style:text-properties fo:color="#0969da" style:text-underline-type="solid" style:text-underline-style="solid"/></style:style>
     <style:style style:name="T4" style:family="text"><style:text-properties fo:font-family="monospace" style:font-family-generic="modern" fo:background-color="#f6f8fa"/></style:style>
     <style:style style:name="T_kbd" style:family="text"><style:text-properties fo:font-family="monospace" style:font-family-generic="modern" fo:background-color="#f0f0f0" fo:padding="0.02in 0.04in" fo:border="0.5pt solid #ccc"/></style:style>
+    <style:style style:name="T_mark" style:family="text"><style:text-properties fo:background-color="#fff8c5"/></style:style>
     <style:style style:name="T_fm_accent" style:family="text"><style:text-properties fo:color="#0969da" fo:font-weight="bold" fo:font-size="7pt"/></style:style>
     <style:style style:name="T_fm_name" style:family="text"><style:text-properties fo:font-size="14pt" fo:font-weight="bold"/></style:style>
   </office:styles>
@@ -1052,6 +1053,7 @@ async function buildDocument(
   let linkHref: string | null = null;
   let subActive = false;
   let superActive = false;
+  let markActive = false;
 
   // ── context stack ──
   type ContextType =
@@ -1278,11 +1280,13 @@ async function buildDocument(
             xml += `<text:a xlink:type="simple" xlink:href="${esc(linkHref)}"><text:span text:style-name="T_link">${esc(child.content)}</text:span></text:a>`;
           } else {
             const styleName = currentTextStyle();
-            if (styleName) {
-              xml += wrapSpan(child.content, styleName);
-            } else {
-              xml += esc(child.content);
+            let inner = styleName
+              ? wrapSpan(child.content, styleName)
+              : esc(child.content);
+            if (markActive) {
+              inner = `<text:span text:style-name="T_mark">${inner}</text:span>`;
             }
+            xml += inner;
           }
           break;
         }
@@ -1312,6 +1316,12 @@ async function buildDocument(
           break;
         case "s_close":
           strikeActive = false;
+          break;
+        case "mark_open":
+          markActive = true;
+          break;
+        case "mark_close":
+          markActive = false;
           break;
         case "link_open":
           linkHref = child.attrGet("href") ?? "";
@@ -1512,6 +1522,10 @@ async function buildDocument(
             italicActive = true;
           } else if (lower === "</i>" || lower === "</em>") {
             italicActive = false;
+          } else if (lower === "<mark>") {
+            markActive = true;
+          } else if (lower === "</mark>") {
+            markActive = false;
           } else if (lower.startsWith("<kbd")) {
             xml += '<text:span text:style-name="T_kbd">';
           } else if (lower === "</kbd>") {

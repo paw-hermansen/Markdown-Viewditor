@@ -1032,6 +1032,12 @@ async function buildDocument(
   const mathObjects: MathObject[] = [];
   let mathCounter = 0;
   const footnoteBodies = new Map<string, string>();
+  const drawNameCount = new Map<string, number>();
+  function uniqueDrawName(base: string): string {
+    const count = drawNameCount.get(base) ?? 0;
+    drawNameCount.set(base, count + 1);
+    return count === 0 ? base : `${base}_${count + 1}`;
+  }
 
   const rasterizeMath = !!options[OPTION_RASTERIZE_MATH];
   const rasterizeSvgFlag = !!options[OPTION_RASTERIZE_SVG];
@@ -1404,7 +1410,7 @@ async function buildDocument(
               sizeAttrs = ` svg:width="${(heightIn * ratio).toFixed(4)}in"${sizeAttrs}`;
             }
             const mimeAttr = img ? ` draw:mime-type="${esc(img.mime)}"` : "";
-            xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(alt || "image")}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
+            xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
           } else {
             xml += `[Image: ${esc(alt || src)}]`;
           }
@@ -1634,7 +1640,7 @@ async function buildDocument(
                 const mimeAttr = img
                   ? ` draw:mime-type="${esc(img.mime)}"`
                   : "";
-                xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(alt || "image")}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
+                xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
               } else {
                 xml += `[Image: ${esc(alt || src)}]`;
               }

@@ -1148,6 +1148,64 @@ After list`;
     expect(mathXml).not.toContain("<mphantom>");
     expect(mathXml).toContain("<mrow/>");
   });
+
+  it("deduplicates draw:name for images sharing the same alt text", async () => {
+    // Minimal valid 1x1 PNG data URI.
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB" +
+      "Nl7BcQAAAABJRU5ErkJggg==";
+    const src = `data:image/png;base64,${png}`;
+    const xml = await getContentXml(
+      `![photo](${src}) ![photo](${src}) ![photo](${src})`,
+    );
+    // First occurrence keeps the base name, subsequent ones get _2, _3.
+    expect(xml).toContain('draw:name="photo"');
+    expect(xml).toContain('draw:name="photo_2"');
+    expect(xml).toContain('draw:name="photo_3"');
+    // No bare duplicate should remain.
+    const matches = xml.match(/draw:name="photo"/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  it("deduplicates draw:name for HTML img tags with the same alt", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB" +
+      "Nl7BcQAAAABJRU5ErkJggg==";
+    const src = `data:image/png;base64,${png}`;
+    const xml = await getContentXml(
+      `<img src="${src}" alt="icon"/> <img src="${src}" alt="icon"/>`,
+    );
+    expect(xml).toContain('draw:name="icon"');
+    expect(xml).toContain('draw:name="icon_2"');
+    const matches = xml.match(/draw:name="icon"/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  it("uses distinct draw:name for images with different alt text", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB" +
+      "Nl7BcQAAAABJRU5ErkJggg==";
+    const src = `data:image/png;base64,${png}`;
+    const xml = await getContentXml(`![first](${src}) ![second](${src})`);
+    expect(xml).toContain('draw:name="first"');
+    expect(xml).toContain('draw:name="second"');
+    // Neither should have a suffix.
+    expect(xml).not.toContain('draw:name="first_2"');
+    expect(xml).not.toContain('draw:name="second_2"');
+  });
+
+  it("falls back to 'image' base name for empty alt text and deduplicates", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB" +
+      "Nl7BcQAAAABJRU5ErkJggg==";
+    const src = `data:image/png;base64,${png}`;
+    // Markdown images with empty alt: ![](src)
+    const xml = await getContentXml(`![](${src}) ![](${src})`);
+    expect(xml).toContain('draw:name="image"');
+    expect(xml).toContain('draw:name="image_2"');
+    const matches = xml.match(/draw:name="image"/g);
+    expect(matches).toHaveLength(1);
+  });
 });
 
 describe("ODT rasterization options", () => {

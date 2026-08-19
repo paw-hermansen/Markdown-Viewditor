@@ -8,6 +8,7 @@ import { load as yamlLoad } from "js-yaml";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { resolveLink } from "$lib/utils/path";
 import vscodeKatex from "@vscode/markdown-it-katex";
+import mark from "markdown-it-mark";
 
 import type { Frontmatter, RenderResult } from "$lib/types";
 import { analyzeTokens, type UsedFeature } from "$lib/utils/markdown-levels";
@@ -615,6 +616,7 @@ async function initMarkdownIt(): Promise<MarkdownIt> {
       .use(createLocalImagePlugin())
       .use(createLinkTooltipPlugin())
       .use(taskLists)
+      .use(mark)
       .use(highlightjs, { hljs, auto: true, ignoreIllegals: true })
       .use(vscodeKatex, {
         // Memoized katex keeps whole-document re-renders ~free for unchanged

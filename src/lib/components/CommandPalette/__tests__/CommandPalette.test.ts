@@ -59,11 +59,13 @@ describe("CommandPalette", () => {
     render(CommandPalette, { props: defaultProps });
     const input = screen.getByPlaceholderText("Type a command...");
     await fireEvent.input(input, { target: { value: "file" } });
-    const items = screen.getAllByRole("button").map(el => el.textContent);
-    const newFileIdx = items.findIndex(t => t?.includes("New File"));
-    const openFileIdx = items.findIndex(t => t?.includes("Open File"));
-    const saveIdx = items.findIndex(t => t?.includes("Save") && !t?.includes("Save As"));
-    const saveAsIdx = items.findIndex(t => t?.includes("Save As"));
+    const items = screen.getAllByRole("button").map((el) => el.textContent);
+    const newFileIdx = items.findIndex((t) => t?.includes("New File"));
+    const openFileIdx = items.findIndex((t) => t?.includes("Open File"));
+    const saveIdx = items.findIndex(
+      (t) => t?.includes("Save") && !t?.includes("Save As"),
+    );
+    const saveAsIdx = items.findIndex((t) => t?.includes("Save As"));
     // "New File" and "Open File" match on label → should come first
     // "Save" and "Save As" match only on category → should come after
     expect(newFileIdx).toBeLessThan(saveIdx);

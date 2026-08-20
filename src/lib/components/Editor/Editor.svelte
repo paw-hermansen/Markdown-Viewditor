@@ -19,7 +19,7 @@
     onContentChange?: (content: string) => void;
   }
 
-  let { content = $bindable(''), onContentChange }: Props = $props();
+  let { content = '', onContentChange }: Props = $props();
 
   let editorElement: HTMLDivElement;
   let editorView: EditorView | undefined;
@@ -137,7 +137,6 @@
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged && !isUpdatingFromProp) {
             const newContent = update.state.doc.toString();
-            content = newContent;
             updateContent(newContent);
             onContentChange?.(newContent);
           }

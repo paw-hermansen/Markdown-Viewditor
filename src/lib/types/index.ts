@@ -46,7 +46,6 @@ export interface EditorState {
   cursorLine: number;
   cursorCol: number;
   wordCount: number;
-  isModified: boolean;
 }
 
 export interface ViewerState {

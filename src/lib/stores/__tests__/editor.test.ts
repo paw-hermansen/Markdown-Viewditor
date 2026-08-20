@@ -60,14 +60,14 @@ describe("editor store", () => {
     it("should mark as modified when content differs from saved", () => {
       markSaved();
       updateContent("changed content");
-      expect(editorState.isModified).toBe(true);
+      expect(hasUnsavedChanges()).toBe(true);
     });
 
     it("should not be modified when content matches saved", () => {
       updateContent("same content");
       markSaved();
       updateContent("same content");
-      expect(editorState.isModified).toBe(false);
+      expect(hasUnsavedChanges()).toBe(false);
     });
   });
 
@@ -88,9 +88,9 @@ describe("editor store", () => {
   describe("markSaved", () => {
     it("should set isModified to false", () => {
       updateContent("changed");
-      expect(editorState.isModified).toBe(true);
+      expect(hasUnsavedChanges()).toBe(true);
       markSaved();
-      expect(editorState.isModified).toBe(false);
+      expect(hasUnsavedChanges()).toBe(false);
     });
 
     it("should save current content as baseline", () => {
@@ -139,7 +139,7 @@ describe("editor store", () => {
       expect(editorState.cursorLine).toBe(1);
       expect(editorState.cursorCol).toBe(1);
       expect(editorState.wordCount).toBe(0);
-      expect(editorState.isModified).toBe(false);
+      expect(hasUnsavedChanges()).toBe(false);
     });
 
     it("should reset saved content baseline", () => {

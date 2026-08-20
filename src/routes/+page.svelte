@@ -751,7 +751,7 @@
   onUpdateClick={handleAbout}
   updateAvailable={updateStatus.available}
   updateVersion={updateStatus.version}
-  isModified={editorState.isModified}
+  isModified={hasUnsavedChanges()}
   isLoading={fileState.isLoading}
   {fileName}
 >

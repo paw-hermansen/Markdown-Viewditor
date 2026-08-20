@@ -113,7 +113,6 @@ vi.mock("$lib/stores/editor.svelte", () => ({
     cursorLine: 1,
     cursorCol: 1,
     wordCount: 0,
-    isModified: false,
   },
   updateContent: vi.fn(),
   updateCursorPosition: vi.fn(),

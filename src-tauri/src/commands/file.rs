@@ -21,7 +21,11 @@ fn decode_bytes(bytes: Vec<u8>) -> Result<String, AppError> {
         None => &bytes,
     };
     match std::str::from_utf8(bytes) {
-        Ok(s) => Ok(s.to_string()),
+        // Normalize Windows-style line endings so the editor, store, and
+        // saved-content baseline all agree. CodeMirror already uses \n
+        // internally; doing it here avoids redundant full-document replacements
+        // and state drift when opening CRLF files.
+        Ok(s) => Ok(s.to_string().replace("\r\n", "\n")),
         Err(utf8_err) => {
             let _ = utf8_err;
             Ok(bytes.iter().map(|b| *b as char).collect())
@@ -287,6 +291,18 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result, "# No BOM");
+    }
+
+    #[tokio::test]
+    async fn read_file_normalizes_crlf_to_lf() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("crlf.md");
+        std::fs::write(&file_path, b"line1\r\nline2\r\n").unwrap();
+
+        let result = read_file(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert_eq!(result, "line1\nline2\n");
     }
 
     #[tokio::test]

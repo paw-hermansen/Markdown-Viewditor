@@ -10,7 +10,6 @@ const { mockEditorState, mockSettingsState, mockLevelState } = vi.hoisted(
       cursorLine: 5,
       cursorCol: 12,
       wordCount: 42,
-      isModified: false,
     },
     mockSettingsState: {
       viewMode: "split" as const,
@@ -116,7 +115,6 @@ vi.mock("$lib/utils/markdown-levels", () => ({
 
 describe("StatusBar", () => {
   beforeEach(() => {
-    mockEditorState.isModified = false;
     mockSettingsState.markdownLevel = "advanced";
     mockSettingsState.enabledFeatures = [
       "tables",

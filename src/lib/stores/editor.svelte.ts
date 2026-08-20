@@ -5,14 +5,12 @@ export const editorState = $state<EditorState>({
   cursorLine: 1,
   cursorCol: 1,
   wordCount: 6,
-  isModified: false,
 });
 
-let savedContent = editorState.content;
+let savedContent = $state(editorState.content);
 
 export function updateContent(newContent: string) {
   editorState.content = newContent;
-  editorState.isModified = newContent !== savedContent;
   updateWordCount(newContent);
 }
 
@@ -32,7 +30,6 @@ export function updateWordCount(content: string) {
 
 export function markSaved() {
   savedContent = editorState.content;
-  editorState.isModified = false;
 }
 
 export function hasUnsavedChanges(): boolean {
@@ -44,6 +41,5 @@ export function resetEditor() {
   editorState.cursorLine = 1;
   editorState.cursorCol = 1;
   editorState.wordCount = 0;
-  editorState.isModified = false;
   savedContent = "";
 }

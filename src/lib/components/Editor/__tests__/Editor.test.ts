@@ -2,6 +2,7 @@
 import { render } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setDiagnostics } from "@codemirror/lint";
+import { updateContent } from "$lib/stores/editor.svelte";
 import Editor from "../Editor.svelte";
 const {
   mockEditorState,
@@ -15,7 +16,6 @@ const {
     cursorLine: 1,
     cursorCol: 1,
     wordCount: 0,
-    isModified: false,
   },
   mockSettingsState: {
     editorLineNumbers: true,
@@ -98,6 +98,27 @@ describe("Editor", () => {
       props: { content: "# Test", onContentChange },
     });
     expect(component).toBeDefined();
+  });
+
+  it("updates CodeMirror content via setContent", () => {
+    const { component } = render(Editor, { props: { content: "# First" } });
+    const editorView = component.getEditorView();
+    expect(editorView?.state.doc.toString()).toBe("# First");
+
+    component.setContent("# Second");
+    expect(editorView?.state.doc.toString()).toBe("# Second");
+  });
+
+  it("notifies the store on user edits", async () => {
+    const { component } = render(Editor, { props: { content: "" } });
+    const editorView = component.getEditorView()!;
+
+    editorView.dispatch({
+      changes: { from: 0, to: 0, insert: "Hello" },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(updateContent).toHaveBeenCalledWith("Hello");
   });
 
   it("mounts cleanly with the levelLinter extension attached", () => {

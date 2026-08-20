@@ -1,6 +1,5 @@
 <script lang="ts">
   import { editorState } from '$lib/stores/editor.svelte';
-  import { fileState, getFileName } from '$lib/stores/file.svelte';
   import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import {
@@ -12,7 +11,6 @@
     type UsedFeature
   } from '$lib/utils/markdown-levels';
 
-  let fileName = $derived(fileState.currentFile ? getFileName(fileState.currentFile) : 'Untitled');
   let showEditorInfo = $derived(settingsState.viewMode === 'split' || settingsState.viewMode === 'editor');
 
   const LEVELS: MarkdownLevel[] = ['basic', 'github', 'advanced', 'custom'];
@@ -91,13 +89,7 @@
 <svelte:window onclick={closePopovers} />
 
 <footer class="statusbar">
-  <div class="statusbar-left">
-    <span class="file-name" title={fileState.currentFile || 'Untitled'}>
-      {fileName}
-      {#if fileState.isReadOnly}{'\u{1F512}'}{/if}
-      {#if editorState.isModified}*{/if}
-    </span>
-  </div>
+  <div class="statusbar-left"></div>
   <div class="statusbar-center">
     {#if showEditorInfo}
       <span>Line {editorState.cursorLine}, Col {editorState.cursorCol}</span>
@@ -181,8 +173,8 @@
 
 <style>
   .statusbar {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     padding: 4px 16px;
     background: var(--bg-secondary);
@@ -201,11 +193,8 @@
     gap: 8px;
   }
 
-  .file-name {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .statusbar-right {
+    justify-content: flex-end;
   }
 
   .separator {

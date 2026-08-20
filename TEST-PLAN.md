@@ -136,7 +136,7 @@ Use these files from `examples/`:
 
 | #    | Test                           | Steps                                                                        | Expected                                                                                                                                                                          |
 | ---- | ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7.1  | Open file                      | Click Open, select `examples/Simple.md`                                      | Content loads into editor, viewer renders it; filename shown in toolbar and status bar                                                                                            |
+| 7.1  | Open file                      | Click Open, select `examples/Simple.md`                                      | Content loads into editor, viewer renders it; filename shown in toolbar                                                                                                           |
 | 7.2  | Open dialog filters            | Open dialog                                                                  | Shows "Markdown" and "All Files" filters                                                                                                                                          |
 | 7.3  | Cancel open / save-as dialog   | Open any dialog, click Cancel                                                | No change to current content                                                                                                                                                      |
 | 7.4  | Save new (untitled) file       | With "Untitled" file, click Save                                             | Save-as dialog appears                                                                                                                                                            |
@@ -155,7 +155,7 @@ Use these files from `examples/`:
 | 7.17 | Reload from disk               | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk; toast `"The file is already up to date."` if unchanged                                                                                                 |
 | 7.18 | Reload unchanged file          | Open `examples/Simple.md`, no edits in app, click Reload                     | Toast: `"The file is already up to date."`                                                                                                                                        |
 | 7.19 | Reload deleted file            | Open a temp file, delete it externally, click Reload                         | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                               |
-| 7.20 | File name display              | Open `examples/Simple.md`                                                    | "Simple.md" shown in toolbar and status bar                                                                                                                                       |
+| 7.20 | File name display              | Open `examples/Simple.md`                                                    | "Simple.md" shown in toolbar                                                                                                                                                      |
 | 7.21 | Modified indicator             | Edit content                                                                 | `*` appears after filename in toolbar; dot appears on Save button                                                                                                                 |
 | 7.22 | Read-only indicator            | Open a read-only file (`chmod 444`)                                          | 🔒 icon appears next to filename in toolbar with tooltip "Read-only"                                                                                                              |
 | 7.23 | Save read-only file            | Open a read-only file, edit, click Save                                      | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
@@ -578,16 +578,13 @@ in the status bar.
 
 ## 19. Status Bar
 
-| #    | Test                       | Steps                         | Expected                                              |
-| ---- | -------------------------- | ----------------------------- | ----------------------------------------------------- |
-| 19.1 | File name display          | Open a file / no file open    | Shows file name / "Untitled"                          |
-| 19.2 | Cursor position            | Click at various positions    | Shows `Line X, Col Y`                                 |
-| 19.3 | Word count                 | Type content / clear all      | Updates; `0 words` when empty                         |
-| 19.4 | Document type & encoding   | Always visible                | Shows "Markdown" / "UTF-8"                            |
-| 19.5 | Level selector             | Check status bar right side   | Shows current level (e.g. "Advanced")                 |
-| 19.6 | Violation badge            | Open file with violations     | ⚠ badge with count appears next to level selector     |
-| 19.7 | External modification icon | Externally modify loaded file | ⚠ icon on filename with tooltip "Externally modified" |
-| 19.8 | Read-only icon             | Open a read-only file         | 🔒 icon on filename with tooltip "Read-only"          |
+| #    | Test                     | Steps                       | Expected                                          |
+| ---- | ------------------------ | --------------------------- | ------------------------------------------------- |
+| 19.1 | Cursor position          | Click at various positions  | Shows `Line X, Col Y`                             |
+| 19.2 | Word count               | Type content / clear all    | Updates; `0 words` when empty                     |
+| 19.3 | Document type & encoding | Always visible              | Shows "Markdown" / "UTF-8"                        |
+| 19.4 | Level selector           | Check status bar right side | Shows current level (e.g. "Advanced")             |
+| 19.5 | Violation badge          | Open file with violations   | ⚠ badge with count appears next to level selector |
 
 ---
 

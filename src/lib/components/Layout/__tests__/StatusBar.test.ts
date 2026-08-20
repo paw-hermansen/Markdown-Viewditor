@@ -3,20 +3,14 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import StatusBar from "../StatusBar.svelte";
 
-const { mockEditorState, mockFileState, mockSettingsState, mockLevelState } =
-  vi.hoisted(() => ({
+const { mockEditorState, mockSettingsState, mockLevelState } = vi.hoisted(
+  () => ({
     mockEditorState: {
       content: "test content",
       cursorLine: 5,
       cursorCol: 12,
       wordCount: 42,
       isModified: false,
-    },
-    mockFileState: {
-      currentFile: "/home/user/document.md" as string | null,
-      recentFiles: [] as string[],
-      isLoading: false,
-      error: null as string | null,
     },
     mockSettingsState: {
       viewMode: "split" as const,
@@ -39,18 +33,11 @@ const { mockEditorState, mockFileState, mockSettingsState, mockLevelState } =
         lines: number[];
       }>,
     },
-  }));
+  }),
+);
 
 vi.mock("$lib/stores/editor.svelte", () => ({
   editorState: mockEditorState,
-}));
-
-vi.mock("$lib/stores/file.svelte", () => ({
-  fileState: mockFileState,
-  getFileName: vi.fn((path: string) => {
-    const parts = path.split("/");
-    return parts[parts.length - 1];
-  }),
 }));
 
 vi.mock("$lib/stores/settings.svelte", () => ({
@@ -129,7 +116,6 @@ vi.mock("$lib/utils/markdown-levels", () => ({
 
 describe("StatusBar", () => {
   beforeEach(() => {
-    mockFileState.currentFile = "/home/user/document.md";
     mockEditorState.isModified = false;
     mockSettingsState.markdownLevel = "advanced";
     mockSettingsState.enabledFeatures = [
@@ -142,18 +128,6 @@ describe("StatusBar", () => {
       "frontmatter",
     ];
     mockLevelState.violations = [];
-  });
-
-  it("displays the filename from currentFile", () => {
-    render(StatusBar);
-    expect(screen.getByText("document.md")).toBeInTheDocument();
-  });
-
-  it("displays 'Untitled' when no file is open", () => {
-    mockFileState.currentFile = null;
-    render(StatusBar);
-    expect(screen.getByText("Untitled")).toBeInTheDocument();
-    mockFileState.currentFile = "/home/user/document.md";
   });
 
   it("displays cursor position", () => {
@@ -170,16 +144,6 @@ describe("StatusBar", () => {
     render(StatusBar);
     expect(screen.getByText("Markdown")).toBeInTheDocument();
     expect(screen.getByText("UTF-8")).toBeInTheDocument();
-  });
-
-  it("shows modified indicator when isModified is true", () => {
-    mockEditorState.isModified = true;
-    render(StatusBar);
-    const fileNameSpan = screen.getByText((_, element) => {
-      return element?.classList.contains("file-name") === true;
-    });
-    expect(fileNameSpan.textContent).toContain("*");
-    mockEditorState.isModified = false;
   });
 
   it("renders a level dropdown button showing the current level label", () => {

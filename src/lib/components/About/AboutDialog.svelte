@@ -209,12 +209,11 @@
           </section>
 
           <section>
-            <h2>AI-Assisted Development</h2>
+            <h2>AI-Augmented Development</h2>
             <p>
-              This application was built with the help of
+              This application was built by a human Senior Software Developer with the help of
               <button class="link" data-href="https://opencode.ai" onclick={() => handleLink('https://opencode.ai')}>OpenCode</button>,
-              an AI-powered coding assistant. Development used multiple AI models and
-              specialized skill files for among others frontend design, documentation, and theme creation.
+              an AI-powered coding assistant. Development used multiple AI models and specialized skill files.
             </p>
           </section>
 

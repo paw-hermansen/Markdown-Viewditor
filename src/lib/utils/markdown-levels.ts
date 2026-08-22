@@ -139,14 +139,20 @@ function hasAttrClass(token: Token, name: string): boolean {
   return false;
 }
 
-/** Iterate inline token children, yielding the enclosing block's start line. */
+/** Iterate inline token children, yielding the precise line number. */
 function* inlineChildren(
   tokens: Token[],
 ): Iterable<{ child: Token; line: number }> {
   for (const t of tokens) {
     if (t.type === "inline" && t.map && t.children) {
-      const line = t.map[0] + 1;
-      for (const c of t.children) yield { child: c, line };
+      let line = t.map[0] + 1;
+      for (const c of t.children) {
+        if (c.type === "softbreak" || c.type === "hardbreak") {
+          line++;
+        } else {
+          yield { child: c, line };
+        }
+      }
     }
   }
 }

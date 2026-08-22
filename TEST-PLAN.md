@@ -137,9 +137,9 @@ editor and rendered output in the viewer.
 
 ### 6.3 View Shortcuts
 
-| #    | Test            | Shortcut       | Expected                               |
-| ---- | --------------- | -------------- | -------------------------------------- |
-| 6.21 | Cycle view mode   | `Ctrl+Shift+V` | Cycles editor → split → viewer → editor   |
+| #    | Test            | Shortcut       | Expected                                |
+| ---- | --------------- | -------------- | --------------------------------------- |
+| 6.21 | Cycle view mode | `Ctrl+Shift+V` | Cycles editor → split → viewer → editor |
 
 ---
 

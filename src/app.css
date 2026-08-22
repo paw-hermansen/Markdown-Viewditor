@@ -20,6 +20,7 @@
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: monospace;
   --viewer-bg: var(--bg-primary);
+  --toolbar-highlight: #b8860b;
 }
 
 [data-theme="light"] {
@@ -33,6 +34,7 @@
   --accent: #e94560;
   --accent-snap: #16a34a;
   --border: #e5e7eb;
+  --toolbar-highlight: #fde68a;
 }
 
 * {

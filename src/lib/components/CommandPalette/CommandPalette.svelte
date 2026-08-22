@@ -20,6 +20,7 @@
     onSaveAs: () => void;
     onReload: () => void;
     onQuit: () => void;
+    viewMode: ViewMode;
     onViewModeChange: (mode: ViewMode) => void;
     onAbout: () => void;
     onPrint?: () => void;
@@ -27,7 +28,7 @@
     printLabel?: string;
   }
 
-  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, onViewModeChange, onAbout, onPrint, onExport, printLabel = 'Print Preview' }: Props = $props();
+  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, viewMode, onViewModeChange, onAbout, onPrint, onExport, printLabel = 'Print Preview' }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
@@ -55,9 +56,10 @@
     { id: 'reload', label: 'Reload from Disk', shortcut: modLabel('Ctrl+R'), category: 'File', action: onReload },
     { id: 'quit', label: 'Quit', shortcut: modLabel('Ctrl+Q'), category: 'File', action: onQuit },
     ...exportCommands,
-    { id: 'view-split', label: 'Split View', category: 'View', action: () => onViewModeChange('split') },
-    { id: 'view-editor', label: 'Editor Only', category: 'View', action: () => onViewModeChange('editor') },
-    { id: 'view-viewer', label: 'Viewer Only', category: 'View', action: () => onViewModeChange('viewer') },
+    { id: 'view-cycle', label: 'Cycle View Mode', shortcut: modLabel('Ctrl+Shift+V'), category: 'View', action: () => {
+      const next: ViewMode = viewMode === 'editor' ? 'split' : viewMode === 'split' ? 'viewer' : 'editor';
+      onViewModeChange(next);
+    }},
     ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: modLabel('Ctrl+P'), category: 'File', action: onPrint }] : []),
     { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
   ]);

@@ -13,6 +13,7 @@ describe("CommandPalette", () => {
     onSaveAs: vi.fn(),
     onReload: vi.fn(),
     onQuit: vi.fn(),
+    viewMode: "split" as const,
     onViewModeChange: vi.fn(),
     onAbout: vi.fn(),
   };
@@ -115,10 +116,8 @@ describe("CommandPalette", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("shows view mode commands", () => {
+  it("shows cycle view mode command", () => {
     render(CommandPalette, { props: defaultProps });
-    expect(screen.getByText("Split View")).toBeInTheDocument();
-    expect(screen.getByText("Editor Only")).toBeInTheDocument();
-    expect(screen.getByText("Viewer Only")).toBeInTheDocument();
+    expect(screen.getByText("Cycle View Mode")).toBeInTheDocument();
   });
 });

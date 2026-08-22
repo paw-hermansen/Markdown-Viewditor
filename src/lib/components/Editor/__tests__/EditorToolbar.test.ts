@@ -4,10 +4,10 @@ import { describe, it, expect, vi } from "vitest";
 import EditorToolbar from "../EditorToolbar.svelte";
 
 describe("EditorToolbar", () => {
-  it("renders all 12 format buttons", () => {
+  it("renders all 13 format buttons", () => {
     render(EditorToolbar, { props: { onFormat: vi.fn() } });
     const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(12);
+    expect(buttons).toHaveLength(13);
   });
 
   it("calls onFormat with correct format id on click", async () => {
@@ -34,15 +34,16 @@ describe("EditorToolbar", () => {
     const expectedFormats = [
       { title: "Bold (Ctrl+B)", id: "bold" },
       { title: "Italic (Ctrl+I)", id: "italic" },
-      { title: "Heading", id: "heading" },
+      { title: "Strikethrough (Ctrl+Shift+X)", id: "strikethrough" },
+      { title: "Highlight (Ctrl+Shift+M)", id: "highlight" },
+      { title: "Heading (Ctrl+Shift+H)", id: "heading" },
       { title: "Link (Ctrl+K)", id: "link" },
-      { title: "Image", id: "image" },
-      { title: "Inline Code", id: "code" },
-      { title: "Code Block", id: "codeblock" },
-      { title: "Bullet List", id: "bullet" },
-      { title: "Numbered List", id: "numbered" },
+      { title: "Image (Ctrl+Shift+I)", id: "image" },
+      { title: "Code (Ctrl+E, toggles)", id: "code" },
+      { title: "Bullet List (Ctrl+Shift+8)", id: "bullet" },
+      { title: "Numbered List (Ctrl+Shift+7)", id: "numbered" },
       { title: "Task List", id: "task" },
-      { title: "Blockquote", id: "quote" },
+      { title: "Blockquote (Ctrl+Shift+Q)", id: "quote" },
       { title: "Horizontal Rule", id: "hr" },
     ];
 
@@ -70,15 +71,20 @@ describe("EditorToolbar", () => {
 
     expect(screen.getByTitle("Bold (Ctrl+B)")).toBeInTheDocument();
     expect(screen.getByTitle("Italic (Ctrl+I)")).toBeInTheDocument();
-    expect(screen.getByTitle("Heading")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Strikethrough (Ctrl+Shift+X)"),
+    ).toBeInTheDocument();
+    expect(screen.getByTitle("Highlight (Ctrl+Shift+M)")).toBeInTheDocument();
+    expect(screen.getByTitle("Heading (Ctrl+Shift+H)")).toBeInTheDocument();
     expect(screen.getByTitle("Link (Ctrl+K)")).toBeInTheDocument();
-    expect(screen.getByTitle("Image")).toBeInTheDocument();
-    expect(screen.getByTitle("Inline Code")).toBeInTheDocument();
-    expect(screen.getByTitle("Code Block")).toBeInTheDocument();
-    expect(screen.getByTitle("Bullet List")).toBeInTheDocument();
-    expect(screen.getByTitle("Numbered List")).toBeInTheDocument();
+    expect(screen.getByTitle("Image (Ctrl+Shift+I)")).toBeInTheDocument();
+    expect(screen.getByTitle("Code (Ctrl+E, toggles)")).toBeInTheDocument();
+    expect(screen.getByTitle("Bullet List (Ctrl+Shift+8)")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Numbered List (Ctrl+Shift+7)"),
+    ).toBeInTheDocument();
     expect(screen.getByTitle("Task List")).toBeInTheDocument();
-    expect(screen.getByTitle("Blockquote")).toBeInTheDocument();
+    expect(screen.getByTitle("Blockquote (Ctrl+Shift+Q)")).toBeInTheDocument();
     expect(screen.getByTitle("Horizontal Rule")).toBeInTheDocument();
   });
 });

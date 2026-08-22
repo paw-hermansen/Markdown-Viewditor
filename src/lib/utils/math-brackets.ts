@@ -446,9 +446,11 @@ registerFeatureDetectors(
       // attribute lines via the enclosing paragraph.
       for (const t of tokens) {
         if (t.type === "inline" && t.map && t.children) {
-          const line = t.map[0] + 1;
+          let line = t.map[0] + 1;
           for (const c of t.children) {
-            if (c.type === "math_inline" && c.markup === "$") {
+            if (c.type === "softbreak" || c.type === "hardbreak") {
+              line++;
+            } else if (c.type === "math_inline" && c.markup === "$") {
               lines.push(line);
             }
           }
@@ -483,9 +485,11 @@ registerFeatureDetectors(
       // `\(` inline math (lives inside inline token children).
       for (const t of tokens) {
         if (t.type === "inline" && t.map && t.children) {
-          const line = t.map[0] + 1;
+          let line = t.map[0] + 1;
           for (const c of t.children) {
-            if (c.type === "math_inline" && c.markup === "\\(") {
+            if (c.type === "softbreak" || c.type === "hardbreak") {
+              line++;
+            } else if (c.type === "math_inline" && c.markup === "\\(") {
               lines.push(line);
             }
           }
@@ -515,9 +519,11 @@ registerFeatureDetectors(
       }
       for (const t of tokens) {
         if (t.type === "inline" && t.map && t.children) {
-          const line = t.map[0] + 1;
+          let line = t.map[0] + 1;
           for (const c of t.children) {
-            if (c.type === "math_inline" && isChem(c.content)) {
+            if (c.type === "softbreak" || c.type === "hardbreak") {
+              line++;
+            } else if (c.type === "math_inline" && isChem(c.content)) {
               lines.push(line);
             }
           }

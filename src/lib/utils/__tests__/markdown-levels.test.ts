@@ -201,13 +201,32 @@ describe("markdown-levels detection", () => {
   });
 
   it("line numbers come from the enclosing block for inline features", async () => {
-    // Strikethrough on line 3 of a 5-line doc.
+    // Strikethrough on line 5 of a 5-line doc (single-line paragraph).
     const used = await analyzeContent(
       "Para one.\n\nPara two.\n\nA ~~strike~~ here.",
     );
     const t = used.find((u) => u.id === "strikethrough");
     expect(t).toBeDefined();
     expect(t!.lines).toEqual([5]);
+  });
+
+  it("line numbers track the exact line within multi-line paragraphs", async () => {
+    // Strikethrough on line 6 of a 7-line doc (paragraph spans lines 5-7).
+    const used = await analyzeContent(
+      "Para one.\n\nPara two.\n\nLine one.\nLine ~~two~~ here.\nLine three.",
+    );
+    const t = used.find((u) => u.id === "strikethrough");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([6]);
+  });
+
+  it("line numbers track highlight on the exact line", async () => {
+    const used = await analyzeContent(
+      "Line one.\nLine ==two== here.\nLine three.",
+    );
+    const t = used.find((u) => u.id === "highlight");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([2]);
   });
 
   it("returns all occurrence lines (no cap in the data model)", async () => {

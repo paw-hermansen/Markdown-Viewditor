@@ -20,17 +20,6 @@ This is a paragraph with **bold**, *italic*, ***bold-italic***, and ~~strikethro
 
 This is a second paragraph with `inline code` and a [link](https://example.com).
 
-- item1
-- item2
-
-1. item1
-2. item 2
-
-
-
-
-This is code and some text
-
 An autolink: https://example.com
 
 [Jump to table](#table)

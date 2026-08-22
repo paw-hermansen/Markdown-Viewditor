@@ -4,11 +4,11 @@ This file exercises **all** `.hljs-*` token classes emitted by the app's registe
 
 ## Text Formatting
 
-This is a regular paragraph with **bold text**, _italic text_, and
-`inline code`. You can also use _**bold italic**_ together. Here is
-a [link to highlight.js](https://highlightjs.org) and here is
-~~strikethrough~~ text and ==highlighted== text. 
-Also **wei*rd co~~mbi~~*~~na~~ti**ons work.
+This is a regular paragraph with **bold text**, _italic text_, and 
+`inline code`. You can also use _**bold italic**_ together. Here is 
+a [link to highlight.js](https://highlightjs.org) and here is 
+~~strikethrough~~ text and ==highlighted== text. Also
+**wei*rd co~~mbi~~*~~na~~ti**ons work.
 
 Here is a paragraph with a footnote reference[^1] and another[^2]. Footnotes appear at the bottom of the document.
 [^1]: This is the first footnote.

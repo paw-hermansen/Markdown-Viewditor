@@ -387,7 +387,6 @@ platform-specific — split tests below.
 | 13.32 | Toolbar labels                     | Inspect the viewer toolbar             | "Export as PDF (Print…)" dropdown item + separate "Print / PDF" button |
 | 13.33 | Print dialog opens                 | Click "Print / PDF" (or `Ctrl+P`)      | Native print dialog opens with styled content                          |
 | 13.34 | Save as PDF                        | In print dialog choose "Save as PDF"   | Vector PDF written, opens correctly                                    |
-| 13.35 | Paper = A4                         | Check print dialog defaults            | A4 preselected; printable area respects 10mm margins                   |
 | 13.36 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
 | 13.37 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
 | 13.38 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |

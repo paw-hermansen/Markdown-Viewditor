@@ -105,6 +105,13 @@ describe("rasterizeSvg (Linux path: invoke resvg)", () => {
     invokeMock.mockResolvedValue(PNG_BYTES);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).Image = makeImageCtor();
+    // Suppress the expected "resvg failed, trying WebView fallback"
+    // console.warn from tests that intentionally trigger the fallback.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("rejects invalid dimensions", async () => {

@@ -5,7 +5,7 @@
   import { oneDarkTheme, oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
   import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
   import { tags } from '@lezer/highlight';
-  import { EditorState, Compartment } from '@codemirror/state';
+  import { EditorState, Compartment, Prec } from '@codemirror/state';
   import { keymap, lineNumbers, type ViewUpdate } from '@codemirror/view';
   import { linter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
@@ -165,8 +165,68 @@
               insertLink();
               return true;
             }
+          },
+          {
+            key: 'Mod-Shift-x',
+            run: () => {
+              wrapSelection('~~', '~~');
+              return true;
+            }
+          },
+          {
+            key: 'Mod-Shift-m',
+            run: () => {
+              wrapSelection('==', '==');
+              return true;
+            }
+          },
+          {
+            key: 'Mod-Shift-h',
+            run: () => {
+              insertFormatting('heading');
+              return true;
+            }
+          },
+          {
+            key: 'Mod-Shift-i',
+            run: () => {
+              insertFormatting('image');
+              return true;
+            }
+          },
+          {
+            key: 'Mod-e',
+            run: () => {
+              toggleCode();
+              return true;
+            }
+          },
+          {
+            key: 'Mod-Shift-q',
+            run: () => {
+              insertFormatting('quote');
+              return true;
+            }
           }
         ]),
+        Prec.high(EditorView.domEventHandlers({
+          keydown: (e: KeyboardEvent) => {
+            const isMod = e.metaKey || e.ctrlKey;
+            if (!isMod || !e.shiftKey) return false;
+
+            if (e.code === 'Digit8') {
+              e.preventDefault();
+              insertFormatting('bullet');
+              return true;
+            }
+            if (e.code === 'Digit7') {
+              e.preventDefault();
+              insertFormatting('numbered');
+              return true;
+            }
+            return false;
+          }
+        })),
         EditorView.theme({
           '&': {
             height: '100%',
@@ -326,6 +386,94 @@
     editorView.focus();
   }
 
+  function toggleCode() {
+    if (!editorView) return;
+    const { from, to } = editorView.state.selection.main;
+    const selectedText = editorView.state.sliceDoc(from, to);
+    const doc = editorView.state.doc;
+
+    // Check if selection is wrapped in single backticks
+    const before1 = editorView.state.sliceDoc(from - 1, from);
+    const after1 = editorView.state.sliceDoc(to, to + 1);
+    if (before1 === '`' && after1 === '`' && selectedText.length > 0 && !selectedText.includes('\n')) {
+      // Inline code → code block
+      const line = doc.lineAt(from);
+      const isAtLineStart = from - 1 === line.from;
+      const prefix = isAtLineStart ? '' : '\n';
+      const isAtLineEnd = to + 1 === line.to;
+      const suffix = isAtLineEnd ? '' : '\n';
+      const charAfterBacktick = editorView.state.sliceDoc(to + 1, to + 2);
+      const consumeTrailingSpace = charAfterBacktick === ' ';
+      const replaceTo = consumeTrailingSpace ? to + 2 : to + 1;
+      const replacement = `${prefix}\`\`\`\n${selectedText}\n\`\`\`${suffix}`;
+      const cursorStart = from - 1 + prefix.length + 4;
+      editorView.dispatch({
+        changes: { from: from - 1, to: replaceTo, insert: replacement },
+        selection: { anchor: cursorStart, head: cursorStart + selectedText.length }
+      });
+      editorView.focus();
+      return;
+    }
+
+    // Check if inside a fenced code block (``` ... ```)
+    const textBefore = editorView.state.sliceDoc(Math.max(0, from - 100), from);
+    const textAfter = editorView.state.sliceDoc(to, Math.min(doc.length, to + 100));
+
+    const fenceOpenMatch = textBefore.match(/```\n([^\n]*)$/);
+    const fenceCloseMatch = textAfter.match(/^([^\n]*)\n```/);
+
+    if (fenceOpenMatch && fenceCloseMatch) {
+      // Inside a code block → inline code
+      // The text between the fences
+      const innerText = fenceOpenMatch[1] + selectedText + fenceCloseMatch[1];
+      // Find the positions of the fences
+      const openFenceStart = from - textBefore.length + textBefore.lastIndexOf('```');
+      const closeFenceEnd = to + textAfter.indexOf('```') + 3;
+
+      // Check if there's a newline before the opening ``` that we should remove.
+      // Only remove it when toggling back to inline code if it was added by the
+      // inline→block conversion (i.e., the line before the newline is not empty).
+      // Preserve the newline if the previous line is also empty (or at doc start)
+      // so toggling is symmetric and doesn't eat empty lines.
+      const beforeOpen = editorView.state.sliceDoc(Math.max(0, openFenceStart - 1), openFenceStart);
+      const hasLeadingNewline = beforeOpen === '\n';
+      const prevChar = openFenceStart >= 2
+        ? editorView.state.sliceDoc(openFenceStart - 2, openFenceStart - 1)
+        : '';
+      const prevLineIsEmpty = prevChar === '\n' || prevChar === '' && openFenceStart <= 1;
+      const shouldRemoveLeadingNewline = hasLeadingNewline && !prevLineIsEmpty;
+
+      // Symmetric check for trailing newline after the closing ```
+      const afterClose = editorView.state.sliceDoc(closeFenceEnd, closeFenceEnd + 1);
+      const hasTrailingNewline = afterClose === '\n';
+      const nextChar = closeFenceEnd + 1 < doc.length
+        ? editorView.state.sliceDoc(closeFenceEnd + 1, closeFenceEnd + 2)
+        : '';
+      const nextLineIsEmpty = nextChar === '\n' || (nextChar === '' && closeFenceEnd + 1 >= doc.length);
+      const shouldRemoveTrailingNewline = hasTrailingNewline && !nextLineIsEmpty;
+
+      const removeFrom = shouldRemoveLeadingNewline ? openFenceStart - 1 : openFenceStart;
+      const removeTo = shouldRemoveTrailingNewline ? closeFenceEnd + 1 : closeFenceEnd;
+      const trailingSpace = shouldRemoveTrailingNewline ? ' ' : '';
+      const replacement = '`' + innerText + '`' + trailingSpace;
+      const cursorPos = removeFrom + 1;
+      editorView.dispatch({
+        changes: { from: removeFrom, to: removeTo, insert: replacement },
+        selection: { anchor: cursorPos, head: cursorPos + innerText.length }
+      });
+      editorView.focus();
+      return;
+    }
+
+    // Default: insert inline code
+    const replacement = '`' + (selectedText || 'code') + '`';
+    editorView.dispatch({
+      changes: { from, to, insert: replacement },
+      selection: { anchor: from + 1, head: from + 1 + (selectedText.length || 4) }
+    });
+    editorView.focus();
+  }
+
   function insertFormatting(format: string) {
     if (!editorView) return;
     const { from, to } = editorView.state.selection.main;
@@ -367,20 +515,11 @@
         return;
       }
       case 'code':
-        replacement = `\`${selectedText || 'code'}\``;
-        cursorOffset = 1;
-        placeholderLen = 4;
-        break;
-      case 'codeblock': {
-        const line = editorView.state.doc.lineAt(from);
-        const isAtLineStart = from === line.from;
-        const prefix = isAtLineStart ? '' : '\n';
-        replacement = `${prefix}\`\`\`\n${selectedText || 'code'}\n\`\`\``;
-        cursorOffset = prefix.length + 4;
-        placeholderLen = 4;
-        cursorBefore = true;
-        break;
-      }
+        toggleCode();
+        return;
+      case 'codeblock':
+        toggleCode();
+        return;
       case 'link':
         insertLink();
         return;
@@ -425,6 +564,12 @@
         return;
       case 'italic':
         toggleItalic();
+        return;
+      case 'strikethrough':
+        wrapSelection('~~', '~~');
+        return;
+      case 'highlight':
+        wrapSelection('==', '==');
         return;
       default:
         return;

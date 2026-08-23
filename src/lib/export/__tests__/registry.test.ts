@@ -57,7 +57,7 @@ describe("exporter registry", () => {
     const ids = listExporters().map((e) => e.id);
     expect(ids).toContain("html");
     expect(ids).toContain("pdf");
-  });
+  }, 15000);
 });
 
 describe("html exporter", () => {

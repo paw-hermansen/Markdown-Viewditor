@@ -302,6 +302,11 @@
     updateViewMode(mode);
   }
 
+  function cycleViewMode() {
+    const next: ViewMode = viewMode === 'editor' ? 'split' : viewMode === 'split' ? 'viewer' : 'editor';
+    handleViewModeChange(next);
+  }
+
   /**
    * Print / Create PDF. Refactored to share the print-container builder with
    * the PDF exporter (see src/lib/export/exporters/pdf.ts). Preserves the
@@ -551,59 +556,65 @@
     if (fileState.isLoading || exportingState.active) return;
 
     const isMod = e.metaKey || e.ctrlKey;
-    const key = e.key.toLowerCase();
+    const code = e.code;
 
-    if (key === "f1") {
+    if (code === "F1") {
       e.preventDefault();
       showAbout = !showAbout;
       return;
     }
 
-    if (isMod && e.shiftKey && key === "s") {
+    if (isMod && e.shiftKey && code === "KeyS") {
       e.preventDefault();
       handleSaveAs();
       return;
     }
 
-    if (isMod && !e.shiftKey && key === "s") {
+    if (isMod && !e.shiftKey && code === "KeyS") {
       e.preventDefault();
       handleSave();
       return;
     }
 
-    if (isMod && e.shiftKey && key === "p") {
+    if (isMod && e.shiftKey && code === "KeyP") {
       e.preventDefault();
       showCommandPalette = !showCommandPalette;
       return;
     }
 
-    if (isMod && !e.shiftKey && key === "p") {
+    if (isMod && !e.shiftKey && code === "KeyP") {
       e.preventDefault();
       handlePrint();
       return;
     }
 
-    if (isMod && key === "n") {
+    if (isMod && code === "KeyN") {
       e.preventDefault();
       handleNew();
       return;
     }
 
-    if (isMod && key === "o") {
+    if (isMod && code === "KeyO") {
       e.preventDefault();
       handleOpen();
       return;
     }
 
-    if (isMod && key === "r") {
+    if (isMod && code === "KeyR") {
       e.preventDefault();
       handleReload();
       return;
     }
 
-    if (isMod && key === "q") {
+    if (isMod && !e.shiftKey && code === "KeyQ") {
       e.preventDefault();
       handleExit();
+      return;
+    }
+
+    if (isMod && e.shiftKey && code === "KeyV") {
+      e.preventDefault();
+      cycleViewMode();
       return;
     }
   }
@@ -785,6 +796,7 @@
   onSaveAs={handleSaveAs}
   onReload={handleReload}
   onQuit={handleExit}
+  {viewMode}
   onViewModeChange={handleViewModeChange}
   onAbout={handleAbout}
   onPrint={handlePrint}

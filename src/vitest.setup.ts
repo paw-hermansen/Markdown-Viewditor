@@ -7,6 +7,13 @@ if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn();
 }
 
+// jsdom does not implement getClientRects on Range. CodeMirror calls it
+// during its internal measure cycle; without a stub the TypeError leaks
+// to stderr even though CodeMirror catches it.
+if (typeof Range !== "undefined" && !Range.prototype.getClientRects) {
+  Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+}
+
 if (typeof window !== "undefined") {
   window.__TAURI_INTERNALS__ = {
     invoke: vi.fn(),

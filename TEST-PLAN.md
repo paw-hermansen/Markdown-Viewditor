@@ -69,21 +69,22 @@
 For each: select text, click the toolbar button, verify markdown output in the
 editor and rendered output in the viewer.
 
-| #    | Test                  | Button           | Verify                                    |
-| ---- | --------------------- | ---------------- | ----------------------------------------- |
-| 5.1  | Bold                  | `B`              | Wraps in `**...**`, viewer shows **bold** |
-| 5.2  | Italic                | `I`              | Wraps in `*...*`, viewer shows _italic_   |
-| 5.3  | Heading (cycles)      | `H`              | Adds `## `; cycles H2→H3→H4→H5→H6→plain   |
-| 5.4  | Link                  | chain icon       | Inserts `[text](url)`                     |
-| 5.5  | Image                 | picture icon     | Inserts `![alt](url)`                     |
-| 5.6  | Inline Code           | backtick         | Wraps in `` ` ``                          |
-| 5.7  | Code Block            | triple backtick  | Wraps in ` ``` ` fences                   |
-| 5.8  | Bullet List           | bullet           | Adds `- ` prefix                          |
-| 5.9  | Numbered List         | `1.`             | Adds `1. ` prefix                         |
-| 5.10 | Task List             | checkbox         | Adds `- [ ] ` prefix                      |
-| 5.11 | Blockquote            | quote            | Adds `> ` prefix                          |
-| 5.12 | Horizontal Rule       | em-dash          | Inserts `\n---\n`                         |
-| 5.13 | Editor focus retained | Click any button | Editor does not lose focus                |
+| #    | Test                  | Button           | Verify                                                  |
+| ---- | --------------------- | ---------------- | ------------------------------------------------------- |
+| 5.1  | Bold                  | `B`              | Wraps in `**...**`, viewer shows **bold**               |
+| 5.2  | Italic                | `I`              | Wraps in `*...*`, viewer shows _italic_                 |
+| 5.3  | Strikethrough         | ~~S~~            | Wraps in `~~...~~`, viewer shows ~~strikethrough~~      |
+| 5.4  | Highlight             | <mark>M</mark>   | Wraps in `==...==`, viewer shows ==highlight==          |
+| 5.5  | Heading (cycles)      | **H**            | Adds `## `; cycles H2→H3→H4→H5→H6→plain                 |
+| 5.6  | Link                  | chain icon       | Inserts `[text](url)`                                   |
+| 5.7  | Image                 | picture icon     | Inserts `![alt](url)`                                   |
+| 5.8  | Code (toggle)         | `</>`            | Wraps in `` ` ` `` (inline); toggles to ` ``` ` (block) |
+| 5.9  | Bullet List           | bullet           | Adds `- ` prefix                                        |
+| 5.10 | Numbered List         | `1.`             | Adds `1. ` prefix                                       |
+| 5.11 | Task List             | checkbox         | Adds `- [ ] ` prefix                                    |
+| 5.12 | Blockquote            | quote            | Adds `> ` prefix                                        |
+| 5.13 | Horizontal Rule       | em-dash          | Inserts `\n---\n`                                       |
+| 5.14 | Editor focus retained | Click any button | Editor does not lose focus                              |
 
 ### Bold/Italic Toggle Detail
 
@@ -92,24 +93,53 @@ editor and rendered output in the viewer.
 3. Click Italic again → `**text**` (back to bold only)
 4. Select plain text, click Italic → `*text*`; click again → plain text
 
+### Code Toggle Detail
+
+1. Select text, click `</>` → `` `text` `` (inline code)
+2. Click `</>` again → ` ```\ntext\n``` ` (code block, with newline before fences)
+3. Click `</>` again → `` `text` `` (back to inline code)
+4. With cursor mid-line, toggling to code block adds `\n` before ` ``` `
+5. With empty line before code block, toggling back preserves the empty line
+
 ---
 
 ## 6. Keyboard Shortcuts
 
-| #    | Test            | Shortcut       | Expected                                    |
-| ---- | --------------- | -------------- | ------------------------------------------- |
-| 6.1  | New file        | `Ctrl+N`       | Creates new empty file (prompts if unsaved) |
-| 6.2  | Open file       | `Ctrl+O`       | Opens file dialog                           |
-| 6.3  | Save            | `Ctrl+S`       | Saves current file                          |
-| 6.4  | Save As         | `Ctrl+Shift+S` | Opens save-as dialog                        |
-| 6.5  | Reload          | `Ctrl+R`       | Reloads file from disk                      |
-| 6.6  | Quit            | `Ctrl+Q`       | Quits app (prompts if unsaved, saves state) |
-| 6.7  | Command palette | `Ctrl+Shift+P` | Opens command palette                       |
-| 6.8  | Print           | `Ctrl+P`       | Opens print dialog (see §13)                |
-| 6.9  | About           | `F1`           | Opens About dialog                          |
-| 6.10 | Bold            | `Ctrl+B`       | Toggles bold                                |
-| 6.11 | Italic          | `Ctrl+I`       | Toggles italic                              |
-| 6.12 | Insert link     | `Ctrl+K`       | Inserts link syntax                         |
+### 6.1 File & App Shortcuts
+
+| #   | Test            | Shortcut       | Expected                                    |
+| --- | --------------- | -------------- | ------------------------------------------- |
+| 6.1 | New file        | `Ctrl+N`       | Creates new empty file (prompts if unsaved) |
+| 6.2 | Open file       | `Ctrl+O`       | Opens file dialog                           |
+| 6.3 | Save            | `Ctrl+S`       | Saves current file                          |
+| 6.4 | Save As         | `Ctrl+Shift+S` | Opens save-as dialog                        |
+| 6.5 | Reload          | `Ctrl+R`       | Reloads file from disk                      |
+| 6.6 | Quit            | `Ctrl+Q`       | Quits app (prompts if unsaved, saves state) |
+| 6.7 | Command palette | `Ctrl+Shift+P` | Opens command palette                       |
+| 6.8 | Print           | `Ctrl+P`       | Opens print dialog (see §13)                |
+| 6.9 | About           | `F1`           | Opens About dialog                          |
+
+### 6.2 Editor Formatting Shortcuts
+
+| #    | Test             | Shortcut       | Expected                                               |
+| ---- | ---------------- | -------------- | ------------------------------------------------------ |
+| 6.10 | Bold             | `Ctrl+B`       | Toggles `**bold**`                                     |
+| 6.11 | Italic           | `Ctrl+I`       | Toggles `*italic*`                                     |
+| 6.12 | Strikethrough    | `Ctrl+Shift+X` | Toggles `~~strikethrough~~`                            |
+| 6.13 | Highlight        | `Ctrl+Shift+M` | Toggles `==highlight==`                                |
+| 6.14 | Heading (cycles) | `Ctrl+Shift+H` | Adds `## `; cycles H2→H3→…→H6→plain                    |
+| 6.15 | Insert link      | `Ctrl+K`       | Inserts `[text](url)`                                  |
+| 6.16 | Insert image     | `Ctrl+Shift+I` | Inserts `![alt](url)`                                  |
+| 6.17 | Code (toggle)    | `Ctrl+E`       | Toggles `` `inline code` `` ↔ ` ```\ncode block\n``` ` |
+| 6.18 | Bullet list      | `Ctrl+Shift+8` | Adds `- ` prefix                                       |
+| 6.19 | Numbered list    | `Ctrl+Shift+7` | Adds `1. ` prefix                                      |
+| 6.20 | Blockquote       | `Ctrl+Shift+Q` | Adds `> ` prefix                                       |
+
+### 6.3 View Shortcuts
+
+| #    | Test            | Shortcut       | Expected                                |
+| ---- | --------------- | -------------- | --------------------------------------- |
+| 6.21 | Cycle view mode | `Ctrl+Shift+V` | Cycles editor → split → viewer → editor |
 
 ---
 
@@ -357,7 +387,6 @@ platform-specific — split tests below.
 | 13.32 | Toolbar labels                     | Inspect the viewer toolbar             | "Export as PDF (Print…)" dropdown item + separate "Print / PDF" button |
 | 13.33 | Print dialog opens                 | Click "Print / PDF" (or `Ctrl+P`)      | Native print dialog opens with styled content                          |
 | 13.34 | Save as PDF                        | In print dialog choose "Save as PDF"   | Vector PDF written, opens correctly                                    |
-| 13.35 | Paper = A4                         | Check print dialog defaults            | A4 preselected; printable area respects 10mm margins                   |
 | 13.36 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
 | 13.37 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
 | 13.38 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |
@@ -549,9 +578,7 @@ in the status bar.
 | Save As                    | `Ctrl+Shift+S` | File                                  |
 | Reload from Disk           | `Ctrl+R`       | File                                  |
 | Quit                       | `Ctrl+Q`       | File                                  |
-| Split View                 | —              | View                                  |
-| Editor Only                | —              | View                                  |
-| Viewer Only                | —              | View                                  |
+| Cycle View Mode            | `Ctrl+Shift+V` | View                                  |
 | Export as HTML             | —              | File                                  |
 | Export as PDF …            | —              | File                                  |
 | Export as ODT              | —              | File                                  |

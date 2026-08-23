@@ -152,8 +152,8 @@ Use these files from `examples/`:
 | 7.14 | Dialog — Save First (named)    | Open `examples/Simple.md`, edit, trigger dialog, click Save First            | File saved (no clear), action proceeds                                                                                                                                            |
 | 7.15 | Dialog — Discard               | In 3-button dialog, click Yes, And Discard My Changes                        | Editor clears (only for New), action proceeds, changes lost                                                                                                                       |
 | 7.16 | Dialog — Cancel                | In 3-button dialog, click Cancel                                             | No change to editor content or current file                                                                                                                                       |
-| 7.17 | Reload from disk               | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk; toast `"The file is already up to date."` if unchanged                                                                                                 |
-| 7.18 | Reload unchanged file          | Open `examples/Simple.md`, no edits in app, click Reload                     | Toast: `"The file is already up to date."`                                                                                                                                        |
+| 7.17 | Reload from disk               | Open `examples/Simple.md`, edit externally, click Reload with no local edits | Content updates from disk                                                                                                                                                         |
+| 7.18 | Reload unchanged file          | Open `examples/Simple.md`, no edits in app, click Reload                     | Nothing happens                                                                                                                                                                   |
 | 7.19 | Reload deleted file            | Open a temp file, delete it externally, click Reload                         | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                               |
 | 7.20 | File name display              | Open `examples/Simple.md`                                                    | "Simple.md" shown in toolbar                                                                                                                                                      |
 | 7.21 | Modified indicator             | Edit content                                                                 | `*` appears after filename in toolbar; dot appears on Save button                                                                                                                 |
@@ -195,7 +195,7 @@ of the app) to modify the file externally.
 | 8.9  | Save over external modification   | Open file, modify externally, press `Ctrl+S`                                           | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
 | 8.10 | Reload with external modification | Modify externally, press `Ctrl+R`                                                      | If dirty: dialog `"You have unsaved changes. Reload from disk and discard your changes?"`; else reloads content silently                                                      |
 | 8.11 | Size-only change detected         | Edit file externally without changing mtime (e.g. `echo x >> file; touch -r ref file`) | ⚠ appears on next focus (mtime OR size comparison)                                                                                                                            |
-| 8.12 | Reload up-to-date                 | Open file, no external changes, press `Ctrl+R`                                         | Toast: `"The file is already up to date."`                                                                                                                                    |
+| 8.12 | Reload up-to-date                 | Open `examples/Example.md`, scroll down to "External image", press `Ctrl+R`            | "External image" changes and nothing else. Content keeps its scroll position.                                                                                                 |
 
 ---
 
@@ -357,10 +357,9 @@ platform-specific — split tests below.
 | 13.32 | Toolbar labels                     | Inspect the viewer toolbar             | "Export as PDF (Print…)" dropdown item + separate "Print / PDF" button |
 | 13.33 | Print dialog opens                 | Click "Print / PDF" (or `Ctrl+P`)      | Native print dialog opens with styled content                          |
 | 13.34 | Save as PDF                        | In print dialog choose "Save as PDF"   | Vector PDF written, opens correctly                                    |
-| 13.35 | Paper = A4                         | Check print dialog defaults            | A4 preselected; printable area respects 10mm margins                   |
-| 13.36 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
-| 13.37 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
-| 13.38 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |
+| 13.35 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
+| 13.36 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
+| 13.37 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |
 
 ### 13.4 Export as ODT
 
@@ -369,24 +368,24 @@ ignored. The confirm dialog shows three option groups when the dialog is on.
 
 | #     | Test                               | Steps                                                      | Expected                                                                              |
 | ----- | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 13.39 | Save dialog                        | Click Export as… → ODT                                     | Save dialog with `<name>.odt`, ODT filter                                             |
-| 13.40 | Opens in LibreOffice               | Open the .odt                                              | Document opens; text, headings, lists, tables render                                  |
-| 13.41 | Code highlighting printer-friendly | Export a fenced code block                                 | Highlighting uses printer-friendly token colors (not theme)                           |
-| 13.42 | Math — native MathML (default)     | Export `examples/Math-Example.md` (rasterize math OFF)     | Formulas appear as editable ODF Math objects                                          |
-| 13.43 | Math — rasterized PNG              | Tick "Rasterize as PNG images"; export                     | Formulas render as inline PNG frames in the ODT                                       |
-| 13.44 | SVG — vector (default)             | Export `examples/Example.md` (references `weird.svg`)      | SVG embedded as a `Pictures/*.svg` entry (vector)                                     |
-| 13.45 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
-| 13.46 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
-| 13.47 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
-| 13.48 | `<dc:title>` from frontmatter      | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
-| 13.49 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
-| 13.50 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
-| 13.51 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
-| 13.52 | Sub/sup, kbd, mark spans           | Export a file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`     | Rendered as text spans with appropriate character styles                              |
-| 13.53 | Tables                             | Export a file with a GFM table                             | Rendered as an ODF table (header + body cells)                                        |
-| 13.54 | Cancel save                        | Cancel the save dialog                                     | No file written, no toast                                                             |
-| 13.55 | Success toast                      | Export ODT successfully                                    | Toast: "Exported" with the saved file path                                            |
-| 13.56 | Error toast                        | Trigger an ODT export failure                              | Toast: "Export failed" with detail message                                            |
+| 13.38 | Save dialog                        | Click Export as… → ODT                                     | Save dialog with `<name>.odt`, ODT filter                                             |
+| 13.39 | Opens in LibreOffice               | Open the .odt                                              | Document opens; text, headings, lists, tables render                                  |
+| 13.40 | Code highlighting printer-friendly | Export a fenced code block                                 | Highlighting uses printer-friendly token colors (not theme)                           |
+| 13.41 | Math — native MathML (default)     | Export `examples/Math-Example.md` (rasterize math OFF)     | Formulas appear as editable ODF Math objects                                          |
+| 13.42 | Math — rasterized PNG              | Tick "Rasterize as PNG images"; export                     | Formulas render as inline PNG frames in the ODT                                       |
+| 13.43 | SVG — vector (default)             | Export `examples/Example.md` (references `weird.svg`)      | SVG embedded as a `Pictures/*.svg` entry (vector)                                     |
+| 13.44 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
+| 13.45 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
+| 13.46 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
+| 13.47 | `<dc:title>` from frontmatter      | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
+| 13.48 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
+| 13.49 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
+| 13.50 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
+| 13.51 | Sub/sup, kbd, mark spans           | Export a file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`     | Rendered as text spans with appropriate character styles                              |
+| 13.52 | Tables                             | Export a file with a GFM table                             | Rendered as an ODF table (header + body cells)                                        |
+| 13.53 | Cancel save                        | Cancel the save dialog                                     | No file written, no toast                                                             |
+| 13.54 | Success toast                      | Export ODT successfully                                    | Toast: "Exported" with the saved file path                                            |
+| 13.55 | Error toast                        | Trigger an ODT export failure                              | Toast: "Export failed" with detail message                                            |
 
 ### 13.5 Frontmatter Option (All Exporters)
 
@@ -396,22 +395,22 @@ has no YAML frontmatter.
 
 | #     | Test                                  | Steps                                              | Expected                                                                        |
 | ----- | ------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 13.57 | HTML — option in dialog               | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.58 | HTML — option disabled                | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.59 | HTML — frontmatter included (ON)      | Export with toggle ON                              | HTML contains `.frontmatter-card` element                                       |
-| 13.60 | HTML — frontmatter excluded (OFF)     | Export with toggle OFF                             | No `.frontmatter-card` in HTML                                                  |
-| 13.61 | HTML — option persisted               | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.62 | PDF — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.63 | PDF — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.64 | PDF — frontmatter included (ON)       | Export with toggle ON                              | PDF contains frontmatter card                                                   |
-| 13.65 | PDF — frontmatter excluded (OFF)      | Export with toggle OFF                             | No frontmatter card in PDF                                                      |
-| 13.66 | PDF — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.67 | ODT — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.68 | ODT — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.69 | ODT — frontmatter card included (ON)  | Export with toggle ON                              | ODF body contains frontmatter card table                                        |
-| 13.70 | ODT — frontmatter card excluded (OFF) | Export with toggle OFF                             | No frontmatter card in ODF                                                      |
-| 13.71 | ODT — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.72 | ODT — `<dc:title>` always set         | Export with frontmatter card OFF                   | `meta.xml` still carries the title field (card option does not affect metadata) |
+| 13.56 | HTML — option in dialog               | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.57 | HTML — option disabled                | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.58 | HTML — frontmatter included (ON)      | Export with toggle ON                              | HTML contains `.frontmatter-card` element                                       |
+| 13.59 | HTML — frontmatter excluded (OFF)     | Export with toggle OFF                             | No `.frontmatter-card` in HTML                                                  |
+| 13.60 | HTML — option persisted               | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.61 | PDF — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.62 | PDF — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.63 | PDF — frontmatter included (ON)       | Export with toggle ON                              | PDF contains frontmatter card                                                   |
+| 13.64 | PDF — frontmatter excluded (OFF)      | Export with toggle OFF                             | No frontmatter card in PDF                                                      |
+| 13.65 | PDF — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.66 | ODT — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.67 | ODT — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.68 | ODT — frontmatter card included (ON)  | Export with toggle ON                              | ODF body contains frontmatter card table                                        |
+| 13.69 | ODT — frontmatter card excluded (OFF) | Export with toggle OFF                             | No frontmatter card in ODF                                                      |
+| 13.70 | ODT — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.71 | ODT — `<dc:title>` always set         | Export with frontmatter card OFF                   | `meta.xml` still carries the title field (card option does not affect metadata) |
 
 ---
 

@@ -19,6 +19,13 @@ vi.mock("html2canvas", () => ({
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
+    // jsdom prints "Not implemented: HTMLCanvasElement's getContext()" to
+    // stderr.  Provide a minimal stub so the warning never fires.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (canvas as any).getContext = () => ({
+      drawImage: () => undefined,
+      clearRect: () => undefined,
+    });
     canvas.toBlob = function (cb: BlobCallback) {
       cb(new Blob([new Uint8Array([0])], { type: "image/png" }));
     };

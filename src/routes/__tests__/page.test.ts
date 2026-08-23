@@ -249,7 +249,7 @@ describe("+page.svelte", () => {
     mockFileState.externallyModified = false;
 
     render(Page);
-    await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    await fireEvent.keyDown(window, { code: "KeyS", ctrlKey: true });
 
     await waitFor(() => {
       expect(mockSaveFile).toHaveBeenCalledWith(
@@ -266,7 +266,7 @@ describe("+page.svelte", () => {
     mockCheckExternalModification.mockResolvedValue("modified");
 
     render(Page);
-    await fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    await fireEvent.keyDown(window, { code: "KeyS", ctrlKey: true });
 
     await waitFor(() => {
       expect(mockSaveFile).toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe("+page.svelte", () => {
     mockShowSaveDialog.mockResolvedValueOnce("/test/new-file.md");
     render(Page);
     await fireEvent.keyDown(window, {
-      key: "S",
+      code: "KeyS",
       ctrlKey: true,
       shiftKey: true,
     });
@@ -291,7 +291,7 @@ describe("+page.svelte", () => {
     mockShowSaveDialog.mockResolvedValueOnce("/test/new-file.md");
     render(Page);
     await fireEvent.keyDown(window, {
-      key: "s",
+      code: "KeyS",
       ctrlKey: true,
       shiftKey: true,
     });
@@ -315,7 +315,7 @@ describe("+page.svelte", () => {
   it("triggers Quit on Ctrl+Q", async () => {
     vi.mocked(hasUnsavedChanges).mockReturnValue(false);
     render(Page);
-    await fireEvent.keyDown(window, { key: "q", ctrlKey: true });
+    await fireEvent.keyDown(window, { code: "KeyQ", ctrlKey: true });
 
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("save_window_state");

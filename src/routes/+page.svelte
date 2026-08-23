@@ -606,7 +606,7 @@
       return;
     }
 
-    if (isMod && code === "KeyQ") {
+    if (isMod && !e.shiftKey && code === "KeyQ") {
       e.preventDefault();
       handleExit();
       return;

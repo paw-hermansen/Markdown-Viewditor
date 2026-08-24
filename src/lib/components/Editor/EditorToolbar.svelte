@@ -15,7 +15,7 @@
     { id: 'bullet', label: '•', title: modLabel('Bullet List (Ctrl+Shift+8)'), cls: '' },
     { id: 'numbered', label: '1.', title: modLabel('Numbered List (Ctrl+Shift+7)'), cls: '' },
     { id: 'task', label: '☑', title: 'Task List', cls: '' },
-    { id: 'quote', label: '❝', title: modLabel('Blockquote (Ctrl+Shift+Q)'), cls: '' },
+    { id: 'quote', label: '❝', title: 'Blockquote', cls: '' },
     { id: 'hr', label: '—', title: 'Horizontal Rule', cls: '' }
   ];
 </script>

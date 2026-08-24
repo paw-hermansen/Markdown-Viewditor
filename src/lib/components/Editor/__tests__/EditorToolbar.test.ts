@@ -43,7 +43,7 @@ describe("EditorToolbar", () => {
       { title: "Bullet List (Ctrl+Shift+8)", id: "bullet" },
       { title: "Numbered List (Ctrl+Shift+7)", id: "numbered" },
       { title: "Task List", id: "task" },
-      { title: "Blockquote (Ctrl+Shift+Q)", id: "quote" },
+      { title: "Blockquote", id: "quote" },
       { title: "Horizontal Rule", id: "hr" },
     ];
 
@@ -84,7 +84,7 @@ describe("EditorToolbar", () => {
       screen.getByTitle("Numbered List (Ctrl+Shift+7)"),
     ).toBeInTheDocument();
     expect(screen.getByTitle("Task List")).toBeInTheDocument();
-    expect(screen.getByTitle("Blockquote (Ctrl+Shift+Q)")).toBeInTheDocument();
+    expect(screen.getByTitle("Blockquote")).toBeInTheDocument();
     expect(screen.getByTitle("Horizontal Rule")).toBeInTheDocument();
   });
 });

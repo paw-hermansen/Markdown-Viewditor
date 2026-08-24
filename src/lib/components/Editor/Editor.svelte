@@ -201,13 +201,6 @@
               return true;
             }
           },
-          {
-            key: 'Mod-Shift-q',
-            run: () => {
-              insertFormatting('quote');
-              return true;
-            }
-          }
         ])),
         Prec.high(EditorView.domEventHandlers({
           keydown: (e: KeyboardEvent) => {

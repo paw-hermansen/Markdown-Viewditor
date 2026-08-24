@@ -257,7 +257,7 @@
     editorView.contentDOM.addEventListener('beforeinput', preventNativeFormat);
 
     handleKeydown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.key !== 'i') return;
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key !== 'i') return;
       e.stopImmediatePropagation();
       e.preventDefault();
       toggleItalic();

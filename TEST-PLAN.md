@@ -489,19 +489,20 @@ in the status bar.
 
 ### Levels Reference
 
-| Level    | Description                                                                                      |
-| -------- | ------------------------------------------------------------------------------------------------ |
-| Basic    | Only pure CommonMark is compatible. All extended features are flagged.                           |
-| GitHub   | Enables: Tables, Strikethrough, Task lists, Autolinks, Footnotes, Raw HTML, Math `$…$` / `$$…$$` |
-| Advanced | Enables all features (default). Everything is allowed.                                           |
-| Custom   | User manually toggles individual features on/off via checkboxes.                                 |
+| Level    | Description                                                                                                |
+| -------- | ---------------------------------------------------------------------------------------------------------- |
+| Basic    | Only pure CommonMark is compatible. All extended features are flagged.                                     |
+| GitHub   | Enables: Tables, Strikethrough, Task lists, Autolinks, Footnotes, Raw HTML, Math `$…$` / `$$…$$`          |
+| Advanced | Enables all features including Highlight, Frontmatter, LaTeX math, Chemical formulas (default). Everything is allowed. |
+| Custom   | User manually toggles individual features on/off via checkboxes.                                           |
 
-### Features (10 total)
+### Features (11 total)
 
 | Feature           | Syntax                           | In GitHub? | In Advanced? |
 | ----------------- | -------------------------------- | ---------- | ------------ |
 | Tables            | GFM pipe tables                  | yes        | yes          |
 | Strikethrough     | `~~text~~`                       | yes        | yes          |
+| Highlight         | `==text==`                       | no         | yes          |
 | Task lists        | `- [ ]` / `- [x]`                | yes        | yes          |
 | Autolinks         | Bare URLs                        | yes        | yes          |
 | Footnotes         | `[^1]`                           | yes        | yes          |
@@ -513,12 +514,12 @@ in the status bar.
 
 ### Test Files
 
-| File                            | Features used                                                          |
-| ------------------------------- | ---------------------------------------------------------------------- |
-| `examples/Simple.md`            | Tables, footnotes, raw HTML (basic+github features)                    |
-| `examples/Math-Example.md`      | All math delimiter styles (dollar, LaTeX, fences)                      |
-| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                                            |
-| `examples/Example.md`           | Everything: tables, task lists, strikethrough, HTML, math, frontmatter |
+| File                            | Features used                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `examples/Simple.md`            | Tables, footnotes, raw HTML (basic+github features)                              |
+| `examples/Math-Example.md`      | All math delimiter styles (dollar, LaTeX, fences)                                |
+| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                                                      |
+| `examples/Example.md`           | Everything: tables, task lists, strikethrough, highlight, HTML, math, frontmatter |
 
 ### Test Steps
 
@@ -528,16 +529,17 @@ in the status bar.
 | 15.2  | Level selector opens          | Click the level button in the status bar (right side)               | Popover opens with four level buttons (Basic, GitHub, Advanced, Custom) and feature toggle checklist                                                               |
 | 15.3  | Switch to Basic               | Click "Basic" in the level popover                                  | Level changes to "Basic"; no warnings for a clean CommonMark document                                                                                              |
 | 15.4  | Basic warns on tables         | Open `examples/Simple.md` (has tables), set level to "Basic"        | ⚠ badge appears in status bar with count; editor gutter shows warnings on table lines; clicking badge shows "Tables is above the 'basic' level (requires: github)" |
-| 15.5  | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                    | Warnings for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry                                                       |
+| 15.5  | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                    | Warnings for tables, strikethrough, highlight, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry                                             |
 | 15.6  | Switch to GitHub              | Click "GitHub" in the level popover                                 | Level changes to "GitHub"; warnings clear for features in the GitHub set                                                                                           |
-| 15.7  | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"              | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                                                                           |
-| 15.8  | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"         | Warnings on `\ce{…}` lines (requires: advanced)                                                                                                                    |
-| 15.9  | Advanced — no warnings        | Set level to "Advanced", open any example file                      | No warnings, no badge                                                                                                                                              |
-| 15.10 | Custom mode                   | Click "Custom", toggle features on/off                              | Level label changes to "Custom (n/10)" showing enabled count; warnings update accordingly                                                                          |
-| 15.11 | Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses | Warnings for that feature clear                                                                                                                                    |
-| 15.12 | Editor lint integration       | With warnings active, hover over a yellow gutter marker             | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")                                                                |
-| 15.13 | Level persistence             | Select "GitHub", close app, reopen                                  | Level is still "GitHub"                                                                                                                                            |
-| 15.14 | Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features     | Warnings appear after ~200ms debounce, not on every keystroke                                                                                                      |
+| 15.7  | GitHub warns on highlight     | Open file with `==text==`, set level to "GitHub"                    | Warnings on highlight lines (requires: advanced)                                                                                                                    |
+| 15.8  | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"              | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                                                                           |
+| 15.9  | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"         | Warnings on `\ce{…}` lines (requires: advanced)                                                                                                                    |
+| 15.10 | Advanced — no warnings        | Set level to "Advanced", open any example file                      | No warnings, no badge                                                                                                                                              |
+| 15.11 | Custom mode                   | Click "Custom", toggle features on/off                              | Level label changes to "Custom (n/11)" showing enabled count; warnings update accordingly                                                                          |
+| 15.12 | Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses | Warnings for that feature clear                                                                                                                                    |
+| 15.13 | Editor lint integration       | With warnings active, hover over a yellow gutter marker             | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")                                                                |
+| 15.14 | Level persistence             | Select "GitHub", close app, reopen                                  | Level is still "GitHub"                                                                                                                                            |
+| 15.15 | Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features     | Warnings appear after ~200ms debounce, not on every keystroke                                                                                                      |
 
 ---
 

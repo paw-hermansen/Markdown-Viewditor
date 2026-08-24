@@ -475,7 +475,6 @@
                 <tr><td>Inline Code / Code Block</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">E</kbd> (toggles)</td></tr>
                 <tr><td>Bullet List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">8</kbd></td></tr>
                 <tr><td>Numbered List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">7</kbd></td></tr>
-                <tr><td>Blockquote</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">Q</kbd></td></tr>
               </tbody>
             </table>
           </section>

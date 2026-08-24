@@ -133,7 +133,6 @@ editor and rendered output in the viewer.
 | 6.17 | Code (toggle)    | `Ctrl+E`       | Toggles `` `inline code` `` ↔ ` ```\ncode block\n``` ` |
 | 6.18 | Bullet list      | `Ctrl+Shift+8` | Adds `- ` prefix                                       |
 | 6.19 | Numbered list    | `Ctrl+Shift+7` | Adds `1. ` prefix                                      |
-| 6.20 | Blockquote       | `Ctrl+Shift+Q` | Adds `> ` prefix                                       |
 
 ### 6.3 View Shortcuts
 

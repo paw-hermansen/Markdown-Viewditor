@@ -144,7 +144,7 @@
           const line = update.state.doc.lineAt(pos);
           updateCursorPosition(line.number, pos - line.from);
         }),
-        keymap.of([
+        Prec.high(keymap.of([
           {
             key: 'Mod-b',
             run: () => {
@@ -201,14 +201,7 @@
               return true;
             }
           },
-          {
-            key: 'Mod-Shift-q',
-            run: () => {
-              insertFormatting('quote');
-              return true;
-            }
-          }
-        ]),
+        ])),
         Prec.high(EditorView.domEventHandlers({
           keydown: (e: KeyboardEvent) => {
             const isMod = e.metaKey || e.ctrlKey;
@@ -257,7 +250,7 @@
     editorView.contentDOM.addEventListener('beforeinput', preventNativeFormat);
 
     handleKeydown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.key !== 'i') return;
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key !== 'i') return;
       e.stopImmediatePropagation();
       e.preventDefault();
       toggleItalic();

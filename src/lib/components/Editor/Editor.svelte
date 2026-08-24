@@ -144,7 +144,7 @@
           const line = update.state.doc.lineAt(pos);
           updateCursorPosition(line.number, pos - line.from);
         }),
-        keymap.of([
+        Prec.high(keymap.of([
           {
             key: 'Mod-b',
             run: () => {
@@ -208,7 +208,7 @@
               return true;
             }
           }
-        ]),
+        ])),
         Prec.high(EditorView.domEventHandlers({
           keydown: (e: KeyboardEvent) => {
             const isMod = e.metaKey || e.ctrlKey;

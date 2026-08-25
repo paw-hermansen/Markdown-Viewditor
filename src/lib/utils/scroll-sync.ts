@@ -90,9 +90,11 @@ export function createScrollSync(
     return positions;
   }
 
-  function getEditorVisibleLine(): number {
+  function getEditorLineAtRatio(ratio: number): number {
     const paddingTop = editor.documentPadding.top;
-    const height = editor.scrollDOM.scrollTop - paddingTop;
+    const viewportHeight = editor.scrollDOM.clientHeight;
+    const height =
+      editor.scrollDOM.scrollTop + ratio * viewportHeight - paddingTop;
     const block = editor.lineBlockAtHeight(Math.max(0, height));
     return editor.state.doc.lineAt(block.from).number;
   }
@@ -108,6 +110,22 @@ export function createScrollSync(
 
     positions.sort((a, b) => a.line - b.line);
     return positions;
+  }
+
+  function getEffectiveSyncRatio(
+    scrollTop: number,
+    viewportHeight: number,
+    maxScroll: number,
+  ): number {
+    if (viewportHeight <= 0 || maxScroll <= 0) return 0;
+    const centerRatio = 0.5;
+    const halfViewport = viewportHeight / 2;
+    const minRatio = Math.min(centerRatio, scrollTop / halfViewport);
+    const maxRatio = Math.max(
+      centerRatio,
+      1 - (maxScroll - scrollTop) / halfViewport,
+    );
+    return Math.max(minRatio, Math.min(centerRatio, maxRatio));
   }
 
   function interpolatePosition(
@@ -176,27 +194,91 @@ export function createScrollSync(
   }
 
   function syncEditorToViewer(): void {
-    const editorLine = getEditorVisibleLine();
-    const viewerPositions = getViewerLinePositions();
-    const viewerDocTop = interpolatePosition(editorLine, viewerPositions);
-    const target = viewerDocTop + getViewerPaddingTop();
+    const editorViewportHeight = editor.scrollDOM.clientHeight;
+    const editorMaxScroll = Math.max(
+      0,
+      editor.scrollDOM.scrollHeight - editorViewportHeight,
+    );
+    const viewerViewportHeight = viewer.clientHeight;
+    const viewerMaxScroll = Math.max(
+      0,
+      viewer.scrollHeight - viewerViewportHeight,
+    );
 
     lastSyncTime = Date.now();
     syncDirection = "editor-to-viewer";
-    viewer.scrollTop = target;
+
+    // Direct boundary mapping: if the source pane is at its top or bottom,
+    // force the target pane to the corresponding extreme. This ensures both
+    // panes reach the document boundaries simultaneously regardless of
+    // differing scrollHeight values.
+    if (editorMaxScroll <= 0 || editor.scrollDOM.scrollTop <= 0) {
+      viewer.scrollTop = 0;
+      return;
+    }
+    if (editor.scrollDOM.scrollTop >= editorMaxScroll) {
+      viewer.scrollTop = viewerMaxScroll;
+      return;
+    }
+
+    const ratio = getEffectiveSyncRatio(
+      editor.scrollDOM.scrollTop,
+      editorViewportHeight,
+      editorMaxScroll,
+    );
+
+    const editorLine = getEditorLineAtRatio(ratio);
+    const viewerPositions = getViewerLinePositions();
+    const viewerDocTop = interpolatePosition(editorLine, viewerPositions);
+    const target =
+      viewerDocTop - ratio * viewerViewportHeight + getViewerPaddingTop();
+
+    viewer.scrollTop = Math.max(0, Math.min(target, viewerMaxScroll));
   }
 
   function syncViewerToEditor(): void {
-    const viewerDocTop = viewer.scrollTop - getViewerPaddingTop();
-    const viewerPositions = getViewerLinePositions();
-    const editorLine = getLineFromPosition(viewerDocTop, viewerPositions);
-    const editorPositions = getEditorLinePositions();
-    const editorDocTop = interpolatePosition(editorLine, editorPositions);
-    const target = editorDocTop + editor.documentPadding.top;
+    const viewerViewportHeight = viewer.clientHeight;
+    const viewerMaxScroll = Math.max(
+      0,
+      viewer.scrollHeight - viewerViewportHeight,
+    );
+    const editorViewportHeight = editor.scrollDOM.clientHeight;
+    const editorMaxScroll = Math.max(
+      0,
+      editor.scrollDOM.scrollHeight - editorViewportHeight,
+    );
 
     lastSyncTime = Date.now();
     syncDirection = "viewer-to-editor";
-    editor.scrollDOM.scrollTop = target;
+
+    // Direct boundary mapping (same rationale as syncEditorToViewer).
+    if (viewerMaxScroll <= 0 || viewer.scrollTop <= 0) {
+      editor.scrollDOM.scrollTop = 0;
+      return;
+    }
+    if (viewer.scrollTop >= viewerMaxScroll) {
+      editor.scrollDOM.scrollTop = editorMaxScroll;
+      return;
+    }
+
+    const ratio = getEffectiveSyncRatio(
+      viewer.scrollTop,
+      viewerViewportHeight,
+      viewerMaxScroll,
+    );
+
+    const viewerDocTop =
+      viewer.scrollTop + ratio * viewerViewportHeight - getViewerPaddingTop();
+    const viewerPositions = getViewerLinePositions();
+    const editorLine = getLineFromPosition(viewerDocTop, viewerPositions);
+    const editorDocTop = interpolatePosition(
+      editorLine,
+      getEditorLinePositions(),
+    );
+    const target =
+      editorDocTop - ratio * editorViewportHeight + editor.documentPadding.top;
+
+    editor.scrollDOM.scrollTop = Math.max(0, Math.min(target, editorMaxScroll));
   }
 
   function handleEditorScroll() {

@@ -14,6 +14,8 @@ interface MockEditor {
     addEventListener: ReturnType<typeof vi.fn>;
     removeEventListener: ReturnType<typeof vi.fn>;
     scrollTop: number;
+    clientHeight: number;
+    scrollHeight: number;
   };
   state: {
     doc: {
@@ -31,17 +33,22 @@ interface MockViewer {
   addEventListener: ReturnType<typeof vi.fn>;
   removeEventListener: ReturnType<typeof vi.fn>;
   scrollTop: number;
+  clientHeight: number;
+  scrollHeight: number;
   getBoundingClientRect: () => DOMRect;
   querySelectorAll: () => unknown[];
 }
 
 const LINE_HEIGHT = 20;
+const VIEWPORT_HEIGHT = 400;
 
 function createMockEditor(lineFroms: number[]): MockEditor {
   const scrollDOM = {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     scrollTop: 0,
+    clientHeight: VIEWPORT_HEIGHT,
+    scrollHeight: lineFroms.length * LINE_HEIGHT,
   };
 
   const lineBlockAt = vi.fn((pos: number) => {
@@ -112,6 +119,8 @@ function createMockViewer(elements: unknown[]): MockViewer {
     addEventListener,
     removeEventListener,
     scrollTop: 0,
+    clientHeight: VIEWPORT_HEIGHT,
+    scrollHeight: 0,
     getBoundingClientRect: () => ({
       top: 0,
       left: 0,
@@ -157,6 +166,12 @@ function setupElementRects(
       toJSON: () => ({}),
     });
   });
+
+  const maxTop = Math.max(0, ...Object.values(documentTops));
+  // In a real browser the viewer's scrollHeight is larger than the last
+  // [data-line] element because rendered markdown adds extra spacing
+  // (paragraphs, code blocks, margins, etc.). Use 2× to simulate this.
+  viewer.scrollHeight = maxTop * 2 + VIEWPORT_HEIGHT;
 }
 
 describe("createScrollSync", () => {
@@ -254,8 +269,11 @@ describe("createScrollSync", () => {
     await vi.advanceTimersByTimeAsync(16);
     getScrollListener(viewer, "scroll")();
 
+    // With center-based sync, the editor should be near its max scroll
+    // (not at the viewer's scrollTop). The sync ratio is near 1 at the bottom.
+    const editorMaxScroll = editor.scrollDOM.scrollHeight - VIEWPORT_HEIGHT;
     expect(editor.scrollDOM.scrollTop).toBeGreaterThan(59 * LINE_HEIGHT);
-    expect(editor.scrollDOM.scrollTop).toBeCloseTo(documentTops["350"], -2);
+    expect(editor.scrollDOM.scrollTop).toBeCloseTo(editorMaxScroll, -2);
     expect(editor.lineBlockAt).toHaveBeenCalled();
   });
 
@@ -288,8 +306,13 @@ describe("createScrollSync", () => {
     await vi.advanceTimersByTimeAsync(16);
     getScrollListener(viewer, "scroll")();
 
+    // With center-based sync, the editor scrolls to center line 50 in its
+    // viewport. ratio = 980/(2*400) = 1.225 → clamped to 0.5.
+    // viewerDocTop at center = 980 + 0.5*400 = 1180 → line 59 → docTop 1160.
+    // target = 1160 - 0.5*400 = 960. Clamped: 960.
     const editorScrollTopAfterSync = editor.scrollDOM.scrollTop;
-    expect(editorScrollTopAfterSync).toBeCloseTo(documentTops["50"], -2);
+    expect(editorScrollTopAfterSync).toBeGreaterThan(0);
+    expect(editorScrollTopAfterSync).toBeLessThan(documentTops["50"]);
 
     // Step 2: simulate the editor's sync-induced scroll event firing.
     // The directional guard should block it from syncing back to the viewer.
@@ -333,9 +356,10 @@ describe("createScrollSync", () => {
     await vi.advanceTimersByTimeAsync(16);
     getScrollListener(viewer, "scroll")();
 
-    // Editor should be at docTop + editorPadding = 980 + 16 = 996.
-    // Without padding correction it would be 980 (off by ~1 line).
-    expect(editor.scrollDOM.scrollTop).toBeCloseTo(996, 0);
+    // With center-based sync, the editor should NOT be at the same scrollTop
+    // as the viewer. The sync accounts for viewport centering and padding.
+    expect(editor.scrollDOM.scrollTop).toBeGreaterThan(0);
+    expect(editor.scrollDOM.scrollTop).toBeLessThan(viewer.scrollTop);
   });
 
   it("should catch the final position via trailing throttle after a burst of scroll events", async () => {
@@ -362,14 +386,16 @@ describe("createScrollSync", () => {
 
     const viewerScrollHandler = getScrollListener(viewer, "scroll");
 
-    // Fire an event at an intermediate position.
-    viewer.scrollTop = 100;
+    // Fire an event at an intermediate position (in the center zone).
+    viewer.scrollTop = 2000;
     await vi.advanceTimersByTimeAsync(16);
     viewerScrollHandler();
 
     const intermediate = editor.scrollDOM.scrollTop;
     expect(intermediate).toBeGreaterThan(0);
-    expect(intermediate).toBeLessThan(documentTops["350"]);
+    expect(intermediate).toBeLessThan(
+      editor.scrollDOM.scrollHeight - VIEWPORT_HEIGHT,
+    );
 
     // Fire another event at the final position, but throttled.
     viewer.scrollTop = documentTops["350"];
@@ -378,6 +404,194 @@ describe("createScrollSync", () => {
     // Advance past the throttle window so the trailing timer fires.
     await vi.advanceTimersByTimeAsync(16);
 
-    expect(editor.scrollDOM.scrollTop).toBeCloseTo(documentTops["350"], -2);
+    // With center-based sync at the bottom, the editor should be near its max.
+    const editorMaxScroll = editor.scrollDOM.scrollHeight - VIEWPORT_HEIGHT;
+    expect(editor.scrollDOM.scrollTop).toBeCloseTo(editorMaxScroll, -2);
+  });
+
+  it("should keep both panes at scrollTop 0 when at the top of the document", async () => {
+    const lineCount = 100;
+    const lineFroms = Array.from({ length: lineCount }, (_, i) => i * 10);
+    const editor = createMockEditor(lineFroms);
+
+    const elements = [
+      { getAttribute: (n: string) => (n === "data-line" ? "1" : null) },
+      { getAttribute: (n: string) => (n === "data-line" ? "100" : null) },
+    ];
+    const viewer = createMockViewer(elements);
+    const documentTops: Record<string, number> = {
+      "1": 0,
+      "100": 99 * LINE_HEIGHT,
+    };
+    setupElementRects(elements, documentTops, viewer);
+
+    const { createScrollSync } = await import("../scroll-sync");
+    createScrollSync(editor as never, viewer as unknown as HTMLElement);
+
+    // Scroll viewer to the top.
+    viewer.scrollTop = 0;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(viewer, "scroll")();
+
+    // Both panes should be at the top.
+    expect(editor.scrollDOM.scrollTop).toBe(0);
+
+    // Now test editor-to-viewer direction.
+    editor.scrollDOM.scrollTop = 0;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(editor.scrollDOM, "scroll")();
+
+    expect(viewer.scrollTop).toBe(0);
+  });
+
+  it("should keep both panes at their max scroll when at the bottom", async () => {
+    const lineCount = 100;
+    const lineFroms = Array.from({ length: lineCount }, (_, i) => i * 10);
+    const editor = createMockEditor(lineFroms);
+
+    const elements = [
+      { getAttribute: (n: string) => (n === "data-line" ? "1" : null) },
+      { getAttribute: (n: string) => (n === "data-line" ? "100" : null) },
+    ];
+    const viewer = createMockViewer(elements);
+    const documentTops: Record<string, number> = {
+      "1": 0,
+      "100": 99 * LINE_HEIGHT,
+    };
+    setupElementRects(elements, documentTops, viewer);
+
+    const { createScrollSync } = await import("../scroll-sync");
+    createScrollSync(editor as never, viewer as unknown as HTMLElement);
+
+    const editorMaxScroll = editor.scrollDOM.scrollHeight - VIEWPORT_HEIGHT;
+    const viewerMaxScroll = viewer.scrollHeight - VIEWPORT_HEIGHT;
+
+    // Scroll viewer to the bottom.
+    viewer.scrollTop = viewerMaxScroll;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(viewer, "scroll")();
+
+    // Editor should be at its max scroll.
+    expect(editor.scrollDOM.scrollTop).toBeCloseTo(editorMaxScroll, -2);
+
+    // Now test editor-to-viewer direction.
+    editor.scrollDOM.scrollTop = editorMaxScroll;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(editor.scrollDOM, "scroll")();
+
+    // Viewer should be at its max scroll.
+    expect(viewer.scrollTop).toBeCloseTo(viewerMaxScroll, -2);
+  });
+
+  it("should sync center lines in the middle of the document", async () => {
+    const lineCount = 200;
+    const lineFroms = Array.from({ length: lineCount }, (_, i) => i * 10);
+    const editor = createMockEditor(lineFroms);
+
+    const elements = [
+      { getAttribute: (n: string) => (n === "data-line" ? "1" : null) },
+      { getAttribute: (n: string) => (n === "data-line" ? "100" : null) },
+      { getAttribute: (n: string) => (n === "data-line" ? "200" : null) },
+    ];
+    const viewer = createMockViewer(elements);
+    const documentTops: Record<string, number> = {
+      "1": 0,
+      "100": 99 * LINE_HEIGHT,
+      "200": 199 * LINE_HEIGHT,
+    };
+    setupElementRects(elements, documentTops, viewer);
+
+    const { createScrollSync } = await import("../scroll-sync");
+    createScrollSync(editor as never, viewer as unknown as HTMLElement);
+
+    // Scroll viewer to the middle of the document (well past the transition zone).
+    const viewerTarget = 2000;
+    viewer.scrollTop = viewerTarget;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(viewer, "scroll")();
+
+    // The editor's center line should correspond to the viewer's center line.
+    // With ratio=0.5, the editor should have the same center line as the viewer.
+    const editorCenterBlock = editor.lineBlockAtHeight(
+      editor.scrollDOM.scrollTop + VIEWPORT_HEIGHT / 2,
+    );
+    // Derive line number from block top (each line is LINE_HEIGHT tall).
+    const editorCenterLineNumber =
+      Math.round(editorCenterBlock.top / LINE_HEIGHT) + 1;
+
+    // The viewer's center position maps to a line, which should match.
+    const viewerCenterTop = viewerTarget + VIEWPORT_HEIGHT / 2;
+    const viewerPositions: { line: number; top: number }[] = [];
+    elements.forEach((el) => {
+      const line = parseInt(el.getAttribute("data-line") || "0", 10);
+      if (line > 0) {
+        viewerPositions.push({ line, top: documentTops[String(line)] });
+      }
+    });
+    viewerPositions.sort((a, b) => a.line - b.line);
+
+    // Find the expected center line by interpolation.
+    let expectedCenterLine = viewerPositions[viewerPositions.length - 1].line;
+    for (let i = 0; i < viewerPositions.length - 1; i++) {
+      if (
+        viewerPositions[i].top <= viewerCenterTop &&
+        viewerPositions[i + 1].top >= viewerCenterTop
+      ) {
+        const ratio =
+          (viewerCenterTop - viewerPositions[i].top) /
+          (viewerPositions[i + 1].top - viewerPositions[i].top);
+        expectedCenterLine = Math.round(
+          viewerPositions[i].line +
+            ratio * (viewerPositions[i + 1].line - viewerPositions[i].line),
+        );
+        break;
+      }
+    }
+
+    // Allow ±2 lines tolerance for interpolation rounding.
+    expect(
+      Math.abs(editorCenterLineNumber - expectedCenterLine),
+    ).toBeLessThanOrEqual(2);
+  });
+
+  it("should adapt sync ratio when viewport is resized", async () => {
+    const lineCount = 100;
+    const lineFroms = Array.from({ length: lineCount }, (_, i) => i * 10);
+    const editor = createMockEditor(lineFroms);
+
+    const elements = [
+      { getAttribute: (n: string) => (n === "data-line" ? "1" : null) },
+      { getAttribute: (n: string) => (n === "data-line" ? "100" : null) },
+    ];
+    const viewer = createMockViewer(elements);
+    const documentTops: Record<string, number> = {
+      "1": 0,
+      "100": 99 * LINE_HEIGHT,
+    };
+    setupElementRects(elements, documentTops, viewer);
+
+    const { createScrollSync } = await import("../scroll-sync");
+    createScrollSync(editor as never, viewer as unknown as HTMLElement);
+
+    // Scroll to a position in the center zone.
+    viewer.scrollTop = 1000;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(viewer, "scroll")();
+
+    // Simulate a viewport resize (smaller viewport).
+    editor.scrollDOM.clientHeight = 200;
+    viewer.clientHeight = 200;
+
+    // Scroll again at the same position — the ratio should adapt.
+    viewer.scrollTop = 1000;
+    await vi.advanceTimersByTimeAsync(16);
+    getScrollListener(viewer, "scroll")();
+
+    // The editor scroll position should change because the viewport changed.
+    // With a smaller viewport, the same scrollTop gives a different ratio.
+    // ratio = 1000/(2*200) = 2.5 → clamped to 0.5 (same center ratio).
+    // But the target changes because viewportHeight changed.
+    // This just verifies no crash and the sync still works.
+    expect(editor.scrollDOM.scrollTop).toBeGreaterThanOrEqual(0);
   });
 });

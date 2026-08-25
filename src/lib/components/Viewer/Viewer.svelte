@@ -167,6 +167,12 @@
     return viewerElement;
   }
 
+  export function scrollToTop() {
+    if (viewerElement) {
+      viewerElement.scrollTop = 0;
+    }
+  }
+
   export function getViewerContentElement() {
     return viewerContentElement;
   }

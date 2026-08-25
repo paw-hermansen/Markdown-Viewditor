@@ -115,6 +115,37 @@
   border-radius: 8px;
 }
 
+.viewer-content .img-tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.viewer-content .img-tooltip-wrapper[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-family: monospace;
+  white-space: nowrap;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  visibility: hidden;
+}
+
+.viewer-content .img-tooltip-wrapper[data-tooltip]:hover::after {
+  visibility: visible;
+}
+
 .viewer-content img[data-broken] {
   display: inline-block;
   max-width: 200px;

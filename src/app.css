@@ -188,3 +188,8 @@ body.exporting .print-content {
 body.exporting .print-content a[data-href]::after {
   display: none !important;
 }
+
+/* The image tooltip is hover-only screen UI; never export it. */
+body.exporting .print-content .img-tooltip-wrapper[data-tooltip]::after {
+  display: none !important;
+}

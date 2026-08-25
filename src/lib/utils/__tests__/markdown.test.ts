@@ -413,6 +413,64 @@ describe("renderMarkdown", () => {
     });
   });
 
+  describe("image tooltip", () => {
+    it("adds data-tooltip with alt text for markdown images", async () => {
+      const result = await renderMarkdown(
+        "![flower photo](images/flower.png)",
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="flower photo"');
+    });
+
+    it("adds data-tooltip with src when alt is empty", async () => {
+      const result = await renderMarkdown(
+        "![](images/flower.png)",
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="images/flower.png"');
+    });
+
+    it("adds data-tooltip with src when alt is whitespace-only", async () => {
+      const result = await renderMarkdown(
+        "![   ](images/flower.png)",
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="images/flower.png"');
+    });
+
+    it("adds data-tooltip with alt text for HTML img tags", async () => {
+      const result = await renderMarkdown(
+        '<img src="images/flower.png" alt="a flower">',
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="a flower"');
+    });
+
+    it("adds data-tooltip with src for HTML img tags without alt", async () => {
+      const result = await renderMarkdown(
+        '<img src="images/flower.png">',
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="images/flower.png"');
+    });
+
+    it("adds data-tooltip with src for HTML img tags with empty alt", async () => {
+      const result = await renderMarkdown(
+        '<img src="images/flower.png" alt="">',
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="images/flower.png"');
+    });
+
+    it("escapes quotes in tooltip for HTML img tags", async () => {
+      const result = await renderMarkdown(
+        '<img src="images/flower.png" alt=\'a "nice" flower\'>',
+        "/home/devel/r/Example.md",
+      );
+      expect(result.html).toContain('data-tooltip="a &quot;nice&quot; flower"');
+    });
+  });
+
   describe("heading IDs", () => {
     it("should generate GitHub-style IDs for headings", async () => {
       const result = await renderMarkdown("# Hello World");

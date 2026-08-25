@@ -405,19 +405,28 @@ function tryResolveLocalPath(
 }
 
 function resolveHtmlImagePaths(html: string, filePath: string): string {
-  return html.replace(
-    /(<img\s[^>]*?)src=["']([^"']+)["']/gi,
-    (match, prefix, src) => {
-      if (src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
-        return match;
-      }
+  return html.replace(/<img\s[^>]*>/gi, (match) => {
+    const srcMatch = match.match(/src=["']([^"']+)["']/i);
+    if (!srcMatch) return match;
+
+    const src = srcMatch[1];
+    const altMatch = match.match(/alt=(["'])(.*?)\1/i);
+    const altText = altMatch ? altMatch[2].trim() : "";
+    const tooltip = (altText || src).replace(/"/g, "&quot;");
+
+    let result = match;
+    if (!src.match(/^(https?:\/\/|data:|asset:|blob:)/)) {
       const resolved = tryResolveLocalPath(filePath, src);
-      if (!resolved.isLocal) {
-        return match;
+      if (resolved.isLocal) {
+        result = result.replace(
+          /src=["'][^"']+["']/i,
+          `src="${convertFileSrc(resolved.path, "localimg")}"`,
+        );
       }
-      return `${prefix}src="${convertFileSrc(resolved.path, "localimg")}"`;
-    },
-  );
+    }
+
+    return `<span class="img-tooltip-wrapper" data-tooltip="${tooltip}">${result}</span>`;
+  });
 }
 
 function createLinkTooltipPlugin() {
@@ -451,6 +460,8 @@ function createLocalImagePlugin() {
       const token = tokens[idx];
       const srcIndex = token.attrIndex("src");
 
+      const originalSrc = srcIndex >= 0 ? token.attrs![srcIndex][1] : "";
+
       if (srcIndex >= 0 && env.filePath) {
         const src = token.attrs![srcIndex][1];
 
@@ -465,7 +476,14 @@ function createLocalImagePlugin() {
         }
       }
 
-      return defaultImageRenderer(tokens, idx, options, env, self);
+      const alt = (token.content || "").trim();
+      const tooltip = alt || originalSrc;
+      const imgHtml = defaultImageRenderer(tokens, idx, options, env, self);
+      if (tooltip) {
+        const escaped = tooltip.replace(/"/g, "&quot;");
+        return `<span class="img-tooltip-wrapper" data-tooltip="${escaped}">${imgHtml}</span>`;
+      }
+      return imgHtml;
     };
 
     const defaultHtmlBlock =

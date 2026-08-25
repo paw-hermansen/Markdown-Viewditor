@@ -124,7 +124,8 @@
     if (content !== null) {
       editorState.content = content;
       updateWordCount(content);
-      editorComponent?.setContent(content);
+      editorComponent?.setContent(content, false);
+      viewerComponent?.scrollToTop();
       markSaved();
     }
   }
@@ -143,7 +144,8 @@
     if (content !== null) {
       editorState.content = content;
       updateWordCount(content);
-      editorComponent?.setContent(content);
+      editorComponent?.setContent(content, false);
+      viewerComponent?.scrollToTop();
       markSaved();
     }
   }
@@ -706,7 +708,8 @@
         if (content !== null) {
           editorState.content = content;
           updateWordCount(content);
-          editorComponent?.setContent(content);
+          editorComponent?.setContent(content, false);
+          viewerComponent?.scrollToTop();
           markSaved();
         }
       }
@@ -718,7 +721,8 @@
       if (content !== null) {
         editorState.content = content;
         updateWordCount(content);
-        editorComponent?.setContent(content);
+        editorComponent?.setContent(content, false);
+        viewerComponent?.scrollToTop();
         markSaved();
       }
     } else if (settingsState.lastOpenedFile) {
@@ -726,7 +730,8 @@
       if (content !== null) {
         editorState.content = content;
         updateWordCount(content);
-        editorComponent?.setContent(content);
+        editorComponent?.setContent(content, false);
+        viewerComponent?.scrollToTop();
         markSaved();
       }
     }

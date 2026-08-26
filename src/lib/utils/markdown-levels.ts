@@ -174,7 +174,7 @@ registerFeatureDetectors(
   },
   {
     id: "strikethrough",
-    label: "Strikethrough `~~x~~`",
+    label: "Strikethrough ~~x~~",
     presets: { github: true, advanced: true },
     detect(tokens) {
       const lines: number[] = [];
@@ -186,7 +186,7 @@ registerFeatureDetectors(
   },
   {
     id: "task-lists",
-    label: "Task lists `- [ ]`",
+    label: "Task lists - [ ]",
     presets: { github: true, advanced: true },
     detect(tokens) {
       const lines: number[] = [];
@@ -221,7 +221,7 @@ registerFeatureDetectors(
   },
   {
     id: "footnotes",
-    label: "Footnotes `[^x]`",
+    label: "Footnotes [^x]",
     presets: { github: true, advanced: true },
     detect(tokens) {
       const lines: number[] = [];
@@ -276,7 +276,7 @@ registerFeatureDetectors(
   },
   {
     id: "highlight",
-    label: "Highlight `==x==`",
+    label: "Highlight ==x==",
     presets: { advanced: true },
     detect(tokens) {
       const lines: number[] = [];

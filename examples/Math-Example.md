@@ -39,7 +39,7 @@ Euler's identity: \( e^{i\pi} + 1 = 0 \).
 \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
 ```
 
-## Fenced blocks (does not render math)
+## Fenced anonymous blocks (does not render math)
 
 ```
 \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}

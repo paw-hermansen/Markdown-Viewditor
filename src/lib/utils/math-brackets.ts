@@ -425,7 +425,7 @@ function isBareBlock(content: string): boolean {
 registerFeatureDetectors(
   {
     id: "math-dollar",
-    label: "Math `$…$` / `$$…$$`",
+    label: "Math `$…$` / `$$…$$` / ```math```",
     presets: { github: true, advanced: true },
     detect(tokens) {
       const lines: number[] = [];
@@ -437,6 +437,14 @@ registerFeatureDetectors(
           t.markup === "$$" &&
           t.map &&
           !isBareBlock(t.content)
+        ) {
+          lines.push(t.map[0] + 1);
+        }
+        // ```math fenced blocks.
+        if (
+          t.type === "fence" &&
+          t.info.trim().toLowerCase() === "math" &&
+          t.map
         ) {
           lines.push(t.map[0] + 1);
         }
@@ -461,25 +469,17 @@ registerFeatureDetectors(
   },
   {
     id: "math-latex",
-    label: "Math: LaTeX delimiters & fences",
+    label: "Math: LaTeX delimiters",
     presets: { advanced: true },
     detect(tokens) {
       const lines: number[] = [];
       for (const t of tokens) {
-        // `\[ ... \]` blocks (this plan) and bare `\begin{...}` blocks
+        // `\[ ... \]` blocks and bare `\begin{...}` blocks
         // (the @vscode plugin emits those as `math_block` with markup `$$`).
         if (t.type === "math_block" && t.map) {
           if (t.markup === "\\[" || isBareBlock(t.content)) {
             lines.push(t.map[0] + 1);
           }
-        }
-        // ```math fences.
-        if (
-          t.type === "fence" &&
-          t.info.trim().toLowerCase() === "math" &&
-          t.map
-        ) {
-          lines.push(t.map[0] + 1);
         }
       }
       // `\(` inline math (lives inside inline token children).

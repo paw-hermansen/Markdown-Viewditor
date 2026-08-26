@@ -191,15 +191,22 @@ describe("math levels detection", () => {
     expect(t!.lines.length).toBeGreaterThan(0);
   });
 
-  it("flags \\(...\\) / \\[...\\] / bare / fence as math-latex", async () => {
+  it("flags \\(...\\) / \\[...\\] / bare as math-latex", async () => {
     const used = await analyzeContent(
-      ["\\( x \\)", "", "\\[", "y", "\\]", "", "```math", "z", "```"].join(
-        "\n",
-      ),
+      ["\\( x \\)", "", "\\[", "y", "\\]", ""].join("\n"),
     );
     const t = used.find((u) => u.id === "math-latex");
     expect(t).toBeDefined();
     expect(t!.lines.length).toBeGreaterThan(0);
+  });
+
+  it("flags ```math fence as math-dollar (not math-latex)", async () => {
+    const used = await analyzeContent("```math\nz\n```");
+    const dollar = used.find((u) => u.id === "math-dollar");
+    const latex = used.find((u) => u.id === "math-latex");
+    expect(dollar).toBeDefined();
+    expect(dollar!.lines.length).toBeGreaterThan(0);
+    expect(latex).toBeUndefined();
   });
 
   it("classifies bare \\begin blocks as math-latex, NOT math-dollar", async () => {

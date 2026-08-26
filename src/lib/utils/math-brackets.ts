@@ -4,7 +4,7 @@ import { registerFeatureDetectors } from "./markdown-levels";
 /**
  * Math support: adds `\(...\)` inline and `\[...\]` block delimiters on top of
  * the @vscode/markdown-it-katex plugin (which handles `$...$` / `$$...$$`,
- * bare `\begin{...}` blocks, and ```` ```math ```` fences). The @vscode plugin
+ * bare `\begin{...}` blocks, and ```` ```math...```` fences). The @vscode plugin
  * must be registered first so its `math_inline` / `math_block` renderers are
  * already in place — this plugin only emits tokens of those same types, so
  * rendering flows through the @vscode KaTeX path unchanged.
@@ -425,7 +425,7 @@ function isBareBlock(content: string): boolean {
 registerFeatureDetectors(
   {
     id: "math-dollar",
-    label: "Math `$…$` / `$$…$$` / ```math```",
+    label: "Math $…$, $$…$$, ```math…```",
     presets: { github: true, advanced: true },
     detect(tokens) {
       const lines: number[] = [];

@@ -41,7 +41,6 @@
   import {
     confirmSaveDiscardCancel,
     confirmOverwrite,
-    confirmReplace,
     confirmReload,
     confirmOk,
   } from "$lib/stores/confirm.svelte";
@@ -226,12 +225,6 @@
             return;
           }
         }
-      } else {
-        const name = getFileName(path);
-        const replace = await confirmReplace(
-          `A file named "${name}" already exists. Do you want to replace it?`,
-        );
-        if (!replace) return;
       }
     }
 

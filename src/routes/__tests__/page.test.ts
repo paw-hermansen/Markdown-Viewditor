@@ -18,7 +18,6 @@ const {
   mockMarkCurrentFileDeleted,
   mockConfirmSaveDiscardCancel,
   mockConfirmOverwrite,
-  mockConfirmReplace,
   mockConfirmReload,
   mockConfirmOk,
   mockFileState,
@@ -39,7 +38,6 @@ const {
   mockMarkCurrentFileDeleted: vi.fn(),
   mockConfirmSaveDiscardCancel: vi.fn().mockResolvedValue("discard"),
   mockConfirmOverwrite: vi.fn().mockResolvedValue(true),
-  mockConfirmReplace: vi.fn().mockResolvedValue(true),
   mockConfirmReload: vi.fn().mockResolvedValue(true),
   mockConfirmOk: vi.fn().mockResolvedValue(true),
   mockFileState: {
@@ -95,7 +93,6 @@ vi.mock("$lib/stores/confirm.svelte", () => ({
   confirmState: { current: null },
   confirmSaveDiscardCancel: mockConfirmSaveDiscardCancel,
   confirmOverwrite: mockConfirmOverwrite,
-  confirmReplace: mockConfirmReplace,
   confirmReload: mockConfirmReload,
   confirmOk: mockConfirmOk,
   resolveConfirm: vi.fn(),
@@ -209,7 +206,6 @@ describe("+page.svelte", () => {
     mockFileState.currentFileSize = null;
     mockConfirmSaveDiscardCancel.mockResolvedValue("discard");
     mockConfirmOverwrite.mockResolvedValue(true);
-    mockConfirmReplace.mockResolvedValue(true);
     mockConfirmReload.mockResolvedValue(true);
     mockConfirmOk.mockResolvedValue(true);
     mockCheckExternalModification.mockResolvedValue("unchanged");

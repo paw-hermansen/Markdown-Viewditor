@@ -58,6 +58,66 @@
     };
   });
 
+  let tooltipEl: HTMLDivElement | undefined = $state(undefined);
+  let activeWrapper: Element | null = null;
+
+  $effect(() => {
+    const container = viewerContentElement;
+    const tooltip = tooltipEl;
+    if (!container || !tooltip) return;
+
+    function onMove(e: MouseEvent) {
+      const wrapper = (e.target as HTMLElement)?.closest?.('.img-tooltip-wrapper');
+      if (!wrapper) {
+        if (activeWrapper) {
+          tooltip!.style.display = 'none';
+          activeWrapper = null;
+        }
+        return;
+      }
+      if (wrapper !== activeWrapper) {
+        const text = wrapper.getAttribute('data-tooltip');
+        if (!text) {
+          tooltip!.style.display = 'none';
+          activeWrapper = null;
+          return;
+        }
+        tooltip!.textContent = text;
+        activeWrapper = wrapper;
+      }
+      tooltip!.style.display = 'block';
+
+      const pad = 12;
+      const tw = tooltip!.offsetWidth;
+      const th = tooltip!.offsetHeight;
+      let x = e.clientX + pad;
+      let y = e.clientY + pad;
+      if (x + tw > window.innerWidth - 4) {
+        x = e.clientX - tw - pad;
+      }
+      if (y + th > window.innerHeight - 4) {
+        y = e.clientY - th - pad;
+      }
+      tooltip!.style.left = `${x}px`;
+      tooltip!.style.top = `${y}px`;
+    }
+
+    function onLeave(e: MouseEvent) {
+      const related = e.relatedTarget as HTMLElement | null;
+      if (!related || !activeWrapper?.contains(related)) {
+        tooltip!.style.display = 'none';
+        activeWrapper = null;
+      }
+    }
+
+    container.addEventListener('mousemove', onMove);
+    container.addEventListener('mouseleave', onLeave);
+    return () => {
+      container.removeEventListener('mousemove', onMove);
+      container.removeEventListener('mouseleave', onLeave);
+    };
+  });
+
   $effect(() => {
     if (viewerElement && onViewerReady) {
       onViewerReady(viewerElement);
@@ -358,6 +418,7 @@
       {@html html}
     {/key}
   </div>
+  <div class="img-cursor-tooltip" bind:this={tooltipEl}></div>
 </div>
 
 <style>
@@ -374,4 +435,23 @@
      frontmatter-card/skill-* rules — live in src/lib/styles/markdown.css,
      shared with the export pipeline so exported HTML/PDF doesn't drift from
      the in-app look. */
+
+  .img-cursor-tooltip {
+    position: fixed;
+    display: none;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-family: monospace;
+    white-space: nowrap;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
 </style>

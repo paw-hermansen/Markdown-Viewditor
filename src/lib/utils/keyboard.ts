@@ -5,7 +5,7 @@ const isMac =
 export function modLabel(shortcut: string): string {
   if (!isMac) return shortcut;
   return shortcut
-    .replace(/Ctrl\+/g, "⌘")
-    .replace(/Shift\+/g, "⇧")
-    .replace(/Alt\+/g, "⌥");
+    .replace(/Ctrl\+?/g, "⌘")
+    .replace(/Shift\+?/g, "⇧")
+    .replace(/Alt\+?/g, "⌥");
 }

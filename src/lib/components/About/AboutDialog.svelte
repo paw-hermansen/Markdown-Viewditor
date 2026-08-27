@@ -437,7 +437,7 @@
         {#if activeTab === 'shortcuts'}
           <section>
             <h2>Command Palette</h2>
-            <p>Press <kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
+            <p>Press <kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
           </section>
 
           <section>
@@ -450,7 +450,7 @@
                 <tr><td>New File</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">N</kbd></td></tr>
                 <tr><td>Open File</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">O</kbd></td></tr>
                 <tr><td>Save</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
-                <tr><td>Save As</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
+                <tr><td>Save As</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
                 <tr><td>Reload from Disk</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">R</kbd></td></tr>
                 <tr><td>Quit</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Q</kbd></td></tr>
                 <tr><td>Print / Create PDF</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
@@ -467,14 +467,14 @@
               <tbody>
                 <tr><td>Bold</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">B</kbd></td></tr>
                 <tr><td>Italic</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
-                <tr><td>Strikethrough</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">X</kbd></td></tr>
-                <tr><td>Highlight</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">M</kbd></td></tr>
-                <tr><td>Heading</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">H</kbd></td></tr>
+                <tr><td>Strikethrough</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">X</kbd></td></tr>
+                <tr><td>Highlight</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">M</kbd></td></tr>
+                <tr><td>Heading</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">H</kbd></td></tr>
                 <tr><td>Insert Link</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">K</kbd></td></tr>
-                <tr><td>Insert Image</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
+                <tr><td>Insert Image</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
                 <tr><td>Inline Code / Code Block</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">E</kbd> (toggles)</td></tr>
-                <tr><td>Bullet List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">8</kbd></td></tr>
-                <tr><td>Numbered List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">7</kbd></td></tr>
+                <tr><td>Bullet List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">8</kbd></td></tr>
+                <tr><td>Numbered List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">7</kbd></td></tr>
               </tbody>
             </table>
           </section>
@@ -486,7 +486,7 @@
                 <tr><th>Action</th><th>Shortcut</th></tr>
               </thead>
               <tbody>
-                <tr><td>Cycle View Mode</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Shift</kbd> + <kbd class="shortcut-key">V</kbd></td></tr>
+                <tr><td>Cycle View Mode</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">V</kbd></td></tr>
               </tbody>
             </table>
           </section>

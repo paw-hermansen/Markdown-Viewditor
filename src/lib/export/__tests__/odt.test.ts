@@ -49,6 +49,7 @@ vi.mock("../math-render", async (importOriginal) => {
   return {
     ...original,
     renderMathToPng: mockRenderMathToPng,
+    MATH_HOST_WIDTH_PX: 600,
   };
 });
 
@@ -1318,7 +1319,8 @@ describe("ODT rasterization options", () => {
       "odt.rasterResolution": 3,
     });
     const args = mockRenderMathToPng.mock.calls[0] as unknown[];
-    expect(args[2]).toBe(3); // scale argument
+    const opts = args[0] as Record<string, unknown>;
+    expect(opts.resolution).toBe(3);
   });
 
   it("passes the 4× resolution scale to renderMathToPng", async () => {
@@ -1327,7 +1329,8 @@ describe("ODT rasterization options", () => {
       "odt.rasterResolution": 4,
     });
     const args = mockRenderMathToPng.mock.calls[0] as unknown[];
-    expect(args[2]).toBe(4); // scale argument
+    const opts = args[0] as Record<string, unknown>;
+    expect(opts.resolution).toBe(4);
   });
 
   it("centers the paragraph that wraps a rasterized math block", async () => {
@@ -1386,10 +1389,12 @@ describe("ODT rasterization options", () => {
       "odt.rasterResolution": 2, // must NOT multiply to 1200
     });
     expect(mockRenderMathToPng).toHaveBeenCalledWith(
-      expect.stringContaining("\\tag{7.a}"),
-      true,
-      2,
-      11,
+      expect.objectContaining({
+        tex: expect.stringContaining("\\tag{7.a}"),
+        displayMode: true,
+        resolution: 2,
+        targetFontSize: 11,
+      }),
     );
     // Width should be 600/96 = 6.25 in. If the dimension-fix
     // regresses (returns post-scale dimensions or measures viewport)
@@ -1491,5 +1496,97 @@ describe("ODT rasterization options", () => {
     );
     expect(files.some((f) => f.endsWith(".svg"))).toBe(true);
     expect(files.some((f) => f.endsWith(".png"))).toBe(false);
+  });
+
+  it("scales a wide formula's frame to fit the ODT page-content width", async () => {
+    // A formula that returns 800px wide (wider than the 600px page)
+    // should be scaled down proportionally.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 800,
+      heightPx: 40,
+    });
+    const xml = await getMathContentXml("$$x^2$$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 2,
+    });
+    // fitScale = 600 / 800 = 0.75
+    // frameWidth = 800 * 0.75 = 600 → 600/96 = 6.25 in
+    // frameHeight = 40 * 0.75 = 30 → 30/96 = 0.3125 in
+    expect(xml).toContain('svg:width="6.2500in"');
+    expect(xml).toContain('svg:height="0.3125in"');
+  });
+
+  it("does not scale a narrow formula's frame", async () => {
+    // A formula that returns 200px wide (narrower than the 600px page)
+    // should keep its natural width.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 200,
+      heightPx: 30,
+    });
+    const xml = await getMathContentXml("$$x^2$$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 2,
+    });
+    // 200/96 = 2.0833 in
+    expect(xml).toContain('svg:width="2.0833in"');
+    expect(xml).toContain('svg:height="0.3125in"');
+  });
+
+  it("scales a wide formula's frame height by the same factor as width", async () => {
+    // Verify proportional scaling: width and height must use the same
+    // fitScale factor.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 1200,
+      heightPx: 60,
+    });
+    const xml = await getMathContentXml("$$x^2$$", {
+      "odt.rasterizeMath": true,
+    });
+    // fitScale = 600 / 1200 = 0.5
+    // frameWidth = 1200 * 0.5 = 600 → 6.25 in
+    // frameHeight = 60 * 0.5 = 30 → 0.3125 in
+    expect(xml).toContain('svg:width="6.2500in"');
+    expect(xml).toContain('svg:height="0.3125in"');
+  });
+
+  it("applies target-font-size scaling before page fitting", async () => {
+    // The mock returns post-target-font-size dimensions (already scaled
+    // by the renderer). The page-fit step operates on those logical
+    // dimensions. If the renderer returns 800px (already scaled from
+    // the host's 16px down to the target font), the page-fit should
+    // still cap at 600px.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 800,
+      heightPx: 40,
+    });
+    const xml = await getMathContentXml("$$x^2$$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 2,
+    });
+    // The frame should be fitted to page width.
+    expect(xml).toContain('svg:width="6.2500in"');
+  });
+
+  it("uses logical dimensions (not bitmap pixels) for page fitting", async () => {
+    // The mock returns logical dimensions (post-crop, post-font-scale).
+    // The page-fit must use these, not the bitmap pixel count.
+    mockRenderMathToPng.mockResolvedValueOnce({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 900,
+      heightPx: 45,
+    });
+    const xml = await getMathContentXml("$$x^2$$", {
+      "odt.rasterizeMath": true,
+      "odt.rasterResolution": 4,
+    });
+    // fitScale = 600 / 900 = 0.6667
+    // frameWidth = 900 * 0.6667 = 600 → 6.25 in
+    // frameHeight = 45 * 0.6667 = 30 → 0.3125 in
+    expect(xml).toContain('svg:width="6.2500in"');
+    expect(xml).toContain('svg:height="0.3125in"');
   });
 });

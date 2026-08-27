@@ -19,7 +19,11 @@ import type {
   ExportContext,
   OptionGroup,
 } from "../types";
-import { renderMathToMathml, renderMathToPng } from "../math-render";
+import {
+  renderMathToMathml,
+  renderMathToPng,
+  MATH_HOST_WIDTH_PX,
+} from "../math-render";
 import { rasterizeSvg } from "../svg-rasterize";
 import { fileState } from "$lib/stores/file.svelte";
 import {
@@ -133,6 +137,40 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
       ],
     },
   ];
+}
+
+/**
+ * ODT page-content width in CSS px. Derived from the host layout width
+ * used by the math renderer (A4 with 1 in margins ≈ 600 px). This is
+ * the maximum width available for content in the ODT page.
+ */
+const ODT_PAGE_CONTENT_WIDTH_PX = MATH_HOST_WIDTH_PX;
+
+/**
+ * Fit logical PNG dimensions inside the ODT page-content width.
+ * Returns the frame dimensions in CSS px. If the formula is narrower
+ * than the page, it keeps its natural width. If wider, it is
+ * proportionally scaled down so the frame never exceeds the page width.
+ *
+ * This is a pure dimension helper — it does not resample the PNG.
+ * ODT frame scaling performs the visual shrink.
+ *
+ * @param logicalWidthPx - Logical width of the cropped PNG in CSS px.
+ * @param logicalHeightPx - Logical height of the cropped PNG in CSS px.
+ * @returns Frame dimensions in CSS px, ready for inch conversion.
+ */
+function fitMathToPage(
+  logicalWidthPx: number,
+  logicalHeightPx: number,
+): { frameWidthPx: number; frameHeightPx: number } {
+  if (logicalWidthPx <= ODT_PAGE_CONTENT_WIDTH_PX) {
+    return { frameWidthPx: logicalWidthPx, frameHeightPx: logicalHeightPx };
+  }
+  const fitScale = ODT_PAGE_CONTENT_WIDTH_PX / logicalWidthPx;
+  return {
+    frameWidthPx: logicalWidthPx * fitScale,
+    frameHeightPx: logicalHeightPx * fitScale,
+  };
 }
 
 /* ─────────────────────── hljs color map (printer-friendly theme) ──────── */
@@ -1429,16 +1467,20 @@ async function buildDocument(
         case "math_inline": {
           if (rasterizeMath) {
             try {
-              const { png, widthPx, heightPx } = await renderMathToPng(
-                child.content,
-                false,
-                rasterScale,
-                mathTargetFontSize,
+              const { png, widthPx, heightPx } = await renderMathToPng({
+                tex: child.content,
+                displayMode: false,
+                resolution: rasterScale,
+                targetFontSize: mathTargetFontSize,
+              });
+              const { frameWidthPx, frameHeightPx } = fitMathToPage(
+                widthPx,
+                heightPx,
               );
               xml += addRasterImage(
                 png,
-                widthPx,
-                heightPx,
+                frameWidthPx,
+                frameHeightPx,
                 `inline-math(${child.content.slice(0, 40)})`,
                 "Formula",
               );
@@ -2055,16 +2097,20 @@ async function buildDocument(
           if (language.toLowerCase() === "math") {
             if (rasterizeMath) {
               try {
-                const { png, widthPx, heightPx } = await renderMathToPng(
-                  token.content,
-                  true,
-                  rasterScale,
-                  mathTargetFontSize,
+                const { png, widthPx, heightPx } = await renderMathToPng({
+                  tex: token.content,
+                  displayMode: true,
+                  resolution: rasterScale,
+                  targetFontSize: mathTargetFontSize,
+                });
+                const { frameWidthPx, frameHeightPx } = fitMathToPage(
+                  widthPx,
+                  heightPx,
                 );
                 const inner = addRasterImage(
                   png,
-                  widthPx,
-                  heightPx,
+                  frameWidthPx,
+                  frameHeightPx,
                   `block-math(${token.content.slice(0, 40)})`,
                 );
                 parts.push(
@@ -2137,16 +2183,20 @@ async function buildDocument(
         case "math_block": {
           if (rasterizeMath) {
             try {
-              const { png, widthPx, heightPx } = await renderMathToPng(
-                token.content,
-                true,
-                rasterScale,
-                mathTargetFontSize,
+              const { png, widthPx, heightPx } = await renderMathToPng({
+                tex: token.content,
+                displayMode: true,
+                resolution: rasterScale,
+                targetFontSize: mathTargetFontSize,
+              });
+              const { frameWidthPx, frameHeightPx } = fitMathToPage(
+                widthPx,
+                heightPx,
               );
               const inner = addRasterImage(
                 png,
-                widthPx,
-                heightPx,
+                frameWidthPx,
+                frameHeightPx,
                 `block-math(${token.content.slice(0, 40)})`,
               );
               parts.push(

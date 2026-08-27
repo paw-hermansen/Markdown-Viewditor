@@ -273,6 +273,15 @@
   color: inherit;
 }
 
+/* KaTeX's automatic equation-number tag uses the same -2px vlist correction
+   as other vertical lists, which becomes false horizontal overflow when the
+   tag is positioned at the right edge of a display. Keep real wide-equation
+   scrolling while removing only that tag-specific overflow. See
+   https://github.com/KaTeX/KaTeX/issues/3254. */
+.viewer-content .katex-display > .katex > .katex-html > .tag > .vlist-t2 {
+  margin-right: 0;
+}
+
 .viewer-content .katex-error {
   display: inline-block;
   min-height: 1.2em;

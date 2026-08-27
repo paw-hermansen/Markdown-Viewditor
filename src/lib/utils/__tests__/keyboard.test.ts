@@ -32,6 +32,21 @@ describe("keyboard utils", () => {
       const { modLabel } = await import("../keyboard");
       expect(modLabel("Ctrl+Shift+S")).toBe("Ctrl+Shift+S");
     });
+
+    it("returns standalone Ctrl unchanged", async () => {
+      const { modLabel } = await import("../keyboard");
+      expect(modLabel("Ctrl")).toBe("Ctrl");
+    });
+
+    it("returns standalone Shift unchanged", async () => {
+      const { modLabel } = await import("../keyboard");
+      expect(modLabel("Shift")).toBe("Shift");
+    });
+
+    it("returns standalone Alt unchanged", async () => {
+      const { modLabel } = await import("../keyboard");
+      expect(modLabel("Alt")).toBe("Alt");
+    });
   });
 
   describe("modLabel (macOS)", () => {
@@ -65,6 +80,21 @@ describe("keyboard utils", () => {
     it("handles shortcut without modifiers", async () => {
       const { modLabel } = await import("../keyboard");
       expect(modLabel("F1")).toBe("F1");
+    });
+
+    it("replaces standalone Ctrl with ⌘", async () => {
+      const { modLabel } = await import("../keyboard");
+      expect(modLabel("Ctrl")).toBe("⌘");
+    });
+
+    it("replaces standalone Shift with ⇧", async () => {
+      const { modLabel } = await import("../keyboard");
+      expect(modLabel("Shift")).toBe("⇧");
+    });
+
+    it("replaces standalone Alt with ⌥", async () => {
+      const { modLabel } = await import("../keyboard");
+      expect(modLabel("Alt")).toBe("⌥");
     });
   });
 });

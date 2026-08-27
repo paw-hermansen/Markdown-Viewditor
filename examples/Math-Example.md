@@ -25,6 +25,14 @@ Euler's identity: \( e^{i\pi} + 1 = 0 \).
 \int_{-\infty}^{\infty} e^{-x^2} \, dx = \sqrt{\pi}
 \]
 
+## Very wide block math (should scroll)
+
+$$
+\begin{aligned}
+\mathcal{L}(\theta) ={}& -\sum_{i=1}^{n} \log p(y_i \mid x_i, \theta) + \lambda_1 \lVert\theta\rVert_1 + \lambda_2 \lVert\theta\rVert_2^2 + \alpha\,\mathrm{tr}(\Sigma^{-1}S) + \beta\,\log\det(\Sigma) + \gamma\,\mathrm{KL}(q(z) \mathbin\Vert p(z)) + \delta\,\mathbb{E}_{z\sim q(z)}[\lVert f_\theta(z) - y\rVert_2^2]
+\end{aligned}
+$$
+
 ## Bare `\begin{...}` blocks
 
 \begin{align}

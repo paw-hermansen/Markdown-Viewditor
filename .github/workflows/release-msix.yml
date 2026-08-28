@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build MSIX bundle
-        run: npm run tauri:windows:build -- --arch x64,arm64
+        run: npm run tauri:windows:build -- --arch x64,arm64 --runner npm
 
       - name: Upload MSIX bundle
         uses: actions/upload-artifact@v4

@@ -13,7 +13,7 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "tauri": "tauri",
-    "tauri:windows:build": "tauri-windows-bundle build",
+    "tauri:windows:build": "tauri-windows-bundle build --runner npm",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:components": "vitest run --environment jsdom src/lib/components"

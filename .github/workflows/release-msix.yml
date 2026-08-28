@@ -34,7 +34,12 @@ jobs:
         run: npm ci
 
       - name: Build MSIX bundle
-        run: npm run tauri:windows:build -- --arch x64,arm64 --runner npm
+        run: npm run tauri:windows:build -- --arch x64,arm64 --runner npm --verbose
+
+      - name: Debug - list target directory
+        if: failure()
+        shell: bash
+        run: find src-tauri/target -name "*.exe" 2>/dev/null || echo "No exe found"
 
       - name: Upload MSIX bundle
         uses: actions/upload-artifact@v4

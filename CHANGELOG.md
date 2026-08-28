@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-08-28
+
+- Added more screendump examples to top-level README (#62) (25f51a8)
+- fix: show macOS shortcut symbols (⌘⇧) in About dialog (#61) (d78c29f)
+- fix(export): complete math PNG capture for ODT (#60) (209353a)
+- fix: remove false horizontal scrollbar on auto-numbered equations (#59) (b09a91a)
+- test: remove 'already up to date' toast checks from reload tests (#58) (bb4ec5a)
+- Make image tooltip follow the cursor instead of floating above the image (#57) (0568e43)
+- Mark fenced math blocks as GitHub-compatible (#56) (bb2db70)
+- fix: remove redundant overwrite confirmation in Save As dialog (#55) (2c51bcd)
+- Scroll new file at top + hover tooltips on images (#54) (c9b82f6)
+- feat: center-based scroll sync with boundary transitions (#53) (de790ab)
+- Fixed shourtcut keys (#52) (3925fde)
+- docs(test-plan): add Highlight feature to Compatibility Levels section (#51) (e84a63f)
+- Added shortkeys (#50) (040303e)
+- fix: report precise line numbers for inline compliance violations (e83e921)
+- fix: keep editor and viewer in sync when opening files (#48) (f1c7d43)
+- Remove redundant filename from status bar (#47) (0ee77b1)
+- Improved about AI wordings (#46) (7978355)
+- Changes job titles to better describe them (#45) (ec68ab5)
+- fix(export): deduplicate draw:name for images with same alt text (#42) (26a0061)
+- Prioritize label matches over category matches in command palette (#44) (24f2c30)
+- feat: support highlight syntax (==text== and <mark>) in ODT export (#43) (521d7a8)
+- Frontmatter export option for all export types (#40) (b775cbc)
+- Multiple small fixes (#39) (0b6aa08)
+- Canonicalize CLI file path argument to absolute path (#38) (ac4ea7d)
+- Add automatic update checking on startup (#37) (8affb9d)
+- Updated test plan with the new export (#36) (6a27f35)
+- Export refactoring and added ODT export (#35) (0f20ad1)
+- Added AI assistant standpoint (#34) (5efad11)
+- Fixed export html images (#33) (9632343)
+
 ## [1.1.1] - 2026-08-07
 
 - Fixed macOS build (#31) (e30a74b)

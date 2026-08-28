@@ -37,7 +37,7 @@ jobs:
         run: npm run tauri:windows:build -- --arch x64,arm64 --runner npm
 
       - name: Upload MSIX bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: msix-bundle
           path: src-tauri/target/msix/*.msixbundle

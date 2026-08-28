@@ -154,7 +154,6 @@ The included example custom theme [Custom Theme Bubblegum](examples/custom_theme
 
 ![Custom Theme Bubblegum](images/ThemeCustomBubblegum.png)
 
-
 ## Project Quick Start
 
 1. **Install Rust** (required for Tauri) — see [rustup.rs](https://rustup.rs) for Windows, macOS, and Linux installers, then restart your terminal

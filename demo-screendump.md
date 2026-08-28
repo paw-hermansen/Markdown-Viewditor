@@ -11,7 +11,7 @@ Earth. Its unique properties arise from _molecular geometry_ and
 _hydrogen bonding_.[^1]
 
 > Water is the driving force in nature
-> 
+>
 > -- <cite>Leonardo da Vinci</cite>
 
 ## Molecular Structure

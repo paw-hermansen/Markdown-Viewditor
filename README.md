@@ -14,13 +14,13 @@ A feature-rich and simple cross-platform markdown viewer and editor with live pr
 - **Scroll Sync** — Editor and view stay synchronized
 - **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
-- **Multiple Themes** — 8 built-in themes + custom CSS themes (see ⓘ inside the app)
+- **Dark/light Themes** — 8 built-in themes + custom CSS themes (see `F1`/ ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
 - **HTML** — Use HTML along with the markdown
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
-## AI-Augmented Development by Experienced Senior Software Developer
+## AI-Augmented Development
 
 This application was built with the help of [OpenCode](https://opencode.ai),
 an AI-powered coding assistant. Development used different AI models, some free
@@ -29,7 +29,7 @@ and some paid. Also most of the documentation was written by AI.
 I'm a Senior Software Developer and I wrote my first software back in the
 1970's. Yes, around the time when smoking was normal, everyone said "10-4", were
 fascinated by Lava Lamps, and listened to Disco music. Phones were anchored to a
-geographic location instead of a person and nobody had yet invented the Internet.
+geographic location instead of to a person and nobody had yet invented the Internet.
 I've been building software for a living my entire career until I retired in 2025.
 
 I'm still coding for fun and I couldn't find a Markdown viewer and editor
@@ -42,9 +42,6 @@ what I meant (most of the time). Sometimes my assistant lacked intelligence
 and experience and therefore it required constant supervision
 and guidance from an experienced software developer - which in my experience is also true
 for many human programmers.
-
-The desktop app did not end up as Slopware. I use it myself and I see my test
-with _AI-Augmented Development_ as a great success.
 
 ## Download
 
@@ -81,6 +78,8 @@ level doesn't enable, the editor shows a lint warning on the relevant line and
 the status bar shows an amber `⚠ N` badge. Rendering is never restricted —
 this is a portability indicator, not a hard limit.
 
+![Compatibility Levels](images/CompatibilityLevels.png)
+
 | Level    | Enabled features                                                           |
 | -------- | -------------------------------------------------------------------------- |
 | Basic    | CommonMark core only (untoggleable)                                        |
@@ -97,9 +96,9 @@ The `<https://…>` autolink form is CommonMark basic and never triggers the
 "autolinks" toggle — that toggle is for bare-URL autolinks (e.g. `https://…`
 written without angle brackets, expanded by the linkify rule).
 
-## Mathematics Formulas
+## Mathematics Formulas in Formats From Most AI Chat Bots
 
-See [Math-Example.md](examples/Math-Example.md) for examples.
+See [Math-Example.md](examples/Math-Example.md) for more examples.
 
 Markdown Viewer includes [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
 
@@ -129,9 +128,18 @@ $\pu{123 kJ/mol}$    — physical units
 The `\ce{…}` and `\pu{…}` commands work inside all supported math delimiters
 (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, bare `\begin{}`, and ` ```math ` fences).
 
-## Custom Themes
+## Themes
 
-See documentation inside the app in the Information Dialog (click ⓘ to open) and see example custom themes in [examples/custom_themes/](./examples/custom_themes/).
+### Examples of Built-in themes
+
+![Github Dark](images/ThemeGithubDark.png)
+![Atom One Dark](images/ThemeAtomOneDark.png)
+![Github Light](images/ThemeGithubLight.png)
+![Nord Light](images/ThemeNordLight.png)
+
+### Custom Themes
+
+See documentation inside the app in the Information Dialog (click `F1` or ⓘ to open) and see example custom themes in [examples/custom_themes/](./examples/custom_themes/).
 To make a new custom theme available in the app, copy a custom theme `.css` file to the themes directory:
 
 | Platform | Path                                                                                |
@@ -141,6 +149,11 @@ To make a new custom theme available in the app, copy a custom theme `.css` file
 | Windows  | `%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\`                     |
 
 Theme type (dark/light) is auto-detected from the CSS content.
+
+The included example custom theme [Custom Theme Bubblegum](examples/custom_themes/theme-bubblegum.css):
+
+![Custom Theme Bubblegum](images/ThemeCustomBubblegum.png)
+
 
 ## Project Quick Start
 

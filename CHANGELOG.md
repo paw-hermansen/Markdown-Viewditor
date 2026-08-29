@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.2] - 2026-08-29
+
+- fix: trigger MSIX release workflow via workflow_call (#71) (b8b2b2c)
+
 ## [1.2.1] - 2026-08-29
 
 - fix: prevent KaTeX Size3 font from being blocked by CSP in production builds (#69) (81efbba)

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.1] - 2026-08-29
+
+- fix: prevent KaTeX Size3 font from being blocked by CSP in production builds (#69) (81efbba)
+- Fix: Microsoft Store Distribution (#68) (878c365)
+- Fix: Microsoft Store Distribution (#67) (7109a95)
+- Fix: Microsoft Store Dist - added debug  (#66) (cc3a887)
+- Fix: Microsoft Store Distribution (#65) (c320dae)
+- CI: Microsoft Store Distribution (#64) (ae0f7d5)
+
 ## [1.2.0] - 2026-08-28
 
 - Added more screendump examples to top-level README (#62) (25f51a8)

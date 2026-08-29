@@ -11,4 +11,10 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    assetsInlineLimit: (filePath: string) => {
+      if (/\.(woff2?|ttf|otf)$/.test(filePath)) return false;
+      return undefined;
+    },
+  },
 });

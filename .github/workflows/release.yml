@@ -1,9 +1,6 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       tag:
@@ -46,6 +43,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'linux'
@@ -79,12 +78,7 @@ jobs:
       - name: Resolve tag name
         id: tag
         shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
 
       - uses: tauri-apps/tauri-action@v0
         env:

@@ -1,10 +1,13 @@
 name: Release MSIX
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Tag name to build (e.g. v1.2.1)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v7
         with:

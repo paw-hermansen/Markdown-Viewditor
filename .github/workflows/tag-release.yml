@@ -40,3 +40,10 @@ jobs:
     with:
       tag: ${{ needs.tag.outputs.tag }}
     secrets: inherit
+
+  release-msix:
+    name: Trigger MSIX Build
+    needs: tag
+    uses: ./.github/workflows/release-msix.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}

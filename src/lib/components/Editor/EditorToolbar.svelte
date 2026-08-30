@@ -41,7 +41,7 @@
   }
 </script>
 
-<div class="editor-toolbar" role="toolbar" aria-label="Formatting" onkeydown={handleToolbarKeydown}>
+<div class="editor-toolbar" role="toolbar" aria-label="Formatting" tabindex="0" onkeydown={handleToolbarKeydown}>
   {#each formats as format}
     <button
       class="toolbar-btn {format.cls}"

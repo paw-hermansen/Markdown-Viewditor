@@ -99,31 +99,36 @@
     const currentIndex = items.indexOf(document.activeElement as HTMLElement);
 
     switch (e.key) {
-      case 'ArrowDown':
+      case 'ArrowDown': {
         e.preventDefault();
         const next = (currentIndex + 1) % items.length;
         items[next]?.focus();
         break;
-      case 'ArrowUp':
+      }
+      case 'ArrowUp': {
         e.preventDefault();
         const prev = (currentIndex - 1 + items.length) % items.length;
         items[prev]?.focus();
         break;
-      case 'Home':
+      }
+      case 'Home': {
         e.preventDefault();
         items[0]?.focus();
         break;
-      case 'End':
+      }
+      case 'End': {
         e.preventDefault();
         items[items.length - 1]?.focus();
         break;
+      }
       case 'Enter':
-      case ' ':
+      case ' ': {
         e.preventDefault();
         if (currentIndex >= 0) {
           items[currentIndex]?.click();
         }
         break;
+      }
     }
   }
 
@@ -170,7 +175,7 @@
   {/if}
 
   {#if isOpen}
-    <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu" onkeydown={handleMenuKeydown}>
+    <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu" tabindex="0" onkeydown={handleMenuKeydown}>
       {#if header}
         <div class="dropdown-header">{header}</div>
       {/if}

@@ -212,7 +212,7 @@
 
   $effect(() => {
     const el = viewerContentElement;
-    const _html = html;
+    void html; // Create dependency on html
     if (!el) return;
     tick().then(() => {
       if (viewerContentElement) ensureImageAlt(viewerContentElement);

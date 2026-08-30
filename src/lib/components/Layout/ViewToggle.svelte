@@ -32,7 +32,7 @@
   }
 </script>
 
-<div class="view-toggle" role="radiogroup" aria-label="View mode" onkeydown={handleKeydown}>
+<div class="view-toggle" role="radiogroup" aria-label="View mode" tabindex="0" onkeydown={handleKeydown}>
   {#each modes as mode}
     <button
       role="radio"

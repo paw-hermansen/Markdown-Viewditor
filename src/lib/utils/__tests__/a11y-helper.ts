@@ -1,4 +1,5 @@
-import { axe, type AxeResults } from "vitest-axe";
+import { axe } from "vitest-axe";
+import type AxeCore from "axe-core";
 import { expect } from "vitest";
 
 /**
@@ -6,20 +7,12 @@ import { expect } from "vitest";
  * Excludes CodeMirror internals (shadow DOM, dynamically generated)
  * and KaTeX math rendering elements.
  */
-const DEFAULT_AXE_OPTIONS = {
+const DEFAULT_AXE_OPTIONS: AxeCore.RunOptions = {
   rules: {
     // CodeMirror generates elements with duplicate IDs for its internal structure
     "duplicate-id-active": { enabled: false },
     "duplicate-id-aria": { enabled: false },
   },
-  exclude: [
-    // CodeMirror editor internals (complex widget, tested separately)
-    [".cm-editor"],
-    // KaTeX rendered math (third-party SVG output)
-    [".katex"],
-    // highlight.js code blocks (third-party generated)
-    [".hljs"],
-  ],
 };
 
 /**
@@ -32,19 +25,15 @@ const DEFAULT_AXE_OPTIONS = {
  */
 export async function checkA11y(
   html: Element | string,
-  options?: Parameters<typeof axe>[1],
-): Promise<AxeResults> {
-  const mergedOptions = {
+  options?: AxeCore.RunOptions,
+): Promise<AxeCore.AxeResults> {
+  const mergedOptions: AxeCore.RunOptions = {
     ...DEFAULT_AXE_OPTIONS,
     ...options,
     rules: {
       ...DEFAULT_AXE_OPTIONS.rules,
       ...options?.rules,
     },
-    exclude: [
-      ...(DEFAULT_AXE_OPTIONS.exclude || []),
-      ...(options?.exclude || []),
-    ],
   };
 
   const results = await axe(html, mergedOptions);
@@ -64,19 +53,15 @@ export async function checkA11y(
  */
 export async function runA11yCheck(
   html: Element | string,
-  options?: Parameters<typeof axe>[1],
-): Promise<AxeResults> {
-  const mergedOptions = {
+  options?: AxeCore.RunOptions,
+): Promise<AxeCore.AxeResults> {
+  const mergedOptions: AxeCore.RunOptions = {
     ...DEFAULT_AXE_OPTIONS,
     ...options,
     rules: {
       ...DEFAULT_AXE_OPTIONS.rules,
       ...options?.rules,
     },
-    exclude: [
-      ...(DEFAULT_AXE_OPTIONS.exclude || []),
-      ...(options?.exclude || []),
-    ],
   };
 
   return axe(html, mergedOptions);

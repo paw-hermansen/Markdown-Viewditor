@@ -61,7 +61,7 @@ describe("CommandPalette", () => {
     render(CommandPalette, { props: defaultProps });
     const input = screen.getByPlaceholderText("Type a command...");
     await fireEvent.input(input, { target: { value: "file" } });
-    const items = screen.getAllByRole("button").map((el) => el.textContent);
+    const items = screen.getAllByRole("option").map((el) => el.textContent);
     const newFileIdx = items.findIndex((t) => t?.includes("New File"));
     const openFileIdx = items.findIndex((t) => t?.includes("Open File"));
     const saveIdx = items.findIndex(

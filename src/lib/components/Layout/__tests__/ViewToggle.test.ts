@@ -9,8 +9,8 @@ describe("ViewToggle", () => {
     render(ViewToggle, {
       props: { viewMode: "split", onchange: vi.fn() },
     });
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(3);
+    const radios = screen.getAllByRole("radio");
+    expect(radios).toHaveLength(3);
   });
 
   it("renders Edit, Split, and View labels", () => {

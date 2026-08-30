@@ -95,7 +95,7 @@
 
 <svelte:window onclick={closePopovers} />
 
-<footer class="statusbar" role="status" aria-label="Document status">
+<footer class="statusbar" aria-label="Document status">
   <div class="statusbar-left"></div>
   <div class="statusbar-center" aria-live="polite" aria-atomic="true">
     {#if showEditorInfo}
@@ -116,7 +116,7 @@
         {levelLabel} <span class="caret">&#x25BE;</span>
       </button>
       {#if showLevel}
-        <div class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" onkeydown={handlePopoverKeydown}>
+        <div class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onkeydown={handlePopoverKeydown}>
           <div class="level-options">
             {#each LEVELS as lvl}
               <button
@@ -158,7 +158,7 @@
           &#x26A0; {violations.length}
         </button>
         {#if showViolations}
-          <div class="popover violations-popover" role="dialog" aria-label="Feature violations" onkeydown={handlePopoverKeydown}>
+          <div class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
             {#each violations as v}
               <div class="violation-row">
                 <div class="violation-msg">{violationMessageFor(v)}</div>

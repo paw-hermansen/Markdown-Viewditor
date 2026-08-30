@@ -90,7 +90,8 @@ describe("AboutDialog", () => {
   it("calls onClose on Escape key", async () => {
     const onClose = vi.fn();
     render(AboutDialog, { props: { open: true, onClose } });
-    await fireEvent.keyDown(window, { key: "Escape" });
+    const dialog = screen.getByRole("dialog");
+    await fireEvent.keyDown(dialog, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
   });
 

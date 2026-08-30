@@ -172,7 +172,7 @@
         />
         <span class="shortcut-hint">Esc to close</span>
       </div>
-      <div class="commands-list" bind:this={commandsList} role="listbox">
+      <div class="commands-list" bind:this={commandsList} role="listbox" aria-label="Commands">
         {#each filteredCommands as command, i}
           <button
             class="command-item"

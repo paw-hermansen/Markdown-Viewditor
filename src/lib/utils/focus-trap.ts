@@ -18,14 +18,14 @@ interface FocusTrapOptions {
 }
 
 const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
-  '[contenteditable]',
-].join(', ');
+  "[contenteditable]",
+].join(", ");
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
@@ -38,13 +38,13 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
   let previousFocus: HTMLElement | null = null;
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       event.preventDefault();
       onEscape?.();
       return;
     }
 
-    if (event.key !== 'Tab') return;
+    if (event.key !== "Tab") return;
 
     const focusable = getFocusableElements(node);
     if (focusable.length === 0) {
@@ -71,7 +71,7 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
   function activate() {
     previousFocus = document.activeElement as HTMLElement;
 
-    node.addEventListener('keydown', handleKeydown);
+    node.addEventListener("keydown", handleKeydown);
 
     // Set initial focus
     if (initialFocus) {
@@ -87,7 +87,7 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
   }
 
   function deactivate() {
-    node.removeEventListener('keydown', handleKeydown);
+    node.removeEventListener("keydown", handleKeydown);
 
     if (restoreFocus && previousFocus) {
       previousFocus.focus();

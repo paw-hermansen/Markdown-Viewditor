@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi } from "vitest";
 import EditorToolbar from "../EditorToolbar.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 describe("EditorToolbar", () => {
   it("renders all 13 format buttons", () => {
@@ -86,5 +87,12 @@ describe("EditorToolbar", () => {
     expect(screen.getByTitle("Task List")).toBeInTheDocument();
     expect(screen.getByTitle("Blockquote")).toBeInTheDocument();
     expect(screen.getByTitle("Horizontal Rule")).toBeInTheDocument();
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(EditorToolbar, {
+      props: { onFormat: vi.fn() },
+    });
+    await checkA11y(container);
   });
 });

@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CommandPalette from "../CommandPalette.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 describe("CommandPalette", () => {
   const defaultProps = {
@@ -119,5 +120,10 @@ describe("CommandPalette", () => {
   it("shows cycle view mode command", () => {
     render(CommandPalette, { props: defaultProps });
     expect(screen.getByText("Cycle View Mode")).toBeInTheDocument();
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(CommandPalette, { props: defaultProps });
+    await checkA11y(container);
   });
 });

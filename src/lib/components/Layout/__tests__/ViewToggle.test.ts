@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi } from "vitest";
 import ViewToggle from "../ViewToggle.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 describe("ViewToggle", () => {
   it("renders three mode buttons", () => {
@@ -60,5 +61,12 @@ describe("ViewToggle", () => {
     });
     await fireEvent.click(screen.getByTitle("Split"));
     expect(onchange).toHaveBeenCalledWith("split");
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(ViewToggle, {
+      props: { viewMode: "split", onchange: vi.fn() },
+    });
+    await checkA11y(container);
   });
 });

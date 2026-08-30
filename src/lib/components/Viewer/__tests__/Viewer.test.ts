@@ -2,6 +2,7 @@
 import { render, screen, waitFor } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Viewer from "../Viewer.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 const {
   mockViewerState,
@@ -287,5 +288,13 @@ describe("Viewer", () => {
     await renderDone;
 
     expect(container.scrollTop).toBe(123);
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(Viewer, {
+      props: { content: "# Hello World" },
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    await checkA11y(container);
   });
 });

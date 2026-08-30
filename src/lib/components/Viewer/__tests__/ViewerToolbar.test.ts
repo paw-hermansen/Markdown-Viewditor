@@ -2,6 +2,7 @@
 import { render, screen, fireEvent, within } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ViewerToolbar from "../ViewerToolbar.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 import {
   registerExporter,
   unregisterExporter,
@@ -116,5 +117,12 @@ describe("ViewerToolbar", () => {
       await fireEvent.click(within(dropdown).getByText("Export as HTML"));
       expect(onExport).toHaveBeenCalledWith("test-html");
     });
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(ViewerToolbar, {
+      props: { onPrint: vi.fn(), onExport: vi.fn() },
+    });
+    await checkA11y(container);
   });
 });

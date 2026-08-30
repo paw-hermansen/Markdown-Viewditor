@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import StatusBar from "../StatusBar.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 const { mockEditorState, mockSettingsState, mockLevelState } = vi.hoisted(
   () => ({
@@ -208,5 +209,10 @@ describe("StatusBar", () => {
     await fireEvent.click(badge);
     expect(screen.getByText("Raw HTML (warning)")).toBeInTheDocument();
     expect(screen.getByText(/line: 3/)).toBeInTheDocument();
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(StatusBar);
+    await checkA11y(container);
   });
 });

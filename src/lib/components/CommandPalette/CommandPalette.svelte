@@ -2,6 +2,7 @@
   import type { ViewMode } from '$lib/types';
   import { modLabel } from '$lib/utils/keyboard';
   import { listExporters } from '$lib/export/registry.svelte';
+  import { focusTrap } from '$lib/utils/focus-trap';
 
   interface Command {
     id: string;
@@ -148,21 +149,12 @@
     }
   }
 
-  function handleGlobalKeydown(e: KeyboardEvent) {
-    if (!open) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-    }
-  }
 </script>
-
-<svelte:window onkeydown={handleGlobalKeydown} />
 
 {#if open}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="overlay" onclick={handleOverlayClick} onkeydown={handleOverlayKeydown}>
-    <div class="palette" role="dialog" aria-label="Command palette">
+    <div class="palette" role="dialog" aria-label="Command palette" aria-modal="true" use:focusTrap={{ onEscape: onClose, initialFocus: searchInput }}>
       <div class="search-container">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/>
@@ -176,14 +168,17 @@
           class="search-input"
           placeholder="Type a command..."
           spellcheck="false"
+          aria-label="Search commands"
         />
         <span class="shortcut-hint">Esc to close</span>
       </div>
-      <div class="commands-list" bind:this={commandsList}>
+      <div class="commands-list" bind:this={commandsList} role="listbox">
         {#each filteredCommands as command, i}
           <button
             class="command-item"
             class:selected={i === selectedIndex}
+            role="option"
+            aria-selected={i === selectedIndex}
             onclick={() => { command.action(); onClose(); }}
             onmouseenter={() => selectedIndex = i}
           >

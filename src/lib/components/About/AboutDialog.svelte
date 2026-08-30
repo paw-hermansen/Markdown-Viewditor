@@ -5,6 +5,7 @@
   import { modLabel } from '$lib/utils/keyboard';
   import { updateStatus, checkForUpdates } from '$lib/stores/update.svelte';
   import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
+  import { focusTrap } from '$lib/utils/focus-trap';
   import licenseText from '../../../../LICENSE?raw';
 
   interface Props {
@@ -68,10 +69,6 @@
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') onClose();
-  }
-
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose();
   }
@@ -131,11 +128,9 @@
   ];
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 {#if open}
   <div class="backdrop" role="presentation" onclick={handleBackdropClick}>
-    <div class="dialog" role="dialog" aria-label="About Markdown Viewditor">
+    <div class="dialog" role="dialog" aria-label="About Markdown Viewditor" aria-modal="true" use:focusTrap={{ onEscape: onClose }}>
       <button class="close-btn" onclick={onClose} aria-label="Close">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -149,15 +144,16 @@
       </div>
 
       <div class="tabs" role="tablist">
-        <button class="tab" class:active={activeTab === 'about'} role="tab" aria-selected={activeTab === 'about'} onclick={() => activeTab = 'about'}>About</button>
-        <button class="tab" class:active={activeTab === 'themes'} role="tab" aria-selected={activeTab === 'themes'} onclick={() => activeTab = 'themes'}>Custom Themes</button>
-        <button class="tab" class:active={activeTab === 'shortcuts'} role="tab" aria-selected={activeTab === 'shortcuts'} onclick={() => activeTab = 'shortcuts'}>Keyboard Shortcuts</button>
-        <button class="tab" class:active={activeTab === 'dependencies'} role="tab" aria-selected={activeTab === 'dependencies'} onclick={() => activeTab = 'dependencies'}>Dependencies</button>
-        <button class="tab" class:active={activeTab === 'license'} role="tab" aria-selected={activeTab === 'license'} onclick={() => activeTab = 'license'}>License</button>
+        <button class="tab" class:active={activeTab === 'about'} role="tab" id="tab-about" aria-selected={activeTab === 'about'} aria-controls="panel-about" onclick={() => activeTab = 'about'}>About</button>
+        <button class="tab" class:active={activeTab === 'themes'} role="tab" id="tab-themes" aria-selected={activeTab === 'themes'} aria-controls="panel-themes" onclick={() => activeTab = 'themes'}>Custom Themes</button>
+        <button class="tab" class:active={activeTab === 'shortcuts'} role="tab" id="tab-shortcuts" aria-selected={activeTab === 'shortcuts'} aria-controls="panel-shortcuts" onclick={() => activeTab = 'shortcuts'}>Keyboard Shortcuts</button>
+        <button class="tab" class:active={activeTab === 'dependencies'} role="tab" id="tab-dependencies" aria-selected={activeTab === 'dependencies'} aria-controls="panel-dependencies" onclick={() => activeTab = 'dependencies'}>Dependencies</button>
+        <button class="tab" class:active={activeTab === 'license'} role="tab" id="tab-license" aria-selected={activeTab === 'license'} aria-controls="panel-license" onclick={() => activeTab = 'license'}>License</button>
       </div>
 
       <div class="tab-content">
         {#if activeTab === 'about'}
+          <div role="tabpanel" id="panel-about" aria-labelledby="tab-about">
           <section>
             <h2>Updates</h2>
             <div class="update-row">
@@ -225,9 +221,11 @@
               You are free to use, modify, and distribute this software.
             </p>
           </section>
+          </div>
         {/if}
 
         {#if activeTab === 'themes'}
+          <div role="tabpanel" id="panel-themes" aria-labelledby="tab-themes">
           <section>
             <h2>Custom Themes</h2>
             <p>A custom theme is a CSS file that styles code highlighting and the rendered markdown. Place <code>.css</code> files in the themes directory:</p>
@@ -438,9 +436,11 @@
 #viewer-content .footnotes { color: #5c6370; font-size: 0.85em; }
 #viewer-content .footnote-backref { color: #61afef; }`}</code></pre>
           </section>
+          </div>
         {/if}
 
         {#if activeTab === 'shortcuts'}
+          <div role="tabpanel" id="panel-shortcuts" aria-labelledby="tab-shortcuts">
           <section>
             <h2>Command Palette</h2>
             <p>Press <kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
@@ -508,9 +508,11 @@
               </tbody>
             </table>
           </section>
+          </div>
         {/if}
 
         {#if activeTab === 'dependencies'}
+          <div role="tabpanel" id="panel-dependencies" aria-labelledby="tab-dependencies">
           <section>
             <h2>Third-Party Libraries</h2>
             <table class="deps-table">
@@ -528,13 +530,16 @@
               </tbody>
             </table>
           </section>
+          </div>
         {/if}
 
         {#if activeTab === 'license'}
+          <div role="tabpanel" id="panel-license" aria-labelledby="tab-license">
           <section>
             <h2>MIT License</h2>
             <pre class="license-text">{licenseText}</pre>
           </section>
+          </div>
         {/if}
       </div>
     </div>

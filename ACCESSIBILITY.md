@@ -4,7 +4,8 @@
 **Version:** 1.3.0  
 **Date:** August 31, 2026  
 **Standards:** WCAG 2.2 Level AA, WCAG2ICT 2.2  
-**Assessment Method:** Automated testing (axe-core) + manual code review
+**Assessment Method:** Automated testing (axe-core) + manual code review  
+**Tested With:** No assistive technology testing performed — see [Limitations](#limitations-of-this-assessment)
 
 ---
 
@@ -21,11 +22,12 @@ Markdown Viewditor is a **native desktop application** built with [Tauri v2](htt
 This means that ARIA attributes (`aria-label`, `role`, `aria-live`, etc.) added to the web UI are **translated to the platform's accessibility tree** and read by desktop screen readers. When a button has `aria-label="Save"`, NVDA on Windows announces "Save button" — just as it would for a native Win32 or WPF application.
 
 **What this means for users:**
-- Screen reader users hear meaningful labels and roles for all interactive elements
-- Keyboard users can navigate the entire application without a mouse
+- Screen reader users *should* hear meaningful labels and roles for all interactive elements
+- Keyboard users *should* be able to navigate the entire application without a mouse
 - Focus indicators are visible for keyboard navigation
-- Dynamic content changes are announced via live regions
-- All standard desktop accessibility features work as expected
+- Dynamic content changes *should* be announced via live regions
+
+**Important:** These are based on code analysis and automated testing, not real-world assistive technology testing. See [Limitations](#limitations-of-this-assessment).
 
 ---
 
@@ -43,6 +45,46 @@ Markdown Viewditor meets **WCAG 2.2 Level AA** conformance for all applicable cr
 | 4. Robust | 1/1 PASS | 1/1 PASS | Full compliance |
 
 **Overall: 37 PASS, 3 PARTIAL, 1 NOT TESTED, 12 NOT APPLICABLE**
+
+### Limitations of This Assessment
+
+This report is based on **automated testing (axe-core) and manual code review only**. The following has **not** been performed:
+
+| Testing Type | Status | Why It Matters |
+|--------------|--------|----------------|
+| Screen reader testing (NVDA, JAWS, VoiceOver, Narrator, Orca) | ❌ Not done | ARIA attributes may not be exposed correctly by the webview; real-world announcement behavior varies |
+| Keyboard-only navigation testing | ❌ Not done | Focus order, trap behavior, and shortcut conflicts can only be verified by actual use |
+| Visual inspection with high contrast / zoom | ❌ Not done | Layout may break at high zoom or with Windows High Contrast mode |
+| Testing with real users with disabilities | ❌ Not done | Automated tools catch ~30-40% of accessibility issues; human testing is essential |
+
+**What we verified:**
+- ✅ Code structure follows accessibility best practices
+- ✅ ARIA attributes are present on all interactive elements
+- ✅ Color contrast ratios meet WCAG AA thresholds (calculated)
+- ✅ Focus management code exists for all dialogs
+- ✅ Keyboard navigation code exists for custom widgets
+- ✅ Automated axe-core tests pass for 9 components
+
+**What we did NOT verify:**
+- ❌ Whether screen readers actually announce elements correctly
+- ❌ Whether keyboard navigation feels natural and complete
+- ❌ Whether the application works with magnification software
+- ❌ Whether users with disabilities can actually use the application effectively
+
+### Help Us Test
+
+If you use assistive technology (screen reader, magnifier, voice control, switch access, etc.) and can test Markdown Viewditor, we would greatly appreciate your feedback. Real-world testing is essential for identifying issues that automated tools cannot detect.
+
+**How to report issues:**
+- [GitHub Issues](https://github.com/paw-hermansen/Markdown-Viewditor/issues) — include your assistive technology, OS, and steps to reproduce
+- Email: (if applicable)
+
+**What to test:**
+- Can you open, edit, and save files using only the keyboard?
+- Does your screen reader announce all buttons, dialogs, and status changes?
+- Can you navigate the editor and viewer without a mouse?
+- Do focus indicators remain visible at all times?
+- Does the application work with your magnification or high-contrast settings?
 
 ### Key Strengths
 
@@ -312,15 +354,27 @@ Per WCAG2ICT, the following criteria do not apply to non-web documents and non-w
 
 ## Testing Infrastructure
 
-### Automated Testing
+### What Automated Testing Covers
 
-Accessibility testing is integrated into the test suite using:
+axe-core checks for **code-level** accessibility issues:
+- Missing `alt` text on images
+- Missing form labels
+- Insufficient color contrast (calculated, not visual)
+- Missing ARIA attributes
+- Invalid ARIA usage
+- Duplicate IDs
 
-- **vitest-axe** — Vitest matcher for axe-core accessibility rules
-- **axe-core** — Industry-standard accessibility testing engine
-- **Custom helper** — `src/lib/utils/__tests__/a11y-helper.ts` with sensible defaults
+### What Automated Testing Does NOT Cover
 
-### Test Coverage
+axe-core **cannot** verify:
+- Whether screen readers announce elements correctly
+- Whether keyboard navigation is complete and intuitive
+- Whether focus is visible in all states
+- Whether the application is usable with assistive technology
+- Whether content is understandable
+- Whether interactions work as expected
+
+### Current Test Coverage
 
 The following components have automated axe-core accessibility tests:
 
@@ -407,6 +461,7 @@ Include:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-08-31 | 1.3 | Added honest assessment limitations; clarified automated vs. manual testing gaps; added community testing invitation |
 | 2026-08-31 | 1.2 | Clarified desktop application architecture and how webview exposes accessibility to platform APIs |
 | 2026-08-31 | 1.1 | Added WCAG2ICT 2.2 reference and regulatory compliance notes |
 | 2026-08-31 | 1.0 | Initial WCAG 2.2 Level AA conformance report |

@@ -4,6 +4,7 @@
     resolveExportConfirm,
   } from '$lib/stores/export-confirm-dialog.svelte';
   import type { OptionGroup } from '$lib/export/types';
+  import { focusTrap } from '$lib/utils/focus-trap';
 
   let dontShowAgain = $state(false);
   /** Working copy of the option values — mutated as the user toggles. */
@@ -20,17 +21,6 @@
 
   function setOption(id: string, value: unknown) {
     currentOptions = { ...currentOptions, [id]: value };
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (!exportConfirmState.current) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      resolveExportConfirm({ confirmed: false, dontShowAgain: false });
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      handleConfirm();
-    }
   }
 
   function handleBackdropClick(e: MouseEvent) {
@@ -62,8 +52,6 @@
   });
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 {#if exportConfirmState.current}
   {@const req = exportConfirmState.current}
   <div class="backdrop" role="presentation" onclick={handleBackdropClick}>
@@ -73,6 +61,7 @@
       aria-modal="true"
       aria-label={req.title}
       aria-describedby="export-confirm-message"
+      use:focusTrap={{ onEscape: () => resolveExportConfirm({ confirmed: false, dontShowAgain: false }) }}
     >
       <div class="icon-row">
         <span class="icon" aria-hidden="true">{'\u2139'}</span>

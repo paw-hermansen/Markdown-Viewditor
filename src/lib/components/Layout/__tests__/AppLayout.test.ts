@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import type { Snippet } from "svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AppLayout from "../AppLayout.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 const snippet = (content = "") => (() => content) as unknown as Snippet;
 
@@ -152,5 +153,12 @@ describe("AppLayout", () => {
     });
     await fireEvent.click(screen.getByTitle("Update available: v1.2.0"));
     expect(onUpdateClick).toHaveBeenCalled();
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(AppLayout, {
+      props: { ...defaultProps, children: snippet("content") },
+    });
+    await checkA11y(container);
   });
 });

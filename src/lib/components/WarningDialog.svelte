@@ -3,21 +3,12 @@
     warningDialogState,
     dismissWarningDialog,
   } from '$lib/stores/warning-dialog.svelte';
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (!warningDialogState.current) return;
-    if (e.key === 'Escape' || e.key === 'Enter') {
-      e.preventDefault();
-      dismissWarningDialog();
-    }
-  }
+  import { focusTrap } from '$lib/utils/focus-trap';
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) dismissWarningDialog();
   }
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 {#if warningDialogState.current}
   {@const req = warningDialogState.current}
@@ -28,6 +19,7 @@
       aria-modal="true"
       aria-label="Export Warnings"
       aria-describedby="warning-dialog-message"
+      use:focusTrap={{ onEscape: () => dismissWarningDialog() }}
     >
       <div class="icon-row">
         <span class="icon" aria-hidden="true">{'\u26A0'}</span>

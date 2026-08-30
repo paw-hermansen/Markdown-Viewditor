@@ -4,29 +4,16 @@
     resolveConfirm,
     type ConfirmButton,
   } from '$lib/stores/confirm.svelte';
+  import { focusTrap } from '$lib/utils/focus-trap';
 
   function pick(btn: ConfirmButton) {
     resolveConfirm(btn.value);
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (!confirmState.current) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      resolveConfirm(null);
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const primary = confirmState.current.buttons.find((b) => b.variant === 'primary');
-      if (primary) resolveConfirm(primary.value);
-    }
   }
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) resolveConfirm(null);
   }
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 {#if confirmState.current}
   {@const req = confirmState.current}
@@ -37,6 +24,7 @@
       aria-modal="true"
       aria-label={req.title}
       aria-describedby="confirm-message"
+      use:focusTrap={{ onEscape: () => resolveConfirm(null) }}
     >
       <div class="icon-row">
         <span class="icon" aria-hidden="true">
@@ -116,7 +104,7 @@
   }
 
   .dialog.error .icon {
-    color: #e06c75;
+    color: var(--accent-danger);
   }
 
   .title {
@@ -168,14 +156,14 @@
   }
 
   .btn.danger {
-    background: #e06c75;
+    background: var(--accent-danger);
     color: #fff;
-    border-color: #e06c75;
+    border-color: var(--accent-danger);
   }
 
   .btn.danger:hover:not(:disabled) {
-    background: #e06c75;
-    border-color: #e06c75;
+    background: var(--accent-danger);
+    border-color: var(--accent-danger);
     opacity: 0.85;
   }
 </style>

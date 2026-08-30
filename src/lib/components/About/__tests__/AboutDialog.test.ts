@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi } from "vitest";
 import AboutDialog from "../AboutDialog.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: vi.fn().mockResolvedValue(undefined),
@@ -89,7 +90,8 @@ describe("AboutDialog", () => {
   it("calls onClose on Escape key", async () => {
     const onClose = vi.fn();
     render(AboutDialog, { props: { open: true, onClose } });
-    await fireEvent.keyDown(window, { key: "Escape" });
+    const dialog = screen.getByRole("dialog");
+    await fireEvent.keyDown(dialog, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -127,5 +129,12 @@ describe("AboutDialog", () => {
   it("shows Check for Updates button", () => {
     render(AboutDialog, { props: { open: true, onClose: vi.fn() } });
     expect(screen.getByText("Check for Updates")).toBeInTheDocument();
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(AboutDialog, {
+      props: { open: true, onClose: vi.fn() },
+    });
+    await checkA11y(container);
   });
 });

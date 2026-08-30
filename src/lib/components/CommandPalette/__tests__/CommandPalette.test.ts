@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CommandPalette from "../CommandPalette.svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 describe("CommandPalette", () => {
   const defaultProps = {
@@ -60,7 +61,7 @@ describe("CommandPalette", () => {
     render(CommandPalette, { props: defaultProps });
     const input = screen.getByPlaceholderText("Type a command...");
     await fireEvent.input(input, { target: { value: "file" } });
-    const items = screen.getAllByRole("button").map((el) => el.textContent);
+    const items = screen.getAllByRole("option").map((el) => el.textContent);
     const newFileIdx = items.findIndex((t) => t?.includes("New File"));
     const openFileIdx = items.findIndex((t) => t?.includes("Open File"));
     const saveIdx = items.findIndex(
@@ -119,5 +120,10 @@ describe("CommandPalette", () => {
   it("shows cycle view mode command", () => {
     render(CommandPalette, { props: defaultProps });
     expect(screen.getByText("Cycle View Mode")).toBeInTheDocument();
+  });
+
+  it("has no accessibility violations", async () => {
+    const { container } = render(CommandPalette, { props: defaultProps });
+    await checkA11y(container);
   });
 });

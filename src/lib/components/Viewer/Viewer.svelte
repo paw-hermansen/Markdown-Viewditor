@@ -198,6 +198,27 @@
     img.removeAttribute('src');
   }
 
+  function ensureImageAlt(node: HTMLElement) {
+    const images = node.querySelectorAll('img');
+    images.forEach((img) => {
+      if (!img.hasAttribute('alt')) {
+        img.setAttribute('alt', '');
+        img.setAttribute('role', 'presentation');
+      } else if (img.getAttribute('alt') === '') {
+        img.setAttribute('role', 'presentation');
+      }
+    });
+  }
+
+  $effect(() => {
+    const el = viewerContentElement;
+    void html; // Create dependency on html
+    if (!el) return;
+    tick().then(() => {
+      if (viewerContentElement) ensureImageAlt(viewerContentElement);
+    });
+  });
+
   // A frontmatter block with both `name` and `description` is treated as a
   // skill file and rendered as a prominent skill card.
   const isSkill = $derived.by(() => {

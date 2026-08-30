@@ -1,5 +1,6 @@
-import { vi } from "vitest";
+import { vi, expect } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import "vitest-axe/extend-expect";
 
 // jsdom does not implement scrollIntoView; components that call it in
 // $effect blocks would otherwise crash during tests.

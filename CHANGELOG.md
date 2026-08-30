@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-08-30
+
+- Disable auto-updater for Windows Store (MSIX) installs (#77) (9b72504)
+- Small clarifications to Privacy Policy (1c84e3d)
+- Added a Privacy Policy (8d26576)
+- Follow-up on previous version update (c9d9d40)
+- Added links to example Custom Themes tab in About Dlg (#76) (5e5687f)
+
 ## [1.2.3] - 2026-08-29
 
 - fix: use template variables in Linux .desktop file (#74) (016ec1c)

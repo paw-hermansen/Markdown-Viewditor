@@ -85,6 +85,7 @@ If you use assistive technology (screen reader, magnifier, voice control, switch
 - Can you navigate the editor and viewer without a mouse?
 - Do focus indicators remain visible at all times?
 - Does the application work with your magnification or high-contrast settings?
+- Do the workflows feel natural and easy, or do they require memorizing shortcuts and workarounds?
 
 ### Key Strengths
 

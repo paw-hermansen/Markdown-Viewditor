@@ -193,7 +193,7 @@
               />
               <span>Auto-check for updates on startup</span>
             </label>
-            <p class="muted">In-app updates are disabled when running inside Flatpak or Snap — use your system updater there.</p>
+            <p class="muted">In-app updates are disabled when running inside Flatpak, Snap, or the Windows Store — use your system updater there.</p>
           </section>
 
           <section>

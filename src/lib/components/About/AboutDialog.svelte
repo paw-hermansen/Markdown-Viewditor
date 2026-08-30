@@ -246,6 +246,12 @@
           </section>
 
           <section>
+            <h2>Examples</h2>
+            <p>At the bottom of this text you can copy the dark custom theme <code>my-theme.css</code>.</p>
+            <p>A more comprehensive light theme can be downloaded from <button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/examples/custom_themes/theme-bubblegum.css" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/examples/custom_themes/theme-bubblegum.css')}>github.com/paw-hermansen/Markdown-Viewditor/blob/main/examples/custom_themes/theme-bubblegum.css</button></p>
+          </section>
+
+          <section>
             <h2>What can be customized</h2>
             <p>Both code highlighting and viewer elements are rendered inside <code>#viewer-content</code>. Prefix your selectors with <code>#viewer-content</code> so they override the app's default styles:</p>
             <ul>

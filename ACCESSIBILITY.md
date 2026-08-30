@@ -3,7 +3,7 @@
 **Product:** Markdown Viewditor  
 **Version:** 1.3.0  
 **Date:** August 31, 2026  
-**Standard:** WCAG 2.2 Level AA  
+**Standards:** WCAG 2.2 Level AA, WCAG2ICT 2.2  
 **Assessment Method:** Automated testing (axe-core) + manual code review
 
 ---
@@ -11,6 +11,8 @@
 ## Executive Summary
 
 Markdown Viewditor meets **WCAG 2.2 Level AA** conformance for all applicable criteria. The application provides comprehensive keyboard navigation, screen reader support, and sufficient color contrast across both dark and light themes.
+
+**Note:** Markdown Viewditor exceeds the minimum accessibility requirements for desktop software. Several WCAG criteria that are not required per Section 508 and EN 301 549 for non-web software are implemented as best practices (e.g., skip link, consistent navigation, multiple ways to find content).
 
 | Principle | Level A | Level AA | Status |
 |-----------|---------|----------|--------|
@@ -39,6 +41,30 @@ Markdown Viewditor meets **WCAG 2.2 Level AA** conformance for all applicable cr
 | 1.4.1 Use of Color | Partial | Active states in ViewToggle and DropdownButton rely primarily on color change. Mitigated by ARIA attributes (`aria-checked`, `aria-selected`) for screen readers. |
 | 1.4.10 Reflow | Partial | Desktop application does not reflow at 320px CSS width. Acceptable for desktop context where window resizing is available. |
 | 1.4.12 Text Spacing | Not Tested | No explicit testing with user-overridden text spacing. Application uses relative units and supports browser zoom. |
+
+---
+
+## Standards Reference
+
+This assessment follows:
+
+- **WCAG 2.2 Level AA** — W3C Recommendation (October 2023)
+- **WCAG2ICT 2.2** — W3C Group Note (December 2025) — Guidance on applying WCAG to non-web ICT
+- **Section 508** — U.S. federal accessibility standards for ICT
+- **EN 301 549** — European accessibility standard for ICT products and services
+
+WCAG2ICT clarifies that several WCAG criteria are **not required** for non-web desktop software under Section 508 and EN 301 549. This assessment marks those criteria accordingly while noting that Markdown Viewditor implements them as best practices.
+
+Per WCAG2ICT, the following criteria do not apply to non-web documents and non-web software according to Section 508 and EN 301 549:
+
+| Criterion | Section 508 | EN 301 549 | Our Implementation |
+|-----------|-------------|------------|-------------------|
+| 2.4.1 Bypass Blocks | Not Required | Not Required | ✅ Implemented (skip link) |
+| 2.4.2 Page Titled | Applies | Not Required | ✅ Implemented (dialog labels) |
+| 2.4.5 Multiple Ways | Not Required | Not Required | ✅ Implemented (Command Palette) |
+| 3.1.2 Language of Parts | Applies | Not Required | N/A (English only) |
+| 3.2.3 Consistent Navigation | Not Required | Not Required | ✅ Implemented |
+| 3.2.4 Consistent Identification | Not Required | Not Required | ✅ Implemented |
 
 ---
 
@@ -164,16 +190,18 @@ Markdown Viewditor meets **WCAG 2.2 Level AA** conformance for all applicable cr
 
 #### 2.4 Navigable
 
-| Criterion | Level | Status | Evidence |
-|-----------|-------|--------|----------|
-| 2.4.1 Bypass Blocks | A | **PASS** | Skip link implemented. |
-| 2.4.2 Page Titled | A | **PASS** | Dialogs have descriptive `aria-label` attributes. |
-| 2.4.3 Focus Order | A | **PASS** | Logical focus order: toolbar → main → status bar. Dialog focus managed. |
-| 2.4.4 Link Purpose | A | **PASS** | All links have descriptive text. |
-| 2.4.5 Multiple Ways | AA | **PASS** | Command Palette + toolbar + keyboard shortcuts. |
-| 2.4.6 Headings and Labels | AA | **PASS** | Proper heading hierarchy. All labels descriptive. |
-| 2.4.7 Focus Visible | AA | **PASS** | Global `:focus-visible` with 2px accent outline. |
-| 2.4.11 Focus Not Obscured | AA | **PASS** | `outline-offset: 2px` ensures visibility. |
+| Criterion | Level | Status | Regulatory | Evidence |
+|-----------|-------|--------|------------|----------|
+| 2.4.1 Bypass Blocks | A | **PASS** | Not Required* | Skip link implemented. |
+| 2.4.2 Page Titled | A | **PASS** | Not Required* | Dialogs have descriptive `aria-label` attributes. |
+| 2.4.3 Focus Order | A | **PASS** | Required | Logical focus order: toolbar → main → status bar. Dialog focus managed. |
+| 2.4.4 Link Purpose | A | **PASS** | Required | All links have descriptive text. |
+| 2.4.5 Multiple Ways | AA | **PASS** | Not Required* | Command Palette + toolbar + keyboard shortcuts. |
+| 2.4.6 Headings and Labels | AA | **PASS** | Required | Proper heading hierarchy. All labels descriptive. |
+| 2.4.7 Focus Visible | AA | **PASS** | Required | Global `:focus-visible` with 2px accent outline. |
+| 2.4.11 Focus Not Obscured | AA | **PASS** | Required | `outline-offset: 2px` ensures visibility. |
+
+*Not required per Section 508 and EN 301 549 for non-web software. Implemented as best practice.
 
 **Evidence for 2.4.1:**
 - `src/lib/components/SkipLink.svelte:4` — `<a href="#main-content" class="skip-link sr-only">Skip to main content</a>`
@@ -199,22 +227,26 @@ Markdown Viewditor meets **WCAG 2.2 Level AA** conformance for all applicable cr
 
 #### 3.1 Readable
 
-| Criterion | Level | Status | Evidence |
-|-----------|-------|--------|----------|
-| 3.1.1 Language of Page | A | **PASS** | `lang="en"` set on `<html>` element. |
-| 3.1.2 Language of Parts | AA | **N/A** | All content in English. |
+| Criterion | Level | Status | Regulatory | Evidence |
+|-----------|-------|--------|------------|----------|
+| 3.1.1 Language of Page | A | **PASS** | Required | `lang="en"` set on `<html>` element. |
+| 3.1.2 Language of Parts | AA | **N/A** | Not Required* | All content in English. |
+
+*Not required per EN 301 549 for non-web software.
 
 **Evidence for 3.1.1:**
 - `src/app.html:2` — `<html lang="en">`
 
 #### 3.2 Predictable
 
-| Criterion | Level | Status | Evidence |
-|-----------|-------|--------|----------|
-| 3.2.1 On Focus | A | **PASS** | No unexpected context changes on focus. |
-| 3.2.2 On Input | A | **PASS** | No unexpected context changes on input. |
-| 3.2.3 Consistent Navigation | AA | **PASS** | Navigation consistent across application. |
-| 3.2.4 Consistent Identification | AA | **PASS** | Consistent UI patterns throughout. |
+| Criterion | Level | Status | Regulatory | Evidence |
+|-----------|-------|--------|------------|----------|
+| 3.2.1 On Focus | A | **PASS** | Required | No unexpected context changes on focus. |
+| 3.2.2 On Input | A | **PASS** | Required | No unexpected context changes on input. |
+| 3.2.3 Consistent Navigation | AA | **PASS** | Not Required* | Navigation consistent across application. |
+| 3.2.4 Consistent Identification | AA | **PASS** | Not Required* | Consistent UI patterns throughout. |
+
+*Not required per Section 508 and EN 301 549 for non-web software. Implemented as best practice.
 
 #### 3.3 Input Assistance
 
@@ -339,8 +371,20 @@ Include:
 
 ---
 
+## References
+
+- [WCAG 2.2](https://www.w3.org/TR/WCAG22/) — W3C Recommendation (October 2023)
+- [WCAG2ICT 2.2](https://www.w3.org/TR/wcag2ict-22/) — Guidance on Applying WCAG to Non-Web ICT (December 2025)
+- [Understanding WCAG 2.2](https://www.w3.org/WAI/WCAG22/Understanding/) — W3C informative resource
+- [Section 508 Standards](https://www.section508.gov/) — U.S. federal accessibility requirements
+- [EN 301 549](https://www.etsi.org/deliver/etsi_en/301500_301599/301549/) — European ICT accessibility standard
+- [axe-core Rules](https://github.com/dequelabs/axe-core/blob/develop/doc/rule-descriptions.md) — Automated testing rules
+
+---
+
 ## Revision History
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-08-31 | 1.1 | Added WCAG2ICT 2.2 reference and regulatory compliance notes |
 | 2026-08-31 | 1.0 | Initial WCAG 2.2 Level AA conformance report |

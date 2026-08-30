@@ -3,7 +3,7 @@
 **Effective Date:** August 2026
 
 ## 1. Introduction
-Markdown Viewditor is a markdown viewer and editor that is open-sourced, free, and MIT licensed. It is developed by Paw Hermansen and hosted at [https://github.com/paw-hermansen/Markdown-Viewditor](https://github.com/paw-hermansen/Markdown-Viewditor). This Privacy Policy explains how we handle your personal information when you use Markdown Viewditor.
+Markdown Viewditor, aka the app in the following, is a markdown viewer and editor that is open-sourced, free, and MIT licensed. It is developed by Paw Hermansen and hosted at [https://github.com/paw-hermansen/Markdown-Viewditor](https://github.com/paw-hermansen/Markdown-Viewditor). This Privacy Policy explains how we handle your personal information when you use Markdown Viewditor.
 
 ## 2. Information We Collect
 ### 2.1 Information You Provide
@@ -28,7 +28,7 @@ When viewing or printing markdown documents that reference external images, Mark
 
 When exporting markdown documents that reference external images, Markdown Viewditor might fetch those images from remote servers to display them. This may expose your IP address to the servers hosting those images.
 
-### 3.3 External Links
+### 3.3 External Links in Markdown Documents
 When you click on links in the viewer, Markdown Viewditor opens them in your default system browser. This is a user-initiated action, and may expose your IP address and other standard browser information to the linked website.
 
 ## 4. Local Data Storage
@@ -37,6 +37,7 @@ Markdown Viewditor stores the following data locally on your device:
 - **Application settings**: Your preferences (editor configuration, theme, update settings) are stored in a `settings.json` file in the application's configuration directory.
 - **Window state**: The application remembers your window position and size in a `window-state.json` file.
 - **Your documents**: Any files you create or edit are saved to the location you choose on your device.
+- **Custom themes**: The app automatically loads theme files from a local themes folder in the app's configuration folder.
 
 This data is stored locally and is never transmitted to any external servers.
 

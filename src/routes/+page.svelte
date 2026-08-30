@@ -12,6 +12,7 @@
   import ExportConfirmDialog from "$lib/components/ExportConfirmDialog.svelte";
   import Toaster from "$lib/components/Toaster.svelte";
   import ExportOverlay from "$lib/components/ExportOverlay.svelte";
+  import SkipLink from "$lib/components/SkipLink.svelte";
   import {
     editorState,
     markSaved,
@@ -747,6 +748,8 @@
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
+
+<SkipLink />
 
 <AppLayout
   {viewMode}

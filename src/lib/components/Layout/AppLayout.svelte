@@ -199,7 +199,7 @@
     </div>
   </header>
 
-  <main class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'} style="--split-ratio: {displayRatio}">
+  <main id="main-content" class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'} style="--split-ratio: {displayRatio}">
     {@render children()}
     <button
       class="resize-handle"

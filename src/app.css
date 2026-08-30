@@ -6,8 +6,9 @@
   --bg-hover: rgba(255, 255, 255, 0.05);
   --text-primary: #eaeaea;
   --text-secondary: #8892b0;
-  --text-muted: #6b7280;
-  --accent: #e94560;
+  --text-muted: #9ca3af;
+  --accent: #ff6b81;
+  --accent-danger: #ff6b6b;
   --accent-snap: #4ade80;
   --border: #233554;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -30,11 +31,24 @@
   --bg-hover: rgba(0, 0, 0, 0.05);
   --text-primary: #2d2d2d;
   --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
+  --text-muted: #6b7280;
   --accent: #e94560;
+  --accent-danger: #dc2626;
   --accent-snap: #16a34a;
   --border: #e5e7eb;
   --toolbar-highlight: #fde68a;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 * {
@@ -187,4 +201,15 @@ body.exporting .print-content {
 /* The link-URL tooltip is hover-only screen UI; never export it. */
 body.exporting .print-content a[data-href]::after {
   display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

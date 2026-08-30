@@ -134,22 +134,22 @@
 </script>
 
 <div class="app-layout">
-  <header class="toolbar">
+  <header class="toolbar" aria-label="Main toolbar">
     <div class="toolbar-left">
-      <button class="toolbar-btn" onclick={onNew} title={modLabel('New file (Ctrl+N)')} disabled={isLoading}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <button class="toolbar-btn" onclick={onNew} title={modLabel('New file (Ctrl+N)')} aria-label="New file" disabled={isLoading}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M3 1h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3h3" stroke="currentColor" stroke-width="1.5"/>
           <path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <button class="toolbar-btn" onclick={onOpen} title={modLabel('Open file (Ctrl+O)')} disabled={isLoading}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <button class="toolbar-btn" onclick={onOpen} title={modLabel('Open file (Ctrl+O)')} aria-label="Open file" disabled={isLoading}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M2 4h4l2 2h6v7a1 1 0 01-1 1H2V4z" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
-      <button class="toolbar-btn" onclick={onSave} title={modLabel('Save (Ctrl+S)')} disabled={isLoading}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <button class="toolbar-btn" onclick={onSave} title={modLabel('Save (Ctrl+S)')} aria-label="Save" disabled={isLoading}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M12 15H3a1 1 0 01-1-1V2a1 1 0 011-1h8l3 3v10a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3H5V1M5 10h6" stroke="currentColor" stroke-width="1.5"/>
         </svg>
@@ -157,16 +157,16 @@
           <span class="modified-dot">●</span>
         {/if}
       </button>
-      <button class="toolbar-btn" onclick={onSaveAs} title={modLabel('Save As (Ctrl+Shift+S)')} disabled={isLoading}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <button class="toolbar-btn" onclick={onSaveAs} title={modLabel('Save As (Ctrl+Shift+S)')} aria-label="Save as" disabled={isLoading}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M12 15H3a1 1 0 01-1-1V2a1 1 0 011-1h8l3 3v10a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/>
           <path d="M10 1v3H5V1" stroke="currentColor" stroke-width="1.5"/>
           <path d="M5 10h2M5 13h6" stroke="currentColor" stroke-width="1.5"/>
         </svg>
       </button>
       <span class="separator"></span>
-      <button class="toolbar-btn" onclick={onReload} title={modLabel('Reload from Disk (Ctrl+R)')} disabled={isLoading || !fileName}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <button class="toolbar-btn" onclick={onReload} title={modLabel('Reload from Disk (Ctrl+R)')} aria-label="Reload" disabled={isLoading || !fileName}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M2 8a6 6 0 0110.47-4M14 8a6 6 0 01-10.47 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           <path d="M12 1v3h-3M4 15v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -181,16 +181,16 @@
     </div>
     <div class="toolbar-right">
       {#if updateAvailable}
-        <button class="toolbar-btn update-available" onclick={onUpdateClick} title="Update available: v{updateVersion}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="toolbar-btn update-available" onclick={onUpdateClick} title="Update available: v{updateVersion}" aria-label="Update available">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/>
             <path d="M12 8v8"/>
             <path d="M8 14l4 4 4-4"/>
           </svg>
         </button>
       {/if}
-      <button class="toolbar-btn" onclick={onAbout} title="About (F1)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="toolbar-btn" onclick={onAbout} title="About (F1)" aria-label="About">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10"/>
           <path d="M12 16v-4"/>
           <path d="M12 8h.01"/>
@@ -367,7 +367,8 @@
   }
 
   .resize-handle:focus-visible {
-    outline: none;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .resize-handle:hover,

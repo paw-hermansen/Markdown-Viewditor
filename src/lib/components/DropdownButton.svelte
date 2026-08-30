@@ -49,6 +49,12 @@
   function toggle() {
     if (disabled) return;
     isOpen = !isOpen;
+    if (isOpen) {
+      setTimeout(() => {
+        const firstItem = rootRef?.querySelector('.dropdown-item') as HTMLElement;
+        firstItem?.focus();
+      }, 0);
+    }
   }
 
   function pick(v: T) {
@@ -57,6 +63,8 @@
     }
     isOpen = false;
     onSelect?.(v);
+    const trigger = rootRef?.querySelector('.main-button') as HTMLElement;
+    trigger?.focus();
   }
 
   function fire() {
@@ -77,7 +85,46 @@
   }
 
   function onDocKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') isOpen = false;
+    if (event.key === 'Escape' && isOpen) {
+      isOpen = false;
+      const trigger = rootRef?.querySelector('.main-button') as HTMLElement;
+      trigger?.focus();
+    }
+  }
+
+  function handleMenuKeydown(e: KeyboardEvent) {
+    if (!isOpen) return;
+
+    const items = Array.from(rootRef?.querySelectorAll('.dropdown-item') ?? []) as HTMLElement[];
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        const next = (currentIndex + 1) % items.length;
+        items[next]?.focus();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        const prev = (currentIndex - 1 + items.length) % items.length;
+        items[prev]?.focus();
+        break;
+      case 'Home':
+        e.preventDefault();
+        items[0]?.focus();
+        break;
+      case 'End':
+        e.preventDefault();
+        items[items.length - 1]?.focus();
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (currentIndex >= 0) {
+          items[currentIndex]?.click();
+        }
+        break;
+    }
   }
 
   $effect(() => {
@@ -123,7 +170,7 @@
   {/if}
 
   {#if isOpen}
-    <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu">
+    <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu" onkeydown={handleMenuKeydown}>
       {#if header}
         <div class="dropdown-header">{header}</div>
       {/if}

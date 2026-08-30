@@ -18,13 +18,35 @@
     { id: 'quote', label: '❝', title: 'Blockquote', cls: '' },
     { id: 'hr', label: '—', title: 'Horizontal Rule', cls: '' }
   ];
+
+  function handleToolbarKeydown(e: KeyboardEvent) {
+    const buttons = Array.from(document.querySelectorAll('.editor-toolbar .toolbar-btn')) as HTMLElement[];
+    const currentIndex = buttons.indexOf(document.activeElement as HTMLElement);
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = (currentIndex + 1) % buttons.length;
+      buttons[next]?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = (currentIndex - 1 + buttons.length) % buttons.length;
+      buttons[prev]?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      buttons[0]?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      buttons[buttons.length - 1]?.focus();
+    }
+  }
 </script>
 
-<div class="editor-toolbar">
+<div class="editor-toolbar" role="toolbar" aria-label="Formatting" onkeydown={handleToolbarKeydown}>
   {#each formats as format}
     <button
       class="toolbar-btn {format.cls}"
       title={format.title}
+      aria-label={format.title}
       onmousedown={(e) => { e.preventDefault(); }}
       onclick={() => onFormat(format.id)}
     >

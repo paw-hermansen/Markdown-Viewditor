@@ -8,6 +8,27 @@
 
 ---
 
+## How Accessibility Works in Markdown Viewditor
+
+Markdown Viewditor is a **native desktop application** built with [Tauri v2](https://v2.tauri.app/). The UI is rendered inside a platform webview (WebView2 on Windows, WebKit on macOS and Linux), which exposes web content to the operating system's accessibility APIs:
+
+| Platform | Webview | Accessibility API | Screen Readers |
+|----------|---------|-------------------|----------------|
+| Windows | WebView2 (Chromium) | UI Automation (UIA) | NVDA, JAWS, Narrator |
+| macOS | WebKit | Accessibility API (AX) | VoiceOver |
+| Linux | WebKitGTK | AT-SPI | Orca |
+
+This means that ARIA attributes (`aria-label`, `role`, `aria-live`, etc.) added to the web UI are **translated to the platform's accessibility tree** and read by desktop screen readers. When a button has `aria-label="Save"`, NVDA on Windows announces "Save button" — just as it would for a native Win32 or WPF application.
+
+**What this means for users:**
+- Screen reader users hear meaningful labels and roles for all interactive elements
+- Keyboard users can navigate the entire application without a mouse
+- Focus indicators are visible for keyboard navigation
+- Dynamic content changes are announced via live regions
+- All standard desktop accessibility features work as expected
+
+---
+
 ## Executive Summary
 
 Markdown Viewditor meets **WCAG 2.2 Level AA** conformance for all applicable criteria. The application provides comprehensive keyboard navigation, screen reader support, and sufficient color contrast across both dark and light themes.
@@ -386,5 +407,6 @@ Include:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-08-31 | 1.2 | Clarified desktop application architecture and how webview exposes accessibility to platform APIs |
 | 2026-08-31 | 1.1 | Added WCAG2ICT 2.2 reference and regulatory compliance notes |
 | 2026-08-31 | 1.0 | Initial WCAG 2.2 Level AA conformance report |

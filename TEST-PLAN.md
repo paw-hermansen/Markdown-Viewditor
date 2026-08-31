@@ -293,7 +293,7 @@ highlighted with the active theme's colors.
 
 The viewer toolbar exposes:
 
-- an **Export as…** dropdown (with HTML, PDF, and ODT exporters),
+- an **Export as…** dropdown (with HTML, HTML Bundle, PDF, and ODT exporters),
 - a **Print / PDF** button (Linux & Windows only — macOS routes PDF through
   the dropdown as "Export as PDF").
 
@@ -319,7 +319,7 @@ before each row.
 
 | #    | Test                              | Steps                                                      | Expected                                                                                                                                                                                                                    |
 | ---- | --------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/PDF export                | Title: "Export" (macOS) / "Export / Print" (other); message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
+| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/HTML Bundle/PDF export | Title: "Export HTML" / "Export HTML Bundle" / "Export / Print"; message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
 | 13.2 | Dialog appearance (neutral / ODT) | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution)                                     |
 | 13.3 | Cancel via Cancel button          | Click Cancel                                               | No export runs, dialog closes                                                                                                                                                                                               |
 | 13.4 | Cancel via Escape / backdrop      | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                                                                                                                               |
@@ -342,7 +342,29 @@ before each row.
 | 13.16 | Success toast            | Export successfully                              | Toast: "Exported" with the saved file path            |
 | 13.17 | Error toast              | Trigger an export failure                        | Toast: "Export failed" with detail message            |
 
-### 13.3 Export as PDF / Print
+### 13.3 Export as HTML Bundle
+
+The HTML Bundle exporter produces a `.zip` containing `index.html` with
+images stored in an `images/` folder and fonts in a `fonts/` folder,
+referenced via relative paths. The result can be unpacked and served from
+any static host.
+
+| #     | Test                         | Steps                                              | Expected                                                                      |
+| ----- | ---------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 13.18 | Save dialog defaults         | Open `examples/Simple.md`, choose Export as HTML Bundle | Save dialog opens with `Simple.zip`, ZIP filter                           |
+| 13.19 | Zip structure                | Save and extract the zip                           | Contains `index.html`, `images/` folder, `fonts/` folder                      |
+| 13.20 | HTML uses relative paths     | Open `index.html` in a browser                     | Page renders identically to the viewer; image srcs point to `images/...`      |
+| 13.21 | Fonts extracted              | Check `fonts/` folder in the zip                   | Contains KaTeX `.woff2` font files                                             |
+| 13.22 | Theme applied                | Repeat with a dark theme active                    | Output uses the same theme                                                    |
+| 13.23 | Local images extracted       | Export `examples/Example.md`                       | `images/` folder contains the local image files                               |
+| 13.24 | Image filename collisions    | Export a file with two images sharing a basename   | Both present: `logo.png` and `logo-1.png`                                     |
+| 13.25 | Cancel save                  | Cancel the save dialog                             | No file written, no toast                                                     |
+| 13.26 | Math rendered                | Export `examples/Math-Example.md`                  | KaTeX formulas render from the extracted fonts in `fonts/`                    |
+| 13.27 | Warnings surface             | Export a file referencing a missing local image    | "Export Warnings" dialog lists the failed image                               |
+| 13.28 | Success toast                | Export successfully                                | Toast: "Exported" with the saved file path                                    |
+| 13.29 | Error toast                  | Trigger an export failure                          | Toast: "Export failed" with detail message                                    |
+
+### 13.4 Export as PDF / Print
 
 The PDF exporter shares the in-app print path. The mechanism is
 platform-specific — split tests below.
@@ -359,87 +381,92 @@ platform-specific — split tests below.
 
 | #     | Test                        | Steps                                                      | Expected                                                                                  |
 | ----- | --------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 13.18 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase                        |
-| 13.19 | Export overlay (Linux/Win)  | On Linux/Windows, trigger PDF export                       | Overlay may flash too fast to see; the print dialog appearing confirms the export started |
-| 13.20 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible                                  |
-| 13.21 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                                                       |
-| 13.22 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                                                   |
-| 13.23 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)                                            |
-| 13.24 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)                                       |
+| 13.30 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase                        |
+| 13.31 | Export overlay (Linux/Win)  | On Linux/Windows, trigger PDF export                       | Overlay may flash too fast to see; the print dialog appearing confirms the export started |
+| 13.32 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible                                  |
+| 13.33 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                                                       |
+| 13.34 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                                                   |
+| 13.35 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)                                            |
+| 13.36 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)                                       |
 
 #### macOS — Export as PDF
 
 | #     | Test                 | Steps                      | Expected                                                           |
 | ----- | -------------------- | -------------------------- | ------------------------------------------------------------------ |
-| 13.25 | Toolbar label        | Inspect the viewer toolbar | Dropdown item "Export as PDF" (no separate Print button)           |
-| 13.26 | Save dialog          | Click "Export as PDF"      | Native save dialog with `<name>.pdf`, PDF filter                   |
-| 13.27 | Vector PDF created   | Save and open in Preview   | Vector PDF with selectable text; one long page (WKWebView capture) |
-| 13.28 | Edge-to-edge scaling | Export                     | Content fills the PDF width edge-to-edge (webview-bounds page)     |
-| 13.29 | Print button hidden  | Inspect toolbar            | No "Print / PDF" button on macOS                                   |
-| 13.30 | Success toast        | Export PDF successfully    | Toast: "PDF saved" with the saved file path                        |
-| 13.31 | Error toast          | Trigger a PDF failure      | Toast: "Create PDF failed" with detail message                     |
+| 13.37 | Toolbar label        | Inspect the viewer toolbar | Dropdown item "Export as PDF" (no separate Print button)           |
+| 13.38 | Save dialog          | Click "Export as PDF"      | Native save dialog with `<name>.pdf`, PDF filter                   |
+| 13.39 | Vector PDF created   | Save and open in Preview   | Vector PDF with selectable text; one long page (WKWebView capture) |
+| 13.40 | Edge-to-edge scaling | Export                     | Content fills the PDF width edge-to-edge (webview-bounds page)     |
+| 13.41 | Print button hidden  | Inspect toolbar            | No "Print / PDF" button on macOS                                   |
+| 13.42 | Success toast        | Export PDF successfully    | Toast: "PDF saved" with the saved file path                        |
+| 13.43 | Error toast          | Trigger a PDF failure      | Toast: "Create PDF failed" with detail message                     |
 
 #### Linux & Windows — Export as PDF (Print…)
 
 | #     | Test                               | Steps                                  | Expected                                                               |
 | ----- | ---------------------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
-| 13.32 | Toolbar labels                     | Inspect the viewer toolbar             | "Export as PDF (Print…)" dropdown item + separate "Print / PDF" button |
-| 13.33 | Print dialog opens                 | Click "Print / PDF" (or `Ctrl+P`)      | Native print dialog opens with styled content                          |
-| 13.34 | Save as PDF                        | In print dialog choose "Save as PDF"   | Vector PDF written, opens correctly                                    |
-| 13.36 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
-| 13.37 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
-| 13.38 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |
+| 13.44 | Toolbar labels                     | Inspect the viewer toolbar             | "Export as PDF (Print…)" dropdown item + separate "Print / PDF" button |
+| 13.45 | Print dialog opens                 | Click "Print / PDF" (or `Ctrl+P`)      | Native print dialog opens with styled content                          |
+| 13.46 | Save as PDF                        | In print dialog choose "Save as PDF"   | Vector PDF written, opens correctly                                    |
+| 13.47 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
+| 13.48 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
+| 13.49 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |
 
-### 13.4 Export as ODT
+### 13.5 Export as ODT
 
 ODT always uses a neutral, printer-friendly style — the active theme is
 ignored. The confirm dialog shows three option groups when the dialog is on.
 
 | #     | Test                               | Steps                                                      | Expected                                                                              |
 | ----- | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 13.39 | Save dialog                        | Click Export as… → ODT                                     | Save dialog with `<name>.odt`, ODT filter                                             |
-| 13.40 | Opens in LibreOffice               | Open the .odt                                              | Document opens; text, headings, lists, tables render                                  |
-| 13.41 | Code highlighting printer-friendly | Export a fenced code block                                 | Highlighting uses printer-friendly token colors (not theme)                           |
-| 13.42 | Math — native MathML (default)     | Export `examples/Math-Example.md` (rasterize math OFF)     | Formulas appear as editable ODF Math objects                                          |
-| 13.43 | Math — rasterized PNG              | Tick "Rasterize as PNG images"; export                     | Formulas render as inline PNG frames in the ODT                                       |
-| 13.44 | SVG — vector (default)             | Export `examples/Example.md` (references `weird.svg`)      | SVG embedded as a `Pictures/*.svg` entry (vector)                                     |
-| 13.45 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
-| 13.46 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
-| 13.47 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
-| 13.48 | `<dc:title>` from frontmatter      | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
-| 13.49 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
-| 13.50 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
-| 13.51 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
-| 13.52 | Sub/sup, kbd, mark spans           | Export a file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`     | Rendered as text spans with appropriate character styles                              |
-| 13.53 | Tables                             | Export a file with a GFM table                             | Rendered as an ODF table (header + body cells)                                        |
-| 13.54 | Cancel save                        | Cancel the save dialog                                     | No file written, no toast                                                             |
-| 13.55 | Success toast                      | Export ODT successfully                                    | Toast: "Exported" with the saved file path                                            |
-| 13.56 | Error toast                        | Trigger an ODT export failure                              | Toast: "Export failed" with detail message                                            |
+| 13.50 | Save dialog                        | Click Export as… → ODT                                     | Save dialog with `<name>.odt`, ODT filter                                             |
+| 13.51 | Opens in LibreOffice               | Open the .odt                                              | Document opens; text, headings, lists, tables render                                  |
+| 13.52 | Code highlighting printer-friendly | Export a fenced code block                                 | Highlighting uses printer-friendly token colors (not theme)                           |
+| 13.53 | Math — native MathML (default)     | Export `examples/Math-Example.md` (rasterize math OFF)     | Formulas appear as editable ODF Math objects                                          |
+| 13.54 | Math — rasterized PNG              | Tick "Rasterize as PNG images"; export                     | Formulas render as inline PNG frames in the ODT                                       |
+| 13.55 | SVG — vector (default)             | Export `examples/Example.md` (references `weird.svg`)      | SVG embedded as a `Pictures/*.svg` entry (vector)                                     |
+| 13.56 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
+| 13.57 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
+| 13.58 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
+| 13.59 | `<dc:title>` from frontmatter      | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
+| 13.60 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
+| 13.61 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
+| 13.62 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
+| 13.63 | Sub/sup, kbd, mark spans           | Export a file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`     | Rendered as text spans with appropriate character styles                              |
+| 13.64 | Tables                             | Export a file with a GFM table                             | Rendered as an ODF table (header + body cells)                                        |
+| 13.65 | Cancel save                        | Cancel the save dialog                                     | No file written, no toast                                                             |
+| 13.66 | Success toast                      | Export ODT successfully                                    | Toast: "Exported" with the saved file path                                            |
+| 13.67 | Error toast                        | Trigger an ODT export failure                              | Toast: "Export failed" with detail message                                            |
 
-### 13.5 Frontmatter Option (All Exporters)
+### 13.6 Frontmatter Option (All Exporters)
 
-All three exporters (HTML, PDF, ODT) expose an "Include frontmatter card"
+All four exporters (HTML, HTML Bundle, PDF, ODT) expose an "Include frontmatter card"
 toggle in the export confirm dialog. The toggle is disabled when the document
 has no YAML frontmatter.
 
 | #     | Test                                  | Steps                                              | Expected                                                                        |
 | ----- | ------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 13.57 | HTML — option in dialog               | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.58 | HTML — option disabled                | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.59 | HTML — frontmatter included (ON)      | Export with toggle ON                              | HTML contains `.frontmatter-card` element                                       |
-| 13.60 | HTML — frontmatter excluded (OFF)     | Export with toggle OFF                             | No `.frontmatter-card` in HTML                                                  |
-| 13.61 | HTML — option persisted               | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.62 | PDF — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.63 | PDF — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.64 | PDF — frontmatter included (ON)       | Export with toggle ON                              | PDF contains frontmatter card                                                   |
-| 13.65 | PDF — frontmatter excluded (OFF)      | Export with toggle OFF                             | No frontmatter card in PDF                                                      |
-| 13.66 | PDF — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.67 | ODT — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.68 | ODT — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.69 | ODT — frontmatter card included (ON)  | Export with toggle ON                              | ODF body contains frontmatter card table                                        |
-| 13.70 | ODT — frontmatter card excluded (OFF) | Export with toggle OFF                             | No frontmatter card in ODF                                                      |
-| 13.71 | ODT — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.72 | ODT — `<dc:title>` always set         | Export with frontmatter card OFF                   | `meta.xml` still carries the title field (card option does not affect metadata) |
+| 13.68 | HTML — option in dialog               | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.69 | HTML — option disabled                | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.70 | HTML — frontmatter included (ON)      | Export with toggle ON                              | HTML contains `.frontmatter-card` element                                       |
+| 13.71 | HTML — frontmatter excluded (OFF)     | Export with toggle OFF                             | No `.frontmatter-card` in HTML                                                  |
+| 13.72 | HTML — option persisted               | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.73 | HTML Bundle — option in dialog        | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.74 | HTML Bundle — option disabled         | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.75 | HTML Bundle — frontmatter included    | Export with toggle ON                              | `index.html` in zip contains `.frontmatter-card` element                        |
+| 13.76 | HTML Bundle — frontmatter excluded    | Export with toggle OFF                             | No `.frontmatter-card` in `index.html`                                          |
+| 13.77 | HTML Bundle — option persisted        | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.78 | PDF — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.79 | PDF — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.80 | PDF — frontmatter included (ON)       | Export with toggle ON                              | PDF contains frontmatter card                                                   |
+| 13.81 | PDF — frontmatter excluded (OFF)      | Export with toggle OFF                             | No frontmatter card in PDF                                                      |
+| 13.82 | PDF — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.83 | ODT — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
+| 13.84 | ODT — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
+| 13.85 | ODT — frontmatter card included (ON)  | Export with toggle ON                              | ODF body contains frontmatter card table                                        |
+| 13.86 | ODT — frontmatter card excluded (OFF) | Export with toggle OFF                             | No frontmatter card in ODF                                                      |
+| 13.87 | ODT — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
+| 13.88 | ODT — `<dc:title>` always set         | Export with frontmatter card OFF                   | `meta.xml` still carries the title field (card option does not affect metadata) |
 
 ---
 
@@ -566,7 +593,7 @@ in the status bar.
 | 17.6  | Execute command            | Select "New File", press Enter | New file created, palette closes                           |
 | 17.7  | Mouse hover selection      | Hover over commands            | Hovered item becomes selected                              |
 | 17.8  | Shortcut / category badges | Open palette                   | Each command shows shortcut and category                   |
-| 17.9  | Export commands present    | Type "export"                  | Lists "Export as HTML", "Export as PDF …", "Export as ODT" |
+| 17.9  | Export commands present    | Type "export"                  | Lists "Export as HTML", "Export as HTML Bundle", "Export as PDF …", "Export as ODT" |
 | 17.10 | Export runs                | Select "Export as HTML"        | Same path as the toolbar dropdown                          |
 
 ### Command Palette Commands Reference
@@ -581,6 +608,7 @@ in the status bar.
 | Quit                       | `Ctrl+Q`       | File                                  |
 | Cycle View Mode            | `Ctrl+Shift+V` | View                                  |
 | Export as HTML             | —              | File                                  |
+| Export as HTML Bundle      | —              | File                                  |
 | Export as PDF …            | —              | File                                  |
 | Export as ODT              | —              | File                                  |
 | Print Preview / Create PDF | `Ctrl+P`       | File (label & visibility OS-specific) |

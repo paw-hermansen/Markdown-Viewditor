@@ -70,6 +70,12 @@ echo "  Updated package.json"
 sed -i "0,/^version = \"$CURRENT_VERSION\"/{s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/}" "$ROOT/src-tauri/Cargo.toml"
 echo "  Updated src-tauri/Cargo.toml"
 
+# Sync Cargo.lock version field (workspace members only, no dep changes)
+if command -v cargo &>/dev/null; then
+  cargo update --workspace --manifest-path "$ROOT/src-tauri/Cargo.toml" 2>/dev/null
+  echo "  Updated src-tauri/Cargo.lock"
+fi
+
 # Update tauri.conf.json
 sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$ROOT/src-tauri/tauri.conf.json"
 echo "  Updated src-tauri/tauri.conf.json"
@@ -128,7 +134,7 @@ if [ "$FILES_ONLY" = true ]; then
 fi
 
 # Stage, commit, and tag
-git -C "$ROOT" add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json CHANGELOG.md
+git -C "$ROOT" add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json CHANGELOG.md
 git -C "$ROOT" commit -m "chore: release v$NEW_VERSION"
 git -C "$ROOT" tag "v$NEW_VERSION"
 

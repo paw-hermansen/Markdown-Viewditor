@@ -36,9 +36,9 @@ When viewing or printing markdown documents that reference external images, Mark
 
 When exporting markdown documents that reference external images, Markdown Viewditor might fetch those images from remote servers to display them. This may expose your IP address to the servers hosting those images.
 
-### 3.3 External Links in Markdown Documents
+### 3.3 External Links
 
-When you click on links in the viewer, Markdown Viewditor opens them in your default system browser. This is a user-initiated action, and may expose your IP address and other standard browser information to the linked website.
+When you click on links in the viewer or in the About Dialog (project page, dependency websites, etc.), Markdown Viewditor opens them in your default system browser. This is a user-initiated action, and may expose your IP address and other standard browser information to the linked website.
 
 ## 4. Local Data Storage
 

@@ -317,16 +317,16 @@ The viewer toolbar exposes:
 Reset by un-checking "Show export confirmation" / "Do not show again"
 before each row.
 
-| #    | Test                              | Steps                                                      | Expected                                                                                                                                                                                                                    |
-| ---- | --------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/HTML Bundle/PDF export | Title: "Export HTML" / "Export HTML Bundle" / "Export / Print"; message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
-| 13.2 | Dialog appearance (neutral / ODT) | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution)                                     |
-| 13.3 | Cancel via Cancel button          | Click Cancel                                               | No export runs, dialog closes                                                                                                                                                                                               |
-| 13.4 | Cancel via Escape / backdrop      | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                                                                                                                               |
-| 13.5 | Confirm via Enter                 | Press Enter                                                | Export runs                                                                                                                                                                                                                 |
-| 13.6 | Don't show again                  | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                                                                                                                         |
-| 13.7 | Re-enable confirmation            | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                                                                                                                                |
-| 13.8 | Options persisted (ODT)           | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                                                                                                                          |
+| #    | Test                              | Steps                                                      | Expected                                                                                                                                                                                                                                |
+| ---- | --------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/HTML Bundle/PDF export    | Title: "Export HTML" / "Export HTML Bundle" / "Export / Print"; message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
+| 13.2 | Dialog appearance (neutral / ODT) | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution)                                                 |
+| 13.3 | Cancel via Cancel button          | Click Cancel                                               | No export runs, dialog closes                                                                                                                                                                                                           |
+| 13.4 | Cancel via Escape / backdrop      | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                                                                                                                                           |
+| 13.5 | Confirm via Enter                 | Press Enter                                                | Export runs                                                                                                                                                                                                                             |
+| 13.6 | Don't show again                  | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                                                                                                                                     |
+| 13.7 | Re-enable confirmation            | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                                                                                                                                            |
+| 13.8 | Options persisted (ODT)           | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                                                                                                                                      |
 
 ### 13.2 Export as HTML
 
@@ -349,20 +349,20 @@ images stored in an `images/` folder and fonts in a `fonts/` folder,
 referenced via relative paths. The result can be unpacked and served from
 any static host.
 
-| #     | Test                         | Steps                                              | Expected                                                                      |
-| ----- | ---------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 13.18 | Save dialog defaults         | Open `examples/Simple.md`, choose Export as HTML Bundle | Save dialog opens with `Simple.zip`, ZIP filter                           |
-| 13.19 | Zip structure                | Save and extract the zip                           | Contains `index.html`, `images/` folder, `fonts/` folder                      |
-| 13.20 | HTML uses relative paths     | Open `index.html` in a browser                     | Page renders identically to the viewer; image srcs point to `images/...`      |
-| 13.21 | Fonts extracted              | Check `fonts/` folder in the zip                   | Contains KaTeX `.woff2` font files                                             |
-| 13.22 | Theme applied                | Repeat with a dark theme active                    | Output uses the same theme                                                    |
-| 13.23 | Local images extracted       | Export `examples/Example.md`                       | `images/` folder contains the local image files                               |
-| 13.24 | Image filename collisions    | Export a file with two images sharing a basename   | Both present: `logo.png` and `logo-1.png`                                     |
-| 13.25 | Cancel save                  | Cancel the save dialog                             | No file written, no toast                                                     |
-| 13.26 | Math rendered                | Export `examples/Math-Example.md`                  | KaTeX formulas render from the extracted fonts in `fonts/`                    |
-| 13.27 | Warnings surface             | Export a file referencing a missing local image    | "Export Warnings" dialog lists the failed image                               |
-| 13.28 | Success toast                | Export successfully                                | Toast: "Exported" with the saved file path                                    |
-| 13.29 | Error toast                  | Trigger an export failure                          | Toast: "Export failed" with detail message                                    |
+| #     | Test                      | Steps                                                   | Expected                                                                 |
+| ----- | ------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 13.18 | Save dialog defaults      | Open `examples/Simple.md`, choose Export as HTML Bundle | Save dialog opens with `Simple.zip`, ZIP filter                          |
+| 13.19 | Zip structure             | Save and extract the zip                                | Contains `index.html`, `images/` folder, `fonts/` folder                 |
+| 13.20 | HTML uses relative paths  | Open `index.html` in a browser                          | Page renders identically to the viewer; image srcs point to `images/...` |
+| 13.21 | Fonts extracted           | Check `fonts/` folder in the zip                        | Contains KaTeX `.woff2` font files                                       |
+| 13.22 | Theme applied             | Repeat with a dark theme active                         | Output uses the same theme                                               |
+| 13.23 | Local images extracted    | Export `examples/Example.md`                            | `images/` folder contains the local image files                          |
+| 13.24 | Image filename collisions | Export a file with two images sharing a basename        | Both present: `logo.png` and `logo-1.png`                                |
+| 13.25 | Cancel save               | Cancel the save dialog                                  | No file written, no toast                                                |
+| 13.26 | Math rendered             | Export `examples/Math-Example.md`                       | KaTeX formulas render from the extracted fonts in `fonts/`               |
+| 13.27 | Warnings surface          | Export a file referencing a missing local image         | "Export Warnings" dialog lists the failed image                          |
+| 13.28 | Success toast             | Export successfully                                     | Toast: "Exported" with the saved file path                               |
+| 13.29 | Error toast               | Trigger an export failure                               | Toast: "Export failed" with detail message                               |
 
 ### 13.4 Export as PDF / Print
 
@@ -583,18 +583,18 @@ in the status bar.
 
 ## 17. Command Palette
 
-| #     | Test                       | Steps                          | Expected                                                   |
-| ----- | -------------------------- | ------------------------------ | ---------------------------------------------------------- |
-| 17.1  | Open palette               | `Ctrl+Shift+P`                 | Command palette overlay appears                            |
-| 17.2  | Close palette              | Escape / click backdrop        | Palette closes                                             |
-| 17.3  | Search commands            | Type "save" / "file"           | Filters to matching commands                               |
-| 17.4  | No results                 | Type "xyzabc"                  | Shows "No matching commands"                               |
-| 17.5  | Keyboard navigation        | Arrow up/down                  | Selection moves, wraps around                              |
-| 17.6  | Execute command            | Select "New File", press Enter | New file created, palette closes                           |
-| 17.7  | Mouse hover selection      | Hover over commands            | Hovered item becomes selected                              |
-| 17.8  | Shortcut / category badges | Open palette                   | Each command shows shortcut and category                   |
+| #     | Test                       | Steps                          | Expected                                                                            |
+| ----- | -------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| 17.1  | Open palette               | `Ctrl+Shift+P`                 | Command palette overlay appears                                                     |
+| 17.2  | Close palette              | Escape / click backdrop        | Palette closes                                                                      |
+| 17.3  | Search commands            | Type "save" / "file"           | Filters to matching commands                                                        |
+| 17.4  | No results                 | Type "xyzabc"                  | Shows "No matching commands"                                                        |
+| 17.5  | Keyboard navigation        | Arrow up/down                  | Selection moves, wraps around                                                       |
+| 17.6  | Execute command            | Select "New File", press Enter | New file created, palette closes                                                    |
+| 17.7  | Mouse hover selection      | Hover over commands            | Hovered item becomes selected                                                       |
+| 17.8  | Shortcut / category badges | Open palette                   | Each command shows shortcut and category                                            |
 | 17.9  | Export commands present    | Type "export"                  | Lists "Export as HTML", "Export as HTML Bundle", "Export as PDF …", "Export as ODT" |
-| 17.10 | Export runs                | Select "Export as HTML"        | Same path as the toolbar dropdown                          |
+| 17.10 | Export runs                | Select "Export as HTML"        | Same path as the toolbar dropdown                                                   |
 
 ### Command Palette Commands Reference
 

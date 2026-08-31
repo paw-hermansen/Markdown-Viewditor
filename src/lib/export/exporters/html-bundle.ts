@@ -207,6 +207,20 @@ export interface ZipEntry {
 }
 
 /**
+ * Remove `@font-face` blocks whose `font-family` starts with `KaTeX_` from
+ * the CSS text. Used to skip the ~300 KB KaTeX font bundle when the document
+ * contains no math.
+ */
+export function stripKatexFontFaces(cssText: string): string {
+  // Matches an @font-face block that declares font-family: KaTeX_*
+  // The regex handles multi-line blocks by matching balanced braces.
+  return cssText.replace(
+    /@font-face\s*\{[^}]*font-family:\s*KaTeX_[^}]*\}/g,
+    "",
+  );
+}
+
+/**
  * Extract same-origin font assets from CSS `url(...)` references, returning
  * raw bytes and rewritten CSS with relative `fonts/` paths. Cross-origin
  * URLs are left untouched.
@@ -378,8 +392,13 @@ export async function buildBundleHtml(
   // 1. Collect CSS from the live document.
   const rawCss = collectStylesheets(options.cssText ?? "");
 
-  // 2. Extract font assets → zip entries + rewritten CSS.
-  const fontResult = await extractFonts(rawCss, fetchImpl);
+  // 2. Strip KaTeX @font-face blocks when the document has no math,
+  //    avoiding ~300 KB of unused font data in the zip.
+  const hasMath = /class="[^"]*\bkatex\b/.test(htmlBody);
+  const filteredCss = hasMath ? rawCss : stripKatexFontFaces(rawCss);
+
+  // 3. Extract font assets → zip entries + rewritten CSS.
+  const fontResult = await extractFonts(filteredCss, fetchImpl);
   warnings.push(...fontResult.warnings);
 
   // 3. Extract image assets → zip entries + rewritten HTML.

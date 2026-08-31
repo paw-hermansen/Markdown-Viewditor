@@ -18,6 +18,7 @@ import {
   extractImages,
   buildBundleHtml,
   htmlBundleExporter,
+  stripKatexFontFaces,
 } from "../exporters/html-bundle";
 import { registerBuiltinExporters, getExporter } from "../registry.svelte";
 
@@ -76,6 +77,44 @@ describe("extractFonts", () => {
     expect(result.entries).toEqual([]);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain("could not be extracted");
+  });
+});
+
+describe("stripKatexFontFaces", () => {
+  it("removes @font-face blocks with KaTeX_ font-family", () => {
+    const css = `
+@font-face {
+  font-family: KaTeX_Main;
+  src: url(fonts/KaTeX_Main-Regular.woff2);
+}
+@font-face {
+  font-family: MyApp;
+  src: url(fonts/app.woff2);
+}`;
+    const result = stripKatexFontFaces(css);
+    expect(result).not.toContain("KaTeX_Main");
+    expect(result).toContain("MyApp");
+    expect(result).toContain("app.woff2");
+  });
+
+  it("removes multiple KaTeX @font-face blocks", () => {
+    const css =
+      "@font-face{font-family:KaTeX_AMS;src:url(a.woff2)}" +
+      "@font-face{font-family:KaTeX_Fraktur;src:url(b.woff2)}" +
+      "@font-face{font-family:App;src:url(c.woff2)}";
+    const result = stripKatexFontFaces(css);
+    expect(result).not.toContain("KaTeX_");
+    expect(result).toContain("App");
+  });
+
+  it("returns CSS unchanged when no KaTeX blocks present", () => {
+    const css = "@font-face{font-family:App;src:url(app.woff2)}";
+    const result = stripKatexFontFaces(css);
+    expect(result).toBe(css);
+  });
+
+  it("handles empty CSS", () => {
+    expect(stripKatexFontFaces("")).toBe("");
   });
 });
 
@@ -210,6 +249,63 @@ describe("buildBundleHtml", () => {
     });
     expect(result.html).toContain('class="viewer-content"');
     expect(result.html).toContain('id="viewer-content"');
+  });
+
+  it("strips KaTeX fonts when document has no math", async () => {
+    const appFontBytes = new Uint8Array([1, 2]);
+    const katexFontBytes = new Uint8Array([3, 4]);
+    const fetchImpl = vi.fn(async (href: string) => ({
+      ok: true,
+      status: 200,
+      headers: new Map([
+        [
+          "content-type",
+          (href as string).includes("KaTeX") ? "font/woff2" : "font/woff2",
+        ],
+      ]),
+      arrayBuffer: async () =>
+        (href as string).includes("KaTeX")
+          ? katexFontBytes.buffer
+          : appFontBytes.buffer,
+    })) as unknown as typeof fetch;
+
+    const css =
+      "@font-face{font-family:KaTeX_Main;src:url(fonts/KaTeX_Main-Regular.woff2)}" +
+      "@font-face{font-family:AppFont;src:url(fonts/app.woff2)}";
+    const result = await buildBundleHtml("<p>no math here</p>", null, "d", {
+      cssText: css,
+      fetchImpl,
+    });
+
+    expect(result.fontEntries).toHaveLength(1);
+    expect(result.fontEntries[0].zipPath).toBe("fonts/app.woff2");
+    expect(result.html).not.toContain("KaTeX_Main");
+    expect(result.html).toContain("AppFont");
+  });
+
+  it("includes KaTeX fonts when document has math", async () => {
+    const fontBytes = new Uint8Array([5, 6]);
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Map([["content-type", "font/woff2"]]),
+      arrayBuffer: async () => fontBytes.buffer,
+    })) as unknown as typeof fetch;
+
+    const css =
+      "@font-face{font-family:KaTeX_Main;src:url(fonts/KaTeX_Main-Regular.woff2)}" +
+      "@font-face{font-family:AppFont;src:url(fonts/app.woff2)}";
+    const htmlWithMath =
+      '<p>Math: <span class="katex"><span>x</span></span></p>';
+    const result = await buildBundleHtml(htmlWithMath, null, "d", {
+      cssText: css,
+      fetchImpl,
+    });
+
+    expect(result.fontEntries).toHaveLength(2);
+    const paths = result.fontEntries.map((e) => e.zipPath);
+    expect(paths).toContain("fonts/KaTeX_Main-Regular.woff2");
+    expect(paths).toContain("fonts/app.woff2");
   });
 });
 

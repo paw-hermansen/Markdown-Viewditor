@@ -205,6 +205,13 @@
           </section>
 
           <section>
+            <h2>Privacy Policy</h2>
+            <p>
+              <button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/PRIVACY-POLICY.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/PRIVACY-POLICY.md')}>PRIVACY-POLICY.md</button>
+            </p>
+          </section>
+
+          <section>
             <h2>AI-Augmented Development</h2>
             <p>
               This application was built by a human Senior Software Developer with the help of

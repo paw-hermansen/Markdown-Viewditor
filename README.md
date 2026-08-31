@@ -67,8 +67,13 @@ or right-click the app → **Open** → **Open anyway**.
 
 ### Auto-updates
 
-The Windows and macOS builds check the GitHub Releases feed for
-updates and can install them in place (Help → About → Check for Updates).
+All desktop builds (Windows, macOS, and Linux deb/rpm) can check the GitHub
+Releases feed for updates and install them in place via **Help → About → Check
+for Updates**. Auto-check on startup is off by default — enable it with the
+checkbox in the About dialog.
+
+In-app updates are disabled when running inside Flatpak, Snap, or the Windows
+Store; use the system updater in those environments.
 
 ## Markdown Compatibility Levels
 

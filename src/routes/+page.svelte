@@ -444,7 +444,7 @@
         }
       }
       const isNeutral = id === 'odt';
-      const titleMap: Record<string, string> = { html: 'Export HTML', odt: 'Export ODT' };
+      const titleMap: Record<string, string> = { html: 'Export HTML', 'html-bundle': 'Export HTML Bundle', odt: 'Export ODT' };
       const result = await showExportConfirmDialog({
         title: titleMap[id] ?? (isMacOS ? 'Export' : 'Export / Print'),
         themeKind: isNeutral ? 'neutral' : 'viewer',

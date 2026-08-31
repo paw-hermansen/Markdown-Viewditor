@@ -56,6 +56,8 @@ export async function registerBuiltinExporters(): Promise<void> {
   builtinsRegistered = true;
   const { htmlExporter } = await import("./exporters/html");
   registerExporter(htmlExporter);
+  const { htmlBundleExporter } = await import("./exporters/html-bundle");
+  registerExporter(htmlBundleExporter);
   const { pdfExporter } = await import("./exporters/pdf");
   registerExporter(pdfExporter);
   const { odtExporter } = await import("./exporters/odt");

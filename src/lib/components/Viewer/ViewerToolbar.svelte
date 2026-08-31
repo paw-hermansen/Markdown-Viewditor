@@ -34,8 +34,9 @@
         class="toolbar-button"
         onclick={() => handleExportAction(exportChoices[0].value)}
         title={exportChoices[0].label}
+        aria-label={exportChoices[0].label}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
@@ -51,7 +52,7 @@
         header={themeLabel}
       >
         {#snippet leadingIcon()}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
@@ -71,8 +72,8 @@
     {/if}
 
     {#if !isMacOS && onPrint}
-      <button class="toolbar-button" onclick={() => onPrint?.()} title={modLabel('Print / PDF (Ctrl+P)')}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="toolbar-button" onclick={() => onPrint?.()} title={modLabel('Print / PDF (Ctrl+P)')} aria-label="Print / PDF">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="6 9 6 2 18 2 18 9" />
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
           <rect x="6" y="14" width="12" height="8" />

@@ -1,4 +1,8 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
+import { render } from "@testing-library/svelte";
+import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
+import ExportConfirmDialog from "$lib/components/ExportConfirmDialog.svelte";
 
 import {
   exportConfirmState,
@@ -122,5 +126,21 @@ describe("export-confirm-dialog store", () => {
       "odt.rasterizeMath": true,
       "odt.rasterResolution": 3,
     });
+  });
+
+  it("has no accessibility violations", async () => {
+    exportConfirmState.current = {
+      title: "Export HTML",
+      themeKind: "viewer",
+      themeLabel: "GitHub Dark",
+      actionLabel: "Export",
+      isMacOS: true,
+      optionGroups: [],
+      currentOptions: {},
+      resolve: () => {},
+    };
+    const { container } = render(ExportConfirmDialog);
+    await checkA11y(container);
+    exportConfirmState.current = null;
   });
 });

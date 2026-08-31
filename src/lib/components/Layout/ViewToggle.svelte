@@ -13,11 +13,30 @@
     { value: 'split', label: 'Split', icon: '⊞' },
     { value: 'viewer', label: 'View', icon: '👁' },
   ];
+
+  function handleKeydown(e: KeyboardEvent) {
+    const buttons = Array.from(document.querySelectorAll('.view-toggle button')) as HTMLElement[];
+    const currentIndex = buttons.indexOf(document.activeElement as HTMLElement);
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = (currentIndex + 1) % buttons.length;
+      buttons[next]?.focus();
+      buttons[next]?.click();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = (currentIndex - 1 + buttons.length) % buttons.length;
+      buttons[prev]?.focus();
+      buttons[prev]?.click();
+    }
+  }
 </script>
 
-<div class="view-toggle">
+<div class="view-toggle" role="radiogroup" aria-label="View mode" tabindex="0" onkeydown={handleKeydown}>
   {#each modes as mode}
     <button
+      role="radio"
+      aria-checked={viewMode === mode.value}
       class:active={viewMode === mode.value}
       onclick={() => onchange(mode.value)}
       title={mode.label}

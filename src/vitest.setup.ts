@@ -1,5 +1,10 @@
-import { vi } from "vitest";
+import { vi, expect } from "vitest";
 import "@testing-library/jest-dom/vitest";
+
+// Import and register vitest-axe matchers
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { toHaveNoViolations } = (await import("vitest-axe/matchers")) as any;
+expect.extend({ toHaveNoViolations });
 
 // jsdom does not implement scrollIntoView; components that call it in
 // $effect blocks would otherwise crash during tests.

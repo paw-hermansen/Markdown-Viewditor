@@ -3,7 +3,7 @@
   import { relaunch } from '@tauri-apps/plugin-process';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { modLabel } from '$lib/utils/keyboard';
-  import { updateStatus, checkForUpdates } from '$lib/stores/update.svelte';
+  import { updateStatus, checkForUpdates, updaterState } from '$lib/stores/update.svelte';
   import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
   import { focusTrap } from '$lib/utils/focus-trap';
   import licenseText from '../../../../LICENSE?raw';
@@ -156,6 +156,7 @@
           <div role="tabpanel" id="panel-about" aria-labelledby="tab-about">
           <section>
             <h2>Updates</h2>
+            {#if updaterState.enabled}
             <div class="update-row">
               <button
                 class="update-btn"
@@ -190,6 +191,7 @@
               <span>Auto-check for updates on startup</span>
             </label>
             <p class="muted">In-app updates are disabled when running inside Flatpak, Snap, or the Windows Store — use your system updater there.</p>
+            {/if}
           </section>
 
           <section>

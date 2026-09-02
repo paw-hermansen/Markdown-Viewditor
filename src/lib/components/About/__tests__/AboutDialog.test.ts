@@ -24,6 +24,7 @@ const { mockUpdateStatus, mockCheckForUpdates } = vi.hoisted(() => ({
 vi.mock("$lib/stores/update.svelte", () => ({
   updateStatus: mockUpdateStatus,
   checkForUpdates: mockCheckForUpdates,
+  updaterState: { enabled: true },
 }));
 
 const { mockSettingsState, mockUpdateSetting } = vi.hoisted(() => ({

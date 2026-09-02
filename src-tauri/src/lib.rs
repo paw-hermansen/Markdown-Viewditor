@@ -55,6 +55,11 @@ fn updater_enabled() -> bool {
     true
 }
 
+#[tauri::command]
+fn is_updater_enabled() -> bool {
+    updater_enabled()
+}
+
 /// Extract a filesystem path from a `file:///` URL.
 /// For `file:///path/to/file.md` returns `/path/to/file.md`.
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
@@ -109,7 +114,8 @@ pub fn run() {
             save_window_state,
             force_close_window,
             create_pdf,
-            rasterize_svg
+            rasterize_svg,
+            is_updater_enabled
         ])
         .setup(|app| {
             // Restore window state before frontend loads

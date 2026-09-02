@@ -68,7 +68,7 @@
   import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
   import { getThemeLabel } from "$lib/utils/themes";
   import { showExportConfirmDialog } from "$lib/stores/export-confirm-dialog.svelte";
-  import { updateStatus, checkForUpdates } from "$lib/stores/update.svelte";
+  import { updateStatus, checkForUpdates, updaterState, initUpdaterEnabled } from "$lib/stores/update.svelte";
 
   const isMacOS = navigator.userAgent.includes("Macintosh");
 
@@ -642,6 +642,9 @@
     // and command palette can list them. Idempotent.
     void registerBuiltinExporters();
 
+    // Check whether the in-app updater is available (disabled in Flatpak, Snap, Windows Store).
+    void initUpdaterEnabled();
+
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(
       async (event) => {
         event.preventDefault();
@@ -730,7 +733,7 @@
       }
     }
 
-    if (settingsState.autoCheckUpdates) {
+    if (updaterState.enabled && settingsState.autoCheckUpdates) {
       setTimeout(() => {
         void checkForUpdates();
       }, 3000);

@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.0] - 2026-09-03
+
+- Fixed missing add of snap yaml to release branch (#89) (832c249)
+- Add snapcraft release (#86) (6167e35)
+- hide auto-updater UI when installed from app stores (#85) (69792a1)
+- docs: include Linux in auto-updater section and note default-off behavior (#84) (1b4bd96)
+- Feature/export zipped html (#83) (11e0295)
+- ci: require release environment approval for MSIX build (#82) (d476df5)
+- Add privacy policy link to About Dialog and expand section 3.3 to cover About Dialog links (#81) (d8182a5)
+- fix: sync Cargo.lock during version bump to prevent dirty working tree after build (#80) (16ac690)
+- Auto-updated version in Cargo.lock (3005b28)
+- Feature/wcag 2.1 aa accessibility (#79) (4625f9f)
+
 ## [1.3.0] - 2026-08-30
 
 - Disable auto-updater for Windows Store (MSIX) installs (#77) (9b72504)

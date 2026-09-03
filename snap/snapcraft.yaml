@@ -1,6 +1,6 @@
 name: markdown-viewditor
 base: core22
-version: "1.4.1"
+version: "1.4.2"
 summary: A markdown viewer and editor with live preview
 description: |
   Markdown Viewditor is a cross-platform markdown viewer and editor

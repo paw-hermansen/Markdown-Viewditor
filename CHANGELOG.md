@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.2] - 2026-09-03
+
+- More fixes for snapcraft release (#93) (9fdbf5d)
+
 ## [1.4.1] - 2026-09-03
 
 - Fixes to snapcraft release (#91) (aa93c6d)

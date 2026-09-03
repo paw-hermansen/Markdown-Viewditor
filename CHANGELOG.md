@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1] - 2026-09-03
+
+- Fixes to snapcraft release (#91) (aa93c6d)
+
 ## [1.4.0] - 2026-09-03
 
 - Fixed missing add of snap yaml to release branch (#89) (832c249)

@@ -35,11 +35,16 @@ jobs:
           name: ${{ matrix.artifact }}
           path: src-tauri/target/release/bundle/deb/
 
-      - name: Install Snapcraft
-        run: sudo snap install snapcraft --classic
+      - name: Install Snapcraft and required snaps
+        run: |
+          sudo snap wait system seed.loaded
+          sudo snap install core22
+          sudo snap install gnome-42-2204
+          sudo snap install gtk-common-themes
+          sudo snap install snapcraft --classic
 
       - name: Build Snap
-        run: snapcraft --destructive-mode
+        run: snapcraft pack --destructive-mode
 
       - name: Upload Snap artifact
         uses: actions/upload-artifact@v5

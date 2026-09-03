@@ -80,6 +80,10 @@ fi
 sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$ROOT/src-tauri/tauri.conf.json"
 echo "  Updated src-tauri/tauri.conf.json"
 
+# Update snap/snapcraft.yaml
+sed -i "s/version: '$CURRENT_VERSION'/version: '$NEW_VERSION'/" "$ROOT/snap/snapcraft.yaml"
+echo "  Updated snap/snapcraft.yaml"
+
 # Generate changelog entry
 TAG_DATE=$(date +%Y-%m-%d)
 CHANGELOG_FILE="$ROOT/CHANGELOG.md"
@@ -134,7 +138,7 @@ if [ "$FILES_ONLY" = true ]; then
 fi
 
 # Stage, commit, and tag
-git -C "$ROOT" add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json CHANGELOG.md
+git -C "$ROOT" add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json snap/snapcraft.yaml CHANGELOG.md
 git -C "$ROOT" commit -m "chore: release v$NEW_VERSION"
 git -C "$ROOT" tag "v$NEW_VERSION"
 

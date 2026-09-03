@@ -54,3 +54,4 @@ jobs:
     uses: ./.github/workflows/release-snap.yml
     with:
       tag: ${{ needs.tag.outputs.tag }}
+    secrets: inherit

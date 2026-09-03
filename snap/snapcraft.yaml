@@ -1,0 +1,26 @@
+name: markdown-viewditor
+base: core22
+version: "1.3.0"
+summary: A markdown viewer and editor with live preview
+description: |
+  Markdown Viewditor is a cross-platform markdown viewer and editor
+  with live preview, supporting GitHub-flavored markdown, math (KaTeX),
+  syntax highlighting, and more.
+grade: stable
+confinement: strict
+
+apps:
+  markdown-viewditor:
+    command: usr/bin/MarkdownViewditor
+    extensions: [gnome]
+    plugs: [home, network, audio-playback, desktop, wayland, x11, opengl]
+
+parts:
+  markdown-viewditor:
+    plugin: nil
+    source: .
+    override-build: |
+      mkdir -p deb-extract
+      ar -x src-tauri/target/release/bundle/deb/*.deb --output deb-extract
+      tar -C deb-extract -xf deb-extract/data.tar.gz
+      cp -r deb-extract/usr $SNAPCRAFT_PART_INSTALL/

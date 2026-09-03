@@ -34,6 +34,9 @@ jobs:
           - platform: linux
             runner: ubuntu-22.04
             args: ""
+          - platform: linux-arm64
+            runner: ubuntu-22.04-arm
+            args: ""
           - platform: windows
             runner: windows-latest
             args: ""
@@ -47,7 +50,7 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
 
       - name: Install Linux system dependencies
-        if: matrix.platform == 'linux'
+        if: startsWith(matrix.platform, 'linux')
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -94,3 +97,11 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Upload deb artifacts
+        if: startsWith(matrix.platform, 'linux')
+        uses: actions/upload-artifact@v5
+        with:
+          name: debs-${{ matrix.platform }}
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error

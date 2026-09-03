@@ -81,7 +81,7 @@ sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$RO
 echo "  Updated src-tauri/tauri.conf.json"
 
 # Update snap/snapcraft.yaml
-sed -i "s/version: '$CURRENT_VERSION'/version: '$NEW_VERSION'/" "$ROOT/snap/snapcraft.yaml"
+sed -i "s/version: \"$CURRENT_VERSION\"/version: \"$NEW_VERSION\"/" "$ROOT/snap/snapcraft.yaml"
 echo "  Updated snap/snapcraft.yaml"
 
 # Generate changelog entry

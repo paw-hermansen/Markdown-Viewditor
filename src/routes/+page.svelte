@@ -642,7 +642,7 @@
     // and command palette can list them. Idempotent.
     void registerBuiltinExporters();
 
-    // Check whether the in-app updater is available (disabled in Flatpak, Snap, Windows Store).
+    // Check whether the in-app updater is available (disabled in Flatpak, Windows Store).
     void initUpdaterEnabled();
 
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(

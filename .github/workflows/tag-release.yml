@@ -47,11 +47,3 @@ jobs:
     uses: ./.github/workflows/release-msix.yml
     with:
       tag: ${{ needs.tag.outputs.tag }}
-
-  release-snap:
-    name: Trigger Snap Build
-    needs: [tag, release]
-    uses: ./.github/workflows/release-snap.yml
-    with:
-      tag: ${{ needs.tag.outputs.tag }}
-    secrets: inherit

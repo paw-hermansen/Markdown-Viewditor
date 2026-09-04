@@ -1,11 +1,13 @@
 name: markdown-viewditor
 base: core22
 version: "1.4.4"
-summary: A markdown viewer and editor with live preview
+summary: Markdown viewer and editor with advanced features and styled exports
 description: |
-  Markdown Viewditor is a cross-platform markdown viewer and editor
-  with live preview, supporting GitHub-flavored markdown, math (KaTeX),
-  syntax highlighting, and more.
+  Markdown Viewditor is a markdown viewer and editor with scroll sync, custom themes, math (KaTeX) and chemical formulas, `SKILL.md` handling, and exports to several formats. It has three view modes: editor-only, split view, or preview-only.
+
+  8 built-in dark and light themes, or create your own with custom CSS. Export your work to self-contained HTML, ODT (for Word, LibreOffice, and others), or print to PDF. HTML and PDF export can be fully themed including custom themes.
+
+  Markdown compatibility levels let you target basic (CommonMark), GitHub-flavored, or advanced syntax — with soft editor warnings when your document uses features outside the chosen level.
 grade: stable
 confinement: strict
 

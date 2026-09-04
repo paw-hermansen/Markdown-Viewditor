@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.5] - 2026-09-04
+
+- Fixed Snap install arch mismatch (#101) (710a35e)
+- Improved Snap store descriptions (#100) (294b089)
+- fix: update button hover contrast in light themes (#99) (34cb00a)
+
 ## [1.4.4] - 2026-09-03
 
 - Yet more fixes for snapcraft release (#97) (311032d)

@@ -14,15 +14,17 @@ permissions:
 jobs:
   build:
     name: Build Snap (${{ matrix.arch }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: amd64
             artifact: debs-linux
+            runner: ubuntu-latest
           - arch: arm64
             artifact: debs-linux-arm64
+            runner: ubuntu-22.04-arm
 
     steps:
       - uses: actions/checkout@v7

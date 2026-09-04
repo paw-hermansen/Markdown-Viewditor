@@ -17,6 +17,10 @@ apps:
     extensions: [gnome]
     plugs: [home, network, audio-playback, desktop, wayland, x11, opengl]
 
+platforms:
+  amd64:
+  arm64:
+
 parts:
   markdown-viewditor:
     plugin: nil

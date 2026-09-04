@@ -107,12 +107,18 @@ describe("Viewer", () => {
     });
   });
 
-  it("debounces rendering on rapid content changes", async () => {
-    render(Viewer, { props: { content: "initial" } });
-    await vi.advanceTimersByTimeAsync(50);
-    expect(mockRenderMarkdown).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(150);
+  it("renders immediately on first load, debounces subsequent changes", async () => {
+    const { rerender } = render(Viewer, { props: { content: "initial" } });
+    // First render is immediate — no debounce.
+    await vi.advanceTimersByTimeAsync(0);
     expect(mockRenderMarkdown).toHaveBeenCalledTimes(1);
+
+    // Subsequent content changes are debounced by 150 ms.
+    rerender({ content: "updated" });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(mockRenderMarkdown).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(150);
+    expect(mockRenderMarkdown).toHaveBeenCalledTimes(2);
   });
 
   it("renders frontmatter card when present", async () => {
@@ -123,7 +129,7 @@ describe("Viewer", () => {
     render(Viewer, {
       props: { content: "---\nname: test-skill\n---\nContent" },
     });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
       expect(screen.getByText("test-skill")).toBeInTheDocument();
     });
@@ -135,7 +141,7 @@ describe("Viewer", () => {
       frontmatter: { license: "MIT" },
     });
     render(Viewer, { props: { content: "---\nlicense: MIT\n---\nContent" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
       expect(screen.getByText("Frontmatter")).toBeInTheDocument();
     });
@@ -143,7 +149,7 @@ describe("Viewer", () => {
 
   it("forceRender recreates the DOM even when the HTML is unchanged", async () => {
     const view = render(Viewer, { props: { content: "# Hello World" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
       expect(screen.getByText("Hello World")).toBeInTheDocument();
     });
@@ -160,7 +166,7 @@ describe("Viewer", () => {
 
   it("forceRender restores the scroll position", async () => {
     const view = render(Viewer, { props: { content: "# Hello World" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
       expect(screen.getByText("Hello World")).toBeInTheDocument();
     });
@@ -184,7 +190,7 @@ describe("Viewer", () => {
       frontmatter: null,
     });
     const view = render(Viewer, { props: { content: "images" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
 
     const renderDone = view.component.forceRender();
     await vi.advanceTimersByTimeAsync(2100);
@@ -208,12 +214,13 @@ describe("Viewer", () => {
       frontmatter: null,
     });
     const view = render(Viewer, { props: { content: "images" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
 
     const firstRender = view.component.forceRender();
     await vi.advanceTimersByTimeAsync(2100);
     await firstRender;
     const first = document.querySelector("img")?.getAttribute("src");
+
     const secondRender = view.component.forceRender();
     await vi.advanceTimersByTimeAsync(2100);
     await secondRender;
@@ -228,7 +235,7 @@ describe("Viewer", () => {
       frontmatter: null,
     });
     const view = render(Viewer, { props: { content: "images" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
 
     const renderDone = view.component.forceRender();
     await vi.advanceTimersByTimeAsync(2100);
@@ -245,7 +252,7 @@ describe("Viewer", () => {
       frontmatter: null,
     });
     const view = render(Viewer, { props: { content: "anchor" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
 
     const container = document.querySelector(
       ".viewer-container",
@@ -270,7 +277,7 @@ describe("Viewer", () => {
       frontmatter: null,
     });
     const view = render(Viewer, { props: { content: "anchor" } });
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
 
     const container = document.querySelector(
       ".viewer-container",

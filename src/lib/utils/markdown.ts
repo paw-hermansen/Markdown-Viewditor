@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js/lib/core";
+import type { LanguageFn } from "highlight.js";
 import highlightjs from "markdown-it-highlightjs";
 import taskLists from "markdown-it-task-lists";
 import footnote from "markdown-it-footnote";
@@ -27,28 +28,51 @@ import "$lib/styles/katex/katex.woff2.css";
 // (e.g. $\pu{123 kJ/mol}$) render. Ships inside katex; no extra dependency.
 import "katex/contrib/mhchem";
 
-import javascript from "highlight.js/lib/languages/javascript";
-import typescript from "highlight.js/lib/languages/typescript";
-import python from "highlight.js/lib/languages/python";
-import css from "highlight.js/lib/languages/css";
-import xml from "highlight.js/lib/languages/xml";
-import json from "highlight.js/lib/languages/json";
-import bash from "highlight.js/lib/languages/bash";
-import markdown from "highlight.js/lib/languages/markdown";
-import sql from "highlight.js/lib/languages/sql";
+// Highlight.js languages are loaded lazily inside initMarkdownIt() via
+// dynamic imports so the module itself can be imported without triggering
+// evaluation of all 11 language grammars.
+const HLJS_LANGUAGES: Record<string, () => Promise<{ default: unknown }>> = {
+  javascript: () => import("highlight.js/lib/languages/javascript"),
+  typescript: () => import("highlight.js/lib/languages/typescript"),
+  python: () => import("highlight.js/lib/languages/python"),
+  css: () => import("highlight.js/lib/languages/css"),
+  xml: () => import("highlight.js/lib/languages/xml"),
+  json: () => import("highlight.js/lib/languages/json"),
+  bash: () => import("highlight.js/lib/languages/bash"),
+  markdown: () => import("highlight.js/lib/languages/markdown"),
+  sql: () => import("highlight.js/lib/languages/sql"),
+};
 
-hljs.registerLanguage("javascript", javascript);
-hljs.registerLanguage("typescript", typescript);
-hljs.registerLanguage("python", python);
-hljs.registerLanguage("css", css);
-hljs.registerLanguage("xml", xml);
-hljs.registerLanguage("html", xml);
-hljs.registerLanguage("json", json);
-hljs.registerLanguage("bash", bash);
-hljs.registerLanguage("shell", bash);
-hljs.registerLanguage("shellscript", bash);
-hljs.registerLanguage("markdown", markdown);
-hljs.registerLanguage("sql", sql);
+// Aliases that point to an already-loaded language module.
+const HLJS_ALIASES: Record<string, string> = {
+  html: "xml",
+  shell: "bash",
+  shellscript: "bash",
+};
+
+let hljsLanguagesLoaded = false;
+
+// Cache imported language functions so aliases can reuse them.
+const importedLangs = new Map<string, LanguageFn>();
+
+async function loadHljsLanguages(): Promise<void> {
+  if (hljsLanguagesLoaded) return;
+  const imports = Object.entries(HLJS_LANGUAGES).map(
+    async ([name, importFn]) => {
+      const mod = await importFn();
+      importedLangs.set(name, mod.default as LanguageFn);
+    },
+  );
+  await Promise.all(imports);
+  for (const [name, lang] of importedLangs) {
+    hljs.registerLanguage(name, lang);
+  }
+  // Register aliases that point to an already-loaded language function.
+  for (const [alias, base] of Object.entries(HLJS_ALIASES)) {
+    hljs.registerLanguage(alias, importedLangs.get(base)!);
+  }
+  hljsLanguagesLoaded = true;
+}
 
 let md: MarkdownIt | null = null;
 let currentThemeStyle: HTMLStyleElement | null = null;
@@ -616,6 +640,7 @@ function wrapMathAnchorRenderers(md: MarkdownIt): void {
 
 async function initMarkdownIt(): Promise<MarkdownIt> {
   if (!md) {
+    await loadHljsLanguages();
     md = new MarkdownIt({
       html: true,
       linkify: true,

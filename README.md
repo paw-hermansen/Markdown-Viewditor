@@ -72,7 +72,7 @@ Releases feed for updates and install them in place via **Help → About → Che
 for Updates**. Auto-check on startup is off by default — enable it with the
 checkbox in the About dialog.
 
-In-app updates are disabled when running inside Flatpak, Snap, or the Windows
+In-app updates are disabled when running inside Flatpak or the Windows
 Store; use the system updater in those environments.
 
 ## Markdown Compatibility Levels

@@ -30,16 +30,13 @@ fn configure_platform() {}
 
 /// Whether the built-in Tauri updater should be active.
 ///
-/// Sandboxed / package-managed installs (Flatpak, Snap, Windows Store)
-/// own the update lifecycle themselves (`flatpak update`, `snap refresh`,
+/// Sandboxed / package-managed installs (Flatpak, Windows Store)
+/// own the update lifecycle themselves (`flatpak update`,
 /// Microsoft Store). Running the in-app updater there would either fail
 /// (read-only filesystem) or conflict with the system updater, so we
 /// disable it.
 fn updater_enabled() -> bool {
     if std::path::Path::new("/.flatpak-info").exists() {
-        return false;
-    }
-    if env::var_os("SNAP").is_some() {
         return false;
     }
     // MSIX-packaged apps always run from

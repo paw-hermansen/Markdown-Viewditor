@@ -29,6 +29,11 @@
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
   let viewerContentElement: HTMLDivElement | undefined = $state(undefined);
   let renderTimeout: ReturnType<typeof setTimeout> | undefined;
+  // Non-reactive flag: tracks whether the viewer has rendered at least once.
+  // Used to skip the debounce on the initial load without creating a
+  // dependency on `html`/`frontmatter` (which would cause the effect to
+  // re-fire whenever the render completes and schedule a spurious timer).
+  let hasRenderedOnce = false;
 
   $effect(() => {
     if (renderTimeout) {
@@ -36,11 +41,17 @@
     }
 
     const currentContent = content;
-    renderTimeout = setTimeout(async () => {
+    async function doRender() {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
       html = result.html;
       frontmatter = result.frontmatter;
-    }, 150);
+      hasRenderedOnce = true;
+    }
+    if (!hasRenderedOnce) {
+      void doRender();
+    } else {
+      renderTimeout = setTimeout(doRender, 150);
+    }
 
     return () => {
       if (renderTimeout) {

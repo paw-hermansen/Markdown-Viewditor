@@ -155,8 +155,8 @@
         {#if activeTab === 'about'}
           <div role="tabpanel" id="panel-about" aria-labelledby="tab-about">
           <section>
-            <h2>Updates</h2>
             {#if updaterState.enabled}
+            <h2>Updates</h2>
             <div class="update-row">
               <button
                 class="update-btn"

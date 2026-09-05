@@ -26,10 +26,11 @@
     onAbout: () => void;
     onPrint?: () => void;
     onExport?: (id: string) => void;
+    onFormatDocument?: () => void;
     printLabel?: string;
   }
 
-  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, viewMode, onViewModeChange, onAbout, onPrint, onExport, printLabel = 'Print Preview' }: Props = $props();
+  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, viewMode, onViewModeChange, onAbout, onPrint, onExport, onFormatDocument, printLabel = 'Print Preview' }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
@@ -61,6 +62,7 @@
       const next: ViewMode = viewMode === 'editor' ? 'split' : viewMode === 'split' ? 'viewer' : 'editor';
       onViewModeChange(next);
     }},
+    ...(onFormatDocument ? [{ id: 'format-document', label: 'Format Document', shortcut: modLabel('Shift+Alt+F'), category: 'Edit', action: onFormatDocument }] : []),
     ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: modLabel('Ctrl+P'), category: 'File', action: onPrint }] : []),
     { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
   ]);

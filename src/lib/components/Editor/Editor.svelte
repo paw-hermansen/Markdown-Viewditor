@@ -13,6 +13,7 @@
   import { viewerState, getThemeType } from '$lib/stores/viewer.svelte';
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { violationMessage } from '$lib/utils/markdown-levels';
+  import { formatMarkdown, type TextMeasurer } from '$lib/utils/markdown-formatter';
 
   interface Props {
     content?: string;
@@ -198,6 +199,13 @@
             key: 'Mod-e',
             run: () => {
               toggleCode();
+              return true;
+            }
+          },
+          {
+            key: 'Shift-Alt-f',
+            run: () => {
+              formatDocument();
               return true;
             }
           },
@@ -642,6 +650,122 @@
         });
       }
       isUpdatingFromProp = false;
+    }
+  }
+
+  function cssPixels(value: string): number {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function getVisibleTextWidth(view: EditorView): number {
+    const scroll = view.scrollDOM;
+    const line = view.contentDOM.querySelector<HTMLElement>('.cm-line');
+    if (!line || !scroll.clientWidth) return 0;
+
+    const scrollRect = scroll.getBoundingClientRect();
+    const lineRect = line.getBoundingClientRect();
+    const scrollStyle = getComputedStyle(scroll);
+    const lineStyle = getComputedStyle(line);
+    const scaleX = scroll.offsetWidth > 0 ? scrollRect.width / scroll.offsetWidth : 1;
+    const borderLeft = cssPixels(scrollStyle.borderLeftWidth);
+    const paddingRight = cssPixels(scrollStyle.paddingRight);
+
+    // The line can be horizontally scrolled, so restore its unscrolled text
+    // origin before comparing it with the visible right edge of the scroller.
+    const textStart = lineRect.left +
+      (scroll.scrollLeft + cssPixels(lineStyle.paddingLeft)) * scaleX;
+    const visibleRight = scrollRect.left +
+      (borderLeft + scroll.clientWidth - paddingRight) * scaleX;
+
+    return (visibleRight - textStart) / scaleX - cssPixels(lineStyle.paddingRight);
+  }
+
+  interface TextProbe {
+    measure: TextMeasurer;
+    destroy: () => void;
+  }
+
+  function getTextMeasurer(view: EditorView): TextProbe | undefined {
+    const line = view.contentDOM.querySelector<HTMLElement>('.cm-line');
+    if (!line || !document.body) return undefined;
+
+    const style = getComputedStyle(line);
+    const probe = document.createElement('span');
+    probe.dataset.markdownFormatProbe = 'true';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.position = 'fixed';
+    probe.style.left = '-100000px';
+    probe.style.top = '-100000px';
+    probe.style.display = 'inline-block';
+    probe.style.width = 'max-content';
+    probe.style.whiteSpace = 'pre';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.style.padding = '0';
+    probe.style.margin = '0';
+    probe.style.border = '0';
+    probe.style.fontFamily = style.fontFamily;
+    probe.style.fontSize = style.fontSize;
+    probe.style.fontStyle = style.fontStyle;
+    probe.style.fontVariant = style.fontVariant;
+    probe.style.fontWeight = style.fontWeight;
+    probe.style.fontStretch = style.fontStretch;
+    probe.style.letterSpacing = style.letterSpacing;
+    probe.style.wordSpacing = style.wordSpacing;
+    probe.style.fontKerning = style.fontKerning;
+    probe.style.fontFeatureSettings = style.fontFeatureSettings;
+    document.body.appendChild(probe);
+
+    return {
+      measure: (text) => {
+        probe.textContent = text;
+        return probe.getBoundingClientRect().width;
+      },
+      destroy: () => probe.remove(),
+    };
+  }
+
+  export function formatDocument() {
+    if (!editorView) return;
+
+    const contentWidth = getVisibleTextWidth(editorView);
+    if (contentWidth <= 0) return;
+
+    const { from, to } = editorView.state.selection.main;
+    const hasSelection = from !== to;
+
+    let targetFrom: number;
+    let targetTo: number;
+    let original: string;
+
+    if (hasSelection) {
+      const startLine = editorView.state.doc.lineAt(from);
+      const endLine = editorView.state.doc.lineAt(to);
+      targetFrom = startLine.from;
+      targetTo = endLine.to;
+      original = editorView.state.sliceDoc(targetFrom, targetTo);
+    } else {
+      targetFrom = 0;
+      targetTo = editorView.state.doc.length;
+      original = editorView.state.sliceDoc(targetFrom, targetTo);
+    }
+
+    if (!original.trim()) return;
+
+    const textProbe = getTextMeasurer(editorView);
+    if (!textProbe) return;
+
+    try {
+      const formatted = formatMarkdown(original, contentWidth - 1, textProbe.measure);
+      if (formatted === original) return;
+
+      editorView.dispatch({
+        changes: { from: targetFrom, to: targetTo, insert: formatted },
+      });
+      editorView.focus();
+    } finally {
+      textProbe.destroy();
     }
   }
 

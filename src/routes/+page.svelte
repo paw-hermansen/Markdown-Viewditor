@@ -94,6 +94,12 @@
     }
   }
 
+  function handleFormatDocument() {
+    if (editorComponent) {
+      editorComponent.formatDocument();
+    }
+  }
+
   async function handleNew() {
     if (fileState.isLoading) return;
 
@@ -613,6 +619,12 @@
       cycleViewMode();
       return;
     }
+
+    if (e.shiftKey && e.altKey && code === "KeyF") {
+      e.preventDefault();
+      handleFormatDocument();
+      return;
+    }
   }
 
   function initScrollSync() {
@@ -805,6 +817,7 @@
   onAbout={handleAbout}
   onPrint={handlePrint}
   onExport={handleExport}
+  onFormatDocument={handleFormatDocument}
   printLabel={isMacOS ? "Create PDF" : "Print Preview"}
 />
 

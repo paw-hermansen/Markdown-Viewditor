@@ -109,6 +109,94 @@ describe("Editor", () => {
     expect(editorView?.state.doc.toString()).toBe("# Second");
   });
 
+  it("formats to the visible viewport when content has intrinsic overflow width", () => {
+    const content =
+      "one two three four five six seven eight nine ten eleven twelve thirteen";
+    const { component } = render(Editor, { props: { content } });
+    const editorView = component.getEditorView()!;
+    const contentRect = vi
+      .spyOn(editorView.contentDOM, "getBoundingClientRect")
+      .mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 2000,
+        height: 20,
+        top: 0,
+        right: 2000,
+        bottom: 20,
+        left: 0,
+        toJSON: () => ({}),
+      });
+    Object.defineProperty(editorView.scrollDOM, "clientWidth", {
+      configurable: true,
+      value: 300,
+    });
+    Object.defineProperty(editorView.scrollDOM, "offsetWidth", {
+      configurable: true,
+      value: 300,
+    });
+    const scrollRect = vi
+      .spyOn(editorView.scrollDOM, "getBoundingClientRect")
+      .mockReturnValue({
+        x: 100,
+        y: 0,
+        width: 300,
+        height: 20,
+        top: 0,
+        right: 400,
+        bottom: 20,
+        left: 100,
+        toJSON: () => ({}),
+      });
+    const line = editorView.contentDOM.querySelector<HTMLElement>(".cm-line")!;
+    const lineRect = vi.spyOn(line, "getBoundingClientRect").mockReturnValue({
+      x: 140,
+      y: 0,
+      width: 2000,
+      height: 20,
+      top: 0,
+      right: 2140,
+      bottom: 20,
+      left: 140,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(line, "offsetWidth", {
+      configurable: true,
+      value: 2000,
+    });
+    const originalElementRect = HTMLElement.prototype.getBoundingClientRect;
+    const probeRect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.markdownFormatProbe === "true") {
+          const width = (this.textContent ?? "").length * 10;
+          return {
+            x: 0,
+            y: 0,
+            width,
+            height: 20,
+            top: 0,
+            right: width,
+            bottom: 20,
+            left: 0,
+            toJSON: () => ({}),
+          };
+        }
+        return originalElementRect.call(this);
+      });
+
+    try {
+      component.formatDocument();
+
+      expect(editorView.state.doc.toString()).toContain("\n");
+    } finally {
+      contentRect.mockRestore();
+      scrollRect.mockRestore();
+      lineRect.mockRestore();
+      probeRect.mockRestore();
+    }
+  });
+
   it("notifies the store on user edits", async () => {
     const { component } = render(Editor, { props: { content: "" } });
     const editorView = component.getEditorView()!;

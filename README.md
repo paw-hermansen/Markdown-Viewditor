@@ -1,7 +1,7 @@
 # Markdown Viewditor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](<>)
 
 A feature-rich and simple cross-platform markdown viewer and editor with live preview and scroll sync built with Tauri v2 + Svelte 5.
 

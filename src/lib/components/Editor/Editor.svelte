@@ -8,6 +8,7 @@
   import { EditorState, Compartment, Prec } from '@codemirror/state';
   import { keymap, lineNumbers, type ViewUpdate } from '@codemirror/view';
   import { linter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
+  import { search } from '@codemirror/search';
   import { updateContent, updateCursorPosition } from '$lib/stores/editor.svelte';
   import { settingsState } from '$lib/stores/settings.svelte';
   import { viewerState, getThemeType } from '$lib/stores/viewer.svelte';
@@ -130,6 +131,11 @@
       doc: content,
       extensions: [
         basicSetup,
+        search({
+          scrollToMatch: (range) => {
+            return EditorView.scrollIntoView(range, { y: 'center' });
+          }
+        }),
         markdown(),
         levelLinter,
         themeCompartment.of(getThemeExtension()),

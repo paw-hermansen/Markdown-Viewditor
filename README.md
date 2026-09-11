@@ -75,6 +75,17 @@ checkbox in the About dialog.
 In-app updates are disabled when running inside Flatpak or the Windows
 Store; use the system updater in those environments.
 
+## Documentation
+
+Detailed guides for end users:
+
+| Guide                                  | Description                                          |
+| -------------------------------------- | ---------------------------------------------------- |
+| [Markdown Examples](docs/Examples.md)  | Syntax reference for all supported markdown features |
+| [Custom Themes](docs/CustomThemes.md)  | Creating and installing custom CSS themes            |
+| [Math Formulas](docs/Math.md)          | KaTeX math rendering and delimiter syntax            |
+| [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
+
 ## Markdown Compatibility Levels
 
 The status bar exposes a level selector and a per-feature checklist so you can
@@ -103,7 +114,7 @@ written without angle brackets, expanded by the linkify rule).
 
 ## Mathematics Formulas in Formats From Most AI Chat Bots
 
-See [Math-Example.md](examples/Math-Example.md) for more examples.
+See [Math.md](docs/Math.md) for all delimiter syntax and formula examples.
 
 Markdown Viewer includes [KaTeX](https://katex.org) / [KaTeX Docs](https://katex.org/docs/supported) rendering of math using any of multiple delimiter rules to allow markdown copied from the most used AI chat bots to be viewed.
 
@@ -119,7 +130,7 @@ followed by digit) prevent false positives with prices like `$5 and $10`.
 
 ## Chemical Formulas
 
-See [Chemistry-Example.md](examples/ChemLab-Example.md) and [ChemLab-Example.md](examples/Chemistry-Example.md) for examples.
+See [Chemistry.md](docs/Chemistry.md) for formula examples and physical units.
 
 Markdown Viewditor includes [mhchem](https://mhchem.github.io/MathJax-mhchem/) for writing chemical equations and physical units. Use the `\ce{…}` command inside any math delimiter:
 
@@ -144,7 +155,7 @@ The `\ce{…}` and `\pu{…}` commands work inside all supported math delimiters
 
 ### Custom Themes
 
-See documentation inside the app in the Information Dialog (click `F1` or ⓘ to open) and see example custom themes in [examples/custom_themes/](./examples/custom_themes/).
+See [Custom Themes documentation](docs/CustomThemes.md) for full reference, and example themes in [testing/custom_themes/](./testing/custom_themes/).
 To make a new custom theme available in the app, copy a custom theme `.css` file to the themes directory:
 
 | Platform | Path                                                                                |
@@ -155,7 +166,7 @@ To make a new custom theme available in the app, copy a custom theme `.css` file
 
 Theme type (dark/light) is auto-detected from the CSS content.
 
-The included example custom theme [Custom Theme Bubblegum](examples/custom_themes/theme-bubblegum.css):
+The included example custom theme [Custom Theme Bubblegum](testing/custom_themes/theme-bubblegum.css):
 
 ![Custom Theme Bubblegum](images/ThemeCustomBubblegum.png)
 

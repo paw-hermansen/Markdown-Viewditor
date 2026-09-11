@@ -62,7 +62,7 @@ describe("AboutDialog", () => {
     render(AboutDialog, { props: { open: true, onClose: vi.fn() } });
     expect(screen.getByRole("tab", { name: "About" })).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: "Custom Themes" }),
+      screen.getByRole("tab", { name: "Keyboard Shortcuts" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("tab", { name: "Dependencies" }),

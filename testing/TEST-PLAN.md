@@ -623,7 +623,7 @@ in the status bar.
 | 18.1 | Open via button / F1          | Click info icon / press `F1` | About dialog opens                                       |
 | 18.2 | Close (X / backdrop / Escape) | Try each close method        | Dialog closes in all cases                               |
 | 18.3 | About tab content             | View About tab               | Shows app info, author, license summary                  |
-| 18.4 | Custom Themes tab             | Click Custom Themes tab      | Shows theme documentation with CSS examples              |
+| 18.4 | Documentation links           | View About tab               | Shows links to docs (Examples, Custom Themes, Math, Chemistry) |
 | 18.5 | Dependencies tab              | Click Dependencies tab       | Shows table of all third-party libraries                 |
 | 18.6 | Shortcuts tab — Quit          | Click Keyboard Shortcuts tab | "Quit" row with `Ctrl+Q` (or `Cmd+Q` on macOS) is listed |
 | 18.7 | License tab                   | Click License tab            | Shows full MIT license text                              |

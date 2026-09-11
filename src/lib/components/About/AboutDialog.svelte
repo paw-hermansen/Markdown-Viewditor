@@ -145,7 +145,6 @@
 
       <div class="tabs" role="tablist">
         <button class="tab" class:active={activeTab === 'about'} role="tab" id="tab-about" aria-selected={activeTab === 'about'} aria-controls="panel-about" onclick={() => activeTab = 'about'}>About</button>
-        <button class="tab" class:active={activeTab === 'themes'} role="tab" id="tab-themes" aria-selected={activeTab === 'themes'} aria-controls="panel-themes" onclick={() => activeTab = 'themes'}>Custom Themes</button>
         <button class="tab" class:active={activeTab === 'shortcuts'} role="tab" id="tab-shortcuts" aria-selected={activeTab === 'shortcuts'} aria-controls="panel-shortcuts" onclick={() => activeTab = 'shortcuts'}>Keyboard Shortcuts</button>
         <button class="tab" class:active={activeTab === 'dependencies'} role="tab" id="tab-dependencies" aria-selected={activeTab === 'dependencies'} aria-controls="panel-dependencies" onclick={() => activeTab = 'dependencies'}>Dependencies</button>
         <button class="tab" class:active={activeTab === 'license'} role="tab" id="tab-license" aria-selected={activeTab === 'license'} aria-controls="panel-license" onclick={() => activeTab = 'license'}>License</button>
@@ -230,220 +229,16 @@
               You are free to use, modify, and distribute this software.
             </p>
           </section>
-          </div>
-        {/if}
-
-        {#if activeTab === 'themes'}
-          <div role="tabpanel" id="panel-themes" aria-labelledby="tab-themes">
-          <section>
-            <h2>Custom Themes</h2>
-            <p>A custom theme is a CSS file that styles code highlighting and the rendered markdown. Place <code>.css</code> files in the themes directory:</p>
-            <table>
-              <thead>
-                <tr><th>Platform</th><th>Path</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Linux</td><td><code>~/.config/com.github.paw-hermansen.markdown-viewditor/themes/</code></td></tr>
-                <tr><td>macOS</td><td><code>~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/</code></td></tr>
-                <tr><td>Windows</td><td><code>%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\</code></td></tr>
-              </tbody>
-            </table>
-            <p class="muted">Theme files are detected on startup and appear in the theme drop-down. A restart is required after adding or removing files.</p>
-            <p class="muted">The theme type (dark or light) is auto-detected from the CSS content and also controls the app chrome (toolbar, editor, etc.).</p>
-          </section>
 
           <section>
-            <h2>Examples</h2>
-            <p>At the bottom of this text you can copy the dark custom theme <code>my-theme.css</code>.</p>
-            <p>A more comprehensive light theme can be downloaded from <button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/examples/custom_themes/theme-bubblegum.css" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/blob/main/examples/custom_themes/theme-bubblegum.css')}>github.com/paw-hermansen/Markdown-Viewditor/blob/main/examples/custom_themes/theme-bubblegum.css</button></p>
-          </section>
-
-          <section>
-            <h2>What can be customized</h2>
-            <p>Both code highlighting and viewer elements are rendered inside <code>#viewer-content</code>. Prefix your selectors with <code>#viewer-content</code> so they override the app's default styles:</p>
+            <h2>Documentation</h2>
+            <p>Detailed guides and references are available on GitHub:</p>
             <ul>
-              <li><strong>Code highlighting</strong> &mdash; <code>.hljs</code> classes on token spans (see reference below).</li>
-              <li><strong>Viewer elements</strong> &mdash; headings, paragraphs, links, tables, blockquotes, etc. (e.g. <code>#viewer-content h1</code>, <code>#viewer-content a</code>, <code>#viewer-content blockquote</code>).</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Examples.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Examples.md')}>Markdown Examples</button> &mdash; syntax reference for all supported markdown features</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md')}>Custom Themes</button> &mdash; creating and installing custom CSS themes</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md')}>Math Formulas</button> &mdash; KaTeX math rendering and delimiter syntax</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md')}>Chemical Formulas</button> &mdash; mhchem equations and physical units</li>
             </ul>
-            <p class="muted">For code blocks, set the background on <code>#viewer-content pre</code> and clear it on <code>#viewer-content pre code</code> so the background covers the whole block, not each line.</p>
-          </section>
-
-          <section>
-            <h2>Highlight.js Token Reference</h2>
-            <p>The following <code>.hljs-*</code> classes are actually emitted by the app's registered languages (JavaScript, TypeScript, Python, CSS, XML, HTML, JSON, Bash, Markdown, SQL):</p>
-            <table class="ref-table">
-              <thead>
-                <tr><th>Class</th><th>Produced by</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>.hljs</code></td><td>Base class on every code block</td></tr>
-                <tr><td><code>.hljs-keyword</code></td><td>JS/TS, Python, CSS, XML, Bash, SQL</td></tr>
-                <tr><td><code>.hljs-string</code></td><td>JS/TS, Python, CSS, XML, Bash, Markdown, SQL</td></tr>
-                <tr><td><code>.hljs-number</code></td><td>JS/TS, Python, CSS, Bash, SQL</td></tr>
-                <tr><td><code>.hljs-comment</code></td><td>JS/TS, Python, SQL, Bash</td></tr>
-                <tr><td><code>.hljs-doctag</code></td><td>JS/TS (JSDoc <code>@tags</code>)</td></tr>
-                <tr><td><code>.hljs-literal</code></td><td>JSON (<code>true</code>/<code>false</code>/<code>null</code>), Markdown</td></tr>
-                <tr><td><code>.hljs-regexp</code></td><td>JS/TS</td></tr>
-                <tr><td><code>.hljs-built_in</code></td><td>JS/TS, Python, CSS, SQL</td></tr>
-                <tr><td><code>.hljs-type</code></td><td>JS/TS (JSDoc), Python, SQL</td></tr>
-                <tr><td><code>.hljs-meta</code></td><td>JS/TS, Python, XML, CSS</td></tr>
-                <tr><td><code>.hljs-title</code></td><td>JS/TS, Python, Bash</td></tr>
-                <tr><td><code>.hljs-title.class_</code></td><td>JS/TS (class declarations)</td></tr>
-                <tr><td><code>.hljs-title.function_</code></td><td>JS/TS, Python, Bash</td></tr>
-                <tr><td><code>.hljs-title.class_.inherited__</code></td><td>JS/TS (extends)</td></tr>
-                <tr><td><code>.hljs-function</code></td><td>JS/TS (arrow fns), Bash</td></tr>
-                <tr><td><code>.hljs-attr</code></td><td>JS/TS, CSS, JSON, XML</td></tr>
-                <tr><td><code>.hljs-attribute</code></td><td>CSS (properties, media features)</td></tr>
-                <tr><td><code>.hljs-variable</code></td><td>JS/TS, Python, Bash, SQL</td></tr>
-                <tr><td><code>.hljs-variable.language</code></td><td>JS/TS (<code>this</code>), Python (<code>self</code>)</td></tr>
-                <tr><td><code>.hljs-variable.constant</code></td><td>JS/TS (SCREAMING_CASE)</td></tr>
-                <tr><td><code>.hljs-params</code></td><td>JS/TS, Python</td></tr>
-                <tr><td><code>.hljs-property</code></td><td>JS/TS</td></tr>
-                <tr><td><code>.hljs-operator</code></td><td>SQL</td></tr>
-                <tr><td><code>.hljs-punctuation</code></td><td>JSON</td></tr>
-                <tr><td><code>.hljs-subst</code></td><td>JS/TS, Python, Bash (template/f-string interpolation)</td></tr>
-                <tr><td><code>.hljs-tag</code></td><td>XML</td></tr>
-                <tr><td><code>.hljs-name</code></td><td>XML</td></tr>
-                <tr><td><code>.hljs-symbol</code></td><td>XML (entities), Markdown</td></tr>
-                <tr><td><code>.hljs-selector-tag</code></td><td>CSS</td></tr>
-                <tr><td><code>.hljs-selector-id</code></td><td>CSS</td></tr>
-                <tr><td><code>.hljs-selector-class</code></td><td>CSS</td></tr>
-                <tr><td><code>.hljs-selector-attr</code></td><td>CSS</td></tr>
-                <tr><td><code>.hljs-selector-pseudo</code></td><td>CSS</td></tr>
-                <tr><td><code>.hljs-section</code></td><td>Markdown (headings)</td></tr>
-                <tr><td><code>.hljs-bullet</code></td><td>Markdown (list markers)</td></tr>
-                <tr><td><code>.hljs-quote</code></td><td>Markdown</td></tr>
-                <tr><td><code>.hljs-link</code></td><td>Markdown</td></tr>
-                <tr><td><code>.hljs-strong</code></td><td>Markdown</td></tr>
-                <tr><td><code>.hljs-emphasis</code></td><td>Markdown</td></tr>
-                <tr><td><code>.hljs-code</code></td><td>Markdown</td></tr>
-              </tbody>
-            </table>
-            <p class="muted">Tiered scopes like <code>title.class</code> become <code>.hljs-title.class_</code> (first part gets <code>hljs-</code> prefix, subsequent parts get trailing underscores).</p>
-          </section>
-
-          <section>
-            <h2>Markdown Element Reference</h2>
-            <p>Markdown syntax is converted to HTML elements inside the viewer:</p>
-            <table class="ref-table">
-              <thead>
-                <tr><th>Markdown</th><th>HTML Element</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code># text</code></td><td><code>h1</code> &ndash; <code>h6</code></td></tr>
-                <tr><td><code>paragraph</code></td><td><code>p</code></td></tr>
-                <tr><td><code>**bold**</code></td><td><code>strong</code></td></tr>
-                <tr><td><code>*italic*</code></td><td><code>em</code></td></tr>
-                <tr><td><code>`code`</code></td><td><code>code</code></td></tr>
-                <tr><td><code>```code```</code></td><td><code>pre &gt; code</code></td></tr>
-                <tr><td><code>&gt; quote</code></td><td><code>blockquote</code></td></tr>
-                <tr><td><code>- item</code></td><td><code>ul &gt; li</code></td></tr>
-                <tr><td><code>1. item</code></td><td><code>ol &gt; li</code></td></tr>
-                <tr><td><code>- [ ] task</code></td><td><code>li.task-list-item</code></td></tr>
-                <tr><td><code>| col |</code></td><td><code>table</code>, <code>th</code>, <code>td</code></td></tr>
-                <tr><td><code>[text](url)</code></td><td><code>a</code></td></tr>
-                <tr><td><code>![alt](src)</code></td><td><code>img</code></td></tr>
-                <tr><td><code>~~text~~</code></td><td><code>del</code></td></tr>
-                <tr><td><code>---</code></td><td><code>hr</code></td></tr>
-                <tr><td><code>[^1]</code></td><td><code>sup.footnote-ref</code>, <code>section.footnotes</code></td></tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section>
-            <h2>Raw HTML Elements</h2>
-            <p>The following HTML elements can be used directly in markdown (with <code>html: true</code> enabled) and styled with custom themes:</p>
-            <table class="ref-table">
-              <thead>
-                <tr><th>HTML</th><th>Element</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>&lt;details&gt;&lt;summary&gt;text&lt;/summary&gt;content&lt;/details&gt;</code></td><td><code>details</code>, <code>summary</code></td></tr>
-                <tr><td><code>&lt;kbd&gt;key&lt;/kbd&gt;</code></td><td><code>kbd</code></td></tr>
-                <tr><td><code>&lt;sub&gt;text&lt;/sub&gt;</code></td><td><code>sub</code></td></tr>
-                <tr><td><code>&lt;sup&gt;text&lt;/sup&gt;</code></td><td><code>sup</code></td></tr>
-                <tr><td><code>&lt;ins&gt;text&lt;/ins&gt;</code></td><td><code>ins</code></td></tr>
-                <tr><td><code>&lt;mark&gt;text&lt;/mark&gt;</code></td><td><code>mark</code></td></tr>
-              </tbody>
-            </table>
-            <p class="muted">These elements require raw HTML in your markdown source. They can be styled like any other element in custom themes.</p>
-          </section>
-
-          <section>
-            <h2>YAML Frontmatter Styling</h2>
-            <p>When a markdown file has YAML frontmatter (between <code>---</code> delimiters), it is rendered as a card above the content. Skill files (with <code>name</code> and <code>description</code>) get special treatment:</p>
-            <table class="ref-table">
-              <thead>
-                <tr><th>Class</th><th>Description</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>.frontmatter-card</code></td><td>Card container for all frontmatter</td></tr>
-                <tr><td><code>.frontmatter-title</code></td><td>"Frontmatter" label (non-skill files)</td></tr>
-                <tr><td><code>.skill-badge</code></td><td>"Skill" badge (skill files only)</td></tr>
-                <tr><td><code>.skill-name</code></td><td>Skill name (skill files only)</td></tr>
-                <tr><td><code>.skill-description</code></td><td>Skill description (skill files only)</td></tr>
-                <tr><td><code>.skill-meta dt</code></td><td>Metadata key labels</td></tr>
-                <tr><td><code>.skill-meta dd</code></td><td>Metadata values</td></tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section>
-            <h2>Additional Styling Possibilities</h2>
-            <p>These CSS selectors can be used for more granular control over viewer elements:</p>
-            <table class="ref-table">
-              <thead>
-                <tr><th>Selector</th><th>Description</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>a:hover</code></td><td>Link hover state</td></tr>
-                <tr><td><code>li::marker</code></td><td>List item markers (bullets, numbers)</td></tr>
-                <tr><td><code>tr:nth-child(even) td</code></td><td>Table zebra stripes</td></tr>
-                <tr><td><code>.footnotes-sep</code></td><td>Footnote separator line</td></tr>
-                <tr><td><code>.footnotes ol</code></td><td>Footnote list</td></tr>
-                <tr><td><code>.footnote-backref</code></td><td>Footnote back reference link</td></tr>
-                <tr><td><code>.task-list-item input[type="checkbox"]</code></td><td>Task list checkbox styling</td></tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section>
-            <h2>Example: Custom Dark Theme</h2>
-            <p>Create <code>my-theme.css</code> in the themes directory:</p>
-            <pre class="code-example"><code>{`/* Code highlighting — prefix selectors with #viewer-content. */
-#viewer-content .hljs { color: #abb2bf; }
-#viewer-content .hljs-keyword, #viewer-content .hljs-doctag { color: #c678dd; }
-#viewer-content .hljs-string, #viewer-content .hljs-regexp { color: #98c379; }
-#viewer-content .hljs-comment { color: #5c6370; font-style: italic; }
-#viewer-content .hljs-number, #viewer-content .hljs-literal { color: #d19a66; }
-#viewer-content .hljs-title, #viewer-content .hljs-title.function_ { color: #61afef; }
-#viewer-content .hljs-built_in, #viewer-content .hljs-type { color: #e5c07b; }
-#viewer-content .hljs-attr, #viewer-content .hljs-attribute { color: #d19a66; }
-#viewer-content .hljs-meta { color: #56b6c2; }
-#viewer-content .hljs-variable, #viewer-content .hljs-params { color: #e06c75; }
-#viewer-content .hljs-tag, #viewer-content .hljs-name { color: #e06c75; }
-#viewer-content .hljs-selector-tag, #viewer-content .hljs-selector-class { color: #e06c75; }
-#viewer-content .hljs-section { color: #e06c75; font-weight: bold; }
-#viewer-content .hljs-bullet { color: #98c379; }
-#viewer-content .hljs-link { color: #61afef; text-decoration: underline; }
-#viewer-content .hljs-strong { font-weight: bold; }
-
-/* Viewer elements — prefix selectors with #viewer-content. */
-#viewer-content { background: #282c34; color: #abb2bf; }
-#viewer-content h1 { color: #e5c07b; border-bottom-color: #3e4451; }
-#viewer-content h2, #viewer-content h3 { color: #e5c07b; }
-#viewer-content a { color: #61afef; }
-#viewer-content a:hover { color: #98c379; }
-#viewer-content blockquote { border-left-color: #c678dd; color: #5c6370; }
-#viewer-content code { background: #2c313a; }
-#viewer-content pre { background: #282c34; }
-#viewer-content pre code { background: transparent; }
-#viewer-content th { background: #2c313a; color: #5c6370; }
-#viewer-content th, #viewer-content td { border-color: #3e4451; }
-#viewer-content hr { border-top-color: #3e4451; }
-#viewer-content .frontmatter-card { background: #2c313a; border-color: #3e4451; }
-#viewer-content .footnotes { color: #5c6370; font-size: 0.85em; }
-#viewer-content .footnote-backref { color: #61afef; }`}</code></pre>
           </section>
           </div>
         {/if}
@@ -799,14 +594,6 @@
     visibility: visible;
   }
 
-  code {
-    background: var(--bg-tertiary);
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-  }
-
   .shortcut-key {
     display: inline-block;
     background: var(--bg-tertiary);
@@ -837,25 +624,6 @@
     color: var(--text-muted);
     font-weight: 600;
     font-size: 12px;
-  }
-
-  .code-example {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px;
-    overflow-x: auto;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    line-height: 1.5;
-    color: var(--text-primary);
-    margin-top: 8px;
-  }
-
-  .code-example code {
-    background: none;
-    padding: 0;
-    font-size: inherit;
   }
 
   .deps-table td:nth-child(3) {

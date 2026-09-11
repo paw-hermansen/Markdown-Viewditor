@@ -1,10 +1,12 @@
 # Tests and Examples
 
-Used with [Test Plan](../TEST-PLAN.md) or just to see some examples 
+Used with [Test Plan](TEST-PLAN.md) or just to see some examples 
 of the supported markdown and extensions. For some tests the 
 custom theme [theme-kaleidoscope.css](custom_themes/theme-kaleidoscope.css) is helpful.
 Git seems not to be able to save file properties so for the tests
 with a read-only markdown file you will have to make one yourself.
+
+For end-user documentation and guides, see the [docs](../docs/) folder.
 
 ## Custom Themes
 
@@ -22,5 +24,4 @@ with a read-only markdown file you will have to make one yourself.
 3. The two custom themes should now be available to select from the
    themes dropdown at the top right
 
-A simpler example custome theme is found in the About Dialog (F1) 
-- select tab _Custom Themes_.
+See [Custom Themes documentation](../docs/CustomThemes.md) for full reference.

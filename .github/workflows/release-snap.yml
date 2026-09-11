@@ -1,0 +1,82 @@
+name: Release Snap
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name (e.g. v1.4.5)"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: "Tag name to build (e.g. v1.4.5)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Snap (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Install Snapcraft
+        uses: samuelmeuli/action-snapcraft@v3
+
+      - name: Build snap
+        run: sg lxd -c 'snapcraft pack --use-lxd'
+
+      - name: Upload Snap artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: snap-${{ matrix.arch }}
+          path: ./*.snap
+          if-no-files-found: error
+
+  publish:
+    name: Publish to Snap Store
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Download amd64 snap
+        uses: actions/download-artifact@v5
+        with:
+          name: snap-amd64
+          path: snaps/
+
+      - name: Download arm64 snap
+        uses: actions/download-artifact@v5
+        with:
+          name: snap-arm64
+          path: snaps/
+
+      - name: Install Snapcraft
+        uses: samuelmeuli/action-snapcraft@v3
+        with:
+          skip_install: true
+
+      - name: Publish to Snap Store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          for snap in snaps/*.snap; do
+            snapcraft upload --release=stable "$snap"
+          done

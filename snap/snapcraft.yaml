@@ -1,0 +1,71 @@
+name: markdown-viewditor
+base: core22
+version: "1.4.5"
+summary: Markdown viewer and editor with advanced features and styled exports
+description: |
+  Markdown Viewditor is a markdown viewer and editor with:
+  * Scroll sync
+  * 8 built-in dark and light themes
+  * Full custom styles with CSS
+  * Math (KaTeX) and chemical formulas
+  * Frontmatter handling
+  * `SKILL.md` handling
+  * Three view modes: _editor-only_, _split view_, and _view-only_
+  * Export to self-contained **HTML**, **PDF**, **ODT** (for Word, LibreOffice, and others)
+  * HTML and PDF exports can be fully themed including custom themes
+  * Markdown **compatibility levels** with _basic (CommonMark)_, _GitHub-flavored_, or _Advanced_ syntax — with soft editor warnings when your document uses features outside the chosen level
+grade: stable
+confinement: strict
+
+layout:
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1
+
+apps:
+  markdown-viewditor:
+    command: usr/bin/MarkdownViewditor
+    desktop: usr/share/applications/MarkdownViewditor.desktop
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - audio-playback
+      - desktop
+      - wayland
+      - x11
+      - opengl
+
+package-repositories:
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 78E1918602959B9C59103100F1831DDAFC42E99D
+    url: http://ppa.launchpad.net/snappy-dev/snapcraft-daily/ubuntu
+
+parts:
+  build-app:
+    plugin: dump
+    build-snaps:
+      - node/22/stable
+      - rustup/latest/stable
+    build-packages:
+      - libwebkit2gtk-4.1-dev
+      - build-essential
+      - curl
+      - wget
+      - file
+      - libxdo-dev
+      - libssl-dev
+      - libayatana-appindicator3-dev
+      - librsvg2-dev
+      - dpkg
+    stage-packages:
+      - libwebkit2gtk-4.1-0
+      - libayatana-appindicator3-1
+    source: .
+    override-build: |
+      set -eu
+      npm install
+      npm run tauri build -- --bundles deb
+      dpkg -x src-tauri/target/release/bundle/deb/*.deb $SNAPCRAFT_PART_INSTALL/
+      sed -i -e "s|Icon=MarkdownViewditor|Icon=/usr/share/icons/hicolor/32x32/apps/MarkdownViewditor.png|g" $SNAPCRAFT_PART_INSTALL/usr/share/applications/MarkdownViewditor.desktop

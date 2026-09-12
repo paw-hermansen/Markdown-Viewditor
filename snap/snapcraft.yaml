@@ -1,6 +1,6 @@
 name: markdown-viewditor
 base: core22
-version: "1.4.5"
+version: "1.5.0"
 summary: Markdown viewer and editor with advanced features and styled exports
 description: |
   Markdown Viewditor is a markdown viewer and editor with:

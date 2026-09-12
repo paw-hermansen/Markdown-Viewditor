@@ -16,7 +16,6 @@ jobs:
   build:
     name: Build Snap (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    environment: release
     strategy:
       fail-fast: false
       matrix:
@@ -31,8 +30,11 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
+      - name: Setup LXD
+        uses: canonical/setup-lxd@main
+
       - name: Install Snapcraft
-        uses: samuelmeuli/action-snapcraft@v3
+        run: sudo snap install snapcraft --classic
 
       - name: Build snap
         run: sg lxd -c 'snapcraft pack --use-lxd'
@@ -64,9 +66,7 @@ jobs:
           path: snaps/
 
       - name: Install Snapcraft
-        uses: samuelmeuli/action-snapcraft@v3
-        with:
-          skip_install: true
+        run: sudo snap install snapcraft --classic
 
       - name: Publish to Snap Store
         env:

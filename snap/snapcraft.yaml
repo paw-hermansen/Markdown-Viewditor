@@ -26,6 +26,8 @@ apps:
     command: usr/bin/MarkdownViewditor
     desktop: usr/share/applications/MarkdownViewditor.desktop
     extensions: [gnome]
+    environment:
+      WEBKIT_DISABLE_DMABUF_RENDERER: "1"
     plugs:
       - home
       - network
@@ -34,6 +36,7 @@ apps:
       - wayland
       - x11
       - opengl
+      - hardware-observe
 
 package-repositories:
   - type: apt

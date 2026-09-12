@@ -21,6 +21,12 @@ layout:
   /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1:
     bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1
 
+plugs:
+  graphics-core22:
+    interface: content
+    target: $SNAP/graphics-core22
+    default-provider: mesa-core22
+
 apps:
   markdown-viewditor:
     command: usr/bin/MarkdownViewditor
@@ -28,6 +34,7 @@ apps:
     extensions: [gnome]
     environment:
       WEBKIT_DISABLE_DMABUF_RENDERER: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
     plugs:
       - home
       - network
@@ -37,6 +44,7 @@ apps:
       - x11
       - opengl
       - hardware-observe
+      - graphics-core22
 
 package-repositories:
   - type: apt

@@ -65,6 +65,7 @@ parts:
     source: .
     override-build: |
       set -eu
+      rustup default stable
       npm install
       npm run tauri build -- --bundles deb
       dpkg -x src-tauri/target/release/bundle/deb/*.deb $SNAPCRAFT_PART_INSTALL/

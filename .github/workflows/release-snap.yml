@@ -37,7 +37,7 @@ jobs:
         run: sudo snap install snapcraft --classic
 
       - name: Build snap
-        run: sg lxd -c 'snapcraft pack --use-lxd'
+        run: snapcraft pack --use-lxd
 
       - name: Upload Snap artifact
         uses: actions/upload-artifact@v5

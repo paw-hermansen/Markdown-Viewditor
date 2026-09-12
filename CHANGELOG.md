@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.5.0] - 2026-09-12
+
+- CI Snapcraft - Removed workflow_dispatch tag input to match MSIX (#112) (15801a3)
+- Add Snapcraft packaging and automated Snap Store publishing (#111) (444953c)
+- docs: add user-facing docs folder, rename examples/ to testing/ (#110) (2054518)
+- Added screendumps to project (#109) (c15a9a1)
+- Search match is shown in the vertical middle (#108) (1ff04bd)
+- Packages updated (#107) (e0eb4f5)
+- feat: add Format Document command with pixel-aware prose wrapping (#106) (98c6980)
+- Also remove title when not using auto-updater (#105) (f9e898a)
+- perf: speed up Viewer initial load (#104) (6f4dbfd)
+- Remove Linux Snaps install (#103) (9d40d53)
+
 ## [1.4.5] - 2026-09-04
 
 - Fixed Snap install arch mismatch (#101) (710a35e)

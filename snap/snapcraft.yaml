@@ -20,11 +20,15 @@ confinement: strict
 layout:
   /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1:
     bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1
+  /usr/share/libdrm:
+    bind: $SNAP/graphics/libdrm
+  /usr/share/drirc.d:
+    symlink: $SNAP/graphics/drirc.d
 
 plugs:
   graphics-core22:
     interface: content
-    target: $SNAP/graphics-core22
+    target: $SNAP/graphics
     default-provider: mesa-core22
 
 apps:
@@ -32,9 +36,10 @@ apps:
     command: usr/bin/MarkdownViewditor
     desktop: usr/share/applications/MarkdownViewditor.desktop
     extensions: [gnome]
+    command-chain:
+      - bin/graphics-core22-wrapper
     environment:
       WEBKIT_DISABLE_DMABUF_RENDERER: "1"
-      GALLIUM_DRIVER: "llvmpipe"
     plugs:
       - home
       - network
@@ -83,3 +88,13 @@ parts:
       sed -i 's/"createUpdaterArtifacts": false/"createUpdaterArtifacts": true/' src-tauri/tauri.conf.json
       dpkg -x src-tauri/target/release/bundle/deb/*.deb $SNAPCRAFT_PART_INSTALL/
       sed -i -e "s|Icon=MarkdownViewditor|Icon=/usr/share/icons/hicolor/32x32/apps/MarkdownViewditor.png|g" $SNAPCRAFT_PART_INSTALL/usr/share/applications/MarkdownViewditor.desktop
+
+  graphics-core22:
+    after: [build-app]
+    source: https://github.com/canonical/gpu-snap.git
+    plugin: dump
+    override-prime: |
+      craftctl default
+      ${CRAFT_PART_SRC}/bin/graphics-core22-cleanup mesa-core22
+    prime:
+      - bin/graphics-core22-wrapper

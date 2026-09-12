@@ -67,6 +67,8 @@ parts:
       set -eu
       rustup default stable
       npm install
+      sed -i 's/"createUpdaterArtifacts": true/"createUpdaterArtifacts": false/' src-tauri/tauri.conf.json
       npm run tauri build -- --bundles deb
+      sed -i 's/"createUpdaterArtifacts": false/"createUpdaterArtifacts": true/' src-tauri/tauri.conf.json
       dpkg -x src-tauri/target/release/bundle/deb/*.deb $SNAPCRAFT_PART_INSTALL/
       sed -i -e "s|Icon=MarkdownViewditor|Icon=/usr/share/icons/hicolor/32x32/apps/MarkdownViewditor.png|g" $SNAPCRAFT_PART_INSTALL/usr/share/applications/MarkdownViewditor.desktop

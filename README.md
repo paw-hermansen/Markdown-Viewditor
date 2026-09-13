@@ -43,6 +43,8 @@ and experience and therefore it required constant supervision
 and guidance from an experienced software developer - which in my experience is also true
 for many human programmers.
 
+Read more details on [my homepage](https://pawhermansen.dk/2026/09/13/what-is-wrong-with-ai-and-how-to-have-fun-doing-ai-augmented-coding/).
+
 ## Download
 
 [Pre-built binaries for Windows, macOS, and Linux](../../releases/latest) are published on the

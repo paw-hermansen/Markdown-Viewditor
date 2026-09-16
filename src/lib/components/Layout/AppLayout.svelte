@@ -173,7 +173,7 @@
       </button>
       {#if fileName}
         <span class="separator"></span>
-        <span class="file-name">{fileName}{#if isModified} *{/if}{#if fileState.isReadOnly} <span class="readonly-indicator" title="Read-only">&#x1F512;</span>{/if}{#if fileState.externallyModified} <span class="external-change-warning" title="Externally modified">&#x26A0;</span>{/if}</span>
+        <span class="file-name" title={fileState.currentFile ?? ''}>{fileName}{#if isModified} *{/if}{#if fileState.isReadOnly} <span class="readonly-indicator" title="Read-only">&#x1F512;</span>{/if}{#if fileState.externallyModified} <span class="external-change-warning" title="Externally modified">&#x26A0;</span>{/if}</span>
       {/if}
     </div>
     <div class="toolbar-center">

@@ -305,5 +305,11 @@ The print clone reproduces the Viewer exactly, then scales to paper:
 - Tauri: https://v2.tauri.app
 - Svelte: https://svelte.dev
 - SvelteKit: https://kit.svelte.dev
-- Development plan: `PLAN.md`
-- Design specs: `GUI-DESIGN.md`
+
+## Plans
+
+Design and implementation plans live in `.opencode/plans/`:
+
+- `extension-system.md` — Extension architecture (lazy-loading, fence attributes, KaTeX refactor, mermaid, ABC, SMILES)
+- `EXPORT-PLAN.md` — Export pipeline design
+- `PLAN-SEARCH.md` — Search implementation plan

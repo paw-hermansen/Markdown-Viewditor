@@ -83,3 +83,73 @@ $$
 ## Invalid LaTeX (renders as a compact error, does not throw)
 
 $$ \undefinedcommand $$
+
+---
+
+## Fence Attributes
+
+### Fontsize scaling
+
+The formula below uses `fontsize=2.0` to render at double size:
+
+```math {fontsize=2.0}
+\frac{x^2}{y^2}
+```
+
+### Left-side equation numbers (leqno)
+
+```math {leqno}
+E = mc^2 \tag{1}
+```
+
+### Flush-left alignment (fleqn)
+
+```math {fleqn}
+\int_0^1 f(x)\,dx = F(1) - F(0)
+```
+
+### Combined attributes
+
+```math {leqno fontsize=1.5}
+a^2 + b^2 = c^2 \tag{2}
+```
+
+---
+
+## HTML Comment Directives
+
+<!-- math: fontsize=1.3 -->
+
+The directive above makes all following math render at 1.3× base size.
+
+$x^2 + y^2 = z^2$
+
+$$
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+$$
+
+<!-- math: !fontsize -->
+
+The `!fontsize` directive resets back to default (1.0).
+
+$\alpha + \beta = \gamma$
+
+<!-- math: leqno -->
+
+The `leqno` directive enables left-side equation numbers for all following math.
+
+$$
+\nabla \cdot \vec{E} = \frac{\rho}{\epsilon_0} \tag{3}
+$$
+
+$$
+\nabla \times \vec{B} = \mu_0 \vec{j} + \mu_0 \epsilon_0 \frac{\partial \vec{E}}{\partial t} \tag{4}
+$$
+
+<!-- math: !leqno -->
+
+The `!leqno` directive disables left-side equation numbers.
+
+$$
+F = ma\tag{Right 5}
+$$

@@ -365,6 +365,7 @@
       }
     }
 
+    await viewerComponent?.waitForRender();
     const viewerContent = viewerComponent?.getViewerContentElement();
     if (!viewerContent) return;
     startExporting();

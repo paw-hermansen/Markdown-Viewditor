@@ -6,6 +6,9 @@ import katex from "katex";
 // katex; no extra dependency.
 import "katex/contrib/mhchem";
 
+// Re-export the directive extractor for use by the export pipeline.
+export { extractMathDirectives } from "$lib/extensions/directives";
+
 /**
  * Fix MathML structural violations in KaTeX's MathML output so that
  * LibreOffice's strict parser can handle the formulas. Browsers and
@@ -70,25 +73,60 @@ function sanitizeKaTeXMathml(mathml: string): string {
 }
 
 /**
+ * Options for MathML rendering. These mirror the KaTeX options that
+ * affect rendering output and can be set via directives.
+ */
+export interface MathmlRenderOptions {
+  leqno?: boolean;
+  fleqn?: boolean;
+  strict?: "ignore" | "warn" | "error";
+  trust?: boolean;
+  fontsize?: number;
+}
+
+/**
  * Render a LaTeX string to MathML using KaTeX. Suitable for ODT and EPUB
  * export where native MathML support is available.
  *
  * @param tex - LaTeX source (without delimiters)
  * @param displayMode - true for display math ($$...$$), false for inline ($...$)
+ * @param options - Optional directive-based KaTeX options
  * @returns MathML markup string (the <math> element only, no KaTeX wrapper)
  */
-export function renderMathToMathml(tex: string, displayMode = false): string {
-  const html = katex.renderToString(tex, {
+export function renderMathToMathml(
+  tex: string,
+  displayMode = false,
+  options?: MathmlRenderOptions,
+): string {
+  const katexOpts: katex.KatexOptions = {
     output: "mathml",
     throwOnError: false,
     displayMode,
-  });
+  };
+  if (options) {
+    if (options.leqno !== undefined) katexOpts.leqno = options.leqno;
+    if (options.fleqn !== undefined) katexOpts.fleqn = options.fleqn;
+    if (options.strict !== undefined)
+      katexOpts.strict = options.strict as katex.KatexOptions["strict"];
+    if (options.trust !== undefined) katexOpts.trust = options.trust;
+  }
+
+  const html = katex.renderToString(tex, katexOpts);
   // KaTeX wraps the <math> element in <span class="katex">...</span>.
   // Extract just the <math>...</math> portion for use in ODF/EPUB.
   const start = html.indexOf("<math");
   const end = html.lastIndexOf("</math>");
   if (start >= 0 && end >= 0) {
-    return sanitizeKaTeXMathml(html.slice(start, end + "</math>".length));
+    let mathml = sanitizeKaTeXMathml(html.slice(start, end + "</math>".length));
+
+    // Apply fontsize via <mstyle mathsize="..."> if non-default.
+    const fontsize = options?.fontsize ?? 1.0;
+    if (fontsize !== 1.0 && fontsize > 0) {
+      const emSize = `${fontsize}em`;
+      mathml = `<mstyle mathsize="${emSize}">${mathml}</mstyle>`;
+    }
+
+    return mathml;
   }
   // Fallback: return as-is if no <math> found
   return html;
@@ -165,6 +203,13 @@ export interface MathPngOptions {
    * the target font size while the bitmap retains the full sharpness
    * of the larger host render (supersampling). */
   targetFontSize?: number;
+
+  // Directive-based KaTeX options (affect rendering output).
+  leqno?: boolean;
+  fleqn?: boolean;
+  strict?: "ignore" | "warn" | "error";
+  trust?: boolean;
+  fontsize?: number;
 }
 
 /**
@@ -391,6 +436,10 @@ export async function renderMathToPng(
     output: "html",
     throwOnError: false,
     displayMode: opts.displayMode,
+    leqno: opts.leqno,
+    fleqn: opts.fleqn,
+    strict: opts.strict as katex.KatexOptions["strict"],
+    trust: opts.trust,
   });
   const hasDisplayTag =
     opts.displayMode && /\bclass="[^"]*\btag\b/.test(katexHtml);
@@ -437,10 +486,25 @@ export async function renderMathToPng(
     ? ""
     : '<span aria-hidden="true" style="display:inline-block;width:0;height:0;line-height:0;overflow:hidden;vertical-align:baseline;visibility:hidden;"></span>';
 
+  // Apply fontsize scaling via CSS variable. KaTeX's .katex font-size is
+  // overridden by the rule injected into the host element.
+  const fontsize = opts.fontsize ?? 1.0;
+  if (fontsize !== 1.0) {
+    host.style.setProperty("--katex-font-scale", String(fontsize));
+  } else {
+    host.style.removeProperty("--katex-font-scale");
+  }
+
   // The zero-size inline participant gives the wrapper a stable baseline even
   // when KaTeX's positioned descendants have no useful line-box rectangle.
   // It is hidden and has no area, so it cannot affect visual-bounds scanning.
   host.innerHTML = `<div style="${wrapperStyle}">${inlineBaselineProbe}${katexHtml}</div>`;
+
+  // Re-inject the --katex-font-scale CSS rule after innerHTML (which clears
+  // all children including the style element created in ensureHost).
+  const fontStyle = document.createElement("style");
+  fontStyle.textContent = `.katex { font-size: calc(1.21em * var(--katex-font-scale, 1)); }`;
+  host.appendChild(fontStyle);
 
   try {
     // Wait for the woff2 KaTeX fonts (already loaded by the document) so the

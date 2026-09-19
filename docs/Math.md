@@ -65,6 +65,122 @@ Use a fenced code block with the `math` language identifier:
 
 A plain fenced block (without `math`) renders as code, not math.
 
+Fenced math blocks also support per-block attributes in curly braces:
+
+````
+```math {leqno fontsize=1.5}
+E = mc^2
+```
+````
+
+See [Math Attributes](#math-attributes) below.
+
+## Math Attributes
+
+KaTeX rendering can be customized per-block with fence attributes or per-document with HTML comment directives.
+
+### Fence Attributes (per-block)
+
+Fence attributes are placed in `{...}` after the `math` language identifier. They apply only to that block.
+
+| Attribute  | Type    | Default | Description                                     |
+| ---------- | ------- | ------- | ----------------------------------------------- |
+| `leqno`    | boolean | `false` | Place equation numbers on the left side         |
+| `fleqn`    | boolean | `false` | Flush-left display math (instead of centered)   |
+| `fontsize` | number  | `1.0`   | Font size scaling factor (multiplies base size) |
+
+Examples:
+
+````
+```math {leqno}
+E = mc^2 \tag{1}
+```
+````
+
+````
+```math {fontsize=2.0}
+\frac{x^2}{y^2}
+```
+````
+
+````
+```math {fleqn leqno fontsize=1.5}
+\int_0^1 f(x)\,dx \tag{2}
+```
+````
+
+### HTML Comment Directives (document-level)
+
+Directives set default values for all math in the document. They use the same attribute syntax as fence attributes and persist until changed by another directive.
+
+```markdown
+<!-- math: leqno -->
+<!-- math: fontsize=1.5 -->
+```
+
+Directives affect all math syntax: `$...$`, `$$...$$`, `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ``` `.
+
+To reset a boolean directive: `<!-- math: !leqno -->`
+To reset a non-boolean directive back to its default: `<!-- math: !fontsize -->`
+
+### Scoping
+
+Fence attributes override directives, but only within the fenced block. After the block ends, the document reverts to the directive state.
+
+````
+<!-- math: leqno -->
+
+$$
+a^2 + b^2 = c^2 \tag{1}
+$$
+
+```math {fontsize=2.0}
+\int_0^1 f(x)\,dx \tag{2}
+````
+
+$$
+x + y = z \tag{3}
+$$
+
+````
+
+In this example: equations (1) and (3) get `leqno` from the directive. Equation (2) gets both `leqno` (inherited) and `fontsize=2.0` (fence override).
+
+### Directive-Only Attributes
+
+These attributes can only be set via HTML comment directives (not fence attributes):
+
+| Attribute     | Type    | Default     | Description                                        |
+| ------------- | ------- | ----------- | -------------------------------------------------- |
+| `throwOnError` | boolean | `false`     | Throw on invalid LaTeX (instead of inline error)   |
+| `errorColor`   | string  | `"#cc0000"` | Color for rendering errors                         |
+| `strict`       | string  | `"warn"`    | KaTeX strictness: `ignore`, `warn`, or `error`     |
+| `trust`        | boolean | `false`     | Allow dangerous commands (`\href`, `\includegraphics`) |
+
+Example:
+
+```markdown
+<!-- math: errorColor=#ff0000 -->
+<!-- math: strict=ignore -->
+````
+
+### All Settable Math Attributes
+
+Complete reference of all attributes available for math rendering:
+
+| Attribute      | Fence? | Directive? | Type    | Default     | Values                    | Description                            |
+| -------------- | ------ | ---------- | ------- | ----------- | ------------------------- | -------------------------------------- |
+| `leqno`        | yes    | yes        | boolean | `false`     |                           | Left-side equation numbers             |
+| `fleqn`        | yes    | yes        | boolean | `false`     |                           | Flush-left display math                |
+| `fontsize`     | yes    | yes        | number  | `1.0`       | 0.3 – 5.0                 | Font size scaling factor               |
+| `throwOnError` | no     | yes        | boolean | `false`     |                           | Throw on invalid LaTeX                 |
+| `errorColor`   | no     | yes        | string  | `"#cc0000"` | any CSS color             | Error highlight color                  |
+| `strict`       | no     | yes        | string  | `"warn"`    | `ignore`, `warn`, `error` | KaTeX strictness level                 |
+| `trust`        | no     | yes        | boolean | `false`     |                           | Allow `\href`, `\includegraphics` etc. |
+
+**Fence?** — settable in ` ```math {key=val} ` syntax.
+**Directive?** — settable in `<!-- math: key=val -->` syntax.
+
 ## Common Constructs
 
 ### Fractions and roots

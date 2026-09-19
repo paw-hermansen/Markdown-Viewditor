@@ -206,6 +206,49 @@ describe("renderMathToMathml", () => {
     // The + between terms should NOT have <mrow/> appended (it has a right operand)
     expect(result).not.toMatch(/<mo[^>]*>\+<\/mo><mrow\/><mrow>/);
   });
+
+  it("applies leqno option", () => {
+    const result = renderMathToMathml("E = mc^2", true, { leqno: true });
+    expect(result).toContain("<math");
+    expect(result).toContain("</math>");
+    // leqno affects the tag position in the KaTeX HTML wrapper,
+    // but MathML output itself doesn't have leqno-specific markup.
+    // The key contract: it doesn't throw and produces valid MathML.
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("applies fleqn option", () => {
+    const result = renderMathToMathml("\\int_0^1 f(x) dx", true, {
+      fleqn: true,
+    });
+    expect(result).toContain("<math");
+    expect(result).toContain("</math>");
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("applies fontsize via mstyle mathsize", () => {
+    const result = renderMathToMathml("x^2", false, { fontsize: 2.0 });
+    expect(result).toContain("<mstyle");
+    expect(result).toContain('mathsize="2em"');
+    expect(result).toContain("</mstyle>");
+  });
+
+  it("does not wrap with mstyle when fontsize is 1.0", () => {
+    const result = renderMathToMathml("x^2", false, { fontsize: 1.0 });
+    expect(result).not.toContain("<mstyle");
+  });
+
+  it("does not wrap with mstyle when fontsize is omitted", () => {
+    const result = renderMathToMathml("x^2", false);
+    expect(result).not.toContain("<mstyle");
+  });
+
+  it("uses defaults when options object is empty", () => {
+    const result = renderMathToMathml("x + y", false, {});
+    expect(result).toContain("<math");
+    expect(result).toContain("</math>");
+    expect(result).not.toContain("<mstyle");
+  });
 });
 
 describe("renderMathToPng", () => {

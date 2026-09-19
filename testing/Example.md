@@ -379,6 +379,22 @@ $$i\hbar \frac{\partial}{\partial t}\Psi(\mathbf{r},t) = \left[ -\frac{\hbar^2}{
 \ce{Zn^2+  <=>[+ 2OH-][+ 2H+]  $\underset{\text{amphoteres Hydroxid}}{\ce{Zn(OH)2 v}}$  <=>[+ 2OH-][+ 2H+]  $\underset{\text{Hydroxozikat}}{\ce{[Zn(OH)4]^2-}}$}
 \]
 
+### Fence attributes
+
+```math {fontsize=1.5}
+\frac{a}{b}
+```
+
+### Directive attributes
+
+<!-- math: leqno -->
+
+$$
+E = mc^2 \tag{8}
+$$
+
+<!-- math: !leqno -->
+
 
 ## Additional Viewer Elements
 

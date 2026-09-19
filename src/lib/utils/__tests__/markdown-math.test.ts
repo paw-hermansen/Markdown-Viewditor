@@ -8,6 +8,11 @@ vi.mock("@tauri-apps/api/core", () => ({
 import { renderMarkdown, analyzeContent } from "../markdown";
 
 describe("math rendering — delimiter matrix", () => {
+  it("loads math extensions before cold-start analysis", async () => {
+    const used = await analyzeContent("$$x^2$$");
+    expect(used.some((feature) => feature.id === "math-dollar")).toBe(true);
+  });
+
   it("renders inline $...$ math (Copilot / Gemini / GitHub)", async () => {
     const r = await renderMarkdown("The Pythagorean theorem: $a^2+b^2=c^2$.");
     expect(r.html).toContain("katex");
@@ -308,5 +313,75 @@ describe("mhchem chemical formulas — level detection", () => {
   it("does NOT flag plain text as chemical-formulas", async () => {
     const used = await analyzeContent("H2O is water.");
     expect(used.find((u) => u.id === "chemical-formulas")).toBeUndefined();
+  });
+});
+
+describe("math fence attributes", () => {
+  it("renders ```math {fontsize=2.0} with scaled font", async () => {
+    const r = await renderMarkdown("```math {fontsize=2.0}\nx^2\n```");
+    expect(r.html).toContain("katex");
+    expect(r.html).toContain("--katex-font-scale: 2");
+  });
+
+  it("renders ```math {leqno} with left equation numbers", async () => {
+    const r = await renderMarkdown("```math {leqno}\nE = mc^2 \\tag{1}\n```");
+    expect(r.html).toContain("katex");
+    expect(r.html).toContain("leqno");
+  });
+
+  it("renders ```math {fleqn} with flush-left alignment", async () => {
+    const r = await renderMarkdown("```math {fleqn}\n\\int_0^1 f(x) dx\n```");
+    expect(r.html).toContain("katex");
+    expect(r.html).toContain("fleqn");
+  });
+
+  it("renders ```math {leqno fontsize=1.5} with combined attributes", async () => {
+    const r = await renderMarkdown(
+      "```math {leqno fontsize=1.5}\na^2 \\tag{2}\n```",
+    );
+    expect(r.html).toContain("katex");
+    expect(r.html).toContain("leqno");
+    expect(r.html).toContain("--katex-font-scale: 1.5");
+  });
+
+  it("fence attributes override directives", async () => {
+    const src =
+      "<!-- math: fontsize=1.5 -->\n\n```math {fontsize=2.0}\nx^2\n```";
+    const r = await renderMarkdown(src);
+    expect(r.html).toContain("--katex-font-scale: 2");
+    expect(r.html).not.toContain("--katex-font-scale: 1.5");
+  });
+
+  it("directive resumes after fenced block (fence attr does not leak)", async () => {
+    const src =
+      "<!-- math: fontsize=1.5 -->\n\n```math {fontsize=2.0}\nx^2\n```\n\n$y^2$";
+    const r = await renderMarkdown(src);
+    // The fenced block should have fontsize=2.0
+    expect(r.html).toContain("--katex-font-scale: 2");
+    // The inline math should use the directive fontsize=1.5
+    expect(r.html).toContain("--katex-font-scale: 1.5");
+  });
+
+  it("flags ```math {fontsize=2.0} as math-dollar (detector handles attrs)", async () => {
+    const used = await analyzeContent("```math {fontsize=2.0}\nx^2\n```");
+    const t = used.find((u) => u.id === "math-dollar");
+    expect(t).toBeDefined();
+    expect(t!.lines.length).toBeGreaterThan(0);
+  });
+
+  it("renders multiple formulas with different fontsize directives", async () => {
+    const src =
+      "<!-- math: fontsize=2.0 -->\n\n$$\na\n$$\n\n<!-- math: fontsize=1.0 -->\n\n$$\nb\n$$";
+    const r = await renderMarkdown(src);
+    const scaleMatches = r.html.match(/--katex-font-scale/g) || [];
+    // Only the first formula should have the scaling wrapper
+    expect(scaleMatches.length).toBe(1);
+  });
+
+  it("fontsize directive applies to all math delimiter types", async () => {
+    const src = "<!-- math: fontsize=1.5 -->\n\n$x$ $$y$$ \\(z\\)";
+    const r = await renderMarkdown(src);
+    const scaleMatches = r.html.match(/--katex-font-scale: 1\.5/g) || [];
+    expect(scaleMatches.length).toBeGreaterThanOrEqual(3);
   });
 });

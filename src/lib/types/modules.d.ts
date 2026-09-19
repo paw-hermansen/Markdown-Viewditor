@@ -20,3 +20,9 @@ declare module "*?raw" {
   const content: string;
   export default content;
 }
+
+declare module "katex/contrib/mhchem" {
+  // Side-effect module that registers \ce and \pu macros on the global katex instance.
+  const mhchem: void;
+  export default mhchem;
+}

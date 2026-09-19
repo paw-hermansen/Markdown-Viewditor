@@ -23,7 +23,19 @@ import {
   renderMathToMathml,
   renderMathToPng,
   MATH_HOST_WIDTH_PX,
+  type MathmlRenderOptions,
 } from "../math-render";
+import {
+  extractMathDirectiveStateMap,
+  lookupDirectiveState,
+} from "$lib/extensions/directives";
+import {
+  extractBraceAttrs,
+  parseAttrString,
+  validateExplicitFenceOptions,
+} from "$lib/extensions/fence-options";
+import { mergeOptions } from "$lib/extensions/directive-merge";
+import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { rasterizeSvg } from "../svg-rasterize";
 import { fileState } from "$lib/stores/file.svelte";
 import {
@@ -1064,6 +1076,7 @@ async function buildDocument(
   invokeImpl: InvokeImpl,
   warnings: string[],
   options: ExportOptions,
+  directiveStateMap: Array<[number, Record<string, unknown>]> = [],
 ): Promise<BuildResult> {
   const autoStyles: Map<string, string> = new Map();
   const images = new Map<string, ResolvedImage>();
@@ -1088,6 +1101,25 @@ async function buildDocument(
   // (HOST_FONT_SIZE) for sharpness; only the reported dimensions are
   // scaled down (supersampling).
   const mathTargetFontSize = 11;
+
+  // Build MathML/png render options for a given source line by looking up
+  // the directive state at that line and merging with optional fence attrs.
+  function buildMathRenderOpts(
+    sourceLine: number,
+    fenceOpts: Record<string, unknown> = {},
+  ): MathmlRenderOptions {
+    const dirState = lookupDirectiveState(directiveStateMap, sourceLine);
+    const merged = mergeOptions(KATEX_OPTIONS_SCHEMA, dirState, fenceOpts);
+    const opts: MathmlRenderOptions = {};
+    if (merged.leqno !== undefined) opts.leqno = !!merged.leqno;
+    if (merged.fleqn !== undefined) opts.fleqn = !!merged.fleqn;
+    if (merged.strict !== undefined)
+      opts.strict = merged.strict as "ignore" | "warn" | "error";
+    if (merged.trust !== undefined) opts.trust = !!merged.trust;
+    if (typeof merged.fontsize === "number" && merged.fontsize !== 1.0)
+      opts.fontsize = merged.fontsize as number;
+    return opts;
+  }
 
   // ── inline formatter state ──
   let boldActive = false;
@@ -1301,7 +1333,10 @@ async function buildDocument(
   }
 
   // ── render inline children into an XML string ──
-  async function renderInline(children: Token[]): Promise<string> {
+  async function renderInline(
+    children: Token[],
+    sourceLine = 0,
+  ): Promise<string> {
     let xml = "";
     for (let ci = 0; ci < children.length; ci++) {
       const child = children[ci];
@@ -1465,6 +1500,7 @@ async function buildDocument(
           break;
         }
         case "math_inline": {
+          const inlineOpts = buildMathRenderOpts(sourceLine);
           if (rasterizeMath) {
             try {
               const { png, widthPx, heightPx } = await renderMathToPng({
@@ -1472,6 +1508,7 @@ async function buildDocument(
                 displayMode: false,
                 resolution: rasterScale,
                 targetFontSize: mathTargetFontSize,
+                ...inlineOpts,
               });
               const { frameWidthPx, frameHeightPx } = fitMathToPage(
                 widthPx,
@@ -1493,7 +1530,7 @@ async function buildDocument(
             }
           }
           try {
-            const mathMl = renderMathToMathml(child.content, false);
+            const mathMl = renderMathToMathml(child.content, false, inlineOpts);
             const objId = `Object ${++mathCounter}`;
             mathObjects.push({ id: objId, mathml: mathMl });
             xml += `<draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
@@ -1816,7 +1853,10 @@ async function buildDocument(
         const next = liInner[i + 1];
         let content = "";
         if (next?.type === "inline" && next.children) {
-          content = await renderInline(stripCheckbox(next.children));
+          content = await renderInline(
+            stripCheckbox(next.children),
+            next.map?.[0] ?? 0,
+          );
         }
         if (firstParagraph && checkboxPrefix) {
           content = esc(checkboxPrefix) + content;
@@ -1829,7 +1869,10 @@ async function buildDocument(
       }
       // Standalone inline (tight lists skip paragraph_open)
       if (t.type === "inline" && t.children) {
-        let content = await renderInline(stripCheckbox(t.children));
+        let content = await renderInline(
+          stripCheckbox(t.children),
+          t.map?.[0] ?? 0,
+        );
         if (firstParagraph && checkboxPrefix) {
           content = esc(checkboxPrefix) + content;
           firstParagraph = false;
@@ -1899,7 +1942,7 @@ async function buildDocument(
           const next = tokens[i + 1];
           let content = "";
           if (next?.type === "inline" && next.children) {
-            content = await renderInline(next.children);
+            content = await renderInline(next.children, next.map?.[0] ?? 0);
           }
           const closeIdx = findClosing(tokens, i, "heading_close");
           parts.push(
@@ -1914,7 +1957,7 @@ async function buildDocument(
           const next = tokens[i + 1];
           let content = "";
           if (next?.type === "inline" && next.children) {
-            content = await renderInline(next.children);
+            content = await renderInline(next.children, next.map?.[0] ?? 0);
           }
           const closeIdx = findClosing(tokens, i, "paragraph_close");
           const inList = contextStack.some(
@@ -2044,7 +2087,7 @@ async function buildDocument(
           const next = tokens[i + 1];
           let content = "";
           if (next?.type === "inline" && next.children) {
-            content = await renderInline(next.children);
+            content = await renderInline(next.children, next.map?.[0] ?? 0);
           }
           const closeIdx = findClosing(tokens, i, "th_close");
           parts.push(
@@ -2058,7 +2101,7 @@ async function buildDocument(
           const next = tokens[i + 1];
           let content = "";
           if (next?.type === "inline" && next.children) {
-            content = await renderInline(next.children);
+            content = await renderInline(next.children, next.map?.[0] ?? 0);
           }
           const closeIdx = findClosing(tokens, i, "td_close");
           parts.push(
@@ -2091,10 +2134,25 @@ async function buildDocument(
         // ── Fence (code block with language) ──
         case "fence": {
           const language = token.info.trim();
+          const fenceLang = language.split(/\s+/)[0].toLowerCase();
           // Fenced math blocks (```math ... ```) stay as fence tokens
           // because @vscode/markdown-it-katex only overrides the HTML
           // renderer, not the token type. Route them to math rendering.
-          if (language.toLowerCase() === "math") {
+          if (fenceLang === "math") {
+            // Parse fence attributes {key=val} from info string and merge
+            // with HTML comment directives (fence attrs override).
+            let fenceOpts: Record<string, unknown> = {};
+            const rawAttrs = extractBraceAttrs(language);
+            if (rawAttrs) {
+              const parsed = parseAttrString(rawAttrs);
+              fenceOpts = validateExplicitFenceOptions(
+                parsed,
+                KATEX_OPTIONS_SCHEMA,
+              );
+            }
+            const sourceLine = token.map?.[0] ?? 0;
+            const blockRenderOpts = buildMathRenderOpts(sourceLine, fenceOpts);
+
             if (rasterizeMath) {
               try {
                 const { png, widthPx, heightPx } = await renderMathToPng({
@@ -2102,6 +2160,7 @@ async function buildDocument(
                   displayMode: true,
                   resolution: rasterScale,
                   targetFontSize: mathTargetFontSize,
+                  ...blockRenderOpts,
                 });
                 const { frameWidthPx, frameHeightPx } = fitMathToPage(
                   widthPx,
@@ -2125,7 +2184,11 @@ async function buildDocument(
               }
             }
             try {
-              const mathMl = renderMathToMathml(token.content, true);
+              const mathMl = renderMathToMathml(
+                token.content,
+                true,
+                blockRenderOpts,
+              );
               const objId = `Object ${++mathCounter}`;
               mathObjects.push({ id: objId, mathml: mathMl });
               parts.push(
@@ -2181,6 +2244,7 @@ async function buildDocument(
 
         // ── Math block ──
         case "math_block": {
+          const blockOpts = buildMathRenderOpts(token.map?.[0] ?? 0);
           if (rasterizeMath) {
             try {
               const { png, widthPx, heightPx } = await renderMathToPng({
@@ -2188,6 +2252,7 @@ async function buildDocument(
                 displayMode: true,
                 resolution: rasterScale,
                 targetFontSize: mathTargetFontSize,
+                ...blockOpts,
               });
               const { frameWidthPx, frameHeightPx } = fitMathToPage(
                 widthPx,
@@ -2212,7 +2277,7 @@ async function buildDocument(
             }
           }
           try {
-            const mathMl = renderMathToMathml(token.content, true);
+            const mathMl = renderMathToMathml(token.content, true, blockOpts);
             const objId = `Object ${++mathCounter}`;
             mathObjects.push({ id: objId, mathml: mathMl });
             parts.push(
@@ -2260,7 +2325,10 @@ async function buildDocument(
         // ── Standalone inline token ──
         case "inline":
           if (token.children) {
-            const content = await renderInline(token.children);
+            const content = await renderInline(
+              token.children,
+              token.map?.[0] ?? 0,
+            );
             parts.push(
               `      <text:p text:style-name="${paragraphStyle()}">${content}</text:p>`,
             );
@@ -2451,11 +2519,16 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
 
   const opts = readOptions(ctx.options);
 
+  // Extract HTML comment directives from the markdown source as a
+  // line-based state map so each math token can look up its own state.
+  const directiveStateMap = extractMathDirectiveStateMap(ctx.markdown);
+
   const { bodyXml, autoStyles, images, mathObjects } = await buildDocument(
     ctx.tokens,
     invokeImpl,
     warnings,
     opts,
+    directiveStateMap,
   );
 
   // Prepend frontmatter/skill card if the option is enabled.

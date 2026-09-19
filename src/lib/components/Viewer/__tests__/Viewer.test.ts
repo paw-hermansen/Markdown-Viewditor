@@ -121,6 +121,66 @@ describe("Viewer", () => {
     expect(mockRenderMarkdown).toHaveBeenCalledTimes(2);
   });
 
+  it("waitForRender waits for an initial render and the DOM flush", async () => {
+    let resolveInitial!: (result: { html: string; frontmatter: null }) => void;
+    const initialRender = new Promise<{
+      html: string;
+      frontmatter: null;
+    }>((resolve) => {
+      resolveInitial = resolve;
+    });
+    mockRenderMarkdown.mockImplementationOnce(() => initialRender);
+
+    const view = render(Viewer, { props: { content: "initial" } });
+    let ready = false;
+    const renderReady = view.component.waitForRender().then(() => {
+      ready = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ready).toBe(false);
+    expect(
+      screen.queryByText("Delayed initial render"),
+    ).not.toBeInTheDocument();
+
+    resolveInitial({
+      html: "<p>Delayed initial render</p>",
+      frontmatter: null,
+    });
+    await renderReady;
+
+    expect(screen.getByText("Delayed initial render")).toBeInTheDocument();
+  });
+
+  it("does not let a stale initial render replace newer content", async () => {
+    let resolveInitial!: (result: { html: string; frontmatter: null }) => void;
+    const initialRender = new Promise<{
+      html: string;
+      frontmatter: null;
+    }>((resolve) => {
+      resolveInitial = resolve;
+    });
+    mockRenderMarkdown
+      .mockImplementationOnce(() => initialRender)
+      .mockResolvedValueOnce({
+        html: "<p>Current content</p>",
+        frontmatter: null,
+      });
+
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    view.rerender({ content: "current" });
+    await view.component.waitForRender();
+    expect(screen.getByText("Current content")).toBeInTheDocument();
+
+    resolveInitial({ html: "<p>Stale content</p>", frontmatter: null });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(screen.getByText("Current content")).toBeInTheDocument();
+    expect(screen.queryByText("Stale content")).not.toBeInTheDocument();
+  });
+
   it("renders frontmatter card when present", async () => {
     mockRenderMarkdown.mockResolvedValueOnce({
       html: "<p>Content</p>",

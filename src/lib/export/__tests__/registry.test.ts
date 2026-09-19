@@ -114,7 +114,9 @@ describe("pdf export (exportPdf, not in the registry)", () => {
 
   it("on non-macOS, calls window.print() and returns", async () => {
     const { exportPdf } = await import("../exporters/pdf");
-    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
+      window.dispatchEvent(new Event("afterprint"));
+    });
     // jsdom navigator.userAgent is not Macintosh.
     const result = await exportPdf("<p>x</p>", "d");
     expect(printSpy).toHaveBeenCalled();

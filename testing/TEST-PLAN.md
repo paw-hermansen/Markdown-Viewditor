@@ -158,7 +158,7 @@ Use these files from `examples/`:
 | `ISO8859-1_Simple.md`  | ISO-8859-1 (Latin-1) encoding           |
 | `简单.md`              | Unicode (CJK) filename                  |
 | `Space Simple.md`      | Filename with spaces                    |
-| `Math-Example.md`      | Math formulas (KaTeX)                   |
+| `Math-Example.md`      | Math formulas (KaTeX), fence attributes, HTML comment directives |
 | `Chemistry-Example.md` | Chemistry formulas (mhchem)             |
 
 ### Test Steps
@@ -249,6 +249,57 @@ correctly:
 | 9.12 | Raw HTML                    | `<details>`, `<kbd>`, `<mark>`, `<sub>`, `<sup>`   | HTML rendered correctly                  |
 | 9.13 | YAML frontmatter (standard) | `---\nkey: value\n---`                             | "Frontmatter" card with key-value grid   |
 | 9.14 | YAML frontmatter (skill)    | `---\nname: ...\ndescription: ...\n---`            | "Skill" card with badge and metadata     |
+
+---
+
+## 9b. Math Attributes (Directives & Fence Attributes)
+
+Use `testing/Math-Example.md` which contains all the test cases below.
+
+### 9b.1 Fence Attributes
+
+| #     | Test                           | Syntax                                          | Expected                                                            |
+| ----- | ------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------- |
+| 9b.1  | `fontsize` scaling             | ` ```math {fontsize=2.0}\nx^2\n``` `            | Formula renders at 2× base size                                     |
+| 9b.2  | `fontsize` default (no attr)   | ` ```math\nx^2\n``` `                           | Formula renders at normal size (same as without attrs)              |
+| 9b.3  | `leqno` left equation numbers  | ` ```math {leqno}\nE=mc^2 \\tag{1}\n``` `       | Equation number appears on the left                                 |
+| 9b.4  | `fleqn` flush-left             | ` ```math {fleqn}\n\int_0^1 f(x) dx\n``` `      | Math block is left-aligned instead of centered                      |
+| 9b.5  | Multiple attributes            | ` ```math {leqno fontsize=1.5}\na^2 \\tag{2}\n``` ` | Left equation number AND 1.5× size                              |
+| 9b.6  | Attributes with bracket block  | `\[...\]` with no attrs                         | Renders normally (attrs only apply to fenced blocks)                |
+| 9b.7  | Attributes with dollar block   | `$$...$$` with no attrs                         | Renders normally (attrs only apply to fenced blocks)                |
+
+### 9b.2 HTML Comment Directives
+
+| #     | Test                             | Syntax                                              | Expected                                                            |
+| ----- | -------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| 9b.8  | `fontsize` directive             | `<!-- math: fontsize=1.3 -->` then `$x^2$`          | Inline math renders at 1.3× size                                    |
+| 9b.9  | `fontsize` on block math         | `<!-- math: fontsize=1.3 -->` then `$$x^2$$`        | Block math renders at 1.3× size                                     |
+| 9b.10 | `leqno` directive                | `<!-- math: leqno -->` then `$$E=mc^2 \tag{1}$$`   | Equation number on the left                                         |
+| 9b.11 | Directive persists               | `<!-- math: leqno -->` then two `$$...$$` blocks    | Both blocks get leqno                                               |
+| 9b.12 | Directive change mid-document    | `<!-- math: fontsize=2.0 -->` ... `<!-- math: !fontsize -->` | First math scaled, second at default                        |
+| 9b.13 | Reset boolean with `!key`        | `<!-- math: leqno -->` ... `<!-- math: !leqno -->`  | First block has leqno, second does not                              |
+| 9b.14 | Reset non-boolean with `!key`    | `<!-- math: fontsize=2.0 -->` ... `<!-- math: !fontsize -->` | First scaled, second at default                              |
+| 9b.15 | Directive on bracket math        | `<!-- math: fontsize=1.5 -->` then `\(x^2\)`       | Inline bracket math scaled                                          |
+| 9b.16 | Directive on bracket block       | `<!-- math: leqno -->` then `\[...\]`              | Bracket block gets leqno                                            |
+| 9b.17 | Multiple directives one line     | `<!-- math: leqno fontsize=2.0 -->`                | Both attributes applied                                             |
+| 9b.18 | Directive comment not rendered   | `<!-- math: leqno -->`                              | Comment does not appear in viewer output                            |
+| 9b.19 | Unknown namespace ignored        | `<!-- unknown: foo=bar -->`                         | No effect on math rendering                                         |
+
+### 9b.3 Scoping (Fence Overrides Directive)
+
+| #     | Test                              | Syntax                                              | Expected                                                           |
+| ----- | --------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| 9b.20 | Fence overrides directive         | `<!-- math: fontsize=1.5 -->` then ` ```math {fontsize=2.0} ``` ` | Fence block at 2×, not 1.5×                              |
+| 9b.21 | Directive resumes after fence     | `<!-- math: leqno -->` then fence block, then `$$`  | Both get leqno (fence doesn't break directive state)               |
+| 9b.22 | Fence attr scoped to block        | ` ```math {fontsize=2.0} ``` ` then ` $$ $$ `       | Fence block scaled, following block at directive/default size      |
+
+### 9b.4 Exports
+
+| #     | Test                              | Steps                                               | Expected                                                           |
+| ----- | --------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| 9b.23 | HTML export with directives       | Export `Math-Example.md` as HTML                    | Directives and fence attrs applied in exported HTML                |
+| 9b.24 | ODT export with directives        | Export `Math-Example.md` as ODT (MathML mode)       | Math renders (directives flow through export pipeline)             |
+| 9b.25 | PDF export with directives        | Export `Math-Example.md` as PDF                     | Math renders correctly in PDF                                      |
 
 ---
 

@@ -243,6 +243,28 @@ function waitForLayout(): Promise<void> {
   });
 }
 
+/**
+ * WebKitGTK can return from window.print() before its native print operation
+ * has captured the page. Keep the print clone alive until afterprint so the
+ * native operation never sees the cleaned-up document.
+ */
+function printAndWaitForCompletion(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const finish = () => {
+      window.removeEventListener("afterprint", finish);
+      resolve();
+    };
+
+    window.addEventListener("afterprint", finish, { once: true });
+    try {
+      window.print();
+    } catch (error) {
+      window.removeEventListener("afterprint", finish);
+      reject(error);
+    }
+  });
+}
+
 const isMacOS =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Macintosh");
 
@@ -305,7 +327,7 @@ export async function exportPdf(
       return { savedPath: savePath, warnings: [] };
     }
     if (!isMacOS) {
-      window.print();
+      await printAndWaitForCompletion();
       return { warnings: [] };
     }
     return { warnings: [] };

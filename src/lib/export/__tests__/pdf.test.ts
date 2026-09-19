@@ -10,6 +10,7 @@ vi.mock("$lib/stores/file.svelte", () => ({
 import {
   buildPrintContainer,
   computeViewerLayoutWidth,
+  exportPdf,
 } from "../exporters/pdf";
 
 const layout = { layoutWidthPx: 832, zoom: 0.86 };
@@ -167,5 +168,33 @@ describe("computeViewerLayoutWidth", () => {
     container.appendChild(el);
     document.body.appendChild(container);
     expect(computeViewerLayoutWidth(el)).toBe(640);
+  });
+});
+
+describe("exportPdf print lifecycle", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    document.documentElement.className = "";
+    document.body.className = "";
+    document.documentElement.removeAttribute("style");
+    document.body.removeAttribute("style");
+    document.getElementById("print-page-background")?.remove();
+  });
+
+  it("keeps the print clone until afterprint", async () => {
+    let cloneWasPresentAtAfterprint = false;
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
+      queueMicrotask(() => {
+        cloneWasPresentAtAfterprint =
+          document.querySelector(".print-content") !== null;
+        window.dispatchEvent(new Event("afterprint"));
+      });
+    });
+
+    await exportPdf("<p>math</p>", "document");
+
+    expect(cloneWasPresentAtAfterprint).toBe(true);
+    expect(document.querySelector(".print-content")).toBeNull();
+    printSpy.mockRestore();
   });
 });

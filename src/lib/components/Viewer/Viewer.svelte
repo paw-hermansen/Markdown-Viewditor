@@ -28,36 +28,102 @@
   let renderKey = $state(0);
   let viewerElement: HTMLDivElement | undefined = $state(undefined);
   let viewerContentElement: HTMLDivElement | undefined = $state(undefined);
-  let renderTimeout: ReturnType<typeof setTimeout> | undefined;
   // Non-reactive flag: tracks whether the viewer has rendered at least once.
   // Used to skip the debounce on the initial load without creating a
   // dependency on `html`/`frontmatter` (which would cause the effect to
   // re-fire whenever the render completes and schedule a spurious timer).
   let hasRenderedOnce = false;
 
-  $effect(() => {
-    if (renderTimeout) {
-      clearTimeout(renderTimeout);
+  interface RenderRequest {
+    generation: number;
+    promise: Promise<void>;
+    superseded: Promise<void>;
+    cancel: () => void;
+    supersede: () => void;
+  }
+
+  let renderGeneration = 0;
+  let currentRender: RenderRequest | null = null;
+
+  function requestRender(
+    task: (generation: number) => Promise<void>,
+    delay: number,
+  ): RenderRequest {
+    currentRender?.supersede();
+
+    const generation = ++renderGeneration;
+    let resolveRender!: () => void;
+    let resolveSuperseded!: () => void;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let started = false;
+    let settled = false;
+    let wasSuperseded = false;
+
+    const promise = new Promise<void>((resolve) => {
+      resolveRender = resolve;
+    });
+    const superseded = new Promise<void>((resolve) => {
+      resolveSuperseded = resolve;
+    });
+
+    const finish = () => {
+      if (!settled) {
+        settled = true;
+        resolveRender();
+      }
+    };
+
+    const supersede = () => {
+      if (!wasSuperseded) {
+        wasSuperseded = true;
+        resolveSuperseded();
+      }
+      if (!started) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = undefined;
+        }
+        finish();
+      }
+    };
+
+    const request: RenderRequest = {
+      generation,
+      promise,
+      superseded,
+      cancel: supersede,
+      supersede,
+    };
+
+    const run = () => {
+      if (started || wasSuperseded) return;
+      started = true;
+      timeout = undefined;
+      void task(generation).then(finish, finish);
+    };
+
+    currentRender = request;
+    if (delay > 0) {
+      timeout = setTimeout(run, delay);
+    } else {
+      run();
     }
 
+    return request;
+  }
+
+  $effect(() => {
     const currentContent = content;
-    async function doRender() {
+    const request = requestRender(async (generation) => {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
+      if (generation !== renderGeneration) return;
       html = result.html;
       frontmatter = result.frontmatter;
       hasRenderedOnce = true;
-    }
-    if (!hasRenderedOnce) {
-      void doRender();
-    } else {
-      renderTimeout = setTimeout(doRender, 150);
-    }
+      await tick();
+    }, hasRenderedOnce ? 150 : 0);
 
-    return () => {
-      if (renderTimeout) {
-        clearTimeout(renderTimeout);
-      }
-    };
+    return request.cancel;
   });
 
   $effect(() => {
@@ -269,6 +335,19 @@
     return viewerContentElement;
   }
 
+  // Wait for the newest render request and the DOM update caused by it. If a
+  // newer request supersedes the one being awaited, follow that request
+  // instead of waiting for stale async work to finish.
+  export async function waitForRender(): Promise<void> {
+    await tick();
+    while (currentRender) {
+      const request = currentRender;
+      await Promise.race([request.promise, request.superseded]);
+      await tick();
+      if (request === currentRender) return;
+    }
+  }
+
   // Append a cache-busting query parameter to image URLs so a forced render
   // re-fetches them instead of being served from the webview's in-memory
   // image cache. The localimg protocol handler ignores the query string (it
@@ -368,40 +447,41 @@
   // in-flight render.
   export function forceRender(): Promise<void> {
     if (activeForceRender) return activeForceRender;
-    activeForceRender = doForceRender().finally(() => {
+    const savedScrollTop = viewerElement?.scrollTop ?? viewerState.scrollTop;
+    const anchor = captureScrollAnchor();
+    const currentContent = content;
+    const request = requestRender(async (generation) => {
+      const result = await renderMarkdown(currentContent, fileState.currentFile);
+      if (generation !== renderGeneration) return;
+
+      // Bumping the key forces the {#key} block around {@html} to destroy and
+      // recreate the DOM even when the rendered HTML is identical (Svelte
+      // skips the update for an unchanged string). This re-requests external
+      // images and retries previously broken ones.
+      renderKey += 1;
+      html = bustImageCache(result.html, renderKey);
+      frontmatter = result.frontmatter;
+      await tick();
+      if (generation !== renderGeneration) return;
+
+      // First restore: positions the anchor correctly in the transient layout
+      // where freshly recreated images have no dimensions yet.
+      restoreScrollPosition(anchor, savedScrollTop);
+      const scrollAfterRestore = viewerElement?.scrollTop;
+      // Recreated images load asynchronously; when they finish, their heights
+      // shift the layout above the anchor. Restore again against the settled
+      // layout so the view ends up exactly where it was captured.
+      await waitForImages();
+      if (generation !== renderGeneration) return;
+      // If the user scrolled while images were loading, don't yank the view back.
+      if (viewerElement && viewerElement.scrollTop === scrollAfterRestore) {
+        restoreScrollPosition(anchor, savedScrollTop);
+      }
+    }, 0);
+    activeForceRender = request.promise.finally(() => {
       activeForceRender = null;
     });
     return activeForceRender;
-  }
-
-  async function doForceRender() {
-    const savedScrollTop = viewerElement?.scrollTop ?? viewerState.scrollTop;
-    const anchor = captureScrollAnchor();
-    if (renderTimeout) {
-      clearTimeout(renderTimeout);
-      renderTimeout = undefined;
-    }
-    const result = await renderMarkdown(content, fileState.currentFile);
-    // Bumping the key forces the {#key} block around {@html} to destroy and
-    // recreate the DOM even when the rendered HTML is identical (Svelte
-    // skips the update for an unchanged string). This re-requests external
-    // images and retries previously broken ones.
-    renderKey += 1;
-    html = bustImageCache(result.html, renderKey);
-    frontmatter = result.frontmatter;
-    await tick();
-    // First restore: positions the anchor correctly in the transient layout
-    // where freshly recreated images have no dimensions yet.
-    restoreScrollPosition(anchor, savedScrollTop);
-    const scrollAfterRestore = viewerElement?.scrollTop;
-    // Recreated images load asynchronously; when they finish, their heights
-    // shift the layout above the anchor. Restore again against the settled
-    // layout so the view ends up exactly where it was captured.
-    await waitForImages();
-    // If the user scrolled while images were loading, don't yank the view back.
-    if (viewerElement && viewerElement.scrollTop === scrollAfterRestore) {
-      restoreScrollPosition(anchor, savedScrollTop);
-    }
   }
 </script>
 

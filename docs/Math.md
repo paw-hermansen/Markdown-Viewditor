@@ -6,12 +6,12 @@ Markdown Viewditor renders math via [$\KaTeX$](https://katex.org). Formulas work
 
 Math works with multiple delimiter styles so that content copied from AI chatbots renders correctly:
 
-| Style   | Inline    | Block                         | Used by                         |
-| ------- | --------- | ----------------------------- | ------------------------------- |
-| Dollar  | `$...$`   | `$$...$$`                     | Copilot, GitHub, Gemini, Claude |
-| Bracket | `\(...\)` | `\[`<br/> ... <br/> `\]`      | ChatGPT, Claude                 |
-| Bare    | —         | `\begin{align}...\end{align}` | LaTeX convention                |
-| Fenced  | —         | ` ```math`<br/> ... <br/> ` ``` `             | Many                            |
+| Style   | Inline    | Block                             | Used by                         |
+| ------- | --------- | --------------------------------- | ------------------------------- |
+| Dollar  | `$...$`   | `$$...$$`                         | Copilot, GitHub, Gemini, Claude |
+| Bracket | `\(...\)` | `\[`<br/> ... <br/> `\]`          | ChatGPT, Claude                 |
+| Bare    | —         | `\begin{align}...\end{align}`     | LaTeX convention                |
+| Fenced  | —         | ` ```math`<br/> ... <br/> ` ``` ` | Many                            |
 
 All styles can be mixed freely in the same document.
 
@@ -30,7 +30,6 @@ $$
 $$
 \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
 $$
-
 
 Pandoc rules prevent false positives — an opening `$` must not be followed by a space, and a closing `$` must not be followed by a digit. Prices like `$5` and `$10` render as literal text.
 
@@ -64,12 +63,12 @@ Standard LaTeX environments work without wrapping delimiters:
 
 \begin{align}
 \nabla \times \vec{B} - \frac{1}{c} \frac{\partial \vec{E}}{\partial t}
-  &= \frac{4\pi}{c} \vec{j} \\
+&= \frac{4\pi}{c} \vec{j} \\
 \nabla \cdot \vec{E} &= 4 \pi \rho
 \end{align}
 
 It only works for `\begin{...}` blocks on the outer level. Other
-valid backslash commands (see [$\KaTeX$ docs](https://katex.org/docs/supported)) 
+valid backslash commands (see [$\KaTeX$ docs](https://katex.org/docs/supported))
 must be put inside math delimiters:
 
 ```
@@ -130,10 +129,10 @@ $\KaTeX$ rendering can be customized per-block with fence attributes or per-docu
 
 Fence attributes are placed in `{...}` after the `math` language identifier. They apply only to that block.
 
-| Attribute  | Type    | Default | Values   | Description                                     |
-| ---------- | ------- | ------- | -------- | ----------------------------------------------- |
-| `leqno`    | boolean | `false` |          | Place equation numbers on the left side         |
-| `fleqn`    | boolean | `false` |          | Flush-left display math (instead of centered)   |
+| Attribute  | Type    | Default | Values    | Description                                     |
+| ---------- | ------- | ------- | --------- | ----------------------------------------------- |
+| `leqno`    | boolean | `false` |           | Place equation numbers on the left side         |
+| `fleqn`    | boolean | `false` |           | Flush-left display math (instead of centered)   |
 | `fontsize` | number  | `1.0`   | 0.3 – 5.0 | Font size scaling factor (multiplies base size) |
 
 Examples:
@@ -148,7 +147,6 @@ E = mc^2 \tag{1}
 E = mc^2 \tag{1}
 ```
 
-
 ````
 ```math {fontsize=2.0}
 \frac{x^2}{y^2}
@@ -158,7 +156,6 @@ E = mc^2 \tag{1}
 ```math {fontsize=2.0}
 \frac{x^2}{y^2}
 ```
-
 
 ````
 ```math {fleqn leqno fontsize=1.5}
@@ -215,6 +212,7 @@ $$
 **Result:**
 
 <!-- math: leqno -->
+
 $$
 a^2 + b^2 = c^2 \tag{1}
 $$
@@ -226,7 +224,6 @@ $$
 $$
 x + y = z \tag{3}
 $$
-
 
 | Equation | Attributes applied                   | Source                     |
 | -------- | ------------------------------------ | -------------------------- |
@@ -305,7 +302,6 @@ ax + by \\
 cx + dy
 \end{pmatrix}
 $$
-
 
 ### Piecewise functions (cases)
 

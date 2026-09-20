@@ -41,6 +41,7 @@ $$
 $$
 \ce{A ->[\text{heat}][\text{catalyst}] B}
 $$
+
 ## Isotopes and Nuclides
 
 Thorium-227: `$\ce{^{227}_{90}Th+}$` → $\ce{^{227}_{90}Th+}$
@@ -166,6 +167,7 @@ Document-wide (or until changed again) directive affecting all chemistry and mat
 
 ```markdown
 <!-- math: fontsize=1.4 -->
+
 $$\ce{2H2 + O2 -> 2H2O}$$
 \[
 \ce{CO2 + C -> 2CO}
@@ -173,6 +175,7 @@ $$\ce{2H2 + O2 -> 2H2O}$$
 ```
 
 <!-- math: fontsize=1.4 -->
+
 $$\ce{2H2 + O2 -> 2H2O}$$
 \[
 \ce{CO2 + C -> 2CO}

@@ -18,17 +18,17 @@ Complex ion: `$\ce{[AgCl2]-}$` → $\ce{[AgCl2]-}$
 
 `$\ce{2H2 + O2 -> 2H2O}$` → $\ce{2H2 + O2 -> 2H2O}$
 
-Fractional: `$\ce{0.5 H2O}$` or `$\ce{1/2 H2O}$`
+Fractional: `$\ce{0.5 H2O}$` → $\ce{0.5 H2O}$ or `$\ce{1/2 H2O}$` → $\ce{1/2 H2O}$
 
 ## Reaction Arrows
 
-| Syntax            | Meaning                       |
-| ----------------- | ----------------------------- |
-| `$\ce{A -> B}$`   | yields                        |
-| `$\ce{A <- B}$`   | is produced by                |
-| `$\ce{A <-> B}$`  | resonance / equilibrium       |
-| `$\ce{A <=> B}$`  | reversible reaction           |
-| `$\ce{A <=>> B}$` | equilibrium favoring products |
+| Syntax            | Output          | Meaning                       |
+| ----------------- | --------------- | ----------------------------- |
+| `$\ce{A -> B}$`   | $\ce{A -> B}$   | yields                        |
+| `$\ce{A <- B}$`   | $\ce{A <- B}$   | is produced by                |
+| `$\ce{A <-> B}$`  | $\ce{A <-> B}$  | resonance / equilibrium       |
+| `$\ce{A <=> B}$`  | $\ce{A <=> B}$  | reversible reaction           |
+| `$\ce{A <=>> B}$` | $\ce{A <=>> B}$ | equilibrium favoring products |
 
 Arrows can carry annotations above and below:
 
@@ -37,6 +37,10 @@ $$
 \ce{A ->[\text{heat}][\text{catalyst}] B}
 $$
 ```
+
+$$
+\ce{A ->[\text{heat}][\text{catalyst}] B}
+$$
 
 ## Isotopes and Nuclides
 
@@ -47,10 +51,12 @@ Neutron: `$\ce{^0_-1n-}$` → $\ce{^0_-1n-}$
 ## Chemical Bonds
 
 Single: `$\ce{C6H5-CHO}$` → $\ce{C6H5-CHO}$
+
 Double: `$\ce{CH2=CH2}$` → $\ce{CH2=CH2}$
+
 Triple: `$\ce{HC#CH}$` → $\ce{HC#CH}$
 
-Delocalized: `$\ce{A\bond{~--}B\bond{~=}C}$`
+Delocalized: `$\ce{A\bond{~--}B\bond{~=}C}$` → $\ce{A\bond{~--}B\bond{~=}C}$
 
 ## States of Aggregation
 
@@ -95,6 +101,10 @@ K = \frac{[\ce{Hg^2+}][\ce{Hg}]}{[\ce{Hg2^2+}]}
 $$
 ```
 
+$$
+K = \frac{[\ce{Hg^2+}][\ce{Hg}]}{[\ce{Hg2^2+}]}
+$$
+
 ## Block Equations
 
 Multi-step reactions in display math:
@@ -105,15 +115,25 @@ $$
 $$
 ```
 
+$$
+\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v <=>[+ 2OH-][+ 2H+] [Zn(OH)4]^2-}
+$$
+
 ## Chemistry in Different Delimiters
 
-Bracket form: `\(\ce{H2O}\)` renders inline. Block:
+Bracket form: `\(\ce{2H2 + O2 -> 2H2O}\)` renders inline like \(\ce{2H2 + O2 -> 2H2O}\), for example.
+
+With square brackets it renders as a block:
 
 ```
 \[
 \ce{2H2 + O2 -> 2H2O}
 \]
 ```
+
+\[
+\ce{2H2 + O2 -> 2H2O}
+\]
 
 Fenced block:
 
@@ -123,7 +143,49 @@ Fenced block:
 ```
 ````
 
+```math
+\ce{CO2 + C -> 2CO}
+```
+
+## Math Attributes for Chemistry
+
+Chemistry formulas support the same [math attributes](Math.md) as regular math — `fontsize`, `leqno`, and `fleqn`.
+
+Fenced block with a larger font:
+
+````markdown
+```math {fontsize=2}
+\ce{2H2 + O2 -> 2H2O}
+```
+````
+
+```math {fontsize=2}
+\ce{2H2 + O2 -> 2H2O}
+```
+
+Document-wide (or until changed again) directive affecting all chemistry and math:
+
+```markdown
+<!-- math: fontsize=1.4 -->
+
+$$\ce{2H2 + O2 -> 2H2O}$$
+\[
+\ce{CO2 + C -> 2CO}
+\]
+```
+
+<!-- math: fontsize=1.4 -->
+
+$$\ce{2H2 + O2 -> 2H2O}$$
+\[
+\ce{CO2 + C -> 2CO}
+\]
+
+<!-- math: !fontsize -->
+
+See [Math Attributes](Math.md) for the full attribute reference.
+
 ## Further Reading
 
 - [mhchem documentation](https://mhchem.github.io/MathJax-mhchem/) — full command reference
-- [KaTeX chemistry support](https://katex.org/docs/supported#chemistry) — what KaTeX supports natively
+- [$\KaTeX$ chemistry support](https://katex.org/docs/supported#chemistry) — what $\KaTeX$ supports natively

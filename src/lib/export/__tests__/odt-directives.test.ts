@@ -66,7 +66,6 @@ function makeMathTokens(src: string) {
     .use(taskLists)
     .use(vscodeKatex, {
       katex,
-      throwOnError: false,
       enableBareBlocks: true,
       enableFencedBlocks: true,
     })
@@ -81,7 +80,6 @@ async function runOdtExport(src: string, options?: Record<string, unknown>) {
     .use(taskLists)
     .use(vscodeKatex, {
       katex,
-      throwOnError: false,
       enableBareBlocks: true,
       enableFencedBlocks: true,
     })
@@ -261,14 +259,6 @@ describe("ODT math directives and fence attributes", () => {
 
   it("fence {fleqn} in ODT MathML", async () => {
     const src = "```math {fleqn}\n\\int_0^1 f(x) dx\n```";
-    const zip = await runOdtExport(src);
-    const mathXml = await zip.file("Object 1/content.xml")!.async("text");
-    expect(mathXml).toContain("<math");
-    expect(mathXml).toContain("</math>");
-  });
-
-  it("strict=ignore directive in ODT", async () => {
-    const src = "<!-- math: strict=ignore -->\n\n$$\n\\undefinedcmd\n$$";
     const zip = await runOdtExport(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");

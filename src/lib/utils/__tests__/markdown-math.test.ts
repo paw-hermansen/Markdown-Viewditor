@@ -58,11 +58,10 @@ describe("math rendering — delimiter matrix", () => {
     expect(r.html).not.toContain("katex");
   });
 
-  it("renders invalid LaTeX without throwing (throwOnError: false)", async () => {
-    // With throwOnError:false, KaTeX renders invalid commands as colored
-    // inline text (errorColor #cc0000) rather than throwing or emitting a
-    // .katex-error span. The key contract: renderMarkdown does NOT throw and
-    // still returns katex-wrapped output.
+  it("renders invalid LaTeX gracefully", async () => {
+    // KaTeX renders invalid commands as colored inline text rather than
+    // throwing or emitting a .katex-error span. The key contract:
+    // renderMarkdown does NOT throw and still returns katex-wrapped output.
     const r = await renderMarkdown("$$ \\undefinedcmd $$");
     expect(r.html).toContain("katex");
     expect(r.html).not.toContain("Error rendering markdown");

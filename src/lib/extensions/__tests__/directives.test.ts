@@ -13,14 +13,6 @@ const schema: FenceOptionSchema = {
   leqno: { type: "boolean", default: false },
   fleqn: { type: "boolean", default: false },
   fontsize: { type: "number", default: 1.0, min: 0.3, max: 5.0 },
-  throwOnError: { type: "boolean", default: false },
-  errorColor: { type: "string", default: "#cc0000" },
-  strict: {
-    type: "string",
-    default: "warn",
-    values: ["ignore", "warn", "error"],
-  },
-  trust: { type: "boolean", default: false },
 };
 
 describe("extractMathDirectives", () => {
@@ -34,7 +26,6 @@ describe("extractMathDirectives", () => {
     expect(result.leqno).toBe(true);
     expect(result.fontsize).toBeUndefined();
     expect(result.fleqn).toBeUndefined();
-    expect(result.throwOnError).toBeUndefined();
   });
 
   it("returns empty for no directives", () => {

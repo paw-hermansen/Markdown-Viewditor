@@ -75,7 +75,7 @@ describe("renderMathToMathml", () => {
     expect(result).toContain("mi"); // variable identifiers
   });
 
-  it("handles invalid LaTeX gracefully (throwOnError=false)", () => {
+  it("handles invalid LaTeX gracefully", () => {
     const result = renderMathToMathml("\\invalid{");
     // Should not throw; produces a .katex-error span or similar
     expect(typeof result).toBe("string");

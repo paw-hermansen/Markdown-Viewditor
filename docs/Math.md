@@ -146,40 +146,17 @@ $$
 
 In this example: equations (1) and (3) get `leqno` from the directive. Equation (2) gets both `leqno` (inherited) and `fontsize=2.0` (fence override).
 
-### Directive-Only Attributes
-
-These attributes can only be set via HTML comment directives (not fence attributes):
-
-| Attribute     | Type    | Default     | Description                                        |
-| ------------- | ------- | ----------- | -------------------------------------------------- |
-| `throwOnError` | boolean | `false`     | Throw on invalid LaTeX (instead of inline error)   |
-| `errorColor`   | string  | `"#cc0000"` | Color for rendering errors                         |
-| `strict`       | string  | `"warn"`    | KaTeX strictness: `ignore`, `warn`, or `error`     |
-| `trust`        | boolean | `false`     | Allow dangerous commands (`\href`, `\includegraphics`) |
-
-Example:
-
-```markdown
-<!-- math: errorColor=#ff0000 -->
-<!-- math: strict=ignore -->
-````
-
 ### All Settable Math Attributes
 
 Complete reference of all attributes available for math rendering:
 
-| Attribute      | Fence? | Directive? | Type    | Default     | Values                    | Description                            |
-| -------------- | ------ | ---------- | ------- | ----------- | ------------------------- | -------------------------------------- |
-| `leqno`        | yes    | yes        | boolean | `false`     |                           | Left-side equation numbers             |
-| `fleqn`        | yes    | yes        | boolean | `false`     |                           | Flush-left display math                |
-| `fontsize`     | yes    | yes        | number  | `1.0`       | 0.3 – 5.0                 | Font size scaling factor               |
-| `throwOnError` | no     | yes        | boolean | `false`     |                           | Throw on invalid LaTeX                 |
-| `errorColor`   | no     | yes        | string  | `"#cc0000"` | any CSS color             | Error highlight color                  |
-| `strict`       | no     | yes        | string  | `"warn"`    | `ignore`, `warn`, `error` | KaTeX strictness level                 |
-| `trust`        | no     | yes        | boolean | `false`     |                           | Allow `\href`, `\includegraphics` etc. |
+| Attribute      | Type    | Default     | Values      | Description                            |
+| -------------- | ------- | ----------- | ----------- | -------------------------------------- |
+| `leqno`        | boolean | `false`     |             | Left-side equation numbers             |
+| `fleqn`        | boolean | `false`     |             | Flush-left display math                |
+| `fontsize`     | number  | `1.0`       | 0.3 – 5.0  | Font size scaling factor               |
 
-**Fence?** — settable in ` ```math {key=val} ` syntax.
-**Directive?** — settable in `<!-- math: key=val -->` syntax.
+All attributes can be set via fence syntax (` ```math {key=val} `) and HTML comment directives (`<!-- math: key=val -->`).
 
 ## Common Constructs
 
@@ -255,3 +232,4 @@ KaTeX supports most of LaTeX's math mode. For the full list of supported command
 ## Chemistry in Math
 
 Chemical formulas use the `\ce{...}` and `\pu{...}` commands inside any math delimiter. See [Chemistry.md](Chemistry.md) for details.
+````

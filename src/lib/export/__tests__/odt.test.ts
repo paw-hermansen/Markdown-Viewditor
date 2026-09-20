@@ -83,7 +83,6 @@ function makeMathTokens(src: string) {
     .use(taskLists)
     .use(vscodeKatex, {
       katex,
-      throwOnError: false,
       enableBareBlocks: true,
       enableFencedBlocks: true,
     })
@@ -142,7 +141,6 @@ async function runOdtExportWithMath(
     .use(taskLists)
     .use(vscodeKatex, {
       katex,
-      throwOnError: false,
       enableBareBlocks: true,
       enableFencedBlocks: true,
     })

@@ -79,8 +79,6 @@ function sanitizeKaTeXMathml(mathml: string): string {
 export interface MathmlRenderOptions {
   leqno?: boolean;
   fleqn?: boolean;
-  strict?: "ignore" | "warn" | "error";
-  trust?: boolean;
   fontsize?: number;
 }
 
@@ -106,9 +104,6 @@ export function renderMathToMathml(
   if (options) {
     if (options.leqno !== undefined) katexOpts.leqno = options.leqno;
     if (options.fleqn !== undefined) katexOpts.fleqn = options.fleqn;
-    if (options.strict !== undefined)
-      katexOpts.strict = options.strict as katex.KatexOptions["strict"];
-    if (options.trust !== undefined) katexOpts.trust = options.trust;
   }
 
   const html = katex.renderToString(tex, katexOpts);
@@ -207,8 +202,6 @@ export interface MathPngOptions {
   // Directive-based KaTeX options (affect rendering output).
   leqno?: boolean;
   fleqn?: boolean;
-  strict?: "ignore" | "warn" | "error";
-  trust?: boolean;
   fontsize?: number;
 }
 
@@ -438,8 +431,6 @@ export async function renderMathToPng(
     displayMode: opts.displayMode,
     leqno: opts.leqno,
     fleqn: opts.fleqn,
-    strict: opts.strict as katex.KatexOptions["strict"],
-    trust: opts.trust,
   });
   const hasDisplayTag =
     opts.displayMode && /\bclass="[^"]*\btag\b/.test(katexHtml);

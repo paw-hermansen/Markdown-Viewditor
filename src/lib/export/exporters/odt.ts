@@ -1113,9 +1113,6 @@ async function buildDocument(
     const opts: MathmlRenderOptions = {};
     if (merged.leqno !== undefined) opts.leqno = !!merged.leqno;
     if (merged.fleqn !== undefined) opts.fleqn = !!merged.fleqn;
-    if (merged.strict !== undefined)
-      opts.strict = merged.strict as "ignore" | "warn" | "error";
-    if (merged.trust !== undefined) opts.trust = !!merged.trust;
     if (typeof merged.fontsize === "number" && merged.fontsize !== 1.0)
       opts.fontsize = merged.fontsize as number;
     return opts;

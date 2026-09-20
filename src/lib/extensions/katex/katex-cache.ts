@@ -6,15 +6,15 @@ import katex from "katex";
  * for unchanged formulas, keeping math-heavy documents smooth.
  *
  * The cache key includes rendering-affecting options (displayMode, leqno,
- * fleqn, strict, trust, errorColor) so formulas with different directive
- * states produce distinct cached entries.
+ * fleqn) so formulas with different directive states produce distinct
+ * cached entries.
  */
 const MAX_CACHE_ENTRIES = 500;
 const cache = new Map<string, string>();
 
 /**
  * Compute a compact fingerprint from KaTeX options that affect rendering
- * output. Options that don't change the HTML (like throwOnError) are excluded.
+ * output.
  */
 function computeOptionsFingerprint(options?: katex.KatexOptions): string {
   if (!options) return "";
@@ -22,11 +22,6 @@ function computeOptionsFingerprint(options?: katex.KatexOptions): string {
   if (options.displayMode) parts.push("D");
   if (options.leqno) parts.push("L");
   if (options.fleqn) parts.push("F");
-  if (options.strict && options.strict !== "warn")
-    parts.push(`S:${options.strict}`);
-  if (options.trust) parts.push("T");
-  if (options.errorColor && options.errorColor !== "#cc0000")
-    parts.push(`E:${options.errorColor}`);
   return parts.join(",");
 }
 

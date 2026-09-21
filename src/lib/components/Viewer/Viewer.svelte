@@ -144,36 +144,64 @@
     if (!container || !tooltip) return;
 
     function onMove(e: MouseEvent) {
-      const wrapper = (e.target as HTMLElement)?.closest?.('.img-tooltip-wrapper');
-      if (!wrapper) {
-        if (activeWrapper) {
-          tooltip!.style.display = 'none';
-          activeWrapper = null;
+      const target = e.target as HTMLElement;
+
+      // Image tooltips take priority (an image inside a link shows the image
+      // alt/src, not the URL).
+      const imgWrapper = target?.closest?.('.img-tooltip-wrapper');
+      if (imgWrapper) {
+        if (imgWrapper !== activeWrapper) {
+          const text = imgWrapper.getAttribute('data-tooltip');
+          if (!text) {
+            tooltip!.style.display = 'none';
+            activeWrapper = null;
+            return;
+          }
+          tooltip!.textContent = text;
+          activeWrapper = imgWrapper;
         }
-        return;
-      }
-      if (wrapper !== activeWrapper) {
-        const text = wrapper.getAttribute('data-tooltip');
-        if (!text) {
-          tooltip!.style.display = 'none';
-          activeWrapper = null;
+        tooltip!.style.display = 'block';
+      } else {
+        // Link URL tooltip: show the href when hovering a link.
+        const link = target?.closest?.('a[data-href]');
+        if (link) {
+          if (link !== activeWrapper) {
+            tooltip!.textContent = link.getAttribute('data-href');
+            activeWrapper = link;
+          }
+          tooltip!.style.display = 'block';
+        } else {
+          if (activeWrapper) {
+            tooltip!.style.display = 'none';
+            activeWrapper = null;
+          }
           return;
         }
-        tooltip!.textContent = text;
-        activeWrapper = wrapper;
       }
-      tooltip!.style.display = 'block';
 
+      // Let the tooltip render at its natural (unconstrained) width, then
+      // measure and position with viewport clamping.
+      tooltip!.style.maxWidth = 'none';
       const pad = 12;
       const tw = tooltip!.offsetWidth;
       const th = tooltip!.offsetHeight;
       let x = e.clientX + pad;
       let y = e.clientY + pad;
+      let openLeft = false;
       if (x + tw > window.innerWidth - 4) {
         x = e.clientX - tw - pad;
+        openLeft = true;
       }
       if (y + th > window.innerHeight - 4) {
         y = e.clientY - th - pad;
+      }
+      // Widen the tooltip to fill available space (up to its natural width)
+      // so long URLs are more readable.
+      const avail = openLeft
+        ? e.clientX - pad - 4
+        : window.innerWidth - e.clientX - pad - 4;
+      if (tw > avail) {
+        tooltip!.style.maxWidth = `${avail}px`;
       }
       tooltip!.style.left = `${x}px`;
       tooltip!.style.top = `${y}px`;
@@ -530,7 +558,7 @@
       {@html html}
     {/key}
   </div>
-  <div class="img-cursor-tooltip" bind:this={tooltipEl}></div>
+  <div class="cursor-tooltip" bind:this={tooltipEl}></div>
 </div>
 
 <style>
@@ -548,7 +576,7 @@
      shared with the export pipeline so exported HTML/PDF doesn't drift from
      the in-app look. */
 
-  .img-cursor-tooltip {
+  .cursor-tooltip {
     position: fixed;
     display: none;
     background: var(--bg-primary);
@@ -559,7 +587,6 @@
     font-size: 0.8em;
     font-family: monospace;
     white-space: nowrap;
-    max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;
     pointer-events: none;

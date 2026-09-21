@@ -61,6 +61,27 @@ describe("extractMathDirectives", () => {
     expect(result.leqno).toBe(true);
     expect(result.fontsize).toBe(2.0);
   });
+
+  it("ignores directives inside fenced code blocks (backtick)", () => {
+    const result = extractMathDirectives(
+      "```markdown\n<!-- math: fontsize=4 -->\n```\n\n$x^2$",
+    );
+    expect(result.fontsize).toBeUndefined();
+  });
+
+  it("ignores directives inside fenced code blocks (tilde)", () => {
+    const result = extractMathDirectives(
+      "~~~markdown\n<!-- math: fontsize=4 -->\n~~~\n\n$x^2$",
+    );
+    expect(result.fontsize).toBeUndefined();
+  });
+
+  it("processes directives outside fenced code blocks", () => {
+    const result = extractMathDirectives(
+      "<!-- math: leqno -->\n\n```markdown\ncode\n```\n\n$x^2$",
+    );
+    expect(result.leqno).toBe(true);
+  });
 });
 
 describe("extractMathDirectiveStateMap", () => {
@@ -107,6 +128,50 @@ describe("extractMathDirectiveStateMap", () => {
     expect(entries).toHaveLength(2);
     expect(entries[0][1].fontsize).toBe(2.0);
     expect(entries[1][1].fontsize).toBeUndefined(); // reset = removed
+  });
+
+  it("ignores directives inside fenced code blocks", () => {
+    const src = ["```markdown", "<!-- math: fontsize=4 -->", "```", "$x$"].join(
+      "\n",
+    );
+    const entries = extractMathDirectiveStateMap(src);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("ignores directives inside tilde fences", () => {
+    const src = ["~~~markdown", "<!-- math: leqno -->", "~~~", "$x$"].join(
+      "\n",
+    );
+    const entries = extractMathDirectiveStateMap(src);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("processes directives outside fenced code blocks", () => {
+    const src = [
+      "<!-- math: leqno -->",
+      "",
+      "```markdown",
+      "code",
+      "```",
+      "$x$",
+    ].join("\n");
+    const entries = extractMathDirectiveStateMap(src);
+    expect(entries).toHaveLength(1);
+    expect(entries[0][1].leqno).toBe(true);
+  });
+
+  it("handles directive before and inside fence", () => {
+    const src = [
+      "<!-- math: leqno -->",
+      "```markdown",
+      "<!-- math: fontsize=4 -->",
+      "```",
+      "$x$",
+    ].join("\n");
+    const entries = extractMathDirectiveStateMap(src);
+    expect(entries).toHaveLength(1);
+    expect(entries[0][1].leqno).toBe(true);
+    expect(entries[0][1].fontsize).toBeUndefined();
   });
 });
 

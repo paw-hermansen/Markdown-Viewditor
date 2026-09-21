@@ -282,6 +282,13 @@
   margin-right: 0;
 }
 
+/* fleqn+leqno: move tag left outside the 2em padding so it doesn't
+   overlap the formula text. KaTeX CSS treats these as independent
+   modifiers and has no combined rule. */
+.viewer-content .katex-display.fleqn.leqno > .katex > .katex-html > .tag {
+  left: -2em;
+}
+
 .viewer-content .katex-error {
   display: inline-block;
   min-height: 1.2em;

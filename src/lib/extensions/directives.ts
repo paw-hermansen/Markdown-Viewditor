@@ -144,9 +144,50 @@ export function getDirectiveState(
 }
 
 /**
+ * Tracks fenced code block state across consecutive lines.
+ * Used by raw-text scanners to skip directives inside fences.
+ */
+interface FenceState {
+  inFence: boolean;
+  fenceChar: string;
+  fenceLen: number;
+}
+
+function isInsideFence(line: string, state: FenceState): boolean {
+  const trimmed = line.trimStart();
+
+  if (!state.inFence) {
+    // Check for fence opening: ``` or ~~~ (3+ chars)
+    const match = trimmed.match(/^(`{3,}|~{3,})/);
+    if (match) {
+      state.inFence = true;
+      state.fenceChar = match[1][0];
+      state.fenceLen = match[1].length;
+      return false; // Opening line itself is not "inside"
+    }
+    return false;
+  }
+
+  // Check for fence closing: same char, at least same length, only whitespace after
+  const match = trimmed.match(/^(`{3,}|~{3,})\s*$/);
+  if (
+    match &&
+    match[1][0] === state.fenceChar &&
+    match[1].length >= state.fenceLen
+  ) {
+    state.inFence = false;
+    return false; // Closing line itself is not "inside"
+  }
+
+  return true; // Inside a fence
+}
+
+/**
  * Extract all math directives from the entire document.
  * Returns ONLY explicitly-set values (no schema defaults).
  * Used by the export pipeline which doesn't go through the render chain.
+ *
+ * Lines inside fenced code blocks (``` or ~~~) are skipped.
  */
 export function extractMathDirectives(
   content: string,
@@ -156,7 +197,10 @@ export function extractMathDirectives(
   if (!schema) return result;
 
   const lines = content.split("\n");
+  const fence: FenceState = { inFence: false, fenceChar: "", fenceLen: 0 };
   for (const line of lines) {
+    if (isInsideFence(line, fence)) continue;
+
     const match = DIRECTIVE_RE.exec(line.trim());
     if (!match) continue;
 
@@ -213,6 +257,8 @@ export function extractMathDirectives(
  *
  * Callers look up the latest entry at or before a math token's source
  * line to get the effective directive state at that position.
+ *
+ * Lines inside fenced code blocks (``` or ~~~) are skipped.
  */
 export function extractMathDirectiveStateMap(
   content: string,
@@ -224,7 +270,10 @@ export function extractMathDirectiveStateMap(
   const cumulative: Record<string, unknown> = {};
 
   const lines = content.split("\n");
+  const fence: FenceState = { inFence: false, fenceChar: "", fenceLen: 0 };
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    if (isInsideFence(lines[lineIdx], fence)) continue;
+
     const match = DIRECTIVE_RE.exec(lines[lineIdx].trim());
     if (!match) continue;
 

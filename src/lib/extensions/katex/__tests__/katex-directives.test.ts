@@ -172,6 +172,15 @@ describe("KaTeX directive rendering", () => {
     expect(r.html).toContain("--katex-font-scale: 2");
   });
 
+  it("applies combined fleqn + leqno to $$...$$", async () => {
+    const r = await renderMarkdown(
+      "<!-- math: fleqn leqno -->\n\n$$\nx + y = z \\tag{2}\n$$",
+    );
+    expect(r.html).toContain("katex");
+    expect(r.html).toContain("fleqn");
+    expect(r.html).toContain("leqno");
+  });
+
   it("renders ```math {fleqn} with flush-left alignment", async () => {
     const r = await renderMarkdown("```math {fleqn}\n\\int_0^1 f(x) dx\n```");
     expect(r.html).toContain("katex");

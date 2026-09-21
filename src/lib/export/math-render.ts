@@ -493,8 +493,11 @@ export async function renderMathToPng(
 
   // Re-inject the --katex-font-scale CSS rule after innerHTML (which clears
   // all children including the style element created in ensureHost).
+  // Also inject the fleqn+leqno fix so the tag doesn't overlap the formula
+  // when both options are active (KaTeX CSS has no combined rule).
   const fontStyle = document.createElement("style");
-  fontStyle.textContent = `.katex { font-size: calc(1.21em * var(--katex-font-scale, 1)); }`;
+  fontStyle.textContent = `.katex { font-size: calc(1.21em * var(--katex-font-scale, 1)); }
+.katex-display.fleqn.leqno > .katex > .katex-html > .tag { left: -2em; }`;
   host.appendChild(fontStyle);
 
   try {

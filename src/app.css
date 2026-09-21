@@ -198,11 +198,6 @@ body.exporting .print-content {
   break-inside: avoid;
 }
 
-/* The link-URL tooltip is hover-only screen UI; never export it. */
-body.exporting .print-content a[data-href]::after {
-  display: none !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

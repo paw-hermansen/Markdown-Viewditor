@@ -33,6 +33,8 @@ export const fileState = $state({
   isReadOnly: null as boolean | null,
   /** When true, the next Save routes to Save As instead of recreating a dead path. */
   forceSaveAs: false,
+  /** When true, the Viewer shows a loading overlay instead of rendered content. */
+  isLoadingContent: false,
 });
 
 function getDefaultDir(): string | undefined {
@@ -157,6 +159,41 @@ export async function openFile(): Promise<string | null> {
     addRecentFile(path);
     updateLastOpenedFile(path);
     return content;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    fileState.error = msg;
+    toast.error(MSG.openFailed, msg);
+    return null;
+  } finally {
+    fileState.isLoading = false;
+  }
+}
+
+/**
+ * Show the OS file-open dialog and return the selected path, or null if
+ * cancelled. Does NOT read the file — callers that need a loading overlay
+ * (e.g. the Viewer spinner) should call readFile() separately after
+ * setting their loading flag.
+ */
+export async function showOpenDialog(): Promise<string | null> {
+  if (fileState.isLoading) return null;
+
+  try {
+    fileState.isLoading = true;
+    fileState.error = null;
+
+    const selected = await open({
+      defaultPath: getDefaultDir(),
+      multiple: false,
+      filters: [
+        { name: "Markdown", extensions: ["md", "markdown", "txt"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+    });
+
+    if (!selected) return null;
+
+    return typeof selected === "string" ? selected : selected;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     fileState.error = msg;

@@ -44,6 +44,7 @@ const {
     currentFile: null as string | null,
     recentFiles: [] as string[],
     isLoading: false,
+    isLoadingContent: false,
     error: null as string | null,
     currentFileMtime: null as number | null,
     currentFileSize: null as number | null,
@@ -76,6 +77,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 vi.mock("$lib/stores/file.svelte", () => ({
   fileState: mockFileState,
   openFile: mockOpenFile,
+  showOpenDialog: vi.fn().mockResolvedValue(null),
   saveFile: mockSaveFile,
   saveFileAs: mockSaveFileAs,
   showSaveDialog: mockShowSaveDialog,
@@ -105,6 +107,7 @@ vi.mock("$lib/stores/toast.svelte", () => ({
 }));
 
 vi.mock("$lib/stores/editor.svelte", () => ({
+  DEFAULT_CONTENT: "# Hello World\n\nStart writing markdown here...",
   editorState: {
     content: "",
     cursorLine: 1,

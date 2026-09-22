@@ -80,6 +80,20 @@ export function presetFor(level: "basic" | "github" | "advanced"): string[] {
 }
 
 /**
+ * Return the highest preset whose feature set exactly matches `enabledIds`,
+ * or `"custom"` if no preset matches.
+ */
+export function presetForEnabled(enabledIds: string[]): MarkdownLevel {
+  const set = new Set(enabledIds);
+  for (const level of ["advanced", "github", "basic"] as const) {
+    const preset = presetFor(level);
+    if (preset.length !== set.size) continue;
+    if (preset.every((id) => set.has(id))) return level;
+  }
+  return "custom";
+}
+
+/**
  * Smallest preset that enables the toggle, or null if no preset enables it
  * (custom-only). Used to phrase warnings: "requires: advanced".
  */
@@ -99,6 +113,9 @@ export function violationMessage(
   const required = requiredPreset(v);
   if (required === null) {
     return `${v.label} is disabled (custom level)`;
+  }
+  if (currentLevel === "custom") {
+    return `${v.label} needs the '${required}' preset (or enable it individually in custom mode)`;
   }
   return `${v.label} is above the '${currentLevel}' level (requires: ${required})`;
 }

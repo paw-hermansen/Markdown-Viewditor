@@ -5,6 +5,7 @@
   import {
     listFeatureToggles,
     presetFor,
+    presetForEnabled,
     violationMessage,
     MAX_DISPLAY_LINES,
     type MarkdownLevel,
@@ -57,7 +58,7 @@
       .map((t) => t.id)
       .filter((tid) => current.has(tid));
     updateSetting('enabledFeatures', next);
-    updateSetting('markdownLevel', 'custom');
+    updateSetting('markdownLevel', presetForEnabled(next));
   }
 
   function violationMessageFor(v: UsedFeature): string {
@@ -291,7 +292,6 @@
   .level-option.active {
     background: color-mix(in srgb, var(--accent) 20%, transparent);
     color: var(--text-primary);
-    font-weight: 600;
   }
 
   .popover-divider {

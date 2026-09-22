@@ -18,6 +18,7 @@ import {
   findViolations,
   requiredPreset,
   violationMessage,
+  presetForEnabled,
   type FeatureDetector,
 } from "../markdown-levels";
 
@@ -104,6 +105,29 @@ describe("markdown-levels registry & presets", () => {
   it("requiredPreset returns advanced for frontmatter", () => {
     const t = listFeatureToggles().find((x) => x.id === "frontmatter")!;
     expect(requiredPreset(t)).toBe("advanced");
+  });
+});
+
+describe("presetForEnabled", () => {
+  it("returns 'basic' for an empty feature set", () => {
+    expect(presetForEnabled([])).toBe("basic");
+  });
+
+  it("returns 'github' for the github preset's exact feature set", () => {
+    expect(presetForEnabled(presetFor("github"))).toBe("github");
+  });
+
+  it("returns 'advanced' for the advanced preset's exact feature set", () => {
+    expect(presetForEnabled(presetFor("advanced"))).toBe("advanced");
+  });
+
+  it("returns 'custom' for a partial feature set", () => {
+    expect(presetForEnabled(["tables", "strikethrough"])).toBe("custom");
+  });
+
+  it("returns 'custom' for a superset with extras", () => {
+    const extra = [...presetFor("github"), "nonexistent"];
+    expect(presetForEnabled(extra)).toBe("custom");
   });
 });
 
@@ -307,6 +331,14 @@ describe("violationMessage", () => {
     const t = listFeatureToggles().find((x) => x.id === "raw-html")!;
     const msg = violationMessage({ ...t, lines: [3] }, "basic");
     expect(msg).toBe("Raw HTML is above the 'basic' level (requires: github)");
+  });
+
+  it("suggests preset or individual toggle when current level is custom", () => {
+    const t = listFeatureToggles().find((x) => x.id === "raw-html")!;
+    const msg = violationMessage({ ...t, lines: [3] }, "custom");
+    expect(msg).toBe(
+      "Raw HTML needs the 'github' preset (or enable it individually in custom mode)",
+    );
   });
 
   it("says 'disabled (custom level)' when no preset enables the feature", () => {

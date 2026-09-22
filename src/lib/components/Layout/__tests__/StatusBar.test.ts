@@ -111,6 +111,35 @@ vi.mock("$lib/utils/markdown-levels", () => ({
             "raw-html",
             "frontmatter",
           ],
+  presetForEnabled: (enabledIds: string[]) => {
+    const set = new Set(enabledIds);
+    for (const level of ["advanced", "github", "basic"] as const) {
+      const preset =
+        level === "basic"
+          ? []
+          : level === "github"
+            ? [
+                "tables",
+                "strikethrough",
+                "task-lists",
+                "autolinks",
+                "footnotes",
+                "raw-html",
+              ]
+            : [
+                "tables",
+                "strikethrough",
+                "task-lists",
+                "autolinks",
+                "footnotes",
+                "raw-html",
+                "frontmatter",
+              ];
+      if (preset.length !== set.size) continue;
+      if (preset.every((id) => set.has(id))) return level;
+    }
+    return "custom";
+  },
   violationMessage: (v: { label: string }) => `${v.label} (warning)`,
 }));
 

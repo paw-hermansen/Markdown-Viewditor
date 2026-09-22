@@ -19,10 +19,11 @@
     resetEditor,
     hasUnsavedChanges,
     updateWordCount,
+    DEFAULT_CONTENT,
   } from "$lib/stores/editor.svelte";
   import {
     fileState,
-    openFile,
+    showOpenDialog,
     saveFile,
     saveFileAs,
     showSaveDialog,
@@ -126,14 +127,21 @@
       }
     }
 
-    const content = await openFile();
+    const path = await showOpenDialog();
+    if (!path) return;
+
+    fileState.isLoadingContent = true;
+    viewerComponent?.resetRenderState();
+    const content = await readFile(path);
     if (content !== null) {
       editorState.content = content;
       updateWordCount(content);
       editorComponent?.setContent(content, false);
       viewerComponent?.scrollToTop();
       markSaved();
+      await viewerComponent?.waitForRender();
     }
+    fileState.isLoadingContent = false;
   }
 
   async function handleLocalMarkdownOpen(path: string) {
@@ -146,6 +154,8 @@
       }
     }
 
+    fileState.isLoadingContent = true;
+    viewerComponent?.resetRenderState();
     const content = await readFile(path);
     if (content !== null) {
       editorState.content = content;
@@ -153,7 +163,9 @@
       editorComponent?.setContent(content, false);
       viewerComponent?.scrollToTop();
       markSaved();
+      await viewerComponent?.waitForRender();
     }
+    fileState.isLoadingContent = false;
   }
 
   /** Returns true when the document was saved (or nothing needed saving), false on cancel/failure. */
@@ -714,6 +726,8 @@
     // and listener registration.
     unlistenOpenFile = await listen<string[]>("open-file", async (event) => {
       if (event.payload.length > 0) {
+        fileState.isLoadingContent = true;
+        viewerComponent?.resetRenderState();
         const content = await readFile(event.payload[0]);
         if (content !== null) {
           editorState.content = content;
@@ -721,12 +735,16 @@
           editorComponent?.setContent(content, false);
           viewerComponent?.scrollToTop();
           markSaved();
+          await viewerComponent?.waitForRender();
         }
+        fileState.isLoadingContent = false;
       }
     });
 
     const initialUrls = await invoke<string[]>("opened_urls");
     if (initialUrls.length > 0) {
+      fileState.isLoadingContent = true;
+      viewerComponent?.resetRenderState();
       const content = await readFile(initialUrls[0]);
       if (content !== null) {
         editorState.content = content;
@@ -734,8 +752,12 @@
         editorComponent?.setContent(content, false);
         viewerComponent?.scrollToTop();
         markSaved();
+        await viewerComponent?.waitForRender();
       }
+      fileState.isLoadingContent = false;
     } else if (settingsState.lastOpenedFile) {
+      fileState.isLoadingContent = true;
+      viewerComponent?.resetRenderState();
       const content = await readFile(settingsState.lastOpenedFile);
       if (content !== null) {
         editorState.content = content;
@@ -743,7 +765,14 @@
         editorComponent?.setContent(content, false);
         viewerComponent?.scrollToTop();
         markSaved();
+        await viewerComponent?.waitForRender();
       }
+      fileState.isLoadingContent = false;
+    } else {
+      editorState.content = DEFAULT_CONTENT;
+      updateWordCount(DEFAULT_CONTENT);
+      editorComponent?.setContent(DEFAULT_CONTENT);
+      markSaved();
     }
 
     if (updaterState.enabled && settingsState.autoCheckUpdates) {
@@ -796,6 +825,7 @@
       <Viewer
         bind:this={viewerComponent}
         content={editorState.content}
+        loading={fileState.isLoadingContent}
         onViewerReady={handleViewerReady}
         onLocalMarkdownOpen={handleLocalMarkdownOpen}
       />

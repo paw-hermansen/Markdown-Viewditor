@@ -1,10 +1,13 @@
 import type { EditorState } from "$lib/types";
 
+export const DEFAULT_CONTENT =
+  "# Hello World\n\nStart writing markdown here...";
+
 export const editorState = $state<EditorState>({
-  content: "# Hello World\n\nStart writing markdown here...",
+  content: "",
   cursorLine: 1,
   cursorCol: 1,
-  wordCount: 6,
+  wordCount: 0,
 });
 
 let savedContent = $state(editorState.content);

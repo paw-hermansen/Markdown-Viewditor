@@ -17,11 +17,12 @@
 
   interface Props {
     content: string;
+    loading?: boolean;
     onViewerReady?: (element: HTMLDivElement) => void;
     onLocalMarkdownOpen?: (path: string) => void;
   }
 
-  let { content, onViewerReady, onLocalMarkdownOpen }: Props = $props();
+  let { content, loading = false, onViewerReady, onLocalMarkdownOpen }: Props = $props();
 
   let html = $state('');
   let frontmatter: Frontmatter | null = $state(null);
@@ -468,6 +469,11 @@
 
   let activeForceRender: Promise<void> | null = null;
 
+  /** Reset `hasRenderedOnce` so the next content change uses 0ms debounce. */
+  export function resetRenderState() {
+    hasRenderedOnce = false;
+  }
+
   // Re-render the current content immediately (bypassing the debounce) and
   // restore the scroll position afterwards. Used by Reload so that external
   // resources (e.g. dynamic or previously broken images) are re-fetched even
@@ -513,55 +519,72 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
-  class="viewer-container"
-  role="group"
-  aria-label="Markdown view"
-  bind:this={viewerElement}
-  onscroll={handleScroll}
-  onclick={handleLinkClick}
-  onkeydown={handleKeydown}
->
-  <div class="viewer-content" id="viewer-content" bind:this={viewerContentElement}>
-    {#if frontmatter}
-      <div class="frontmatter-card" data-line="1">
-        {#if isSkill}
-          <div class="skill-badge">Skill</div>
-          {#if frontmatter.name}
-            <div class="skill-name">{frontmatter.name}</div>
-          {/if}
-          {#if frontmatter.description}
-            <p class="skill-description">{frontmatter.description}</p>
-          {/if}
-          {#if extraEntries.length > 0}
+<div class="viewer-wrapper">
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="viewer-container"
+    role="group"
+    aria-label="Markdown view"
+    bind:this={viewerElement}
+    onscroll={handleScroll}
+    onclick={handleLinkClick}
+    onkeydown={handleKeydown}
+  >
+    <div class="viewer-content" id="viewer-content" bind:this={viewerContentElement}>
+      {#if frontmatter}
+        <div class="frontmatter-card" data-line="1">
+          {#if isSkill}
+            <div class="skill-badge">Skill</div>
+            {#if frontmatter.name}
+              <div class="skill-name">{frontmatter.name}</div>
+            {/if}
+            {#if frontmatter.description}
+              <p class="skill-description">{frontmatter.description}</p>
+            {/if}
+            {#if extraEntries.length > 0}
+              <dl class="skill-meta">
+                {#each extraEntries as [key, value]}
+                  <dt>{key}</dt>
+                  <dd>{formatValue(value)}</dd>
+                {/each}
+              </dl>
+            {/if}
+          {:else}
+            <div class="frontmatter-title">Frontmatter</div>
             <dl class="skill-meta">
-              {#each extraEntries as [key, value]}
+              {#each Object.entries(frontmatter) as [key, value]}
                 <dt>{key}</dt>
                 <dd>{formatValue(value)}</dd>
               {/each}
             </dl>
           {/if}
-        {:else}
-          <div class="frontmatter-title">Frontmatter</div>
-          <dl class="skill-meta">
-            {#each Object.entries(frontmatter) as [key, value]}
-              <dt>{key}</dt>
-              <dd>{formatValue(value)}</dd>
-            {/each}
-          </dl>
-        {/if}
-      </div>
-    {/if}
-    {#key renderKey}
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      {@html html}
-    {/key}
+        </div>
+      {/if}
+      {#key renderKey}
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html html}
+      {/key}
+    </div>
   </div>
+  {#if loading}
+    <div class="loading-overlay" role="presentation">
+      <div class="loading-overlay-content" role="alert" aria-live="assertive" aria-label="Loading document">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <span class="loading-label">Loading…</span>
+      </div>
+    </div>
+  {/if}
   <div class="cursor-tooltip" bind:this={tooltipEl}></div>
 </div>
 
 <style>
+  .viewer-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
   .viewer-container {
     width: 100%;
     height: 100%;
@@ -592,5 +615,70 @@
     pointer-events: none;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    animation: loading-fade-in 120ms ease-out;
+    cursor: default;
+  }
+
+  @keyframes loading-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .loading-overlay-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    padding: 16px 24px;
+    animation: loading-slide-up 120ms ease-out;
+  }
+
+  @keyframes loading-slide-up {
+    from {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: loading-spin 600ms linear infinite;
+  }
+
+  @keyframes loading-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .loading-label {
+    font-size: 14px;
+    color: var(--text-primary);
+    user-select: none;
   }
 </style>

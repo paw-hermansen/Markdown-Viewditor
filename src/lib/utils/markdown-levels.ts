@@ -100,6 +100,9 @@ export function violationMessage(
   if (required === null) {
     return `${v.label} is disabled (custom level)`;
   }
+  if (currentLevel === "custom") {
+    return `${v.label} needs the '${required}' preset (or enable it individually in custom mode)`;
+  }
   return `${v.label} is above the '${currentLevel}' level (requires: ${required})`;
 }
 

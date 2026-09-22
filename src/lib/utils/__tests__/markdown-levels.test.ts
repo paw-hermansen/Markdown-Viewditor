@@ -309,6 +309,14 @@ describe("violationMessage", () => {
     expect(msg).toBe("Raw HTML is above the 'basic' level (requires: github)");
   });
 
+  it("suggests preset or individual toggle when current level is custom", () => {
+    const t = listFeatureToggles().find((x) => x.id === "raw-html")!;
+    const msg = violationMessage({ ...t, lines: [3] }, "custom");
+    expect(msg).toBe(
+      "Raw HTML needs the 'github' preset (or enable it individually in custom mode)",
+    );
+  });
+
   it("says 'disabled (custom level)' when no preset enables the feature", () => {
     const fake: FeatureDetector = {
       id: "custom-only",

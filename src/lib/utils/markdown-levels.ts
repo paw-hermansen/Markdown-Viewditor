@@ -1,4 +1,6 @@
 import type MarkdownIt from "markdown-it";
+import { getExtensionSchema } from "$lib/extensions/registry";
+import { extractBraceAttrs } from "$lib/extensions/fence-options";
 
 /**
  * Markdown syntax levels: named presets over a feature set, plus a custom mode
@@ -283,6 +285,52 @@ registerFeatureDetectors(
       for (const { child, line } of inlineChildren(tokens)) {
         if (child.type === "mark_open") lines.push(line);
       }
+      return lines;
+    },
+  },
+  {
+    id: "extension-settings",
+    label: "Extension settings",
+    presets: { advanced: true },
+    detect(tokens, env) {
+      const lines: number[] = [];
+
+      // Check 1: Directives with non-default values.
+      const stateMap = env.directives as
+        Map<number, Map<string, Record<string, unknown>>> | undefined;
+      if (stateMap && stateMap.size > 0) {
+        for (const [tokenIdx, nsMap] of stateMap) {
+          for (const [namespace, state] of nsMap) {
+            const schema = getExtensionSchema(namespace);
+            if (!schema) continue;
+            const hasCustom = Object.entries(state).some(
+              ([key, value]) => schema[key] && value !== schema[key].default,
+            );
+            if (hasCustom) {
+              const token = tokens[tokenIdx];
+              if (token?.map) lines.push(token.map[0] + 1);
+            }
+          }
+        }
+      }
+
+      // Check 2: Fence tokens with brace attributes for registered extensions.
+      for (const t of tokens) {
+        if (t.type === "fence" && t.map) {
+          const info = t.info.trim();
+          const lang = info.split(/\s+/)[0].toLowerCase();
+          if (lang && info.includes("{")) {
+            const schema = getExtensionSchema(lang);
+            if (schema) {
+              const rawAttrs = extractBraceAttrs(info);
+              if (rawAttrs && rawAttrs.length > 0) {
+                lines.push(t.map[0] + 1);
+              }
+            }
+          }
+        }
+      }
+
       return lines;
     },
   },

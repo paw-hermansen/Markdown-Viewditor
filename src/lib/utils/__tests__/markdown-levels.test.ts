@@ -22,7 +22,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 11 toggles from plans 1, 2, mhchem, and highlight", () => {
+  it("registers the 12 toggles from plans 1, 2, mhchem, highlight, and extension-settings", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -33,6 +33,7 @@ describe("markdown-levels registry & presets", () => {
       "raw-html",
       "frontmatter",
       "highlight",
+      "extension-settings",
       "math-dollar",
       "math-latex",
       "chemical-formulas",
@@ -57,7 +58,7 @@ describe("markdown-levels registry & presets", () => {
     );
   });
 
-  it("advanced preset enables all 11 toggles", () => {
+  it("advanced preset enables all 12 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -71,6 +72,7 @@ describe("markdown-levels registry & presets", () => {
         "math-latex",
         "chemical-formulas",
         "highlight",
+        "extension-settings",
       ].sort(),
     );
   });
@@ -240,6 +242,30 @@ describe("markdown-levels detection", () => {
     const t = used.find((u) => u.id === "tables");
     expect(t).toBeDefined();
     expect(t!.lines.length).toBe(6);
+  });
+
+  it("detects extension settings via directive", async () => {
+    const used = await analyzeContent("<!-- math: leqno -->\n\n$$x^2$$");
+    const t = used.find((u) => u.id === "extension-settings");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([1]);
+  });
+
+  it("detects extension settings via fence attributes", async () => {
+    const used = await analyzeContent("```math {leqno}\nx^2\n```");
+    const t = used.find((u) => u.id === "extension-settings");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([1]);
+  });
+
+  it("does NOT detect default-only directives", async () => {
+    const used = await analyzeContent("<!-- math: !leqno -->\n\n$$x^2$$");
+    expect(used.find((u) => u.id === "extension-settings")).toBeUndefined();
+  });
+
+  it("does NOT detect math without settings", async () => {
+    const used = await analyzeContent("$$x^2$$");
+    expect(used.find((u) => u.id === "extension-settings")).toBeUndefined();
   });
 });
 

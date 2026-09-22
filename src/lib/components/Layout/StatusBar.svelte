@@ -292,7 +292,6 @@
   .level-option.active {
     background: color-mix(in srgb, var(--accent) 20%, transparent);
     color: var(--text-primary);
-    font-weight: 600;
   }
 
   .popover-divider {

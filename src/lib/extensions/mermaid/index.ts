@@ -1,33 +1,12 @@
-import type { MarkdownExtension, FenceOptionSchema } from "../types";
+import type { MarkdownExtension } from "../types";
 import { MERMAID_PATTERNS } from "../pre-scan";
 import { mergeOptions } from "../directive-merge";
 import { preRenderMermaidBlocks, renderMermaid } from "./renderer";
 import { injectMermaidStyles } from "./styles";
+import { MERMAID_OPTIONS_SCHEMA } from "./schema";
 
 // Side-effect: register feature detectors on import.
 import "./detectors";
-
-const MERMAID_OPTIONS_SCHEMA: FenceOptionSchema = {
-  align: {
-    type: "string",
-    default: "center",
-    values: ["left", "center", "right"],
-    description: "Diagram alignment",
-  },
-  maxWidth: {
-    type: "number",
-    default: 800,
-    min: 200,
-    max: 2000,
-    description: "Max container width in px",
-  },
-  fitToWidth: {
-    type: "boolean",
-    default: true,
-    description:
-      "Scale diagram to fit container width (false = show at full size with scrollbars)",
-  },
-};
 
 function resolveOptions(
   opts: Record<string, unknown>,

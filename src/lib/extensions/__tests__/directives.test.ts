@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import MarkdownIt from "markdown-it";
 import {
   extractMathDirectives,
+  extractDirectiveStateMap,
+  extractDirectives,
   extractMathDirectiveStateMap,
   lookupDirectiveState,
   directivePlugin,
@@ -183,6 +185,57 @@ describe("extractMathDirectiveStateMap", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0][1].leqno).toBe(true);
     expect(entries[0][1].fontsize).toBeUndefined();
+  });
+});
+
+describe("extractDirectiveStateMap (namespace-parameterized)", () => {
+  beforeEach(() => {
+    resetExtensions();
+    registerExtensionSchema("math", schema);
+    registerExtensionSchema("mermaid", mermaidSchema);
+  });
+
+  it("collects only the requested namespace", () => {
+    const src = [
+      "<!-- math: leqno -->",
+      "<!-- mermaid: theme=dark -->",
+      "<!-- mermaid: maxWidth=1200 -->",
+    ].join("\n");
+    const mermaidEntries = extractDirectiveStateMap(src, "mermaid");
+    expect(mermaidEntries).toHaveLength(2);
+    expect(mermaidEntries[1][1]).toEqual({
+      theme: "dark",
+      maxWidth: 1200,
+    });
+    const mathEntries = extractDirectiveStateMap(src, "math");
+    expect(mathEntries).toHaveLength(1);
+    expect(mathEntries[0][1].leqno).toBe(true);
+  });
+
+  it("clamps numeric values to schema bounds", () => {
+    const src = "<!-- mermaid: maxWidth=9999 -->";
+    const entries = extractDirectiveStateMap(src, "mermaid");
+    expect(entries[0][1].maxWidth).toBe(2000);
+  });
+
+  it("drops string values outside the schema enum", () => {
+    const src = "<!-- mermaid: theme=neon -->";
+    const entries = extractDirectiveStateMap(src, "mermaid");
+    expect(entries[0][1].theme).toBeUndefined();
+  });
+
+  it("returns empty for an unregistered namespace", () => {
+    expect(
+      extractDirectiveStateMap("<!-- mermaid: theme=dark -->", "smiles"),
+    ).toEqual([]);
+  });
+
+  it("extractDirectives collects only the requested namespace", () => {
+    const src = ["<!-- math: leqno -->", "<!-- mermaid: theme=forest -->"].join(
+      "\n",
+    );
+    expect(extractDirectives(src, "mermaid")).toEqual({ theme: "forest" });
+    expect(extractDirectives(src, "math")).toEqual({ leqno: true });
   });
 });
 

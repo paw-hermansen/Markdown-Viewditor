@@ -26,7 +26,7 @@ import {
   type MathmlRenderOptions,
 } from "../math-render";
 import {
-  extractMathDirectiveStateMap,
+  extractDirectiveStateMap,
   lookupDirectiveState,
 } from "$lib/extensions/directives";
 import {
@@ -38,6 +38,7 @@ import { mergeOptions } from "$lib/extensions/directive-merge";
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { rasterizeSvg } from "../svg-rasterize";
 import { renderMermaidSvgForExport } from "$lib/extensions/mermaid/renderer";
+import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
 import { fileState } from "$lib/stores/file.svelte";
 import {
   isSkill,
@@ -239,6 +240,12 @@ const S = {
   cell: "Table_20_Contents",
   cellHead: "Table_20_Heading",
   mathDisplay: "Math_20_Display",
+  diagramDisplay: (align: string): string =>
+    align === "left"
+      ? "Diagram_20_Display_20_Left"
+      : align === "right"
+        ? "Diagram_20_Display_20_Right"
+        : "Diagram_20_Display",
   fmTable: "FrontmatterTable",
   fmCell: "FrontmatterCell",
   fmHeading: "FrontmatterHeading",
@@ -844,6 +851,15 @@ function generateStylesXml(): string {
     <style:style style:name="${S.mathDisplay}" style:family="paragraph" style:class="text">
       <style:paragraph-properties fo:text-align="center" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
     </style:style>
+    <style:style style:name="${S.diagramDisplay("left")}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="left" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
+    <style:style style:name="${S.diagramDisplay("center")}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="center" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
+    <style:style style:name="${S.diagramDisplay("right")}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="right" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
     ${[1, 2, 3, 4, 5, 6]
       .map(
         (l) => `
@@ -1078,6 +1094,7 @@ async function buildDocument(
   warnings: string[],
   options: ExportOptions,
   directiveStateMap: Array<[number, Record<string, unknown>]> = [],
+  mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
 ): Promise<BuildResult> {
   const autoStyles: Map<string, string> = new Map();
   const images = new Map<string, ResolvedImage>();
@@ -1117,6 +1134,18 @@ async function buildDocument(
     if (typeof merged.fontsize === "number" && merged.fontsize !== 1.0)
       opts.fontsize = merged.fontsize as number;
     return opts;
+  }
+
+  // Resolve the horizontal alignment for a mermaid diagram by looking up
+  // the directive state at that line and merging with optional fence attrs.
+  // Defaults to "center", matching the viewer's `.mermaid-block` layout.
+  function buildMermaidAlign(
+    sourceLine: number,
+    fenceOpts: Record<string, unknown> = {},
+  ): string {
+    const dirState = lookupDirectiveState(mermaidDirectiveStateMap, sourceLine);
+    const merged = mergeOptions(MERMAID_OPTIONS_SCHEMA, dirState, fenceOpts);
+    return typeof merged.align === "string" ? merged.align : "center";
   }
 
   // ── inline formatter state ──
@@ -2204,10 +2233,27 @@ async function buildDocument(
             break;
           }
           // Mermaid diagrams embed as an image (vector SVG, or PNG when the
-          // shared SVG/diagram rasterize option is on). On render failure we
+          // shared SVG/diagram rasterize option is on). The frame sits in a
+          // paragraph whose text-align mirrors the viewer's horizontal
+          // alignment (align option, default center). On render failure we
           // fall through and keep the source as a preformatted code block.
           if (fenceLang === "mermaid") {
             const label = `mermaid(token@${i})`;
+            // Parse fence attributes {key=val} from info string and merge
+            // with HTML comment directives (fence attrs override).
+            let mermaidFenceOpts: Record<string, unknown> = {};
+            const mermaidRawAttrs = extractBraceAttrs(language);
+            if (mermaidRawAttrs) {
+              const parsed = parseAttrString(mermaidRawAttrs);
+              mermaidFenceOpts = validateExplicitFenceOptions(
+                parsed,
+                MERMAID_OPTIONS_SCHEMA,
+              );
+            }
+            const mermaidAlign = buildMermaidAlign(
+              token.map?.[0] ?? 0,
+              mermaidFenceOpts,
+            );
             try {
               const svgXml = await renderMermaidSvgForExport(token.content);
               const dims = sniffSvgDimensions(
@@ -2230,7 +2276,7 @@ async function buildDocument(
               );
               const inner = rasterized ?? addSvgImage(svgXml, frameDims, label);
               parts.push(
-                `      <text:p text:style-name="${paragraphStyle()}">${inner}</text:p>`,
+                `      <text:p text:style-name="${S.diagramDisplay(mermaidAlign)}">${inner}</text:p>`,
               );
               i++;
               break;
@@ -2554,9 +2600,14 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
 
   const opts = readOptions(ctx.options);
 
-  // Extract HTML comment directives from the markdown source as a
-  // line-based state map so each math token can look up its own state.
-  const directiveStateMap = extractMathDirectiveStateMap(ctx.markdown);
+  // Extract HTML comment directives from the markdown source as
+  // line-based state maps so each math/mermaid token can look up its
+  // own state.
+  const directiveStateMap = extractDirectiveStateMap(ctx.markdown, "math");
+  const mermaidDirectiveStateMap = extractDirectiveStateMap(
+    ctx.markdown,
+    "mermaid",
+  );
 
   const { bodyXml, autoStyles, images, mathObjects } = await buildDocument(
     ctx.tokens,
@@ -2564,6 +2615,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     warnings,
     opts,
     directiveStateMap,
+    mermaidDirectiveStateMap,
   );
 
   // Prepend frontmatter/skill card if the option is enabled.

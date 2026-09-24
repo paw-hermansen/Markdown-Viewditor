@@ -55,6 +55,11 @@ import footnote from "markdown-it-footnote";
 import taskLists from "markdown-it-task-lists";
 import { odtExporter, odtOptionGroups } from "../exporters/odt";
 import type { ExportContext } from "../types";
+import {
+  registerExtensionSchema,
+  resetExtensions,
+} from "$lib/extensions/registry";
+import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
 
 const MERMAID_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160" viewBox="0 0 320 160"><rect width="320" height="160"/></svg>';
@@ -99,7 +104,10 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   beforeAll(() => {
-    // Nothing to register — the exporter path is driven by fence tokens.
+    // Register the mermaid schema so `<!-- mermaid: ... -->` directives are
+    // validated during export (mirrors builtins.ts registration).
+    resetExtensions();
+    registerExtensionSchema("mermaid", MERMAID_OPTIONS_SCHEMA);
   });
 
   it("embeds a mermaid fence as a vector SVG image by default", async () => {
@@ -177,6 +185,77 @@ describe("ODT Mermaid diagram export", () => {
     const xml = await zip.file("content.xml")!.async("text");
     const frames = xml.match(/<draw:frame/g) ?? [];
     expect(frames.length).toBe(2);
+  });
+
+  it("centers mermaid diagrams by default (vector SVG)", async () => {
+    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display"[^>]*>[\s\S]*?<draw:frame/,
+    );
+    const styles = await zip.file("styles.xml")!.async("text");
+    expect(styles).toContain('style:name="Diagram_20_Display"');
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Diagram_20_Display"[\s\S]*?fo:text-align="center"[\s\S]*?<\/style:style>/,
+    );
+  });
+
+  it("centers mermaid diagrams by default (rasterized PNG)", async () => {
+    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
+      "odt.rasterizeSvg": true,
+    });
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display"[^>]*>[\s\S]*?draw:mime-type="image\/png"/,
+    );
+  });
+
+  it("honors align fence attributes (left/right)", async () => {
+    const leftZip = await runOdtExport(
+      `\`\`\`mermaid {align=left}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    const leftXml = await leftZip.file("content.xml")!.async("text");
+    expect(leftXml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display_20_Left"[^>]*>[\s\S]*?<draw:frame/,
+    );
+    expect(leftXml).not.toContain('text:style-name="Diagram_20_Display"');
+
+    const rightZip = await runOdtExport(
+      `\`\`\`mermaid {align=right}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    const rightXml = await rightZip.file("content.xml")!.async("text");
+    expect(rightXml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display_20_Right"[^>]*>[\s\S]*?<draw:frame/,
+    );
+
+    const styles = await leftZip.file("styles.xml")!.async("text");
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Diagram_20_Display_20_Left"[\s\S]*?fo:text-align="left"[\s\S]*?<\/style:style>/,
+    );
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Diagram_20_Display_20_Right"[\s\S]*?fo:text-align="right"[\s\S]*?<\/style:style>/,
+    );
+  });
+
+  it("honors mermaid align directives", async () => {
+    const zip = await runOdtExport(
+      `<!-- mermaid: align=right -->\n\n\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``,
+    );
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display_20_Right"[^>]*>[\s\S]*?<draw:frame/,
+    );
+  });
+
+  it("lets fence attributes override mermaid align directives", async () => {
+    const zip = await runOdtExport(
+      `<!-- mermaid: align=right -->\n\n\`\`\`mermaid {align=left}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display_20_Left"[^>]*>[\s\S]*?<draw:frame/,
+    );
+    expect(xml).not.toContain("Diagram_20_Display_20_Right");
   });
 
   it("names the option group to cover Mermaid diagrams", () => {

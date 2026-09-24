@@ -37,6 +37,7 @@ import {
 import { mergeOptions } from "$lib/extensions/directive-merge";
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { rasterizeSvg } from "../svg-rasterize";
+import { renderMermaidSvgForExport } from "$lib/extensions/mermaid/renderer";
 import { fileState } from "$lib/stores/file.svelte";
 import {
   isSkill,
@@ -116,12 +117,12 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
     },
     {
       id: "svg",
-      label: "SVG images",
+      label: "SVG images & Mermaid diagrams",
       options: [
         {
           id: OPTION_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "Applies to inline <svg>, <img src=*.svg>, and markdown ![…](.svg). PNG: wider compatibility. SVG: vector, may not render in all viewers.",
+          hint: "Applies to inline <svg>, <img src=*.svg>, markdown ![…](.svg), and Mermaid diagrams. PNG: wider compatibility. SVG: vector, may not render in all viewers.",
           kind: "toggle",
           value: false,
         },
@@ -134,7 +135,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_RASTER_RESOLUTION,
           label: "Resolution",
-          hint: "Applies only when math or SVG rasterization is on. Higher = sharper print, larger file.",
+          hint: "Applies only when math or image/diagram rasterization is on. Higher = sharper print, larger file.",
           kind: "select",
           value: 2,
           choices: [
@@ -159,19 +160,19 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
 const ODT_PAGE_CONTENT_WIDTH_PX = MATH_HOST_WIDTH_PX;
 
 /**
- * Fit logical PNG dimensions inside the ODT page-content width.
- * Returns the frame dimensions in CSS px. If the formula is narrower
+ * Fit logical image dimensions inside the ODT page-content width.
+ * Returns the frame dimensions in CSS px. If the content is narrower
  * than the page, it keeps its natural width. If wider, it is
  * proportionally scaled down so the frame never exceeds the page width.
  *
- * This is a pure dimension helper — it does not resample the PNG.
+ * This is a pure dimension helper — it does not resample the image.
  * ODT frame scaling performs the visual shrink.
  *
- * @param logicalWidthPx - Logical width of the cropped PNG in CSS px.
- * @param logicalHeightPx - Logical height of the cropped PNG in CSS px.
+ * @param logicalWidthPx - Logical width of the PNG/SVG in CSS px.
+ * @param logicalHeightPx - Logical height of the PNG/SVG in CSS px.
  * @returns Frame dimensions in CSS px, ready for inch conversion.
  */
-function fitMathToPage(
+function fitFrameToPage(
   logicalWidthPx: number,
   logicalHeightPx: number,
 ): { frameWidthPx: number; frameHeightPx: number } {
@@ -1507,7 +1508,7 @@ async function buildDocument(
                 targetFontSize: mathTargetFontSize,
                 ...inlineOpts,
               });
-              const { frameWidthPx, frameHeightPx } = fitMathToPage(
+              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
                 widthPx,
                 heightPx,
               );
@@ -2159,7 +2160,7 @@ async function buildDocument(
                   targetFontSize: mathTargetFontSize,
                   ...blockRenderOpts,
                 });
-                const { frameWidthPx, frameHeightPx } = fitMathToPage(
+                const { frameWidthPx, frameHeightPx } = fitFrameToPage(
                   widthPx,
                   heightPx,
                 );
@@ -2201,6 +2202,43 @@ async function buildDocument(
             }
             i++;
             break;
+          }
+          // Mermaid diagrams embed as an image (vector SVG, or PNG when the
+          // shared SVG/diagram rasterize option is on). On render failure we
+          // fall through and keep the source as a preformatted code block.
+          if (fenceLang === "mermaid") {
+            const label = `mermaid(token@${i})`;
+            try {
+              const svgXml = await renderMermaidSvgForExport(token.content);
+              const dims = sniffSvgDimensions(
+                new TextEncoder().encode(svgXml),
+                label,
+                warnings,
+              ) ?? { width: 0, height: 0 };
+              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
+                dims.width,
+                dims.height,
+              );
+              const frameDims = {
+                width: Math.round(frameWidthPx),
+                height: Math.round(frameHeightPx),
+              };
+              const rasterized = await tryRasterizeSvg(
+                svgXml,
+                frameDims,
+                label,
+              );
+              const inner = rasterized ?? addSvgImage(svgXml, frameDims, label);
+              parts.push(
+                `      <text:p text:style-name="${paragraphStyle()}">${inner}</text:p>`,
+              );
+              i++;
+              break;
+            } catch (err) {
+              warnings.push(
+                `Mermaid rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
+              );
+            }
           }
           const code = token.content.trimEnd();
           const lines = code.split("\n");
@@ -2251,7 +2289,7 @@ async function buildDocument(
                 targetFontSize: mathTargetFontSize,
                 ...blockOpts,
               });
-              const { frameWidthPx, frameHeightPx } = fitMathToPage(
+              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
                 widthPx,
                 heightPx,
               );

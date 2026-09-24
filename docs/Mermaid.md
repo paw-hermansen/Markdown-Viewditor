@@ -293,6 +293,7 @@ graph LR
 ```
 
 Set back to default values for later diagrams:
+
 ```markdown
 <!-- mermaid: !maxWidth !align -->
 ```
@@ -422,11 +423,11 @@ nonsense
 
 ## Export
 
-| Format | Behavior                                       |
-| ------ | ---------------------------------------------- |
-| HTML   | Diagrams are inline SVG — fully self-contained |
-| PDF    | Vector SVG — prints cleanly at any resolution  |
-| ODT    | Mermaid fences are exported as source code     |
+| Format | Behavior                                                                                                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| HTML   | Diagrams are inline SVG — fully self-contained                                                                                                                                             |
+| PDF    | Vector SVG — prints cleanly at any resolution                                                                                                                                              |
+| ODT    | Diagrams embedded as vector SVG; the shared "SVG images & Mermaid diagrams" → "Rasterize as PNG images" option converts them to PNG. On render failure the source is kept as a code block. |
 
 ## Mermaid Reference
 

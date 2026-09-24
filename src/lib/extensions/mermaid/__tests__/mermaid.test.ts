@@ -5,6 +5,7 @@ import {
   clearMermaidCache,
   preRenderMermaidBlocks,
   renderMermaid,
+  renderMermaidSvgForExport,
 } from "../renderer";
 import { directivePlugin } from "../../directives";
 import { extensionFencePlugin } from "../../fence-plugin";
@@ -554,6 +555,127 @@ describe("mermaid extension", () => {
       expect(natural).not.toContain("max-width: 640px");
       expect(responsive).toContain('width="100%"');
       expect(responsive).toContain("max-width: 640px");
+    });
+  });
+
+  describe("renderMermaidSvgForExport", () => {
+    it("returns a normalized SVG with explicit width/height and namespaced ids", async () => {
+      setAppTheme("dark");
+      mermaidMock.render.mockResolvedValue({
+        svg: '<svg id="diagram" width="100%" height="auto" style="max-width: 640px;" viewBox="0 0 640 320"><rect id="box" width="10" height="10"/></svg>',
+      });
+
+      const svg = await renderMermaidSvgForExport("graph LR\n    A-->B");
+
+      expect(svg).toContain('width="640"');
+      expect(svg).toContain('height="320"');
+      expect(svg).not.toContain("max-width: 640px");
+      expect(svg).toContain('id="mmd-exp-0-diagram"');
+      expect(svg).toContain('id="mmd-exp-0-box"');
+    });
+
+    it("forces neutral theme, SVG text labels, and a concrete font stack", async () => {
+      setAppTheme("dark");
+
+      await renderMermaidSvgForExport("graph LR\n    A-->B");
+
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          theme: "default",
+          htmlLabels: false,
+          fontFamily: "'trebuchet ms', verdana, arial, sans-serif",
+        }),
+      );
+      expect(mermaidMock.render).toHaveBeenCalledWith(
+        expect.stringMatching(/^mmd-export-/),
+        "graph LR\n    A-->B",
+      );
+    });
+
+    it("materializes font-family as presentation attributes on text shapes", async () => {
+      setAppTheme("light");
+      mermaidMock.render.mockResolvedValue({
+        svg: '<svg viewBox="0 0 100 50" width="100" height="50"><style>.label { font-family: inherit; }</style><text class="label"><tspan>Hello</tspan></text></svg>',
+      });
+
+      const svg = await renderMermaidSvgForExport("graph LR\n    A-->B");
+
+      // `inherit` is meaningless in a standalone SVG.
+      expect(svg).not.toMatch(/font-family:\s*inherit\b/);
+      expect(svg).toContain(
+        "font-family: 'trebuchet ms', verdana, arial, sans-serif",
+      );
+      // Presentation attributes survive LibreOffice svgio and usvg, which
+      // don't reliably apply Mermaid's class/descendant CSS to <text>.
+      expect(svg).toMatch(/<text[^>]+font-family="/);
+      expect(svg).toMatch(/<tspan[^>]+font-family="/);
+    });
+
+    it("does not override an explicit font-family already on a text shape", async () => {
+      setAppTheme("light");
+      mermaidMock.render.mockResolvedValue({
+        svg: '<svg viewBox="0 0 100 50" width="100" height="50"><text font-family="monospace">Hi</text></svg>',
+      });
+
+      const svg = await renderMermaidSvgForExport("graph LR\n    A-->B");
+
+      expect(svg).toContain('font-family="monospace"');
+      expect(svg).not.toContain("trebuchet");
+    });
+
+    it("caches the raw SVG across calls without re-rendering", async () => {
+      setAppTheme("light");
+      mermaidMock.render.mockResolvedValue({
+        svg: '<svg viewBox="0 0 640 320" width="640" height="320"><rect id="box" width="10" height="10"/></svg>',
+      });
+      const source = "graph LR\n    A-->B";
+
+      const first = await renderMermaidSvgForExport(source);
+      const second = await renderMermaidSvgForExport(source);
+
+      expect(mermaidMock.render).toHaveBeenCalledTimes(1);
+      // Namespacing is applied per call so each embed is unique.
+      expect(first).toContain("mmd-exp-0-box");
+      expect(second).toContain("mmd-exp-1-box");
+    });
+
+    it("keeps the export cache separate from the viewer cache even in the same theme", async () => {
+      setAppTheme("light");
+      const source = "graph LR\n    A-->B";
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source)],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+      await renderMermaidSvgForExport(source);
+
+      expect(mermaidMock.render).toHaveBeenCalledTimes(2);
+    });
+
+    it("re-initializes the viewer config after an export render", async () => {
+      setAppTheme("light");
+      const source = "graph LR\n    A-->B";
+
+      await renderMermaidSvgForExport(source);
+      await preRenderMermaidBlocks(
+        [fenceToken("graph TB\n    C-->D")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      const configs = mermaidMock.initialize.mock.calls.map((c) => c[0]);
+      expect(configs[0]).toMatchObject({ htmlLabels: false });
+      expect(configs[1]).toMatchObject({ fontFamily: "inherit" });
+    });
+
+    it("throws when Mermaid fails to render", async () => {
+      setAppTheme("light");
+      mermaidMock.render.mockRejectedValue(new Error("bad diagram"));
+
+      await expect(renderMermaidSvgForExport("nonsense")).rejects.toThrow(
+        /bad diagram/,
+      );
     });
   });
 

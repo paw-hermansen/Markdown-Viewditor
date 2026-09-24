@@ -10,9 +10,10 @@
 //! frontend never calls it there — it uses the working `Image` fallback
 //! — but the stub keeps the IPC contract uniform across platforms.
 //!
-//! Default `resvg` features are enabled (text, filter, pattern, image)
-//! so the rasterized output matches the browser's fidelity on every SVG
-//! construct, including `<text>` and `<filter>`.
+//! Default `resvg` features are enabled (text, filter, pattern, image).
+//! Text support still needs a populated font database — `usvg::Options::default()`
+//! ships an empty `fontdb`, so we load system fonts here (mirroring resvg's
+//! own CLI) or every `<text>` span would be silently dropped.
 
 #[cfg(target_os = "linux")]
 use resvg::tiny_skia;
@@ -57,7 +58,19 @@ pub fn rasterize_svg(
             return Err(AppError::Svg(format!("invalid scale: {scale}")));
         }
 
-        let tree = Tree::from_str(&svg, &Options::default())
+        let mut options = Options::default();
+        // `Options::default()` ships an empty fontdb (fontdb::Database::new()),
+        // which makes usvg silently drop every <text> span at layout time.
+        // resvg's own CLI calls load_system_fonts() — mirror that here so
+        // diagram / SVG labels actually appear in the PNG.
+        options.fontdb_mut().load_system_fonts();
+        // Fallback family when the SVG has no usable font-family (e.g. the
+        // CSS-wide keyword `inherit`, which usvg drops). "sans-serif" is a
+        // generic alias in fontdb and resolves on every platform; the
+        // default "Times New Roman" often isn't installed on Linux.
+        options.font_family = "sans-serif".to_owned();
+
+        let tree = Tree::from_str(&svg, &options)
             .map_err(|e| AppError::Svg(format!("usvg parse failed: {e}")))?;
 
         // The output PNG is width*scale × height*scale pixels; the SVG's
@@ -221,5 +234,55 @@ mod tests {
         let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>";
         let err = rasterize_svg(svg.to_string(), 10, 10, 0).unwrap_err();
         assert!(err.to_string().contains("invalid scale"));
+    }
+
+    #[test]
+    fn rasterizes_text_with_system_fonts() {
+        // Regression: Options::default() has an empty fontdb, so usvg used to
+        // silently drop every <text> span and the PNG contained no text at all.
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50">
+            <rect width="200" height="50" fill="white"/>
+            <text x="10" y="35" font-family="sans-serif" font-size="28" fill="black">Hi</text>
+        </svg>"##;
+        let pixmap = rasterize_to_pixels(svg, 200, 50, 1);
+        // If text is dropped the image is pure white. Sample the glyph area
+        // and require a meaningful number of dark pixels.
+        let mut dark = 0u32;
+        for y in 10..45 {
+            for x in 5..120 {
+                let p = pixmap.pixel(x, y).unwrap();
+                if p.red() < 128 && p.green() < 128 && p.blue() < 128 {
+                    dark += 1;
+                }
+            }
+        }
+        assert!(
+            dark > 20,
+            "expected dark text pixels in the glyph area, found {dark}"
+        );
+    }
+
+    #[test]
+    fn falls_back_to_sans_serif_when_font_family_is_inherit() {
+        // `font-family: inherit` has no parent in a standalone SVG; usvg drops
+        // the attribute and must fall back to Options::font_family ("sans-serif").
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50">
+            <rect width="200" height="50" fill="white"/>
+            <text x="10" y="35" font-family="inherit" font-size="28" fill="black">Hi</text>
+        </svg>"##;
+        let pixmap = rasterize_to_pixels(svg, 200, 50, 1);
+        let mut dark = 0u32;
+        for y in 10..45 {
+            for x in 5..120 {
+                let p = pixmap.pixel(x, y).unwrap();
+                if p.red() < 128 && p.green() < 128 && p.blue() < 128 {
+                    dark += 1;
+                }
+            }
+        }
+        assert!(
+            dark > 20,
+            "expected dark text pixels via the sans-serif fallback, found {dark}"
+        );
     }
 }

@@ -10,15 +10,31 @@ import type { FenceOptionSchema } from "../types";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
+/**
+ * Which Mermaid config / cache family a render belongs to. The viewer
+ * inherits the page font and uses HTML labels; export must stand alone
+ * in LibreOffice, usvg, and SVG-as-image, which drop `foreignObject`
+ * and cannot resolve `font-family: inherit`.
+ */
+type RenderVariant = "viewer" | "export";
 
 let mermaidModule: MermaidModule | null = null;
 let initialized = false;
-let lastTheme = "";
+let lastInitKey = "";
 let nextRenderId = 0;
 let nextWrapperId = 0;
 let preRenderQueue: Promise<void> = Promise.resolve();
 
 const ERROR = "ERROR";
+
+/**
+ * Concrete font stack for exported SVGs. Mermaid's own default stack,
+ * kept unquoted-with-single-quotes so the same string works both in CSS
+ * and as a `font-family="…"` presentation attribute. The trailing
+ * `sans-serif` generic resolves on every platform via fontdb/LO font
+ * substitution even when the named faces are missing.
+ */
+const EXPORT_FONT_FAMILY = "'trebuchet ms', verdana, arial, sans-serif";
 
 // Cache only the raw SVG. Host layout options are applied when the wrapper is
 // rendered, so changing alignment or sizing never duplicates Mermaid work.
@@ -35,12 +51,19 @@ function getAppTheme(): AppTheme {
 }
 
 /**
- * Build the cache key from the diagram source and the app theme. Mermaid's
- * own frontmatter remains in `content`, so Mermaid can apply native config
- * after this extension initializes the site theme.
+ * Build the cache key from the diagram source, app theme, and render
+ * variant. The variant is part of the key because viewer and export
+ * SVGs have different label structure (foreignObject vs `<text>`) and
+ * must never be reused across pipelines. Mermaid's own frontmatter
+ * remains in `content`, so Mermaid can apply native config after this
+ * extension initializes the site theme.
  */
-function cacheKey(content: string, appTheme: AppTheme): string {
-  return JSON.stringify([appTheme, content]);
+function cacheKey(
+  content: string,
+  appTheme: AppTheme,
+  variant: RenderVariant = "viewer",
+): string {
+  return JSON.stringify([appTheme, variant, content]);
 }
 
 async function ensureLoaded(): Promise<MermaidModule> {
@@ -53,18 +76,32 @@ async function ensureLoaded(): Promise<MermaidModule> {
 async function ensureInitialized(
   mod: MermaidModule,
   theme: AppTheme,
+  variant: RenderVariant = "viewer",
 ): Promise<void> {
-  if (initialized && lastTheme === theme) return;
-  const config: MermaidConfig = {
-    startOnLoad: false,
-    theme: theme as MermaidConfig["theme"],
-    securityLevel: "strict",
-    fontFamily: "inherit",
-    suppressErrorRendering: true,
-  };
+  const key = `${variant}:${theme}`;
+  if (initialized && lastInitKey === key) return;
+  const config: MermaidConfig =
+    variant === "export"
+      ? {
+          // Standalone-SVG safe: labels become <text>/<tspan> (not
+          // <foreignObject>) and fonts are a concrete stack (not `inherit`).
+          startOnLoad: false,
+          theme: "default",
+          securityLevel: "strict",
+          fontFamily: EXPORT_FONT_FAMILY,
+          htmlLabels: false,
+          suppressErrorRendering: true,
+        }
+      : {
+          startOnLoad: false,
+          theme: theme as MermaidConfig["theme"],
+          securityLevel: "strict",
+          fontFamily: "inherit",
+          suppressErrorRendering: true,
+        };
   await mod.default.initialize(config);
   initialized = true;
-  lastTheme = theme;
+  lastInitKey = key;
 }
 
 export function preRenderMermaidBlocks(
@@ -110,7 +147,7 @@ async function preRenderMermaidBlocksPass(
 
     try {
       if (!mod) mod = await ensureLoaded();
-      await ensureInitialized(mod, appTheme);
+      await ensureInitialized(mod, appTheme, "viewer");
       const { svg } = await mod.default.render(
         `mmd-${nextRenderId++}`,
         diagramContent,
@@ -167,9 +204,88 @@ export function renderMermaid(
 export function clearMermaidCache(): void {
   svgCache.clear();
   initialized = false;
-  lastTheme = "";
+  lastInitKey = "";
   nextRenderId = 0;
   nextWrapperId = 0;
+}
+
+/**
+ * Render a Mermaid diagram to a standalone SVG for export pipelines (ODT).
+ *
+ * Uses an export-specific Mermaid config so the SVG survives consumers
+ * that are not a live HTML document (LibreOffice svgio, usvg/resvg, and
+ * `Image`-based SVG rasterization):
+ *   - `htmlLabels: false` — labels are `<text>/<tspan>`, not
+ *     `<foreignObject>` HTML, which those consumers drop outright.
+ *   - concrete `fontFamily` — `font-family: inherit` has no parent in a
+ *     standalone SVG and is dropped or mis-resolved.
+ *   - `materializeSvgFonts` then copies the font stack onto every
+ *     `<text>/<tspan>` as a presentation attribute, which LibreOffice
+ *     honors more reliably than Mermaid's class/descendant CSS.
+ *
+ * Always uses Mermaid's light ("default") theme so exports stay neutral /
+ * printer-friendly regardless of the app theme. The raw SVG is cached
+ * under an export-variant key so it is never mixed up with the viewer's
+ * foreignObject output. IDs are namespaced per call so several diagrams
+ * can coexist in one exported document, and the SVG is normalized to
+ * explicit width/height so dimension sniffing never sees percentage sizes.
+ *
+ * @throws If Mermaid fails to load or render the source.
+ */
+export async function renderMermaidSvgForExport(
+  content: string,
+): Promise<string> {
+  const key = cacheKey(content, "default", "export");
+  let raw = svgCache.get(key);
+  if (raw === ERROR) raw = undefined;
+
+  if (!raw) {
+    const mod = await ensureLoaded();
+    await ensureInitialized(mod, "default", "export");
+    try {
+      const { svg } = await mod.default.render(
+        `mmd-export-${nextRenderId++}`,
+        content,
+      );
+      raw = svg;
+      svgCache.set(key, raw);
+    } catch (err) {
+      removeMermaidTempElements();
+      svgCache.set(key, ERROR);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+  }
+
+  return materializeSvgFonts(
+    normalizeSvgForNaturalSize(
+      namespaceSvgIds(raw, `mmd-exp-${nextWrapperId++}`),
+    ),
+  );
+}
+
+/**
+ * Make text survive standalone SVG consumers. Mermaid emits `font-family`
+ * only in CSS class/descendant rules (and used `inherit` for the viewer);
+ * LibreOffice's svgio and usvg don't reliably apply those to `<text>`.
+ * This pass (1) replaces the CSS-wide keyword `inherit` with the concrete
+ * export stack and (2) copies that stack onto every `<text>`/`<tspan>` as
+ * a presentation attribute, which all three consumers honor.
+ */
+function materializeSvgFonts(svg: string): string {
+  let out = svg.replace(
+    /font-family\s*:\s*inherit\b/gi,
+    `font-family: ${EXPORT_FONT_FAMILY}`,
+  );
+  // Presentation attribute on the text shapes themselves. Skip tags that
+  // already carry one so we never override a more specific Mermaid style.
+  out = out.replace(
+    /<(text|tspan)\b([^>]*?)(\/?)>/gi,
+    (_tag, name: string, attrs: string, slash: string) => {
+      if (/\sfont-family\s*=/i.test(attrs)) return _tag;
+      return `<${name}${attrs} font-family="${EXPORT_FONT_FAMILY}"${slash}>`;
+    },
+  );
+  return out;
 }
 
 function escapeHtml(s: string): string {

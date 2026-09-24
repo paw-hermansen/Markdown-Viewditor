@@ -60,6 +60,7 @@ async function ensureInitialized(
     theme: theme as MermaidConfig["theme"],
     securityLevel: "strict",
     fontFamily: "inherit",
+    suppressErrorRendering: true,
   };
   await mod.default.initialize(config);
   initialized = true;
@@ -116,6 +117,7 @@ async function preRenderMermaidBlocksPass(
       );
       svgCache.set(key, svg);
     } catch (err) {
+      removeMermaidTempElements();
       if (!mod) {
         loadFailed = true;
         console.error("[mermaid] Load error:", err);
@@ -125,6 +127,18 @@ async function preRenderMermaidBlocksPass(
       svgCache.set(key, ERROR);
     }
   }
+}
+
+function removeMermaidTempElements(): void {
+  if (
+    typeof document === "undefined" ||
+    typeof document.querySelectorAll !== "function"
+  ) {
+    return;
+  }
+  document
+    .querySelectorAll('body > div[id^="dmmd-"], body > iframe[id^="immd-"]')
+    .forEach((node) => node.remove());
 }
 
 export function renderMermaid(

@@ -421,6 +421,44 @@ describe("mermaid extension", () => {
       expect(mermaidMock.render).toHaveBeenCalledTimes(2);
     });
 
+    it("initializes Mermaid with suppressErrorRendering", async () => {
+      setAppTheme("light");
+      const source = "graph LR\n    A-->B\n";
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source)],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({ suppressErrorRendering: true }),
+      );
+    });
+
+    it("sweeps leftover Mermaid temp nodes after a failed render", async () => {
+      const leftoverDiv = { remove: vi.fn() };
+      const leftoverIframe = { remove: vi.fn() };
+      const querySelectorAll = vi.fn(() => [leftoverDiv, leftoverIframe]);
+      vi.stubGlobal("document", {
+        documentElement: { getAttribute: () => "light" },
+        querySelectorAll,
+      });
+      mermaidMock.render.mockRejectedValueOnce(new Error("render failed"));
+
+      await preRenderMermaidBlocks(
+        [fenceToken("graph LR\n    A-->B\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(querySelectorAll).toHaveBeenCalledWith(
+        'body > div[id^="dmmd-"], body > iframe[id^="immd-"]',
+      );
+      expect(leftoverDiv.remove).toHaveBeenCalled();
+      expect(leftoverIframe.remove).toHaveBeenCalled();
+    });
+
     it("isolates Mermaid initialization failures to the failed diagram", async () => {
       setAppTheme("light");
       const failedSource = "graph LR\n    A-->B\n";

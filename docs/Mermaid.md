@@ -292,6 +292,7 @@ graph LR
     E[Fifth] --> F[Sixth]
 ```
 
+Set back to default values for later diagrams:
 ```markdown
 <!-- mermaid: !maxWidth !align -->
 ```

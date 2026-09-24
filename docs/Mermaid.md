@@ -202,13 +202,13 @@ flowchart LR
 ```
 
 ````
-```mermaid {fitToWidth=false maxWidth=300 align=right}
+```mermaid {maxWidth=300 align=right}
 flowchart LR
     A[Start] --> B[Middle] --> C[End]
 ```
 ````
 
-```mermaid {fitToWidth=false maxWidth=300 align=right}
+```mermaid {maxWidth=300 align=right}
 flowchart LR
     A[Start] --> B[Middle] --> C[End]
 ```
@@ -237,6 +237,26 @@ How directives and fence attributes interact:
 A document sets `align=left` and `maxWidth=600`, then one block overrides only `align`. A later directive changes only `maxWidth`, so `align=left` persists:
 
 ````markdown
+```mermaid
+graph LR
+    A[First] --> B[Second]
+```
+````
+
+```mermaid
+graph LR
+    A[First] --> B[Second]
+```
+
+````markdown
+<!-- mermaid: align=left maxWidth=600 -->
+
+```mermaid
+graph LR
+    A[First] --> B[Second]
+```
+````
+
 <!-- mermaid: align=left maxWidth=600 -->
 
 ```mermaid
@@ -244,12 +264,20 @@ graph LR
     A[First] --> B[Second]
 ```
 
+````markdown
+```mermaid {align=right}
+graph LR
+    C[Third] --> D[Fourth]
+```
+````
+
 ```mermaid {align=right}
 graph LR
     C[Third] --> D[Fourth]
 ```
 
-<!-- mermaid: maxWidth=400 -->
+````markdown
+<!-- mermaid: maxWidth=200 -->
 
 ```mermaid
 graph LR
@@ -257,11 +285,25 @@ graph LR
 ```
 ````
 
-| Diagram | Effective host options                           | Source                            |
-| ------- | ------------------------------------------------ | --------------------------------- |
-| First   | `align=left`, `maxWidth=600`, `fitToWidth=true`  | First directive                   |
-| Second  | `align=right`, `maxWidth=600`, `fitToWidth=true` | Directive + fence override        |
-| Third   | `align=left`, `maxWidth=400`, `fitToWidth=true`  | Later directive; `align` persists |
+<!-- mermaid: maxWidth=200 -->
+
+```mermaid
+graph LR
+    E[Fifth] --> F[Sixth]
+```
+
+````markdown
+<!-- mermaid: !maxWidth !align -->
+````
+<!-- mermaid: !maxWidth !align -->
+
+
+| Diagram | Effective host options                            | Source                            |
+| ------- | ------------------------------------------------- | --------------------------------- |
+| First   | `align=center`, `maxWidth=800`, `fitToWidth=true` | Default                           |
+| Second  | `align=left`, `maxWidth=600`, `fitToWidth=true`   | First directive                   |
+| Third   | `align=right`, `maxWidth=600`, `fitToWidth=true`  | Directive + fence override        |
+| Fourth  | `align=left`, `maxWidth=200`, `fitToWidth=true`   | Later directive; `align` persists |
 
 The fenced block does not affect surrounding diagrams; it overrides only its own block.
 
@@ -281,16 +323,32 @@ The outer host width is the smaller of `maxWidth` and the available content widt
 - **`fitToWidth=true`** (default) - the diagram scales to fit the host width. Content is not clipped, but very large diagrams may become small.
 - **`fitToWidth=false`** - the diagram renders at its natural size and uses horizontal scrolling when it exceeds the host width. There is no vertical scrolling and no `maxHeight` option; tall diagrams expand vertically.
 
+### Scaling
+
 ````
-```mermaid {fitToWidth=false maxWidth=300 align=left}
+```mermaid {fitToWidth=true}
 flowchart LR
-    A[Step 1] --> B[Step 2] --> C[Step 3] --> D[Step 4] --> E[Step 5]
+    A[Step 1] --> B[Step 2] --> C[Step 3] --> D[Step 4] --> E[Step 5] --> F[Step 6]
 ```
 ````
 
-```mermaid {fitToWidth=false maxWidth=300 align=left}
+```mermaid {fitToWidth=true}
 flowchart LR
-    A[Step 1] --> B[Step 2] --> C[Step 3] --> D[Step 4] --> E[Step 5]
+    A[Step 1] --> B[Step 2] --> C[Step 3] --> D[Step 4] --> E[Step 5] --> F[Step 6]
+```
+
+### Scrollbar
+
+````
+```mermaid {fitToWidth=false}
+flowchart LR
+    A[Step 1] --> B[Step 2] --> C[Step 3] --> D[Step 4] --> E[Step 5] --> F[Step 6]
+```
+````
+
+```mermaid {fitToWidth=false}
+flowchart LR
+    A[Step 1] --> B[Step 2] --> C[Step 3] --> D[Step 4] --> E[Step 5] --> F[Step 6]
 ```
 
 ## Per-Diagram Frontmatter
@@ -301,9 +359,30 @@ Mermaid also supports YAML frontmatter at the top of a diagram for native config
 ```mermaid
 ---
 config:
+  theme: forest
+---
+graph LR
+    A[Styled] --> B[Node]
+```
+````
+
+```mermaid
+---
+config:
+  theme: forest
+---
+graph LR
+    A[Styled] --> B[Node]
+```
+
+````
+```mermaid
+---
+config:
   theme: base
   themeVariables:
-    primaryColor: '#e1f5fe'
+    primaryColor: '#ffeecc'
+    lineColor: '#ffbb33'
 ---
 graph LR
     A[Styled] --> B[Node]
@@ -316,31 +395,11 @@ config:
   theme: base
   themeVariables:
     primaryColor: '#ffeecc'
+    lineColor: '#ffbb33'
 ---
 graph LR
     A[Styled] --> B[Node]
 ```
-
-````
-```mermaid
----
-config:
-  theme: forest
----
-graph LR
-    A[Styled] --> B[Node]
-```
-````
-
-```mermaid
----
-config:
-  theme: forest
----
-graph LR
-    A[Styled] --> B[Node]
-```
-
 
 See [Mermaid configuration](https://mermaid.js.org/config/configuration.html) for all available frontmatter options.
 

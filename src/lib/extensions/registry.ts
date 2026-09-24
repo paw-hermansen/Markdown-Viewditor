@@ -1,5 +1,9 @@
 import type MarkdownIt from "markdown-it";
-import type { MarkdownExtension, FenceOptionSchema } from "./types";
+import type {
+  MarkdownExtension,
+  MarkdownPreRenderContext,
+  FenceOptionSchema,
+} from "./types";
 
 const extensions = new Map<string, MarkdownExtension>();
 const loadedPlugins = new Set<string>();
@@ -51,6 +55,21 @@ export async function loadExtensionsForContent(
   }
 
   return anyLoaded;
+}
+
+/**
+ * Pre-render blocks after Markdown-it has parsed the document. This gives
+ * extensions access to positional parser state such as HTML directives.
+ */
+export async function preRenderExtensionsForContent(
+  content: string,
+  context: MarkdownPreRenderContext,
+): Promise<void> {
+  for (const ext of detectExtensions(content)) {
+    if (ext.preRenderBlocks) {
+      await ext.preRenderBlocks(content, context);
+    }
+  }
 }
 
 async function loadPlugin(

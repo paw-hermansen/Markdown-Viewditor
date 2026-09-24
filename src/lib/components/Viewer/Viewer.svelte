@@ -115,6 +115,7 @@
 
   $effect(() => {
     const currentContent = content;
+    void viewerState.theme;
     const request = requestRender(async (generation) => {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
       if (generation !== renderGeneration) return;

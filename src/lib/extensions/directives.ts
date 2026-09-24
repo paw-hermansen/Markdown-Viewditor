@@ -1,6 +1,7 @@
 import type MarkdownIt from "markdown-it";
-import { parseAttrString, validateFenceOptions } from "./fence-options";
+import { parseAttrString, validateExplicitFenceOptions } from "./fence-options";
 import { getExtensionSchema } from "./registry";
+import type { FenceOptionSchema } from "./types";
 
 /**
  * Pattern to match HTML comment directives:
@@ -10,6 +11,54 @@ import { getExtensionSchema } from "./registry";
  * Group 2: attribute string (rest of line before -->)
  */
 const DIRECTIVE_RE = /^<!--\s*(\w+)\s*:\s*(.+?)\s*-->$/;
+
+/**
+ * Preserve warnings for invalid explicit values without filling omitted keys.
+ */
+export function warnInvalidExplicitFenceOptions(
+  parsed: Record<string, string | number | boolean>,
+  schema: FenceOptionSchema,
+): void {
+  for (const [key, raw] of Object.entries(parsed)) {
+    const def = schema[key];
+    if (!def || raw === false) continue;
+
+    if (raw === true) {
+      if (def.type !== "boolean") {
+        console.warn(
+          `fence-options: bare flag "${key}" used on non-boolean type (${def.type}), using default`,
+        );
+      }
+      continue;
+    }
+
+    switch (def.type) {
+      case "boolean":
+        if (raw !== "true" && raw !== "1" && raw !== "false" && raw !== "0") {
+          console.warn(
+            `fence-options: invalid boolean value "${raw}" for "${key}", using default`,
+          );
+        }
+        break;
+      case "number":
+        if (!Number.isFinite(parseFloat(String(raw)))) {
+          console.warn(
+            `fence-options: invalid number value "${raw}" for "${key}", using default`,
+          );
+        }
+        break;
+      case "string": {
+        const value = String(raw);
+        if (def.values && !def.values.includes(value)) {
+          console.warn(
+            `fence-options: invalid value "${value}" for "${key}", allowed: ${def.values.join(", ")}`,
+          );
+        }
+        break;
+      }
+    }
+  }
+}
 
 /**
  * Markdown-it core plugin that parses HTML comment directives.
@@ -58,7 +107,8 @@ export function directivePlugin(md: MarkdownIt): void {
 
           // Parse and validate attributes.
           const parsed = parseAttrString(rawAttrs);
-          const validated = validateFenceOptions(parsed, schema);
+          warnInvalidExplicitFenceOptions(parsed, schema);
+          const validated = validateExplicitFenceOptions(parsed, schema);
 
           // Update cumulative state.
           if (!cumulative[namespace]) {

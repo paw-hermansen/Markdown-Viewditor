@@ -41,6 +41,9 @@ describe("Mermaid host-layout styles", () => {
 
   it("keeps natural mode start-aligned with horizontal overflow only", () => {
     const naturalWrapper = ruleFor('.mermaid-block[data-fit-to-width="false"]');
+    const naturalScroll = ruleFor(
+      '.mermaid-block[data-fit-to-width="false"] .mermaid-scroll-content',
+    );
     const naturalSvg = ruleFor('.mermaid-block[data-fit-to-width="false"] svg');
 
     expect(naturalWrapper).toContain("overflow-x: auto;");
@@ -52,12 +55,18 @@ describe("Mermaid host-layout styles", () => {
     expect(naturalWrapper).not.toContain("height:");
     expect(naturalWrapper).not.toContain("max-height:");
 
+    expect(naturalScroll).toContain("display: inline-block;");
+    expect(naturalScroll).toContain("flex: 0 0 auto;");
+    expect(naturalScroll).toContain("max-width: none;");
+    expect(naturalScroll).toContain("vertical-align: top;");
+    expect(naturalScroll).not.toContain("height:");
+    expect(naturalScroll).not.toContain("max-height:");
+
     expect(naturalSvg).toContain("max-width: none !important;");
-    expect(naturalSvg).toContain("width: max-content !important;");
-    expect(naturalSvg).toContain("min-width: max-content !important;");
-    expect(naturalSvg).toContain("flex-shrink: 0 !important;");
-    expect(naturalSvg).not.toContain("height:");
-    expect(naturalSvg).not.toContain("max-height:");
+    expect(naturalSvg).toContain("width: auto !important;");
+    expect(naturalSvg).toContain("height: auto !important;");
+    expect(naturalSvg).not.toContain("flex-shrink:");
+    expect(naturalSvg).not.toContain("min-width:");
   });
 
   it("keeps fit-mode SVGs responsive without clipping their auto height", () => {

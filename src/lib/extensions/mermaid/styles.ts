@@ -43,11 +43,19 @@ export const MERMAID_STYLES = `
         max-width: 100%;
         height: auto;
       }
+      /* Inner wrapper so the SVG is not a direct flex item. WebKitGTK does not
+         reliably resolve width: max-content on SVG flex items, causing the
+         diagram to shrink to the host width instead of scrolling. */
+      .mermaid-block[data-fit-to-width="false"] .mermaid-scroll-content {
+        display: inline-block;
+        flex: 0 0 auto;
+        max-width: none;
+        vertical-align: top;
+      }
       .mermaid-block[data-fit-to-width="false"] svg {
         max-width: none !important;
-        width: max-content !important;
-        min-width: max-content !important;
-        flex-shrink: 0 !important;
+        width: auto !important;
+        height: auto !important;
       }
       .mermaid-error {
         color: #cc0000;

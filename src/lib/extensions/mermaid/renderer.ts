@@ -143,8 +143,11 @@ export function renderMermaid(
   const fitToWidth = options.fitToWidth !== false;
   const svg = fitToWidth ? cached : normalizeSvgForNaturalSize(cached);
   const namespacedSvg = namespaceSvgIds(svg, `mmd-svg-${nextWrapperId++}`);
+  const body = fitToWidth
+    ? namespacedSvg
+    : `<div class="mermaid-scroll-content">${namespacedSvg}</div>`;
 
-  return `<div class="mermaid-block"${attributes}>${namespacedSvg}</div>`;
+  return `<div class="mermaid-block"${attributes}>${body}</div>`;
 }
 
 export function clearMermaidCache(): void {

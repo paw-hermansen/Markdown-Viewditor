@@ -292,11 +292,11 @@ graph LR
     E[Fifth] --> F[Sixth]
 ```
 
-````markdown
+```markdown
 <!-- mermaid: !maxWidth !align -->
-````
-<!-- mermaid: !maxWidth !align -->
+```
 
+<!-- mermaid: !maxWidth !align -->
 
 | Diagram | Effective host options                            | Source                            |
 | ------- | ------------------------------------------------- | --------------------------------- |
@@ -418,8 +418,6 @@ nonsense
 nonsense
     A --> B
 ```
-
-
 
 ## Export
 

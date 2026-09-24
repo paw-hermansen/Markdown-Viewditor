@@ -5,6 +5,7 @@
   } from '$lib/stores/export-confirm-dialog.svelte';
   import type { OptionGroup } from '$lib/export/types';
   import { focusTrap } from '$lib/utils/focus-trap';
+  import SelectField from '$lib/components/SelectField.svelte';
 
   let dontShowAgain = $state(false);
   /** Working copy of the option values — mutated as the user toggles. */
@@ -105,23 +106,22 @@
                       <span>{opt.label}</span>
                     </label>
                   {:else if opt.kind === 'select'}
-                    <label class="option-control select-row">
-                      <span class="select-label">{opt.label}</span>
-                      <select
+                    <div class="option-control select-row">
+                      <label class="select-label" for={`export-opt-${opt.id}`}>{opt.label}</label>
+                      <SelectField
+                        id={`export-opt-${opt.id}`}
+                        label={opt.label}
                         value={String(currentOptions[opt.id] ?? opt.value)}
-                        onchange={(e) => {
-                          const raw = (e.currentTarget as HTMLSelectElement).value;
-                          const match = opt.choices?.find(
-                            (c) => String(c.value) === raw,
-                          );
+                        choices={(opt.choices ?? []).map((c) => ({
+                          value: String(c.value),
+                          label: c.label,
+                        }))}
+                        onSelect={(raw) => {
+                          const match = opt.choices?.find((c) => String(c.value) === raw);
                           setOption(opt.id, match ? match.value : raw);
                         }}
-                      >
-                        {#each opt.choices ?? [] as choice (String(choice.value))}
-                          <option value={String(choice.value)}>{choice.label}</option>
-                        {/each}
-                      </select>
-                    </label>
+                      />
+                    </div>
                   {/if}
                   {#if opt.hint}
                     <p class="option-hint">{opt.hint}</p>
@@ -303,15 +303,6 @@
 
   .select-label {
     flex: 1;
-  }
-
-  .option-control select {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 3px 6px;
-    font-size: 12px;
-    color: var(--text-primary);
     cursor: pointer;
   }
 

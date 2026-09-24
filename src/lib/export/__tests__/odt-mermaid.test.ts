@@ -67,6 +67,9 @@ const MERMAID_SVG =
 const WIDE_MERMAID_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400"><rect width="1200" height="400"/></svg>';
 
+const MEDIUM_MERMAID_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="700" height="320" viewBox="0 0 700 320"><rect width="700" height="320"/></svg>';
+
 const MERMAID_SRC = "graph LR\n    A-->B";
 
 function makeTokens(src: string) {
@@ -138,7 +141,10 @@ describe("ODT Mermaid diagram export", () => {
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain('draw:mime-type="image/png"');
     expect(xml).not.toContain('draw:mime-type="image/svg+xml"');
-    expect(mockRasterizeSvg).toHaveBeenCalledWith(MERMAID_SVG, 320, 160, 2);
+    // 320 viewer px maps to 320 × (600/800) = 240 ODT px.
+    expect(mockRasterizeSvg).toHaveBeenCalledWith(MERMAID_SVG, 240, 120, 2);
+    expect(xml).toContain('svg:width="2.5000in"');
+    expect(xml).toContain('svg:height="1.2500in"');
   });
 
   it("fits wide diagrams to the ODT page content width", async () => {
@@ -147,7 +153,8 @@ describe("ODT Mermaid diagram export", () => {
       "odt.rasterizeSvg": true,
       "odt.rasterResolution": 1,
     });
-    // Page content width is 600px; 1200×400 scales to 600×200.
+    // Default maxWidth=800 maps to the page content width: 800/800 × 600px.
+    // 1200×400 scales to 600×200.
     expect(mockRasterizeSvg).toHaveBeenCalledWith(
       WIDE_MERMAID_SVG,
       600,
@@ -157,6 +164,107 @@ describe("ODT Mermaid diagram export", () => {
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain('svg:width="6.2500in"');
     expect(xml).toContain('svg:height="2.0833in"');
+  });
+
+  it("scales wide diagrams down to the maxWidth fraction of the page", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `\`\`\`mermaid {maxWidth=400}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    // maxWidth=400 → 400/800 × page width = 3.125in; 1200×400 → 300×100.
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="3.1250in"');
+    expect(xml).toContain('svg:height="1.0417in"');
+  });
+
+  it("scales rasterized diagrams down to the maxWidth fraction of the page", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    await runOdtExport(`\`\`\`mermaid {maxWidth=400}\n${MERMAID_SRC}\n\`\`\``, {
+      "odt.rasterizeSvg": true,
+      "odt.rasterResolution": 1,
+    });
+    expect(mockRasterizeSvg).toHaveBeenCalledWith(
+      WIDE_MERMAID_SVG,
+      300,
+      100,
+      1,
+    );
+  });
+
+  it("honors mermaid maxWidth directives", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `<!-- mermaid: maxWidth=400 -->\n\n\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``,
+    );
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="3.1250in"');
+    expect(xml).toContain('svg:height="1.0417in"');
+  });
+
+  it("lets fence attributes override mermaid maxWidth directives", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `<!-- mermaid: maxWidth=400 -->\n\n\`\`\`mermaid {maxWidth=200}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    // 200/800 × 6.25in = 1.5625in; 1200×400 → 150×50.
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="1.5625in"');
+    expect(xml).toContain('svg:height="0.5208in"');
+  });
+
+  it("clamps maxWidth above the viewer column to the page content width", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `\`\`\`mermaid {maxWidth=1200}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="6.2500in"');
+    expect(xml).toContain('svg:height="2.0833in"');
+  });
+
+  it("shows diagrams at natural size when fitToWidth is false, clamped to the page", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(MEDIUM_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `\`\`\`mermaid {maxWidth=280 fitToWidth=false}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    // Natural 700×320 → 700/800 × page width = 5.4688in (under the page
+    // width, so no clamp). fitToWidth=true would cap at 2.1875in.
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="5.4688in"');
+    expect(xml).toContain('svg:height="2.5000in"');
+
+    const fitZip = await runOdtExport(
+      `\`\`\`mermaid {maxWidth=280}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    // 280/800 × 6.25in = 2.1875in; 700×320 → 210×96.
+    const fitXml = await fitZip.file("content.xml")!.async("text");
+    expect(fitXml).toContain('svg:width="2.1875in"');
+    expect(fitXml).toContain('svg:height="1.0000in"');
+  });
+
+  it("clamps fitToWidth=false diagrams to the page content width", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `\`\`\`mermaid {fitToWidth=false}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    // Natural 1200×400 maps to 900px wide but the page clamps to 600×200.
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="6.2500in"');
+    expect(xml).toContain('svg:height="2.0833in"');
+  });
+
+  it("applies maxWidth with align so narrow frames align like the viewer", async () => {
+    mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
+    const zip = await runOdtExport(
+      `\`\`\`mermaid {align=left maxWidth=300}\n${MERMAID_SRC}\n\`\`\``,
+    );
+    // 300/800 × 6.25in = 2.3438in; 1200×400 → 225×75.
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="2.3438in"');
+    expect(xml).toContain('svg:height="0.7813in"');
+    expect(xml).toMatch(
+      /<text:p[^>]*text:style-name="Diagram_20_Display_20_Left"[^>]*>[\s\S]*?<draw:frame/,
+    );
   });
 
   it("falls back to source code when Mermaid rendering fails", async () => {

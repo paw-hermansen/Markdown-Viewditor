@@ -429,6 +429,12 @@ nonsense
 | PDF    | Vector SVG — prints cleanly at any resolution                                                                                                                                              |
 | ODT    | Diagrams embedded as vector SVG; the shared "SVG images & Mermaid diagrams" → "Rasterize as PNG images" option converts them to PNG. On render failure the source is kept as a code block. |
 
+In ODT export, diagram widths map proportionally from the 800 px Viewer
+column to the ODT text column, so `maxWidth` and `align` produce the same
+layout as in the Viewer (e.g. `maxWidth=300` → at most 300/800 of the page
+width). `fitToWidth=false` keeps the diagram at its natural size, but is
+still clamped to the page width since ODF has no scroll container.
+
 ## Mermaid Reference
 
 Mermaid supports dozens of diagram types including flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, mind maps, and more.

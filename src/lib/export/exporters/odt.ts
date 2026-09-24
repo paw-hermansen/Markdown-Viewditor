@@ -161,6 +161,22 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
 const ODT_PAGE_CONTENT_WIDTH_PX = MATH_HOST_WIDTH_PX;
 
 /**
+ * Viewer content column width in CSS px. Keep in sync with
+ * `.viewer-content`'s max-width in `markdown.css` and
+ * `DEFAULT_VIEWER_MAX_WIDTH_PX` in `pdf.ts`.
+ */
+const VIEWER_CONTENT_WIDTH_PX = 800;
+
+/**
+ * Scale factor mapping viewer CSS px to ODT page-content px. The viewer
+ * column (800 px) corresponds to the ODT text column (600 px), so a
+ * diagram occupying N viewer px occupies N × 0.75 ODT px — preserving
+ * its relative width within the page, just like in the Viewer.
+ */
+const VIEWER_TO_PAGE_SCALE =
+  ODT_PAGE_CONTENT_WIDTH_PX / VIEWER_CONTENT_WIDTH_PX;
+
+/**
  * Fit logical image dimensions inside the ODT page-content width.
  * Returns the frame dimensions in CSS px. If the content is narrower
  * than the page, it keeps its natural width. If wider, it is
@@ -185,6 +201,43 @@ function fitFrameToPage(
     frameWidthPx: logicalWidthPx * fitScale,
     frameHeightPx: logicalHeightPx * fitScale,
   };
+}
+
+/**
+ * Compute the ODT frame dimensions for a mermaid diagram so its on-page
+ * size matches its Viewer proportions.
+ *
+ * Mirrors the Viewer's `.mermaid-block` sizing: the host box is
+ * `min(maxWidth, 800 px column)`; with `fitToWidth` (default) the SVG
+ * renders at `min(naturalWidth, host)` (scaled down when wider than
+ * `maxWidth`), with `fitToWidth=false` it renders at natural size
+ * (scrollable in the Viewer). ODF has no scroll container, so the
+ * natural-size path is still clamped to the page width for
+ * printability.
+ *
+ * @param naturalWidthPx - Natural SVG width in CSS px.
+ * @param naturalHeightPx - Natural SVG height in CSS px.
+ * @param opts - Resolved mermaid options (`maxWidth`, `fitToWidth`).
+ * @returns Frame dimensions in CSS px, ready for inch conversion.
+ */
+function computeMermaidFrameDims(
+  naturalWidthPx: number,
+  naturalHeightPx: number,
+  opts: { maxWidth: number; fitToWidth: boolean },
+): { frameWidthPx: number; frameHeightPx: number } {
+  if (naturalWidthPx <= 0 || naturalHeightPx <= 0) {
+    return { frameWidthPx: naturalWidthPx, frameHeightPx: naturalHeightPx };
+  }
+  const displayWidthPx =
+    opts.fitToWidth === false
+      ? naturalWidthPx
+      : Math.min(naturalWidthPx, opts.maxWidth, VIEWER_CONTENT_WIDTH_PX);
+  const scale = (displayWidthPx / naturalWidthPx) * VIEWER_TO_PAGE_SCALE;
+  const frameWidthPx = naturalWidthPx * scale;
+  const frameHeightPx = naturalHeightPx * scale;
+  return opts.fitToWidth === false
+    ? fitFrameToPage(frameWidthPx, frameHeightPx)
+    : { frameWidthPx, frameHeightPx };
 }
 
 /* ─────────────────────── hljs color map (printer-friendly theme) ──────── */
@@ -1136,16 +1189,22 @@ async function buildDocument(
     return opts;
   }
 
-  // Resolve the horizontal alignment for a mermaid diagram by looking up
-  // the directive state at that line and merging with optional fence attrs.
-  // Defaults to "center", matching the viewer's `.mermaid-block` layout.
-  function buildMermaidAlign(
+  // Resolve the options for a mermaid diagram by looking up the
+  // directive state at that line and merging with optional fence attrs.
+  // Defaults match the viewer's `.mermaid-block` layout (align center,
+  // maxWidth 800, fitToWidth true).
+  function buildMermaidOptions(
     sourceLine: number,
     fenceOpts: Record<string, unknown> = {},
-  ): string {
+  ): { align: string; maxWidth: number; fitToWidth: boolean } {
     const dirState = lookupDirectiveState(mermaidDirectiveStateMap, sourceLine);
     const merged = mergeOptions(MERMAID_OPTIONS_SCHEMA, dirState, fenceOpts);
-    return typeof merged.align === "string" ? merged.align : "center";
+    return {
+      align: typeof merged.align === "string" ? merged.align : "center",
+      maxWidth: typeof merged.maxWidth === "number" ? merged.maxWidth : 800,
+      fitToWidth:
+        typeof merged.fitToWidth === "boolean" ? merged.fitToWidth : true,
+    };
   }
 
   // ── inline formatter state ──
@@ -2250,7 +2309,7 @@ async function buildDocument(
                 MERMAID_OPTIONS_SCHEMA,
               );
             }
-            const mermaidAlign = buildMermaidAlign(
+            const mermaidOpts = buildMermaidOptions(
               token.map?.[0] ?? 0,
               mermaidFenceOpts,
             );
@@ -2261,9 +2320,10 @@ async function buildDocument(
                 label,
                 warnings,
               ) ?? { width: 0, height: 0 };
-              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
+              const { frameWidthPx, frameHeightPx } = computeMermaidFrameDims(
                 dims.width,
                 dims.height,
+                mermaidOpts,
               );
               const frameDims = {
                 width: Math.round(frameWidthPx),
@@ -2276,7 +2336,7 @@ async function buildDocument(
               );
               const inner = rasterized ?? addSvgImage(svgXml, frameDims, label);
               parts.push(
-                `      <text:p text:style-name="${S.diagramDisplay(mermaidAlign)}">${inner}</text:p>`,
+                `      <text:p text:style-name="${S.diagramDisplay(mermaidOpts.align)}">${inner}</text:p>`,
               );
               i++;
               break;

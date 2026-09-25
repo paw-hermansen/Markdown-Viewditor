@@ -3,10 +3,8 @@
 ## Test Environment Setup
 
 - Build & launch: `npm run tauri dev` (or install a built binary)
-- Markdown files in folder `examples` have all the required content for the
-  tests (chemistry/math samples, BOM / CRLF / Latin-1 / Unicode files, an
-  SVG, local PNG images in `examples/image/`).
-- Tests marked **macOS**/**Linux&Windows** apply only to that platform;
+- Test files live in the `testing/` directory.
+- Tests marked **macOS** / **Linux&Windows** apply only to that platform;
   unmarked tests are platform-independent.
 
 > Notation:
@@ -16,713 +14,758 @@
 
 ---
 
-## 1. Application Launch & Window
+# Part 1 — Test Stories
 
-| #   | Test                     | Steps                                       | Expected                                             |
-| --- | ------------------------ | ------------------------------------------- | ---------------------------------------------------- |
-| 1.1 | First launch             | Start the app                               | Window opens at 1200×800, title "Markdown Viewditor" |
-| 1.2 | Minimum size             | Resize window below 800×600                 | Window clamps at 800×600                             |
-| 1.3 | Window state persistence | Move/resize window, close, reopen           | Position and size restored                           |
-| 1.4 | Maximized persistence    | Maximize, close, reopen                     | Opens maximized                                      |
-| 1.5 | CLI file open            | Launch with `markdown-viewditor myfile.md`  | File opens automatically                             |
-| 1.6 | Restore last file        | Open a file, close app, reopen without args | Same file opens                                      |
+Each story is a self-contained walkthrough. Complete the stories in order.
+Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 
 ---
 
-## 2. Layout & Split Pane
+## S1: Cold Launch & Window
 
-| #   | Test                          | Steps                                               | Expected                                      |
-| --- | ----------------------------- | --------------------------------------------------- | --------------------------------------------- |
-| 2.1 | Default layout                | Launch app                                          | Split view: editor left, viewer right, ~50/50 |
-| 2.2 | Resize handle drag            | Drag the center divider left/right                  | Pane ratio changes, panes resize              |
-| 2.3 | Snap to viewer / editor       | Drag handle to far left (<5%) / far right (>95%)    | Switches to viewer-only / editor-only mode    |
-| 2.4 | Snap to center & double-click | Drag handle within 2.5% of 50% (or double-click it) | Snaps / resets to exactly 50% split           |
-| 2.5 | Handle visual feedback        | Hover/drag the handle                               | Handle turns accent color                     |
-| 2.6 | Context menu suppression      | Right-click anywhere in the app                     | No native context menu appears                |
+*No file needed — fresh start.*
 
----
-
-## 3. View Toggle
-
-| #   | Test                    | Steps                               | Expected                            |
-| --- | ----------------------- | ----------------------------------- | ----------------------------------- |
-| 3.1 | Editor / Split / Viewer | Click "Edit"/"Split"/"View" buttons | Only the selected pane(s) visible   |
-| 3.2 | Active state highlight  | Switch modes                        | Active button has accent background |
-| 3.3 | Persistence             | Set to "Editor", close, reopen      | Restores "Editor" mode              |
+| Step | Action | Expected |
+|------|--------|----------|
+| 1.1 | Start the app for the first time (or clear saved state). | Window opens at ~1200×800, title "Markdown Viewditor". |
+| 1.2 | Resize the window below 800×600. | Window clamps at 800×600. |
+| 1.3 | Move and resize the window, close the app, reopen. | Position and size are restored. |
+| 1.4 | Maximize the window, close, reopen. | Opens maximized. |
+| 1.5 | Right-click anywhere in the app. | No native context menu appears. |
+| 1.6 | Launch from the command line: `markdown-viewditor testing/Simple.md`. | `Simple.md` opens automatically. |
+| 1.7 | Open a file, close the app, reopen without arguments. | The same file opens on startup. |
 
 ---
 
-## 4. Editor
+## S2: Layout, Navigation & View Modes
 
-| #   | Test                          | Steps                                                 | Expected                                    |
-| --- | ----------------------------- | ----------------------------------------------------- | ------------------------------------------- |
-| 4.1 | Type text                     | Click in editor, type `Hello World`                   | Text appears, cursor moves                  |
-| 4.2 | Line numbers                  | Look at left gutter                                   | Line numbers displayed                      |
-| 4.3 | Syntax highlighting           | Type markdown (`# Heading`, `**bold**`, `` `code` ``) | Markdown syntax is color-highlighted        |
-| 4.4 | Cursor position in status bar | Click at different positions                          | Status bar shows correct `Line X, Col Y`    |
-| 4.5 | Word count                    | Type several words / clear all content                | Status bar word count updates; 0 when empty |
+*File: `Rendering-All.md`*
 
----
-
-## 5. Editor Toolbar — Formatting Buttons
-
-For each: select text, click the toolbar button, verify markdown output in the
-editor and rendered output in the viewer.
-
-| #    | Test                  | Button           | Verify                                                  |
-| ---- | --------------------- | ---------------- | ------------------------------------------------------- |
-| 5.1  | Bold                  | `B`              | Wraps in `**...**`, viewer shows **bold**               |
-| 5.2  | Italic                | `I`              | Wraps in `*...*`, viewer shows _italic_                 |
-| 5.3  | Strikethrough         | ~~S~~            | Wraps in `~~...~~`, viewer shows ~~strikethrough~~      |
-| 5.4  | Highlight             | <mark>M</mark>   | Wraps in `==...==`, viewer shows ==highlight==          |
-| 5.5  | Heading (cycles)      | **H**            | Adds `## `; cycles H2→H3→H4→H5→H6→plain                 |
-| 5.6  | Link                  | chain icon       | Inserts `[text](url)`                                   |
-| 5.7  | Image                 | picture icon     | Inserts `![alt](url)`                                   |
-| 5.8  | Code (toggle)         | `</>`            | Wraps in `` ` ` `` (inline); toggles to ` ``` ` (block) |
-| 5.9  | Bullet List           | bullet           | Adds `- ` prefix                                        |
-| 5.10 | Numbered List         | `1.`             | Adds `1. ` prefix                                       |
-| 5.11 | Task List             | checkbox         | Adds `- [ ] ` prefix                                    |
-| 5.12 | Blockquote            | quote            | Adds `> ` prefix                                        |
-| 5.13 | Horizontal Rule       | em-dash          | Inserts `\n---\n`                                       |
-| 5.14 | Editor focus retained | Click any button | Editor does not lose focus                              |
-
-### Bold/Italic Toggle Detail
-
-1. Select text, click Bold → `**text**`
-2. Click Italic → `***text***` (bold-italic)
-3. Click Italic again → `**text**` (back to bold only)
-4. Select plain text, click Italic → `*text*`; click again → plain text
-
-### Code Toggle Detail
-
-1. Select text, click `</>` → `` `text` `` (inline code)
-2. Click `</>` again → ` ```\ntext\n``` ` (code block, with newline before fences)
-3. Click `</>` again → `` `text` `` (back to inline code)
-4. With cursor mid-line, toggling to code block adds `\n` before ` ``` `
-5. With empty line before code block, toggling back preserves the empty line
+| Step | Action | Expected |
+|------|--------|----------|
+| 2.1 | Open `Rendering-All.md`. | A loading overlay with spinner appears briefly over the viewer, then content loads. |
+| 2.2 | Observe the layout. | Split view: editor left, viewer right, ~50/50. |
+| 2.3 | Drag the center divider left and right. | Pane ratio changes; panes resize smoothly. |
+| 2.4 | Drag the handle to the far left (<5%). | Switches to viewer-only mode. |
+| 2.5 | Drag the handle to the far right (>95%). | Switches to editor-only mode. |
+| 2.6 | Double-click the handle. | Snaps back to exactly 50% split. |
+| 2.7 | Hover the handle. | Handle turns accent color. |
+| 2.8 | Click "Edit", "Split", "View" buttons. | Only the selected pane(s) are visible; active button has accent background. |
+| 2.9 | In split view, scroll the viewer slowly. | Editor scrolls to the corresponding section (scroll sync). |
+| 2.10 | Scroll the editor slowly. | Viewer scrolls to the corresponding section. |
+| 2.11 | Scroll quickly in either pane. | No drift, oscillation, or lag. |
+| 2.12 | Switch to editor-only mode, scroll. | Only the editor scrolls; viewer is unaffected. |
+| 2.13 | Switch to viewer-only mode, scroll. | Only the viewer scrolls; editor is unaffected. |
+| 2.14 | Set the view to "Editor", close, reopen. | Restores "Editor" mode. |
 
 ---
 
-## 6. Keyboard Shortcuts
+## S3: Editor Basics & Search
 
-### 6.1 File & App Shortcuts
+*Open a new untitled file (Ctrl+N).*
 
-| #   | Test            | Shortcut       | Expected                                    |
-| --- | --------------- | -------------- | ------------------------------------------- |
-| 6.1 | New file        | `Ctrl+N`       | Creates new empty file (prompts if unsaved) |
-| 6.2 | Open file       | `Ctrl+O`       | Opens file dialog                           |
-| 6.3 | Save            | `Ctrl+S`       | Saves current file                          |
-| 6.4 | Save As         | `Ctrl+Shift+S` | Opens save-as dialog                        |
-| 6.5 | Reload          | `Ctrl+R`       | Reloads file from disk                      |
-| 6.6 | Quit            | `Ctrl+Q`       | Quits app (prompts if unsaved, saves state) |
-| 6.7 | Command palette | `Ctrl+Shift+P` | Opens command palette                       |
-| 6.8 | Print           | `Ctrl+P`       | Opens print dialog (see §13)                |
-| 6.9 | About           | `F1`           | Opens About dialog                          |
-
-### 6.2 Editor Formatting Shortcuts
-
-| #    | Test             | Shortcut       | Expected                                               |
-| ---- | ---------------- | -------------- | ------------------------------------------------------ |
-| 6.10 | Bold             | `Ctrl+B`       | Toggles `**bold**`                                     |
-| 6.11 | Italic           | `Ctrl+I`       | Toggles `*italic*`                                     |
-| 6.12 | Strikethrough    | `Ctrl+Shift+X` | Toggles `~~strikethrough~~`                            |
-| 6.13 | Highlight        | `Ctrl+Shift+M` | Toggles `==highlight==`                                |
-| 6.14 | Heading (cycles) | `Ctrl+Shift+H` | Adds `## `; cycles H2→H3→…→H6→plain                    |
-| 6.15 | Insert link      | `Ctrl+K`       | Inserts `[text](url)`                                  |
-| 6.16 | Insert image     | `Ctrl+Shift+I` | Inserts `![alt](url)`                                  |
-| 6.17 | Code (toggle)    | `Ctrl+E`       | Toggles `` `inline code` `` ↔ ` ```\ncode block\n``` ` |
-| 6.18 | Bullet list      | `Ctrl+Shift+8` | Adds `- ` prefix                                       |
-| 6.19 | Numbered list    | `Ctrl+Shift+7` | Adds `1. ` prefix                                      |
-
-### 6.3 View Shortcuts
-
-| #    | Test            | Shortcut       | Expected                                |
-| ---- | --------------- | -------------- | --------------------------------------- |
-| 6.21 | Cycle view mode | `Ctrl+Shift+V` | Cycles editor → split → viewer → editor |
+| Step | Action | Expected |
+|------|--------|----------|
+| 3.1 | Click in the editor, type `Hello World`. | Text appears, cursor moves. |
+| 3.2 | Look at the left gutter. | Line numbers are displayed. |
+| 3.3 | Type `# Heading`, `**bold**`, `` `code` ``. | Markdown syntax is color-highlighted. |
+| 3.4 | Click at different positions in the text. | Status bar shows correct `Line X, Col Y`. |
+| 3.5 | Type several words. | Status bar word count updates. |
+| 3.6 | Select all text (Ctrl+A), delete. | Word count shows 0. |
+| 3.7 | Type some text, press Ctrl+F. | Search bar opens. Type a word that exists — editor jumps to the match. |
+| 3.8 | Press Escape. | Search bar closes. |
+| 3.9 | Press Ctrl+H (Find and Replace). Type a search term and replacement, click "Replace All". | Text is replaced; word count updates. Press Escape to close. |
 
 ---
 
-## 7. File Operations
+## S4: Editor Toolbar & Formatting Shortcuts
 
-### Test Files
+*Open a new untitled file (Ctrl+N). Type a line of text, select it.*
 
-Use these files from `examples/`:
-
-| File                   | Purpose                                 |
-| ---------------------- | --------------------------------------- |
-| `Simple.md`            | Standard UTF-8, basic markdown features |
-| `Empty.md`             | Zero-content file                       |
-| `Large.md`             | ~5800 lines, performance testing        |
-| `BOM_Simple.md`        | UTF-8 with Byte Order Mark              |
-| `CRLF_Simple.md`       | Windows-style CRLF line endings         |
-| `ISO8859-1_Simple.md`  | ISO-8859-1 (Latin-1) encoding           |
-| `简单.md`              | Unicode (CJK) filename                  |
-| `Space Simple.md`      | Filename with spaces                    |
-| `Math-Example.md`      | Math formulas (KaTeX), fence attributes, HTML comment directives |
-| `Chemistry-Example.md` | Chemistry formulas (mhchem)             |
-
-### Test Steps
-
-| #    | Test                           | Steps                                                                                           | Expected                                                                                                                                                                          |
-| ---- | ------------------------------ | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7.1  | Open file                      | Click Open, select `examples/Simple.md`                                                         | Content loads into editor, viewer renders it; filename shown in toolbar                                                                                                           |
-| 7.2  | Open dialog filters            | Open dialog                                                                                     | Shows "Markdown" and "All Files" filters                                                                                                                                          |
-| 7.3  | Cancel open / save-as dialog   | Open any dialog, click Cancel                                                                   | No change to current content                                                                                                                                                      |
-| 7.4  | Save new (untitled) file       | With "Untitled" file, click Save                                                                | Save-as dialog appears                                                                                                                                                            |
-| 7.5  | Save existing file             | Open `examples/Simple.md`, edit content, click Save                                             | File saved, `*` indicator disappears, `.bak` backup created in same directory                                                                                                     |
-| 7.6  | Save As same path              | Save As to the current file's path                                                              | If externally modified, overwrite prompt: "This file has been modified by another application since it was last saved. Overwrite the external changes?"; otherwise saves directly |
-| 7.7  | Save As different path         | Save As to a new location (e.g. `/tmp/test-save.md`)                                            | New file created, app tracks new path                                                                                                                                             |
-| 7.8  | Save As to existing file       | Save As to a file that already exists (e.g. `examples/Empty.md`)                                | OS native overwrite confirmation appears; on confirm, file is replaced (no second app dialog)                                                                                     |
-| 7.9  | Save As to read-only file      | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it                           | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
-| 7.10 | Unsaved-change dialog — New    | Edit content, click New (toolbar or `Ctrl+N`)                                                   | Dialog: `"You have unsaved changes. Create a new file?"` with Cancel / Yes, And Discard My Changes / Save First                                                                   |
-| 7.11 | Unsaved-change dialog — Open   | Edit content, click Open (`Ctrl+O`)                                                             | Dialog: `"You have unsaved changes. Open a different file?"` with same three buttons                                                                                              |
-| 7.12 | Unsaved-change dialog — Reload | Edit content, click Reload (`Ctrl+R`)                                                           | Dialog: `"You have unsaved changes. Reload from disk and discard your changes?"` with Cancel / Yes, Discard My Changes                                                            |
-| 7.13 | Dialog — Save First (untitled) | In 3-button dialog, click Save First                                                            | Save-as dialog appears; on save editor clears to "Untitled"                                                                                                                       |
-| 7.14 | Dialog — Save First (named)    | Open `examples/Simple.md`, edit, trigger dialog, click Save First                               | File saved (no clear), action proceeds                                                                                                                                            |
-| 7.15 | Dialog — Discard               | In 3-button dialog, click Yes, And Discard My Changes                                           | Editor clears (only for New), action proceeds, changes lost                                                                                                                       |
-| 7.16 | Dialog — Cancel                | In 3-button dialog, click Cancel                                                                | No change to editor content or current file                                                                                                                                       |
-| 7.17 | Reload from disk               | Open `examples/Simple.md`, edit externally, click Reload with no local edits                    | Content updates from disk                                                                                                                                                         |
-| 7.18 | Reload always reloads          | Open `examples/Example.md`, note the external image (`https://picsum.photos/128`), click Reload | Viewer re-renders; external image shows a new random photo (reload is never skipped)                                                                                              |
-| 7.19 | Reload deleted file            | Open a temp file, delete it externally, click Reload                                            | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                               |
-| 7.20 | File name display              | Open `examples/Simple.md`                                                                       | "Simple.md" shown in toolbar                                                                                                                                                      |
-| 7.21 | Modified indicator             | Edit content                                                                                    | `*` appears after filename in toolbar; dot appears on Save button                                                                                                                 |
-| 7.22 | Read-only indicator            | Open a read-only file (`chmod 444`)                                                             | 🔒 icon appears next to filename in toolbar with tooltip "Read-only"                                                                                                              |
-| 7.23 | Save read-only file            | Open a read-only file, edit, click Save                                                         | Toast error: `"This file is read-only. Use Save As to save your work to a different location."`                                                                                   |
-| 7.24 | .bak backup created            | Open `examples/Simple.md`, edit, save, check directory                                          | `Simple.md.bak` contains the previous content                                                                                                                                     |
-| 7.25 | Encoding — UTF-8 BOM           | Open `examples/BOM_Simple.md`                                                                   | Content reads correctly, no BOM artifact in editor, no garbled characters                                                                                                         |
-| 7.26 | Encoding — CRLF                | Open `examples/CRLF_Simple.md`                                                                  | Content reads correctly, no `^M` artifacts, renders normally                                                                                                                      |
-| 7.27 | Encoding — Latin-1             | Open `examples/ISO8859-1_Simple.md`                                                             | Decoded losslessly (Æ Ø Å visible), no crash or garbled text                                                                                                                      |
-| 7.28 | Encoding — Unicode filename    | Open `examples/简单.md`                                                                         | Opens correctly, filename displays in toolbar                                                                                                                                     |
-| 7.29 | Filename with spaces           | Open `examples/Space Simple.md`                                                                 | Opens correctly, saves correctly                                                                                                                                                  |
-| 7.30 | Empty file                     | Open `examples/Empty.md`                                                                        | Viewer empty, word count 0, no crash                                                                                                                                              |
-| 7.31 | Toast on save failure          | Save to a path that fails (e.g. read-only directory)                                            | Toast error: `"Failed to save the file."` with detail message                                                                                                                     |
-| 7.32 | Toast on open failure          | Open a file that fails (e.g. permission denied)                                                 | Toast error: `"Failed to open the file."` with detail message                                                                                                                     |
-| 7.33 | Externally modified indicator  | Open file, edit in another editor, focus app but decline reload                                 | ⚠ icon appears next to filename in toolbar with tooltip "Externally modified"                                                                                                     |
+| Step | Action | Expected |
+|------|--------|----------|
+| 4.1 | Click the **Bold** toolbar button. | Wraps in `**...**`; viewer shows **bold**. |
+| 4.2 | Click **Italic**. | Becomes `***...***` (bold-italic). |
+| 4.3 | Click **Italic** again. | Back to `**...**` (bold only). |
+| 4.4 | Select plain text, click **Italic**. | Wraps in `*...*`. Click again → plain text. |
+| 4.5 | Click **Strikethrough**. | Wraps in `~~...~~`; viewer shows ~~strikethrough~~. |
+| 4.6 | Click **Highlight**. | Wraps in `==...==`; viewer shows ==highlight==. |
+| 4.7 | Click **Heading**. | Adds `## `. Click again: cycles H3→H4→H5→H6→plain. |
+| 4.8 | Click **Link**. | Inserts `[text](url)`. |
+| 4.9 | Click **Image**. | Inserts `![alt](url)`. |
+| 4.10 | Select text, click **Code**. | Wraps in `` ` ` `` (inline code). |
+| 4.11 | Click **Code** again. | Toggles to ` ``` ` code block. |
+| 4.12 | Click **Code** again. | Back to inline code. |
+| 4.13 | Click **Bullet List**. | Adds `- ` prefix. |
+| 4.14 | Click **Numbered List**. | Adds `1. ` prefix. |
+| 4.15 | Click **Task List**. | Adds `- [ ] ` prefix. |
+| 4.16 | Click **Blockquote**. | Adds `> ` prefix. |
+| 4.17 | Click **Horizontal Rule**. | Inserts `\n---\n`. |
+| 4.18 | Click any toolbar button. | Editor does not lose focus. |
+| 4.19 | Select text, press `Ctrl+B`. | Toggles `**bold**` (same as button). |
+| 4.20 | Press `Ctrl+I`. | Toggles `*italic*`. |
+| 4.21 | Press `Ctrl+Shift+X`. | Toggles `~~strikethrough~~`. |
+| 4.22 | Press `Ctrl+Shift+M`. | Toggles `==highlight==`. |
+| 4.23 | Press `Ctrl+Shift+H`. | Cycles heading levels. |
+| 4.24 | Press `Ctrl+K`. | Inserts link. |
+| 4.25 | Press `Ctrl+Shift+I`. | Inserts image. |
+| 4.26 | Press `Ctrl+E`. | Toggles code. |
+| 4.27 | Press `Ctrl+Shift+8`. | Adds bullet list prefix. |
+| 4.28 | Press `Ctrl+Shift+7`. | Adds numbered list prefix. |
+| 4.29 | Press `Ctrl+Shift+V`. | Cycles editor → split → viewer → editor. |
+| 4.30 | Type a paragraph with several lines, select it, press `Shift+Alt+F`. | Lines re-wrap to fit the editor width. |
+| 4.31 | Select a blockquote paragraph, press `Shift+Alt+F`. | Lines re-wrap; `> ` prefixes are preserved. |
 
 ---
 
-## 8. External Modification Detection
+## S5: Viewer — Full Rendering
 
-### Test Files
+*File: `Rendering-All.md` — open in split view.*
 
-Create a temporary file for these tests (e.g. `/tmp/ext-test.md`) with some
-markdown content. Use a second editor (e.g. `nano`, `vim`, or another instance
-of the app) to modify the file externally.
-
-### Test Steps
-
-| #    | Test                              | Steps                                                                                  | Expected                                                                                                                                                                      |
-| ---- | --------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8.1  | Modified externally (clean)       | Open `/tmp/ext-test.md`, edit in another editor, focus app                             | Dialog: `"This file has been modified by another application. Do you want to reload it?"` with Cancel / Reload buttons                                                        |
-| 8.2  | Modified externally (dirty)       | Open `/tmp/ext-test.md`, edit in app, edit externally, focus app                       | Dialog: `"This file has been modified by another application. You also have unsaved changes. Reload and discard your changes?"` with Cancel / Yes, Discard My Changes buttons |
-| 8.3  | Decline reload aftermath          | Decline reload prompt (click Cancel)                                                   | ⚠ icon appears on filename in toolbar (tooltip "Externally modified"); no re-prompt on later focuses until file changes again                                                 |
-| 8.4  | Decline reload — Save still warns | Decline reload, then `Ctrl+S`                                                          | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
-| 8.5  | Accept reload (clean)             | With no local edits, accept reload prompt (click Reload)                               | Content updates from disk, ⚠ clears, baseline reset                                                                                                                           |
-| 8.6  | Accept reload (dirty)             | With local edits, accept reload prompt (click Yes, Discard My Changes)                 | Content updates from disk, ⚠ clears, local edits lost, baseline reset                                                                                                         |
-| 8.7  | File deleted externally           | Open `/tmp/ext-test.md`, delete it externally (`rm /tmp/ext-test.md`), focus app       | Dialog: `"This file no longer exists on disk (it may have been deleted or moved). Use Save As to save your work to a new location."` with OK button                           |
-| 8.8  | Save after external deletion      | After deletion warning, press `Ctrl+S`                                                 | Save As dialog appears (does not recreate at old path)                                                                                                                        |
-| 8.9  | Save over external modification   | Open file, modify externally, press `Ctrl+S`                                           | Dialog: `"This file has been modified by another application since it was last saved. Overwrite the external changes?"` with Cancel / Overwrite External Changes buttons      |
-| 8.10 | Reload with external modification | Modify externally, press `Ctrl+R`                                                      | If dirty: dialog `"You have unsaved changes. Reload from disk and discard your changes?"`; else reloads content silently                                                      |
-| 8.11 | Size-only change detected         | Edit file externally without changing mtime (e.g. `echo x >> file; touch -r ref file`) | ⚠ appears on next focus (mtime OR size comparison)                                                                                                                            |
-| 8.12 | Reload always re-renders          | Open file, no external changes, press `Ctrl+R`                                         | Content reloads from disk; viewer re-renders (no toast)                                                                                                                       |
-
----
-
-## 9. Viewer — Markdown Rendering
-
-Create a test file with all supported features and verify each renders
-correctly:
-
-| #    | Feature                     | Syntax                                             | Verify                                   |
-| ---- | --------------------------- | -------------------------------------------------- | ---------------------------------------- |
-| 9.1  | H1–H6                       | `# ` through `###### `                             | Styled headings of decreasing size       |
-| 9.2  | Paragraphs                  | Text with blank lines                              | Separate paragraphs                      |
-| 9.3  | Inline emphasis             | `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` | Bold, italic, strikethrough, inline code |
-| 9.4  | Fenced code blocks          | ` ```js ... ``` `                                  | Syntax-highlighted code block            |
-| 9.5  | Blockquotes                 | `> text`                                           | Indented quote block                     |
-| 9.6  | Lists                       | `- item` / `1. item` / `- [ ] task` / `- [x] done` | Bullets, numbers, checkboxes             |
-| 9.7  | Tables                      | GFM pipe tables                                    | Rendered table with borders              |
-| 9.8  | Links / Autolinks           | `[text](url)` / `https://example.com`              | Clickable links                          |
-| 9.9  | Images                      | `![alt](src)`                                      | Image displayed                          |
-| 9.10 | Horizontal rules            | `---`                                              | Horizontal line                          |
-| 9.11 | Footnotes                   | `[^1]` and `[^1]: def`                             | Footnote links and definitions           |
-| 9.12 | Raw HTML                    | `<details>`, `<kbd>`, `<mark>`, `<sub>`, `<sup>`   | HTML rendered correctly                  |
-| 9.13 | YAML frontmatter (standard) | `---\nkey: value\n---`                             | "Frontmatter" card with key-value grid   |
-| 9.14 | YAML frontmatter (skill)    | `---\nname: ...\ndescription: ...\n---`            | "Skill" card with badge and metadata     |
+| Step | Action | Expected |
+|------|--------|----------|
+| 5.1 | Look at the "Headings" section. | H1 is the page title; H3–H6 render at decreasing sizes. |
+| 5.2 | Look at "Custom Heading ID". | The heading is rendered. An anchor link to `#custom-test-id` (in the Links section) scrolls here. |
+| 5.3 | Look at "Text Formatting". | Bold, italic, bold-italic, strikethrough, inline code, and ==highlighted== text all render. Combinations like bold-italic-strikethrough work. |
+| 5.4 | Look at the footnote references. | Superscript links [1] and [2] appear inline. Footnote definitions appear at the bottom of the document. |
+| 5.5 | Look at "Lists". | Unordered (bullets), ordered (numbers), task (checkboxes) render correctly. |
+| 5.6 | Look at "Deeply Nested List". | Six indentation levels render correctly with mixed bullets, numbers, and checkboxes. |
+| 5.7 | Look at "Blockquotes". | Nested blockquotes indent correctly. A blockquote containing a nested list renders both. |
+| 5.8 | Look at "Tables". | Both tables render with borders. The aligned-columns table has left, center, and right alignment. |
+| 5.9 | Look at "Code Blocks". | All 7 language blocks (JS, Python, CSS, HTML, JSON, Bash, SQL) have syntax highlighting — keywords, strings, comments are colored. |
+| 5.10 | Look at the "Very Long Code Block". | It renders without breaking layout and scrolls inside its block. |
+| 5.11 | Look at "Horizontal Rule". | A horizontal line separates sections. |
+| 5.12 | Look at "Raw HTML Elements". | `<details>`/`<summary>` collapses/expands. `<kbd>` shows keyboard style. `<sub>`, `<sup>` render correctly. `<mark>` highlights. `<ins>`/`<del>` render. Colored `<span>` text appears in red and green. Special characters Æ Ø Å – — ♪ ♫ → ½ render correctly. |
+| 5.13 | Look at "YAML Frontmatter". | A "Frontmatter" card shows `title`, `author`, `tags` as a key-value grid. |
+| 5.14 | Open `SKILL.md` in the viewer. | A "Skill" card shows a badge, name, description, and license. |
+| 5.15 | In `Rendering-All.md`, click the anchor link to `#custom-test-id`. | Viewer scrolls to the "Custom Heading ID" heading. |
+| 5.16 | Click the anchor link to `#tables`. | Viewer scrolls to the Tables section. Special characters in anchors work (CSS.escape). |
+| 5.17 | Click the external link (`https://example.com`). | Opens in external browser. |
+| 5.18 | Click the local file link (`README.md`). | Opens with OS default handler. |
+| 5.19 | Hover over a link in the viewer. | A tooltip appears showing the link's destination URL. |
+| 5.20 | Look at "Images". | Local relative path, HTML `<img>`, filenames with spaces (quoted and percent-encoded), unicode filename in subdirectory all render. |
+| 5.21 | Look at the remote image. | Loads from the internet (random photo from picsum.photos). |
+| 5.22 | Look at the data URI image. | A small colored square renders inline. |
+| 5.23 | Look at the missing image. | Shows a broken-image placeholder; no crash. |
+| 5.24 | Look at the SVG images. | The SVG from file and the inline SVG both render. |
+| 5.25 | Hover over an image in the viewer. | A tooltip shows the alt text or image source path. |
+| 5.26 | Tab to a link, press Enter. | Same behavior as clicking (opens in browser/handler). |
 
 ---
 
-## 9b. Math Attributes (Directives & Fence Attributes)
+## S6: Math, Chemistry & Mermaid
 
-Use `testing/Math-Example.md` which contains all the test cases below.
+*File: `MathChemMermaid-All.md` — open in split view.*
 
-### 9b.1 Fence Attributes
+### 6a. Math — Delimiter Styles
 
-| #     | Test                           | Syntax                                          | Expected                                                            |
-| ----- | ------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------- |
-| 9b.1  | `fontsize` scaling             | ` ```math {fontsize=2.0}\nx^2\n``` `            | Formula renders at 2× base size                                     |
-| 9b.2  | `fontsize` default (no attr)   | ` ```math\nx^2\n``` `                           | Formula renders at normal size (same as without attrs)              |
-| 9b.3  | `leqno` left equation numbers  | ` ```math {leqno}\nE=mc^2 \\tag{1}\n``` `       | Equation number appears on the left                                 |
-| 9b.4  | `fleqn` flush-left             | ` ```math {fleqn}\n\int_0^1 f(x) dx\n``` `      | Math block is left-aligned instead of centered                      |
-| 9b.5  | Multiple attributes            | ` ```math {leqno fontsize=1.5}\na^2 \\tag{2}\n``` ` | Left equation number AND 1.5× size                              |
-| 9b.6  | Attributes with bracket block  | `\[...\]` with no attrs                         | Renders normally (attrs only apply to fenced blocks)                |
-| 9b.7  | Attributes with dollar block   | `$$...$$` with no attrs                         | Renders normally (attrs only apply to fenced blocks)                |
+| Step | Action | Expected |
+|------|--------|----------|
+| 6.1 | Look at "Inline Dollar". | Pythagorean theorem renders with superscripts. The price sentence ("$5 and $10") is plain text. |
+| 6.2 | Look at "Block Dollar". | Quadratic formula renders as a centered fraction with ± and √. |
+| 6.3 | Look at "Matrices". | Two matrices multiplied, with parentheses and aligned elements. |
+| 6.4 | Look at "Cases". | Piecewise function with a brace and two branches. |
+| 6.5 | Look at "Inline Bracket". | Euler's identity renders inline. |
+| 6.6 | Look at "Block Bracket". | Gaussian integral renders centered with ∫ and √π. |
+| 6.7 | Look at "Bare `\begin{...}` Blocks". | Maxwell equations render aligned at `=` signs. |
+| 6.8 | Look at "Fenced ` ```math ` Blocks". | Basel problem sum renders as math. The anonymous ` ``` ` block below it renders as plain code. |
+| 6.9 | Look at "Very Wide Block". | Renders without breaking layout; horizontal scrollbar appears if needed. |
+| 6.10 | Look at "Invalid LaTeX". | A compact error message appears inline; no crash. |
 
-### 9b.2 HTML Comment Directives
+### 6b. Math — Fence Attributes
 
-| #     | Test                             | Syntax                                              | Expected                                                            |
-| ----- | -------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
-| 9b.8  | `fontsize` directive             | `<!-- math: fontsize=1.3 -->` then `$x^2$`          | Inline math renders at 1.3× size                                    |
-| 9b.9  | `fontsize` on block math         | `<!-- math: fontsize=1.3 -->` then `$$x^2$$`        | Block math renders at 1.3× size                                     |
-| 9b.10 | `leqno` directive                | `<!-- math: leqno -->` then `$$E=mc^2 \tag{1}$$`   | Equation number on the left                                         |
-| 9b.11 | Directive persists               | `<!-- math: leqno -->` then two `$$...$$` blocks    | Both blocks get leqno                                               |
-| 9b.12 | Directive change mid-document    | `<!-- math: fontsize=2.0 -->` ... `<!-- math: !fontsize -->` | First math scaled, second at default                        |
-| 9b.13 | Reset boolean with `!key`        | `<!-- math: leqno -->` ... `<!-- math: !leqno -->`  | First block has leqno, second does not                              |
-| 9b.14 | Reset non-boolean with `!key`    | `<!-- math: fontsize=2.0 -->` ... `<!-- math: !fontsize -->` | First scaled, second at default                              |
-| 9b.15 | Directive on bracket math        | `<!-- math: fontsize=1.5 -->` then `\(x^2\)`       | Inline bracket math scaled                                          |
-| 9b.16 | Directive on bracket block       | `<!-- math: leqno -->` then `\[...\]`              | Bracket block gets leqno                                            |
-| 9b.17 | Multiple directives one line     | `<!-- math: leqno fontsize=2.0 -->`                | Both attributes applied                                             |
-| 9b.18 | Directive comment not rendered   | `<!-- math: leqno -->`                              | Comment does not appear in viewer output                            |
-| 9b.19 | Unknown namespace ignored        | `<!-- unknown: foo=bar -->`                         | No effect on math rendering                                         |
+| Step | Action | Expected |
+|------|--------|----------|
+| 6.11 | Look at "Fontsize Scaling (2×)". | The fraction `x²/y²` renders at 2× base size. |
+| 6.12 | Look at "Left-side Equation Numbers (leqno)". | Equation number (1) appears on the left. |
+| 6.13 | Look at "Flush-left Alignment (fleqn)". | The integral is left-aligned, not centered. |
+| 6.14 | Look at "Combined Attributes". | Equation number (2) on the left AND 1.5× size. |
 
-### 9b.3 Scoping (Fence Overrides Directive)
+### 6c. Math — HTML Comment Directives
 
-| #     | Test                              | Syntax                                              | Expected                                                           |
-| ----- | --------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
-| 9b.20 | Fence overrides directive         | `<!-- math: fontsize=1.5 -->` then ` ```math {fontsize=2.0} ``` ` | Fence block at 2×, not 1.5×                              |
-| 9b.21 | Directive resumes after fence     | `<!-- math: leqno -->` then fence block, then `$$`  | Both get leqno (fence doesn't break directive state)               |
-| 9b.22 | Fence attr scoped to block        | ` ```math {fontsize=2.0} ``` ` then ` $$ $$ `       | Fence block scaled, following block at directive/default size      |
+| Step | Action | Expected |
+|------|--------|----------|
+| 6.15 | Look at "Fontsize Directive". | The `<!-- math: fontsize=1.3 -->` comment is not visible. The inline `$…$` and block `$$…$$` math below it render at 1.3× size. |
+| 6.16 | Look at "Reset Fontsize". | After `<!-- math: !fontsize -->`, the inline math is at default size. |
+| 6.17 | Look at "Leqno Directive". | Two blocks below `<!-- math: leqno -->` both have left equation numbers (3) and (4). |
+| 6.18 | Look at "Reset Leqno". | After `<!-- math: !leqno -->`, equation (Right 5) has a right-side number. |
+| 6.19 | Look at "Directive on Bracket Math". | Bracket inline `\(x^2\)` and bracket block `\[∫\]` are both scaled. |
+| 6.20 | Look at "Multiple Directives on One Line". | Both leqno and fontsize=2.0 apply to equation (6). |
+| 6.21 | Look at "Scoping — Fence Overrides Directive". | The ` ```math {fontsize=2.0} ``` ` block is at 2×, not 1.5×. The `$$…$$` block after it resumes at 1.5× (directive still active). |
+| 6.22 | Look at "Directive Comment Not Rendered". | The `<!-- math: leqno -->` comment is not visible in the viewer. |
+| 6.23 | Look at "Unknown Namespace Ignored". | The `<!-- unknown: foo=bar -->` comment has no effect. |
 
-### 9b.4 Exports
+### 6d. Chemistry
 
-| #     | Test                              | Steps                                               | Expected                                                           |
-| ----- | --------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
-| 9b.23 | HTML export with directives       | Export `Math-Example.md` as HTML                    | Directives and fence attrs applied in exported HTML                |
-| 9b.24 | ODT export with directives        | Export `Math-Example.md` as ODT (MathML mode)       | Math renders (directives flow through export pipeline)             |
-| 9b.25 | PDF export with directives        | Export `Math-Example.md` as PDF                     | Math renders correctly in PDF                                      |
+| Step | Action | Expected |
+|------|--------|----------|
+| 6.24 | Look at "Chemistry — Formulas". | H₂O, H₂SO₄, C₆H₁₂O₆ render with subscripts. |
+| 6.25 | Look at "Charges". | H⁺, CrO₄²⁻, [AgCl₂]⁻ render with superscripts. |
+| 6.26 | Look at "Stoichiometric Numbers". | 2H₂ + O₂ → 2H₂O renders with coefficients. |
+| 6.27 | Look at "Reaction Arrows". | Arrow table renders. Annotated arrow shows "heat" above and "catalyst" below. |
+| 6.28 | Look at "Isotopes and Bonds". | Thorium isotope with superscript/subscript. Single, double, triple bonds render. |
+| 6.29 | Look at "States of Aggregation". | (aq), precipitate ↓, gas ↑ render. |
+| 6.30 | Look at "Physical Units". | 123 kJ/mol and 3×10⁸ m·s⁻¹ render correctly. |
+| 6.31 | Look at "Inline in Sentences". | Chemistry inline in prose with physical units. |
+| 6.32 | Look at "Block Equations". | Zinc equilibrium renders as a multi-step reaction. |
+| 6.33 | Look at "Equilibrium with Math". | K expression with `\frac` and `\ce` mixed. |
+| 6.34 | Look at "Bracket Delimiters". | Inline and bracket-block chemistry render. |
+| 6.35 | Look at "Fenced Blocks". | Chemistry in a ` ```math ` fence renders. |
 
----
+### 6e. Mermaid
 
-## 10. Viewer — Code Syntax Highlighting
-
-Add fenced code blocks for each language and verify highlighting in the viewer.
-
-| #    | Test       | Languages                                          |
-| ---- | ---------- | -------------------------------------------------- |
-| 10.1 | Multi-lang | JavaScript, Python, HTML/XML, CSS, SQL, JSON, Bash |
-
-For each: keywords, strings, comments / tags / properties / values are
-highlighted with the active theme's colors.
-
----
-
-## 11. Viewer — Link Navigation
-
-| #    | Test                      | Steps                            | Expected                           |
-| ---- | ------------------------- | -------------------------------- | ---------------------------------- |
-| 11.1 | External URL link         | Click `https://example.com` link | Opens in external browser          |
-| 11.2 | Anchor link               | Click `#section` link            | Viewer scrolls to matching heading |
-| 11.3 | Anchor with special chars | Use anchor with spaces/symbols   | Scrolls correctly (CSS.escape)     |
-| 11.4 | Local file path link      | Click link to local file         | Opens with OS default handler      |
-| 11.5 | Keyboard link activation  | Tab to a link, press Enter       | Same behavior as click             |
+| Step | Action | Expected |
+|------|--------|----------|
+| 6.36 | Look at "Mermaid — Basic Flowchart". | A flowchart renders as inline SVG: Start → Decision → Action 1/2 → End. |
+| 6.37 | Look at "Mermaid — Sequence Diagram". | A sequence diagram with Alice and Bob exchanging messages. |
+| 6.38 | Look at "Mermaid — Error Case". | A styled error block shows the source code with a "Mermaid rendering failed" message; no crash. |
+| 6.39 | Look at "Mermaid — Fence Attributes: Align Left, Max Width 400". | The diagram is left-aligned and constrained to 400px width. |
+| 6.40 | Look at "Mermaid — Fence Attributes: Fit to Width Disabled". | The diagram renders at natural size with a horizontal scrollbar; no vertical scrollbar. |
+| 6.41 | Look at "Mermaid — HTML Comment Directives". | The diagram below the `<!-- mermaid: align=center maxWidth=600 -->` directive is centered at 600px. After the reset directive, the next diagram uses defaults. |
+| 6.42 | Look at "Mermaid — Theme Override via YAML". | The diagram uses the "forest" theme (different from the app's dark/light theme). |
+| 6.43 | Switch the app theme between dark and light. | Mermaid diagrams re-render with the matching Mermaid theme (dark → "dark", light → "default"). |
 
 ---
 
-## 12. Viewer — Local Images
+## S7: Compatibility Levels
 
-| #    | Test              | Steps                                       | Expected                             |
-| ---- | ----------------- | ------------------------------------------- | ------------------------------------ |
-| 12.1 | Relative paths    | `![](./image.png)` etc.                     | Image renders (incl. subdirs)        |
-| 12.2 | Path edge cases   | Paths with spaces / unicode / `./图片.png`  | Image renders correctly              |
-| 12.3 | HTML img tag      | `<img src="./local.png">`                   | Image renders                        |
-| 12.4 | Remote / data URI | `https://...` / `data:image/png;base64,...` | Loads from internet / renders inline |
-| 12.5 | Missing image     | `![](./nonexistent.png)`                    | Broken image, no crash               |
+*Files: `Rendering-All.md`, `MathChemMermaid-All.md`*
 
----
-
-## 13. Export & Print
-
-The viewer toolbar exposes:
-
-- an **Export as…** dropdown (with HTML, HTML Bundle, PDF, and ODT exporters),
-- a **Print / PDF** button (Linux & Windows only — macOS routes PDF through
-  the dropdown as "Export as PDF").
-
-> There is an "Export / Print" confirmation dialog (governed by the
-> "Show export confirmation" checkbox inside the dropdown footer). With it
-> enabled each export/print first shows the dialog; with "Do not show this
-> message again" ticked it is skipped thereafter.
-
-### Test Files
-
-| File                            | Purpose                                       |
-| ------------------------------- | --------------------------------------------- |
-| `examples/Simple.md`            | Basic markdown, YAML frontmatter              |
-| `examples/Example.md`           | Comprehensive: images, SVG, all HTML elements |
-| `examples/Math-Example.md`      | KaTeX math formulas                           |
-| `examples/Chemistry-Example.md` | mhchem chemistry formulas                     |
-| `examples/weird.svg`            | SVG file for ODT rasterization tests          |
-
-### 13.1 Export Confirm Dialog
-
-Reset by un-checking "Show export confirmation" / "Do not show again"
-before each row.
-
-| #    | Test                              | Steps                                                      | Expected                                                                                                                                                                                                                                |
-| ---- | --------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 13.1 | Dialog appearance (viewer theme)  | With confirmation ON, click HTML/HTML Bundle/PDF export    | Title: "Export HTML" / "Export HTML Bundle" / "Export / Print"; message: "Exports use the current viewer theme." / "Exports and prints use the current viewer theme."; shows "Current theme: {name}"; hint about Printer Friendly theme |
-| 13.2 | Dialog appearance (neutral / ODT) | With confirmation ON, click "Export as ODT"                | Title: "Export" / "Export / Print"; message: "This export always uses a neutral, printer-friendly style."; no theme line; shows ODT options (math rasterize, SVG rasterize, resolution)                                                 |
-| 13.3 | Cancel via Cancel button          | Click Cancel                                               | No export runs, dialog closes                                                                                                                                                                                                           |
-| 13.4 | Cancel via Escape / backdrop      | Press Escape / click backdrop                              | No export runs, dialog closes                                                                                                                                                                                                           |
-| 13.5 | Confirm via Enter                 | Press Enter                                                | Export runs                                                                                                                                                                                                                             |
-| 13.6 | Don't show again                  | Tick "Do not show this message again", confirm             | Next export runs without the dialog                                                                                                                                                                                                     |
-| 13.7 | Re-enable confirmation            | Untick "Show export confirmation" in dropdown footer       | Dialog reappears next export                                                                                                                                                                                                            |
-| 13.8 | Options persisted (ODT)           | ODT: change rasterize/resolution, confirm, re-export later | Last-used options are pre-selected                                                                                                                                                                                                      |
-
-### 13.2 Export as HTML
-
-| #     | Test                     | Steps                                            | Expected                                              |
-| ----- | ------------------------ | ------------------------------------------------ | ----------------------------------------------------- |
-| 13.9  | Save dialog defaults     | Open `examples/Simple.md`, choose Export as HTML | Save dialog opens with `Simple.html`, HTML filter     |
-| 13.10 | Standalone HTML produced | Save and open the file in a browser              | Self-contained page renders identically to the viewer |
-| 13.11 | Theme applied            | Repeat with a dark theme active                  | Output uses the same theme                            |
-| 13.12 | Local images inlined     | Export `examples/Example.md`                     | Relative/local images embedded as data URIs           |
-| 13.13 | Cancel save              | Cancel the save dialog                           | No file written, no toast                             |
-| 13.14 | Math rendered            | Export `examples/Math-Example.md`                | KaTeX formulas render from the inlined CSS            |
-| 13.15 | Warnings surface         | Export a file referencing a missing local image  | "Export Warnings" dialog lists the failed image       |
-| 13.16 | Success toast            | Export successfully                              | Toast: "Exported" with the saved file path            |
-| 13.17 | Error toast              | Trigger an export failure                        | Toast: "Export failed" with detail message            |
-
-### 13.3 Export as HTML Bundle
-
-The HTML Bundle exporter produces a `.zip` containing `index.html` with
-images stored in an `images/` folder and fonts in a `fonts/` folder,
-referenced via relative paths. The result can be unpacked and served from
-any static host.
-
-| #     | Test                      | Steps                                                   | Expected                                                                 |
-| ----- | ------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| 13.18 | Save dialog defaults      | Open `examples/Simple.md`, choose Export as HTML Bundle | Save dialog opens with `Simple.zip`, ZIP filter                          |
-| 13.19 | Zip structure             | Save and extract the zip                                | Contains `index.html`, `images/` folder, `fonts/` folder                 |
-| 13.20 | HTML uses relative paths  | Open `index.html` in a browser                          | Page renders identically to the viewer; image srcs point to `images/...` |
-| 13.21 | Fonts extracted           | Check `fonts/` folder in the zip                        | Contains KaTeX `.woff2` font files                                       |
-| 13.22 | Theme applied             | Repeat with a dark theme active                         | Output uses the same theme                                               |
-| 13.23 | Local images extracted    | Export `examples/Example.md`                            | `images/` folder contains the local image files                          |
-| 13.24 | Image filename collisions | Export a file with two images sharing a basename        | Both present: `logo.png` and `logo-1.png`                                |
-| 13.25 | Cancel save               | Cancel the save dialog                                  | No file written, no toast                                                |
-| 13.26 | Math rendered             | Export `examples/Math-Example.md`                       | KaTeX formulas render from the extracted fonts in `fonts/`               |
-| 13.27 | Warnings surface          | Export a file referencing a missing local image         | "Export Warnings" dialog lists the failed image                          |
-| 13.28 | Success toast             | Export successfully                                     | Toast: "Exported" with the saved file path                               |
-| 13.29 | Error toast               | Trigger an export failure                               | Toast: "Export failed" with detail message                               |
-
-### 13.4 Export as PDF / Print
-
-The PDF exporter shares the in-app print path. The mechanism is
-platform-specific — split tests below.
-
-#### Common (Print container & fidelity)
-
-> **Note (Linux & Windows):** The export overlay ("Exporting…") is shown
-> during the build phase (font loading, layout settling) but is hidden by
-> CSS (`body.exporting .backdrop { display: none }`) right before
-> `window.print()` opens the native print dialog. On Linux/Windows this
-> transition is nearly instantaneous — the overlay may flash and disappear
-> too fast to notice. This is expected; the overlay is only clearly visible
-> on macOS where the save dialog + async WKWebView capture takes longer.
-
-| #     | Test                        | Steps                                                      | Expected                                                                                  |
-| ----- | --------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 13.30 | Export overlay (macOS)      | On macOS, trigger PDF export                               | Modal overlay with "Exporting…" spinner visible during build phase                        |
-| 13.31 | Export overlay (Linux/Win)  | On Linux/Windows, trigger PDF export                       | Overlay may flash too fast to see; the print dialog appearing confirms the export started |
-| 13.32 | Overlay postrun             | Wait for export to finish                                  | Overlay disappears (if visible), original viewer visible                                  |
-| 13.33 | Line wrap matches viewer    | Compare a long-paragraph file in the export vs viewer      | Wrapping is identical word-for-word                                                       |
-| 13.34 | Math prints                 | Export `examples/Math-Example.md` / `Chemistry-Example.md` | Formulas render correctly in the output                                                   |
-| 13.35 | Full-bleed theme background | With a dark theme active, export                           | Page background matches the viewer (not white)                                            |
-| 13.36 | Cancel after dialog         | Cancel save / print dialog                                 | No file written (macOS) / no print started (others)                                       |
-
-#### macOS — Export as PDF
-
-| #     | Test                 | Steps                      | Expected                                                           |
-| ----- | -------------------- | -------------------------- | ------------------------------------------------------------------ |
-| 13.37 | Toolbar label        | Inspect the viewer toolbar | Dropdown item "Export as PDF" (no separate Print button)           |
-| 13.38 | Save dialog          | Click "Export as PDF"      | Native save dialog with `<name>.pdf`, PDF filter                   |
-| 13.39 | Vector PDF created   | Save and open in Preview   | Vector PDF with selectable text; one long page (WKWebView capture) |
-| 13.40 | Edge-to-edge scaling | Export                     | Content fills the PDF width edge-to-edge (webview-bounds page)     |
-| 13.41 | Print button hidden  | Inspect toolbar            | No "Print / PDF" button on macOS                                   |
-| 13.42 | Success toast        | Export PDF successfully    | Toast: "PDF saved" with the saved file path                        |
-| 13.43 | Error toast          | Trigger a PDF failure      | Toast: "Create PDF failed" with detail message                     |
-
-#### Linux & Windows — Export as PDF (Print…)
-
-| #     | Test                               | Steps                                  | Expected                                                               |
-| ----- | ---------------------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
-| 13.44 | Toolbar labels                     | Inspect the viewer toolbar             | "Export as PDF (Print…)" dropdown item + separate "Print / PDF" button |
-| 13.45 | Print dialog opens                 | Click "Print / PDF" (or `Ctrl+P`)      | Native print dialog opens with styled content                          |
-| 13.46 | Save as PDF                        | In print dialog choose "Save as PDF"   | Vector PDF written, opens correctly                                    |
-| 13.47 | Background over margins (Chromium) | Enable "Background graphics" if needed | Page background paints to the paper edge on WebView2/Chromium          |
-| 13.48 | Direct print                       | Pick a real printer, click Print       | Document prints with correct styling                                   |
-| 13.49 | Error toast                        | Trigger a print failure                | Toast: "Print failed" with detail message                              |
-
-### 13.5 Export as ODT
-
-ODT always uses a neutral, printer-friendly style — the active theme is
-ignored. The confirm dialog shows three option groups when the dialog is on.
-
-| #     | Test                               | Steps                                                      | Expected                                                                              |
-| ----- | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 13.50 | Save dialog                        | Click Export as… → ODT                                     | Save dialog with `<name>.odt`, ODT filter                                             |
-| 13.51 | Opens in LibreOffice               | Open the .odt                                              | Document opens; text, headings, lists, tables render                                  |
-| 13.52 | Code highlighting printer-friendly | Export a fenced code block                                 | Highlighting uses printer-friendly token colors (not theme)                           |
-| 13.53 | Math — native MathML (default)     | Export `examples/Math-Example.md` (rasterize math OFF)     | Formulas appear as editable ODF Math objects                                          |
-| 13.54 | Math — rasterized PNG              | Tick "Rasterize as PNG images"; export                     | Formulas render as inline PNG frames in the ODT                                       |
-| 13.55 | SVG — vector (default)             | Export `examples/Example.md` (references `weird.svg`)      | SVG embedded as a `Pictures/*.svg` entry (vector)                                     |
-| 13.56 | SVG — rasterized PNG               | Tick "Rasterize as PNG images"; export                     | SVG replaced with `<draw:image … image/x-png>`                                        |
-| 13.57 | Resolution picker                  | Switch resolution to 1×/2×/3×/4× and re-export (raster on) | PNG file size scales with the multiplier                                              |
-| 13.58 | Resolution disabled when no raster | Tick neither rasterize option                              | Resolution `<select>` is greyed out (fieldset disabled)                               |
-| 13.59 | `<dc:title>` from frontmatter      | Export `examples/Simple.md` (has YAML frontmatter)         | `meta.xml` carries the title field regardless of frontmatter card option              |
-| 13.60 | Footnotes                          | Export a file with `[^1]`                                  | Rendered as ODF footnotes (citation + body)                                           |
-| 13.61 | Local / remote / data-URI images   | Export `examples/Example.md`                               | Local images embedded; data URIs embedded; remote fetched (or warning if unreachable) |
-| 13.62 | Warnings summary                   | Reference an unreachable remote image, export              | "Export Warnings" dialog lists the failed fetch                                       |
-| 13.63 | Sub/sup, kbd, mark spans           | Export a file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`     | Rendered as text spans with appropriate character styles                              |
-| 13.64 | Tables                             | Export a file with a GFM table                             | Rendered as an ODF table (header + body cells)                                        |
-| 13.65 | Cancel save                        | Cancel the save dialog                                     | No file written, no toast                                                             |
-| 13.66 | Success toast                      | Export ODT successfully                                    | Toast: "Exported" with the saved file path                                            |
-| 13.67 | Error toast                        | Trigger an ODT export failure                              | Toast: "Export failed" with detail message                                            |
-
-### 13.6 Frontmatter Option (All Exporters)
-
-All four exporters (HTML, HTML Bundle, PDF, ODT) expose an "Include frontmatter card"
-toggle in the export confirm dialog. The toggle is disabled when the document
-has no YAML frontmatter.
-
-| #     | Test                                  | Steps                                              | Expected                                                                        |
-| ----- | ------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 13.68 | HTML — option in dialog               | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.69 | HTML — option disabled                | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.70 | HTML — frontmatter included (ON)      | Export with toggle ON                              | HTML contains `.frontmatter-card` element                                       |
-| 13.71 | HTML — frontmatter excluded (OFF)     | Export with toggle OFF                             | No `.frontmatter-card` in HTML                                                  |
-| 13.72 | HTML — option persisted               | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.73 | HTML Bundle — option in dialog        | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.74 | HTML Bundle — option disabled         | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.75 | HTML Bundle — frontmatter included    | Export with toggle ON                              | `index.html` in zip contains `.frontmatter-card` element                        |
-| 13.76 | HTML Bundle — frontmatter excluded    | Export with toggle OFF                             | No `.frontmatter-card` in `index.html`                                          |
-| 13.77 | HTML Bundle — option persisted        | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.78 | PDF — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.79 | PDF — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.80 | PDF — frontmatter included (ON)       | Export with toggle ON                              | PDF contains frontmatter card                                                   |
-| 13.81 | PDF — frontmatter excluded (OFF)      | Export with toggle OFF                             | No frontmatter card in PDF                                                      |
-| 13.82 | PDF — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.83 | ODT — option in dialog                | With confirmation ON, export file with frontmatter | "Include frontmatter card" toggle visible and ON                                |
-| 13.84 | ODT — option disabled                 | Export file without frontmatter                    | Toggle greyed out (disabled)                                                    |
-| 13.85 | ODT — frontmatter card included (ON)  | Export with toggle ON                              | ODF body contains frontmatter card table                                        |
-| 13.86 | ODT — frontmatter card excluded (OFF) | Export with toggle OFF                             | No frontmatter card in ODF                                                      |
-| 13.87 | ODT — option persisted                | Set toggle OFF, export, re-export                  | Toggle stays OFF on next export                                                 |
-| 13.88 | ODT — `<dc:title>` always set         | Export with frontmatter card OFF                   | `meta.xml` still carries the title field (card option does not affect metadata) |
+| Step | Action | Expected |
+|------|--------|----------|
+| 7.1 | Open `Rendering-All.md`, check the status bar. | Level button shows "Advanced". |
+| 7.2 | Click the level button, click "Basic". | Level changes to "Basic". No warnings for pure CommonMark content. |
+| 7.3 | With "Basic" level, look at `Rendering-All.md` in editor. | Gutter warnings appear on lines using tables, strikethrough, highlight, task lists, autolinks, footnotes, raw HTML, math, frontmatter, and mermaid. Warning badge shows count in status bar. |
+| 7.4 | Hover over a yellow gutter marker. | Tooltip shows the violation message (e.g. "Tables is above the 'basic' level (requires: github)"). |
+| 7.5 | Click the warning badge. | Popover shows violation details. |
+| 7.6 | Switch to "GitHub". | Warnings clear for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math (dollar), and mermaid. Warnings remain for highlight, frontmatter, chemistry, and LaTeX math. |
+| 7.7 | Open `MathChemMermaid-All.md` with "GitHub" level. | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, ` ```math `, `\ce{}`, and mermaid fence lines. |
+| 7.8 | Switch to "Advanced". | All warnings clear. No badge. |
+| 7.9 | Switch to "Custom". | Level shows "Custom (n/13)" with enabled count. Toggle features on/off — warnings update. |
+| 7.10 | Select "GitHub", close app, reopen. | Level is still "GitHub". |
+| 7.11 | Switch to "Basic", type `==text==` rapidly. | Warnings appear after ~200ms debounce, not on every keystroke. |
 
 ---
 
-## 14. Theme Selector
+## S8: File Operations
 
-| #    | Test                           | Steps                                    | Expected                                                         |
-| ---- | ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------- |
-| 14.1 | Open / close dropdown          | Click theme button; click outside        | Dropdown opens and closes                                        |
-| 14.2 | Switch dark / light theme      | Select "GitHub Dark" then "GitHub Light" | Viewer & editor syntax colors swap accordingly                   |
-| 14.3 | App chrome follows             | Switch themes                            | Toolbar, status bar, borders change color                        |
-| 14.4 | Active theme highlight + badge | Open dropdown                            | Active row has accent background; shows "Dark"/"Light" badge     |
-| 14.5 | Theme persistence              | Select a theme, close, reopen            | Same theme active                                                |
-| 14.6 | Try all 9 built-in themes      | Select each theme in sequence            | Each applies correctly, no visual glitches                       |
-| 14.7 | Printer Friendly theme         | Select "Printer Friendly / Neutral"      | Light theme with neutral syntax highlighting; used by ODT export |
+*Files: `Simple.md`, `Empty.md`, `Large.md`, `BOM_Simple.md`, `CRLF_Simple.md`, `ISO8859-1_Simple.md`, `简单.md`, `Space Simple.md`*
 
-### Built-in Themes Reference
-
-| Theme                      | Type  |
-| -------------------------- | ----- |
-| GitHub Dark                | Dark  |
-| GitHub Light               | Light |
-| Atom One Dark              | Dark  |
-| Atom One Light             | Light |
-| Monokai                    | Dark  |
-| Monokai Light              | Light |
-| Nord                       | Dark  |
-| Nord Light                 | Light |
-| Printer Friendly / Neutral | Light |
-
-### Custom Theme
-
-| #     | Test                 | Steps                                                | Expected                                    |
-| ----- | -------------------- | ---------------------------------------------------- | ------------------------------------------- |
-| 14.8  | Add custom theme     | Place a `.css` file in the themes directory, restart | Appears in dropdown                         |
-| 14.9  | Dark/light detection | Custom CSS with dark/light background keywords       | Badge shows "Dark"/"Light" accordingly      |
-| 14.10 | Custom theme applies | Select custom theme from dropdown                    | Viewer and code highlighting use custom CSS |
-
----
-
-## 15. Compatibility Levels
-
-The compatibility levels feature warns when the document uses markdown syntax
-outside the selected level. It does NOT restrict rendering — the Viewer always
-renders everything. Warnings appear as editor gutter diagnostics and a badge
-in the status bar.
-
-### Levels Reference
-
-| Level    | Description                                                                                                            |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Basic    | Only pure CommonMark is compatible. All extended features are flagged.                                                 |
-| GitHub   | Enables: Tables, Strikethrough, Task lists, Autolinks, Footnotes, Raw HTML, Math `$…$` / `$$…$$`                       |
-| Advanced | Enables all features including Highlight, Frontmatter, LaTeX math, Chemical formulas (default). Everything is allowed. |
-| Custom   | User manually toggles individual features on/off via checkboxes.                                                       |
-
-### Features (11 total)
-
-| Feature           | Syntax                           | In GitHub? | In Advanced? |
-| ----------------- | -------------------------------- | ---------- | ------------ |
-| Tables            | GFM pipe tables                  | yes        | yes          |
-| Strikethrough     | `~~text~~`                       | yes        | yes          |
-| Highlight         | `==text==`                       | no         | yes          |
-| Task lists        | `- [ ]` / `- [x]`                | yes        | yes          |
-| Autolinks         | Bare URLs                        | yes        | yes          |
-| Footnotes         | `[^1]`                           | yes        | yes          |
-| Raw HTML          | `<kbd>`, `<mark>`, etc.          | yes        | yes          |
-| Frontmatter       | YAML `---` blocks                | no         | yes          |
-| Math (dollar)     | `$…$` / `$$…$$`                  | yes        | yes          |
-| Math (LaTeX)      | `\(...\)`, `\[...\]`, `\begin{}` | no         | yes          |
-| Chemical formulas | `\ce{…}`                         | no         | yes          |
-
-### Test Files
-
-| File                            | Features used                                                                     |
-| ------------------------------- | --------------------------------------------------------------------------------- |
-| `examples/Simple.md`            | Tables, footnotes, raw HTML (basic+github features)                               |
-| `examples/Math-Example.md`      | All math delimiter styles (dollar, LaTeX, fences)                                 |
-| `examples/Chemistry-Example.md` | Chemical formulas (`\ce{}`)                                                       |
-| `examples/Example.md`           | Everything: tables, task lists, strikethrough, highlight, HTML, math, frontmatter |
-
-### Test Steps
-
-| #     | Test                          | Steps                                                               | Expected                                                                                                                                                           |
-| ----- | ----------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 15.1  | Default level is Advanced     | Open app, check status bar                                          | Level button shows "Advanced"                                                                                                                                      |
-| 15.2  | Level selector opens          | Click the level button in the status bar (right side)               | Popover opens with four level buttons (Basic, GitHub, Advanced, Custom) and feature toggle checklist                                                               |
-| 15.3  | Switch to Basic               | Click "Basic" in the level popover                                  | Level changes to "Basic"; no warnings for a clean CommonMark document                                                                                              |
-| 15.4  | Basic warns on tables         | Open `examples/Simple.md` (has tables), set level to "Basic"        | ⚠ badge appears in status bar with count; editor gutter shows warnings on table lines; clicking badge shows "Tables is above the 'basic' level (requires: github)" |
-| 15.5  | Basic warns on all extensions | Open `examples/Example.md`, set level to "Basic"                    | Warnings for tables, strikethrough, highlight, task lists, autolinks, footnotes, raw HTML, math, frontmatter, chemistry                                            |
-| 15.6  | Switch to GitHub              | Click "GitHub" in the level popover                                 | Level changes to "GitHub"; warnings clear for features in the GitHub set                                                                                           |
-| 15.7  | GitHub warns on highlight     | Open file with `==text==`, set level to "GitHub"                    | Warnings on highlight lines (requires: advanced)                                                                                                                   |
-| 15.8  | GitHub warns on LaTeX math    | Open `examples/Math-Example.md`, set level to "GitHub"              | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, and ` ```math ` lines (requires: advanced)                                                                           |
-| 15.9  | GitHub warns on chemistry     | Open `examples/Chemistry-Example.md`, set level to "GitHub"         | Warnings on `\ce{…}` lines (requires: advanced)                                                                                                                    |
-| 15.10 | Advanced — no warnings        | Set level to "Advanced", open any example file                      | No warnings, no badge                                                                                                                                              |
-| 15.11 | Custom mode                   | Click "Custom", toggle features on/off                              | Level label changes to "Custom (n/11)" showing enabled count; warnings update accordingly                                                                          |
-| 15.12 | Custom — toggle re-enables    | In Custom mode, re-enable a disabled feature that the document uses | Warnings for that feature clear                                                                                                                                    |
-| 15.13 | Editor lint integration       | With warnings active, hover over a yellow gutter marker             | Tooltip shows the violation message (e.g. "Raw HTML is above the 'basic' level (requires: github)")                                                                |
-| 15.14 | Level persistence             | Select "GitHub", close app, reopen                                  | Level is still "GitHub"                                                                                                                                            |
-| 15.15 | Analysis debounce             | Switch to "Basic", rapidly type markdown with extended features     | Warnings appear after ~200ms debounce, not on every keystroke                                                                                                      |
+| Step | Action | Expected |
+|------|--------|----------|
+| 8.1 | Click Open, select `Simple.md`. | Content loads into editor, viewer renders it; "Simple.md" shown in toolbar. |
+| 8.2 | Open the file dialog. | Shows "Markdown" and "All Files" filters. Cancel — no change. |
+| 8.3 | With "Untitled" file, click Save. | Save-as dialog appears. |
+| 8.4 | Open `Simple.md`, edit content, click Save. | File saved; `*` indicator disappears; `.bak` backup created. |
+| 8.5 | Use Save As to a new location (e.g. `/tmp/test-save.md`). | New file created; app tracks new path. |
+| 8.6 | Use Save As to an existing file (`Empty.md`). | OS overwrite confirmation appears; on confirm, file is replaced. |
+| 8.7 | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it. | Toast: "This file is read-only…" |
+| 8.8 | Edit content, click New (or Ctrl+N). | Dialog: "You have unsaved changes. Create a new file?" with Cancel / Discard / Save First. |
+| 8.9 | Edit content, click Open (Ctrl+O). | Same 3-button dialog. |
+| 8.10 | Edit content, click Reload (Ctrl+R). | 2-button dialog: Cancel / Yes, Discard My Changes. |
+| 8.11 | In the 3-button dialog, click Save First (no filename). | Save-as dialog; on save, editor clears to "Untitled". |
+| 8.12 | In the 3-button dialog, click Save First (with filename). | File saved (no clear); action proceeds. |
+| 8.13 | In the 3-button dialog, click Discard. | Editor clears (New) or action proceeds; changes lost. |
+| 8.14 | In the 3-button dialog, click Cancel. | No change. |
+| 8.15 | Open `Simple.md`, edit externally, click Reload (no local edits). | Content updates from disk. |
+| 8.16 | Click Reload again (no external changes). | Content reloads from disk; viewer re-renders. |
+| 8.17 | Open a temp file, delete externally, click Reload. | Dialog: "This file no longer exists…" with OK. |
+| 8.18 | After deletion, press Ctrl+S. | Save-as dialog (does not recreate at old path). |
+| 8.19 | Edit content. | `*` after filename; dot on Save button. |
+| 8.20 | Open a read-only file (`chmod 444`). | Lock icon with tooltip "Read-only". |
+| 8.21 | Edit the read-only file, click Save. | Toast: "This file is read-only…" |
+| 8.22 | Open `Empty.md`. | Viewer empty; word count 0; no crash. |
+| 8.23 | Open `Large.md`. | Loads without freezing; scroll works. |
+| 8.24 | Open `BOM_Simple.md`. | Content reads correctly, no BOM artifact. |
+| 8.25 | Open `CRLF_Simple.md`. | Content reads correctly, no `^M` artifacts. |
+| 8.26 | Open `ISO8859-1_Simple.md`. | Decoded losslessly (Æ Ø Å visible). |
+| 8.27 | Open `简单.md`. | Opens correctly; filename displays in toolbar. |
+| 8.28 | Open `Space Simple.md`. | Opens and saves correctly. |
+| 8.29 | Save to a read-only directory. | Toast: "Failed to save the file." |
+| 8.30 | Open a file that fails (permission denied). | Toast: "Failed to open the file." |
 
 ---
 
-## 16. Scroll Sync
+## S9: External Modification
 
-| #    | Test                         | Steps                                          | Expected                                    |
-| ---- | ---------------------------- | ---------------------------------------------- | ------------------------------------------- |
-| 16.1 | Editor↔Viewer sync           | In split view, scroll either pane slowly       | Other pane scrolls to corresponding section |
-| 16.2 | Rapid scrolling              | Scroll quickly in either pane                  | No drift, oscillation, or lag               |
-| 16.3 | Large document sync          | Open 5000+ line file, scroll                   | Sync remains accurate                       |
-| 16.4 | Mixed content sync           | Document with code, tables, lists, blockquotes | Sync handles all block types                |
-| 16.5 | Sync disabled in single view | Switch to editor-only or viewer-only           | Scrolling only affects the visible pane     |
+*Create a temporary file `/tmp/ext-test.md` with some content. Use a second editor to modify it.*
 
----
-
-## 17. Command Palette
-
-| #     | Test                       | Steps                          | Expected                                                                            |
-| ----- | -------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
-| 17.1  | Open palette               | `Ctrl+Shift+P`                 | Command palette overlay appears                                                     |
-| 17.2  | Close palette              | Escape / click backdrop        | Palette closes                                                                      |
-| 17.3  | Search commands            | Type "save" / "file"           | Filters to matching commands                                                        |
-| 17.4  | No results                 | Type "xyzabc"                  | Shows "No matching commands"                                                        |
-| 17.5  | Keyboard navigation        | Arrow up/down                  | Selection moves, wraps around                                                       |
-| 17.6  | Execute command            | Select "New File", press Enter | New file created, palette closes                                                    |
-| 17.7  | Mouse hover selection      | Hover over commands            | Hovered item becomes selected                                                       |
-| 17.8  | Shortcut / category badges | Open palette                   | Each command shows shortcut and category                                            |
-| 17.9  | Export commands present    | Type "export"                  | Lists "Export as HTML", "Export as HTML Bundle", "Export as PDF …", "Export as ODT" |
-| 17.10 | Export runs                | Select "Export as HTML"        | Same path as the toolbar dropdown                                                   |
-
-### Command Palette Commands Reference
-
-| Command                    | Shortcut       | Category                              |
-| -------------------------- | -------------- | ------------------------------------- |
-| New File                   | `Ctrl+N`       | File                                  |
-| Open File                  | `Ctrl+O`       | File                                  |
-| Save                       | `Ctrl+S`       | File                                  |
-| Save As                    | `Ctrl+Shift+S` | File                                  |
-| Reload from Disk           | `Ctrl+R`       | File                                  |
-| Quit                       | `Ctrl+Q`       | File                                  |
-| Cycle View Mode            | `Ctrl+Shift+V` | View                                  |
-| Export as HTML             | —              | File                                  |
-| Export as HTML Bundle      | —              | File                                  |
-| Export as PDF …            | —              | File                                  |
-| Export as ODT              | —              | File                                  |
-| Print Preview / Create PDF | `Ctrl+P`       | File (label & visibility OS-specific) |
-| About                      | `F1`           | Help                                  |
+| Step | Action | Expected |
+|------|--------|----------|
+| 9.1 | Open `/tmp/ext-test.md`, edit externally, focus app. | Dialog: "This file has been modified by another application. Do you want to reload it?" with Cancel / Reload. |
+| 9.2 | Edit in app, edit externally, focus app. | Dialog: "…You also have unsaved changes. Reload and discard your changes?" with Cancel / Yes, Discard. |
+| 9.3 | Click Cancel (decline). | Warning icon appears on filename; no re-prompt until file changes again. |
+| 9.4 | After declining, press Ctrl+S. | Dialog: "…Overwrite the external changes?" with Cancel / Overwrite. |
+| 9.5 | Accept reload (no local edits). | Content updates; warning clears; baseline reset. |
+| 9.6 | Accept reload (with local edits). | Content updates; warning clears; local edits lost. |
+| 9.7 | Delete file externally, focus app. | Dialog: "This file no longer exists…" with OK. |
+| 9.8 | After deletion, press Ctrl+S. | Save-as dialog. |
+| 9.9 | Open file, modify externally, press Ctrl+S. | Overwrite warning dialog. |
+| 9.10 | Modify externally, press Ctrl+R. | If dirty: reload dialog. If clean: reloads silently. |
+| 9.11 | Edit externally without changing mtime (`echo x >> file; touch -r ref file`). | Warning icon appears (size comparison). |
+| 9.12 | Press Ctrl+R with no external changes. | Content reloads; viewer re-renders; no toast. |
 
 ---
 
-## 18. About Dialog
+## S10: Export — All Formats
 
-| #    | Test                          | Steps                        | Expected                                                 |
-| ---- | ----------------------------- | ---------------------------- | -------------------------------------------------------- |
-| 18.1 | Open via button / F1          | Click info icon / press `F1` | About dialog opens                                       |
-| 18.2 | Close (X / backdrop / Escape) | Try each close method        | Dialog closes in all cases                               |
-| 18.3 | About tab content             | View About tab               | Shows app info, author, license summary                  |
-| 18.4 | Documentation links           | View About tab               | Shows links to docs (Examples, Custom Themes, Math, Chemistry) |
-| 18.5 | Dependencies tab              | Click Dependencies tab       | Shows table of all third-party libraries                 |
-| 18.6 | Shortcuts tab — Quit          | Click Keyboard Shortcuts tab | "Quit" row with `Ctrl+Q` (or `Cmd+Q` on macOS) is listed |
-| 18.7 | License tab                   | Click License tab            | Shows full MIT license text                              |
-| 18.8 | Check for updates             | Click "Check for Updates"    | Shows status (checking, up-to-date, or available)        |
-| 18.9 | External links                | Click any link in About      | Opens in external browser                                |
+*Files: `Rendering-All.md`, `MathChemMermaid-All.md`*
+
+### 10a. Confirm Dialog
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 10.1 | With confirmation ON, click HTML/PDF export. | Dialog: title "Export HTML" / "Export / Print"; shows current theme name; hint about Printer Friendly theme. |
+| 10.2 | With confirmation ON, click ODT export. | Dialog: "This export always uses a neutral, printer-friendly style."; shows ODT options (math rasterize, "SVG images & Mermaid diagrams" rasterize, resolution). |
+| 10.3 | Click Cancel / press Escape / click backdrop. | No export runs. |
+| 10.4 | Press Enter. | Export runs. |
+| 10.5 | Tick "Do not show this message again", confirm. | Next export skips dialog. |
+| 10.6 | Untick "Show export confirmation" in dropdown footer. | Dialog reappears next export. |
+
+### 10b. Export as HTML
+
+*File: `Rendering-All.md`*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 10.7 | Choose Export as HTML. | Save dialog with `Rendering-All.html`, HTML filter. |
+| 10.8 | Save and open in browser. | Self-contained page renders identically to the viewer. |
+| 10.9 | Repeat with a dark theme. | Output uses the same theme. |
+| 10.10 | Export `Rendering-All.md`. | Local images embedded as data URIs. |
+| 10.11 | Export `MathChemMermaid-All.md`. | KaTeX and chemistry formulas render from inlined CSS. |
+| 10.12 | Export a file with a missing local image. | Warnings dialog lists the failed image. |
+| 10.13 | Successful export. | Toast: "Exported" with path. |
+| 10.14 | Cancel the save dialog. | No file written, no toast. |
+
+### 10c. Export as HTML Bundle
+
+*File: `Rendering-All.md`*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 10.15 | Choose Export as HTML Bundle. | Save dialog with `.zip`, ZIP filter. |
+| 10.16 | Save and extract. | Contains `index.html`, `images/`, `fonts/`. |
+| 10.17 | Open `index.html` in browser. | Renders identically; image srcs point to `images/...`. |
+| 10.18 | Check `fonts/` folder. | Contains KaTeX `.woff2` files. |
+| 10.19 | Repeat with a dark theme. | Output uses same theme. |
+| 10.20 | Export with two images sharing a basename. | Both present: `name.png` and `name-1.png`. |
+| 10.21 | Export `MathChemMermaid-All.md`. | Math renders from extracted fonts. |
+| 10.22 | Successful export. | Toast: "Exported". |
+
+### 10d. Export as ODT
+
+*Files: `Rendering-All.md`, `MathChemMermaid-All.md`*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 10.23 | Choose Export as ODT. | Save dialog with `.odt`, ODT filter. |
+| 10.24 | Open in LibreOffice. | Text, headings, lists, tables, code highlighting render. Code uses printer-friendly colors. |
+| 10.25 | Math — rasterize OFF (default). | Formulas appear as editable ODF Math objects. |
+| 10.26 | Math — rasterize ON (tick "Rasterize as PNG"). | Formulas render as inline PNG frames. |
+| 10.27 | SVG — rasterize OFF. | SVG embedded as `Pictures/*.svg` (vector). |
+| 10.28 | SVG — rasterize ON. | SVG replaced with PNG image. |
+| 10.29 | Resolution: switch to 2×, re-export. | PNG file size scales up. |
+| 10.30 | Neither raster option ticked. | Resolution selector is greyed out. |
+| 10.31 | Frontmatter: toggle OFF, export. | No frontmatter card in ODT. |
+| 10.32 | Frontmatter: toggle ON. | Frontmatter card table appears in ODF body. |
+| 10.33 | Frontmatter toggle OFF. | `meta.xml` still carries `<dc:title>` from frontmatter. |
+| 10.34 | Export file with footnotes. | Rendered as ODF footnotes. |
+| 10.35 | Export `Rendering-All.md`. | Local images embedded; remote fetched (or warning). |
+| 10.36 | Export with unreachable remote image. | Warnings dialog lists the failed fetch. |
+| 10.37 | Export file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`. | Rendered as text spans with character styles. |
+| 10.38 | Export file with GFM table. | Rendered as ODF table. |
+| 10.39 | Mermaid — rasterize OFF. | Diagram embedded as SVG. |
+| 10.40 | Mermaid — rasterize ON ("SVG images & Mermaid diagrams"). | Diagram replaced with PNG. |
+| 10.41 | Invalid mermaid fence. | Source kept as preformatted code block. |
+| 10.42 | Successful export. | Toast: "Exported". |
+| 10.43 | Change ODT rasterize/resolution, export, re-export later. | Last-used options are pre-selected. |
+
+### 10e. Frontmatter Toggle — All Exporters
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 10.44 | For each exporter (HTML, HTML Bundle, PDF, ODT): export file with frontmatter. | "Include frontmatter card" toggle visible and ON. |
+| 10.45 | For each exporter: export file without frontmatter. | Toggle greyed out (disabled). |
+| 10.46 | For each exporter: toggle ON. | Frontmatter card present in output. |
+| 10.47 | For each exporter: toggle OFF. | No frontmatter card in output. |
+| 10.48 | For each exporter: set OFF, export, re-export. | Toggle stays OFF. |
 
 ---
 
-## 19. Status Bar
+## S11: Themes
 
-| #    | Test                     | Steps                       | Expected                                          |
-| ---- | ------------------------ | --------------------------- | ------------------------------------------------- |
-| 19.1 | Cursor position          | Click at various positions  | Shows `Line X, Col Y`                             |
-| 19.2 | Word count               | Type content / clear all    | Updates; `0 words` when empty                     |
-| 19.3 | Document type & encoding | Always visible              | Shows "Markdown" / "UTF-8"                        |
-| 19.4 | Level selector           | Check status bar right side | Shows current level (e.g. "Advanced")             |
-| 19.5 | Violation badge          | Open file with violations   | ⚠ badge with count appears next to level selector |
+*File: `Rendering-All.md` — open in viewer.*
 
----
-
-## 20. Error Handling & Edge Cases
-
-| #     | Test                              | Steps                                         | Expected                                                    |
-| ----- | --------------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
-| 20.1  | Empty file                        | Create new file, don't type                   | Viewer empty, word count 0                                  |
-| 20.2  | Very large file                   | Open 5MB+ markdown file                       | Loads without freezing, scroll works                        |
-| 20.3  | CRLF line endings                 | Open Windows-style line endings file          | Renders correctly                                           |
-| 20.4  | Read-only file                    | Open read-only file, try to save              | 🔒 indicator shown, toast error on save, file not corrupted |
-| 20.5  | Path edge cases                   | Open/save files with spaces / unicode in path | Works correctly                                             |
-| 20.6  | Deeply nested lists / blockquotes | Create 5+ levels of each                      | Render without breaking layout                              |
-| 20.7  | Very long code block              | Paste 500+ line code block                    | Renders, scrolls, syncs                                     |
-| 20.8  | Rapid typing                      | Type fast for 30 seconds                      | No lost characters, viewer catches up                       |
-| 20.9  | Frontmatter with non-object YAML  | Use array or string as frontmatter            | Gracefully ignored, no crash                                |
-| 20.10 | Mixed content stress test         | File with every feature combined              | All features render correctly together                      |
-| 20.11 | Switching views while rendering   | Rapidly toggle view modes                     | No crashes or visual glitches                               |
-| 20.12 | Open file while loading           | Double-click a file rapidly                   | Only one file opens (loading guard)                         |
+| Step | Action | Expected |
+|------|--------|----------|
+| 11.1 | Click the theme button; click outside. | Dropdown opens and closes. |
+| 11.2 | Select "GitHub Dark", then "GitHub Light". | Viewer, editor syntax, toolbar, status bar, borders change. |
+| 11.3 | Open the dropdown. | Active row has accent background and "Dark"/"Light" badge. |
+| 11.4 | Select each of the 9 built-in themes in sequence. | Each applies correctly; no glitches. |
+| 11.5 | Select "Printer Friendly / Neutral". | Light theme with neutral syntax highlighting. |
+| 11.6 | Place a `.css` file in the themes directory, restart. | Custom theme appears in dropdown. Select it — viewer and code use custom CSS. |
+| 11.7 | Select a theme, close, reopen. | Same theme active. |
 
 ---
 
-## 21. Quit Behavior
+## S12: Command Palette & About
 
-| #    | Test                       | Steps                                        | Expected                                                                                                                                     |
-| ---- | -------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 21.1 | Quit with no changes       | Close window / `Ctrl+Q` / palette "Quit"     | App closes immediately; prompt does not appear                                                                                               |
-| 21.2 | Quit with unsaved changes  | Edit content, then quit via any of the three | Dialog: `"You have unsaved changes. Close the application and discard your changes?"` with Cancel / Yes, And Discard My Changes / Save First |
-| 21.3 | Quit — Cancel              | Click Cancel in dialog                       | Window stays open                                                                                                                            |
-| 21.4 | Quit — Discard             | Click Yes, And Discard My Changes            | App closes, changes lost                                                                                                                     |
-| 21.5 | Quit — Save (untitled)     | Click Save First (no file name)              | Save As dialog appears; on save app closes                                                                                                   |
-| 21.6 | Quit — Save (named)        | Click Save First                             | File saved, app closes                                                                                                                       |
-| 21.7 | Quit — Save cancelled      | Click Save First, then cancel Save As        | Window stays open (save didn't complete)                                                                                                     |
-| 21.8 | Window state saved on quit | Resize window, quit, reopen                  | Position and size restored (persisted at exit via `save_window_state`)                                                                       |
+*Any open file.*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 12.1 | Press `Ctrl+Shift+P`. | Command palette opens. |
+| 12.2 | Press Escape / click backdrop. | Palette closes. |
+| 12.3 | Type "save". | Filters to matching commands. |
+| 12.4 | Type "xyzabc". | "No matching commands". |
+| 12.5 | Arrow up/down. | Selection moves, wraps. |
+| 12.6 | Select "New File", press Enter. | New file created; palette closes. |
+| 12.7 | Hover over commands. | Hovered item becomes selected. |
+| 12.8 | Open palette. | Each command shows shortcut and category badges. |
+| 12.9 | Type "export". | Lists Export as HTML, HTML Bundle, PDF, ODT. |
+| 12.10 | Select an export command. | Same export flow as toolbar. |
+| 12.11 | Press `F1` or click info icon. | About dialog opens. |
+| 12.12 | Close via X / backdrop / Escape. | Dialog closes. |
+| 12.13 | View About tab. | App info, author, license, documentation links. |
+| 12.14 | Click Dependencies tab. | Table of third-party libraries. |
+| 12.15 | Click Keyboard Shortcuts tab. | Lists all shortcuts including Quit. |
+| 12.16 | Click License tab. | Full MIT license text. |
+| 12.17 | Click Themes tab. | Theme information displayed. |
+| 12.18 | Click "Check for Updates". | Shows status (checking, up-to-date, or available). |
+| 12.19 | Click any link in About. | Opens in external browser. |
+
+---
+
+## S13: Quit Behavior & Edge Cases
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 13.1 | Close / `Ctrl+Q` / palette "Quit" with no changes. | App closes immediately. |
+| 13.2 | Edit content, quit. | Dialog: "You have unsaved changes. Close the application and discard your changes?" with Cancel / Discard / Save First. |
+| 13.3 | Click Cancel. | Window stays open. |
+| 13.4 | Click Discard. | App closes, changes lost. |
+| 13.5 | Click Save First (no filename). | Save-as; on save, app closes. |
+| 13.6 | Click Save First (with filename). | File saved, app closes. |
+| 13.7 | Click Save First, cancel Save-as. | Window stays open. |
+| 13.8 | Resize window, quit, reopen. | Position and size restored. |
+| 13.9 | Open `Large.md`. | Loads without freezing; scroll works. |
+| 13.10 | Type fast for 30 seconds. | No lost characters; viewer catches up. |
+| 13.11 | Open a file with every feature combined. | All features render together. |
+| 13.12 | Rapidly toggle view modes. | No crashes or glitches. |
+
+---
+
+## S14: Platform-Specific — PDF / Print
+
+*File: `Rendering-All.md`*
+
+### macOS
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 14.1 | Inspect viewer toolbar. | Dropdown has "Export as PDF"; no separate Print button. |
+| 14.2 | Click "Export as PDF". | Native save dialog with `.pdf`, PDF filter. |
+| 14.3 | Save and open in Preview. | Vector PDF, selectable text, one long page, edge-to-edge. |
+| 14.4 | Trigger PDF export. | "Exporting…" overlay visible during build phase. |
+| 14.5 | Export successfully. | Toast: "PDF saved" with path. |
+| 14.6 | Trigger a failure. | Toast: "Create PDF failed" with detail. |
+
+### Linux & Windows
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 14.7 | Inspect viewer toolbar. | Dropdown has "Export as PDF (Print…)" + separate "Print / PDF" button. |
+| 14.8 | Click "Print / PDF" (or `Ctrl+P`). | Native print dialog opens with styled content. |
+| 14.9 | Choose "Save as PDF". | Vector PDF written, opens correctly. |
+| 14.10 | Enable "Background graphics" if needed. | Background paints to paper edge (Chromium). |
+| 14.11 | Pick a real printer, print. | Document prints with correct styling. |
+| 14.12 | Trigger a failure. | Toast: "Print failed" with detail. |
+| 14.13 | Trigger PDF export. | Overlay may flash; print dialog confirms export started. |
+
+### Common (all platforms)
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 14.14 | Compare long paragraphs in export vs viewer. | Line wrapping matches word-for-word. |
+| 14.15 | Export `MathChemMermaid-All.md`. | Math and chemistry render correctly. |
+| 14.16 | Export with dark theme. | Page background matches viewer (not white). |
+| 14.17 | Cancel save / print dialog. | No file written. |
+
+---
+
+# Part 2 — Feature Reference
+
+Each row lists a feature or sub-feature and the test story where it is
+verified. Stories are identified by **S#** (e.g. **S5**); the step number
+within each story gives the precise check.
+
+| Feature | Sub-feature | Tested In |
+|---------|-------------|-----------|
+| About dialog | Open/close (F1, info icon) | **S12** (12.11–12.12) |
+| About dialog | About tab content | **S12** (12.13) |
+| About dialog | Dependencies tab | **S12** (12.14) |
+| About dialog | Keyboard Shortcuts tab | **S12** (12.15) |
+| About dialog | License tab | **S12** (12.16) |
+| About dialog | Themes tab | **S12** (12.17) |
+| About dialog | Check for updates | **S12** (12.18) |
+| About dialog | External links | **S12** (12.19) |
+| Anchor links | Regular headings | **S5** (5.16) |
+| Anchor links | Custom heading IDs `{#id}` | **S5** (5.15) |
+| Anchor links | Special characters (CSS.escape) | **S5** (5.16) |
+| Chemistry | Formulas (`\ce{}`) | **S6** (6.24) |
+| Chemistry | Charges | **S6** (6.25) |
+| Chemistry | Stoichiometric numbers | **S6** (6.26) |
+| Chemistry | Reaction arrows (with annotations) | **S6** (6.27) |
+| Chemistry | Isotopes | **S6** (6.28) |
+| Chemistry | Bonds (single/double/triple) | **S6** (6.28) |
+| Chemistry | States of aggregation | **S6** (6.29) |
+| Chemistry | Physical units (`\pu{}`) | **S6** (6.30) |
+| Chemistry | Inline in sentences | **S6** (6.31) |
+| Chemistry | Block equations | **S6** (6.32) |
+| Chemistry | Equilibrium with math | **S6** (6.33) |
+| Chemistry | Bracket delimiters | **S6** (6.34) |
+| Chemistry | Fenced ` ```math ` blocks | **S6** (6.35) |
+| Code blocks | Syntax highlighting (7 languages) | **S5** (5.9) |
+| Code blocks | Very long code block (scroll) | **S5** (5.10) |
+| Command palette | Open/close | **S12** (12.1–12.2) |
+| Command palette | Search/filter | **S12** (12.3–12.4) |
+| Command palette | Keyboard navigation | **S12** (12.5) |
+| Command palette | Execute command | **S12** (12.6) |
+| Command palette | Mouse hover | **S12** (12.7) |
+| Command palette | Shortcut/category badges | **S12** (12.8) |
+| Command palette | Export commands | **S12** (12.9–12.10) |
+| Compatibility levels | Default is Advanced | **S7** (7.1) |
+| Compatibility levels | Level selector | **S7** (7.2) |
+| Compatibility levels | Basic warnings | **S7** (7.3–7.5) |
+| Compatibility levels | GitHub warnings | **S7** (7.6–7.7) |
+| Compatibility levels | Advanced (no warnings) | **S7** (7.8) |
+| Compatibility levels | Custom mode | **S7** (7.9) |
+| Compatibility levels | Level persistence | **S7** (7.10) |
+| Compatibility levels | Analysis debounce | **S7** (7.11) |
+| Editor | Type text | **S3** (3.1) |
+| Editor | Line numbers | **S3** (3.2) |
+| Editor | Syntax highlighting | **S3** (3.3) |
+| Editor | Cursor position (status bar) | **S3** (3.4) |
+| Editor | Word count | **S3** (3.5–3.6) |
+| Editor | Find (Ctrl+F) | **S3** (3.7–3.8) |
+| Editor | Find & Replace (Ctrl+H) | **S3** (3.9) |
+| Editor | Format Document (Shift+Alt+F) | **S4** (4.30–4.31) |
+| Editor | Focus retained after toolbar click | **S4** (4.18) |
+| Editor toolbar | Bold | **S4** (4.1, 4.19) |
+| Editor toolbar | Italic | **S4** (4.2–4.4, 4.20) |
+| Editor toolbar | Strikethrough | **S4** (4.5, 4.21) |
+| Editor toolbar | Highlight | **S4** (4.6, 4.22) |
+| Editor toolbar | Heading (cycles) | **S4** (4.7, 4.23) |
+| Editor toolbar | Link | **S4** (4.8, 4.24) |
+| Editor toolbar | Image | **S4** (4.9, 4.25) |
+| Editor toolbar | Code (toggle inline↔block) | **S4** (4.10–4.12, 4.26) |
+| Editor toolbar | Bullet list | **S4** (4.13, 4.27) |
+| Editor toolbar | Numbered list | **S4** (4.14, 4.28) |
+| Editor toolbar | Task list | **S4** (4.15) |
+| Editor toolbar | Blockquote | **S4** (4.16) |
+| Editor toolbar | Horizontal rule | **S4** (4.17) |
+| Encoding | UTF-8 BOM | **S8** (8.24) |
+| Encoding | CRLF line endings | **S8** (8.25) |
+| Encoding | ISO-8859-1 (Latin-1) | **S8** (8.26) |
+| Encoding | Unicode filename | **S8** (8.27) |
+| Encoding | Filename with spaces | **S8** (8.28) |
+| Export | Confirm dialog (appearance) | **S10** (10.1–10.2) |
+| Export | Confirm dialog (cancel/escape) | **S10** (10.3) |
+| Export | Confirm dialog (confirm/enter) | **S10** (10.4) |
+| Export | Don't show again | **S10** (10.5) |
+| Export | Re-enable confirmation | **S10** (10.6) |
+| Export | Frontmatter toggle — all exporters | **S10** (10.44–10.48) |
+| Export HTML | Save dialog defaults | **S10** (10.7) |
+| Export HTML | Standalone HTML | **S10** (10.8) |
+| Export HTML | Theme applied | **S10** (10.9) |
+| Export HTML | Local images inlined | **S10** (10.10) |
+| Export HTML | Math rendered | **S10** (10.11) |
+| Export HTML | Warnings (missing image) | **S10** (10.12) |
+| Export HTML | Success/error toast | **S10** (10.13) |
+| Export HTML | Cancel save | **S10** (10.14) |
+| Export HTML Bundle | Save dialog defaults | **S10** (10.15) |
+| Export HTML Bundle | Zip structure | **S10** (10.16) |
+| Export HTML Bundle | Relative paths in HTML | **S10** (10.17) |
+| Export HTML Bundle | Fonts extracted | **S10** (10.18) |
+| Export HTML Bundle | Theme applied | **S10** (10.19) |
+| Export HTML Bundle | Filename collisions | **S10** (10.20) |
+| Export HTML Bundle | Math rendered | **S10** (10.21) |
+| Export HTML Bundle | Success toast | **S10** (10.22) |
+| Export ODT | Opens in LibreOffice | **S10** (10.24) |
+| Export ODT | Math — native MathML | **S10** (10.25) |
+| Export ODT | Math — rasterized PNG | **S10** (10.26) |
+| Export ODT | SVG — vector | **S10** (10.27) |
+| Export ODT | SVG — rasterized PNG | **S10** (10.28) |
+| Export ODT | Resolution picker | **S10** (10.29–10.30) |
+| Export ODT | Frontmatter card toggle | **S10** (10.31–10.33) |
+| Export ODT | Footnotes | **S10** (10.34) |
+| Export ODT | Local/remote images | **S10** (10.35) |
+| Export ODT | Warnings summary | **S10** (10.36) |
+| Export ODT | HTML element spans | **S10** (10.37) |
+| Export ODT | Tables | **S10** (10.38) |
+| Export ODT | Mermaid — vector | **S10** (10.39) |
+| Export ODT | Mermaid — rasterized | **S10** (10.40) |
+| Export ODT | Mermaid — failure fallback | **S10** (10.41) |
+| Export ODT | Options persisted | **S10** (10.43) |
+| Export PDF | Overlay (macOS) | **S14** (14.4) |
+| Export PDF | Overlay (Linux/Win) | **S14** (14.13) |
+| Export PDF | Line wrap matches viewer | **S14** (14.14) |
+| Export PDF | Math renders | **S14** (14.15) |
+| Export PDF | Full-bleed background | **S14** (14.16) |
+| Export PDF | macOS — save dialog | **S14** (14.2) |
+| Export PDF | macOS — vector PDF | **S14** (14.3) |
+| Export PDF | macOS — success/error toast | **S14** (14.5–14.6) |
+| Export PDF | Linux/Win — print dialog | **S14** (14.8) |
+| Export PDF | Linux/Win — save as PDF | **S14** (14.9) |
+| Export PDF | Linux/Win — background margins | **S14** (14.10) |
+| Export PDF | Linux/Win — direct print | **S14** (14.11) |
+| Export PDF | Linux/Win — error toast | **S14** (14.12) |
+| External modification | Modified (clean) | **S9** (9.1) |
+| External modification | Modified (dirty) | **S9** (9.2) |
+| External modification | Decline reload | **S9** (9.3) |
+| External modification | Decline + save warns | **S9** (9.4) |
+| External modification | Accept reload (clean) | **S9** (9.5) |
+| External modification | Accept reload (dirty) | **S9** (9.6) |
+| External modification | File deleted | **S9** (9.7) |
+| External modification | Save after deletion | **S9** (9.8) |
+| External modification | Save over modification | **S9** (9.9) |
+| External modification | Reload + modification | **S9** (9.10) |
+| External modification | Size-only change | **S9** (9.11) |
+| External modification | Reload re-renders | **S9** (9.12) |
+| File operations | Open file | **S8** (8.1) |
+| File operations | Dialog filters | **S8** (8.2) |
+| File operations | Save new (untitled) | **S8** (8.3) |
+| File operations | Save existing | **S8** (8.4) |
+| File operations | Save As — different path | **S8** (8.5) |
+| File operations | Save As — existing file | **S8** (8.6) |
+| File operations | Save As — read-only | **S8** (8.7) |
+| File operations | Unsaved dialog — New | **S8** (8.8) |
+| File operations | Unsaved dialog — Open | **S8** (8.9) |
+| File operations | Unsaved dialog — Reload | **S8** (8.10) |
+| File operations | Save First (untitled) | **S8** (8.11) |
+| File operations | Save First (named) | **S8** (8.12) |
+| File operations | Discard | **S8** (8.13) |
+| File operations | Cancel | **S8** (8.14) |
+| File operations | Reload from disk | **S8** (8.15) |
+| File operations | Reload always reloads | **S8** (8.16) |
+| File operations | Reload deleted file | **S8** (8.17) |
+| File operations | Save after deletion | **S8** (8.18) |
+| File operations | Modified indicator | **S8** (8.19) |
+| File operations | Read-only indicator | **S8** (8.20) |
+| File operations | Save read-only | **S8** (8.21) |
+| File operations | Empty file | **S8** (8.22) |
+| File operations | Large file | **S8** (8.23) |
+| File operations | Toast on save failure | **S8** (8.29) |
+| File operations | Toast on open failure | **S8** (8.30) |
+| Layout | Default split view | **S2** (2.2) |
+| Layout | Resize handle drag | **S2** (2.3) |
+| Layout | Snap to viewer/editor | **S2** (2.4–2.5) |
+| Layout | Snap to center / double-click | **S2** (2.6) |
+| Layout | Handle visual feedback | **S2** (2.7) |
+| Links | External URL | **S5** (5.17) |
+| Links | Local file path | **S5** (5.18) |
+| Links | Link tooltip on hover | **S5** (5.19) |
+| Links | Keyboard activation (Tab + Enter) | **S5** (5.26) |
+| Loading overlay | During file load | **S2** (2.1) |
+| Math | Dollar inline `$…$` | **S6** (6.1) |
+| Math | Dollar block `$$…$$` | **S6** (6.2) |
+| Math | Matrices | **S6** (6.3) |
+| Math | Cases | **S6** (6.4) |
+| Math | Bracket inline `\(...\)` | **S6** (6.5) |
+| Math | Bracket block `\[...\]` | **S6** (6.6) |
+| Math | Bare `\begin{...}` | **S6** (6.7) |
+| Math | Fenced ` ```math ` | **S6** (6.8) |
+| Math | Anonymous fenced block (not math) | **S6** (6.8) |
+| Math | Very wide block (scroll) | **S6** (6.9) |
+| Math | Invalid LaTeX (error, no crash) | **S6** (6.10) |
+| Math attributes | Fence: fontsize | **S6** (6.11) |
+| Math attributes | Fence: leqno | **S6** (6.12) |
+| Math attributes | Fence: fleqn | **S6** (6.13) |
+| Math attributes | Fence: combined | **S6** (6.14) |
+| Math attributes | Directive: fontsize | **S6** (6.15) |
+| Math attributes | Directive: reset (`!key`) | **S6** (6.16) |
+| Math attributes | Directive: leqno (persists) | **S6** (6.17) |
+| Math attributes | Directive: reset leqno | **S6** (6.18) |
+| Math attributes | Directive on bracket math | **S6** (6.19) |
+| Math attributes | Multiple directives | **S6** (6.20) |
+| Math attributes | Scoping (fence overrides directive) | **S6** (6.21) |
+| Math attributes | Directive comment not rendered | **S6** (6.22) |
+| Math attributes | Unknown namespace ignored | **S6** (6.23) |
+| Mermaid | Basic flowchart | **S6** (6.36) |
+| Mermaid | Sequence diagram | **S6** (6.37) |
+| Mermaid | Error case (invalid syntax) | **S6** (6.38) |
+| Mermaid | Fence: align + maxWidth | **S6** (6.39) |
+| Mermaid | Fence: fitToWidth=false | **S6** (6.40) |
+| Mermaid | HTML comment directives | **S6** (6.41) |
+| Mermaid | Theme override (YAML) | **S6** (6.42) |
+| Mermaid | Dark/light theme mapping | **S6** (6.43) |
+| Print / PDF | macOS — toolbar label | **S14** (14.1) |
+| Print / PDF | Linux/Win — toolbar labels | **S14** (14.7) |
+| Print / PDF | Linux/Win — print dialog | **S14** (14.8) |
+| Print / PDF | Cancel after dialog | **S14** (14.17) |
+| Quit | No changes — immediate close | **S13** (13.1) |
+| Quit | Unsaved changes dialog | **S13** (13.2) |
+| Quit | Cancel | **S13** (13.3) |
+| Quit | Discard | **S13** (13.4) |
+| Quit | Save First (untitled) | **S13** (13.5) |
+| Quit | Save First (named) | **S13** (13.6) |
+| Quit | Save cancelled | **S13** (13.7) |
+| Quit | Window state saved | **S13** (13.8) |
+| Raw HTML | `<details>`/`<summary>` | **S5** (5.12) |
+| Raw HTML | `<kbd>` | **S5** (5.12) |
+| Raw HTML | `<sub>`, `<sup>` | **S5** (5.12) |
+| Raw HTML | `<mark>` | **S5** (5.12) |
+| Raw HTML | `<ins>`, `<del>` | **S5** (5.12) |
+| Raw HTML | Colored `<span>` | **S5** (5.12) |
+| Raw HTML | Special characters | **S5** (5.12) |
+| Rendering | H1–H6 headings | **S5** (5.1) |
+| Rendering | Paragraphs | **S5** (5.1) |
+| Rendering | Bold, italic, bold-italic | **S5** (5.3) |
+| Rendering | Strikethrough | **S5** (5.3) |
+| Rendering | Inline code | **S5** (5.3) |
+| Rendering | Highlight (`==…==`) | **S5** (5.3) |
+| Rendering | Footnotes | **S5** (5.4) |
+| Rendering | Lists (unordered, ordered, task) | **S5** (5.5) |
+| Rendering | Deeply nested lists (6 levels) | **S5** (5.6) |
+| Rendering | Blockquotes (nested) | **S5** (5.7) |
+| Rendering | Blockquote with nested list | **S5** (5.7) |
+| Rendering | Tables (aligned columns) | **S5** (5.8) |
+| Rendering | Horizontal rule | **S5** (5.11) |
+| Rendering | Custom heading IDs `{#id}` | **S5** (5.2) |
+| Rendering | Frontmatter card (standard) | **S5** (5.13) |
+| Rendering | Frontmatter card (skill) | **S5** (5.14) |
+| Rendering — images | Local relative path | **S5** (5.20) |
+| Rendering — images | HTML `<img>` tag | **S5** (5.20) |
+| Rendering — images | Filename with spaces | **S5** (5.20) |
+| Rendering — images | Unicode filename in subdir | **S5** (5.20) |
+| Rendering — images | Remote image | **S5** (5.21) |
+| Rendering — images | Data URI | **S5** (5.22) |
+| Rendering — images | Missing image (no crash) | **S5** (5.23) |
+| Rendering — images | SVG from file | **S5** (5.24) |
+| Rendering — images | Inline SVG | **S5** (5.24) |
+| Rendering — images | Image tooltip on hover | **S5** (5.25) |
+| Scroll sync | Editor↔Viewer | **S2** (2.9–2.10) |
+| Scroll sync | Rapid scrolling | **S2** (2.11) |
+| Scroll sync | Single view disables sync | **S2** (2.12–2.13) |
+| Themes | Open/close dropdown | **S11** (11.1) |
+| Themes | Switch dark/light | **S11** (11.2) |
+| Themes | App chrome follows | **S11** (11.2) |
+| Themes | Active highlight + badge | **S11** (11.3) |
+| Themes | All 9 built-in themes | **S11** (11.4) |
+| Themes | Printer Friendly | **S11** (11.5) |
+| Themes | Custom theme | **S11** (11.6) |
+| Themes | Persistence | **S11** (11.7) |
+| View toggle | Editor / Split / Viewer | **S2** (2.8) |
+| View toggle | Active state highlight | **S2** (2.8) |
+| View toggle | Persistence | **S2** (2.14) |
+| Window | First launch (size, title) | **S1** (1.1) |
+| Window | Minimum size | **S1** (1.2) |
+| Window | State persistence | **S1** (1.3) |
+| Window | Maximized persistence | **S1** (1.4) |
+| Window | Context menu suppression | **S1** (1.5) |
+| Window | CLI file open | **S1** (1.6) |
+| Window | Restore last file | **S1** (1.7) |
+| Edge cases | Very large file | **S13** (13.9) |
+| Edge cases | Rapid typing | **S13** (13.10) |
+| Edge cases | Mixed content stress test | **S13** (13.11) |
+| Edge cases | View mode switching | **S13** (13.12) |

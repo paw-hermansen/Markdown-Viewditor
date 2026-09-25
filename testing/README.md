@@ -20,7 +20,7 @@ For end-user documentation and guides, see the [docs](../docs/) folder.
 | macOS    | `~/Library/Application Support/com.github.paw-hermansen.markdown-viewditor/themes/` |
 | Windows  | `%APPDATA%\com.github.paw-hermansen.markdown-viewditor\themes\`                     |
 
-2. Open a markdown file, for example `Example.md`, in the Markdown Viewditor
+2. Open a markdown file, for example `Rendering-All.md`, in the Markdown Viewditor
 3. The two custom themes should now be available to select from the
    themes dropdown at the top right
 

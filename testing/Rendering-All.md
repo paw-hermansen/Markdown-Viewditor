@@ -379,56 +379,6 @@ function line105() { return 105; }
 // End of long code block.
 ```
 
-## Links
-
-- [External link](https://example.com) — opens in browser
-- Autolink: https://example.com
-- [Anchor to custom heading](#custom-test-id) — scrolls to custom heading
-- [Anchor to "Tables"](#tables) — scrolls to Tables section
-- [Local file](README.md) — opens with OS default handler
-
-## Images
-
-### Local Relative Path
-
-![Local image](./ai_flower.png)
-
-### HTML img Tag
-
-<img src="./ai_flower.png" alt="HTML img tag" width="200">
-
-### Filename with Space (quoted)
-
-![Filename with space](<./ai flower.png>)
-
-### Filename with Space (percent-encoded)
-
-![Percent-encoded space](./ai%20flower.png)
-
-### Unicode Filename in Subdirectory
-
-![Unicode name](./image/人工智能生成的花朵.png)
-
-### Remote Image
-
-![External image](https://picsum.photos/128)
-
-### Data URI (small inline PNG)
-
-![Embedded image](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==)
-
-### Missing Image (should show broken, no crash)
-
-![Missing image](./nonexistent.png)
-
-### SVG from File
-
-![SVG from file](./weird.svg)
-
-### Inline SVG
-
-Here is an inline SVG: <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="red"/></svg> inside text.
-
 ## Horizontal Rule
 
 ---
@@ -462,3 +412,58 @@ Special characters: Æ Ø Å – — ♪ ♫ → ½
 
 The file `SKILL.md` in this directory has `name`, `description`, `license`
 frontmatter — rendered as a "Skill" card with badge and metadata.
+
+## Links
+
+- [Anchor to "Tables"](#tables) — scrolls to Tables section
+- [External link](https://example.com) — opens in browser
+- [Local file](README.md) — opens with OS default handler
+- Autolink: https://example.com
+- [Anchor to custom heading](#custom-test-id) — scrolls to custom heading
+
+## Images
+
+### Local Relative Path
+
+![Local image](./ai_flower.png)
+
+### HTML img Tag
+
+<img src="./ai_flower.png" alt="HTML img tag" width="200">
+
+### Filename with Space (quoted)
+
+![Filename with space](<./ai flower.png>)
+
+### Filename with Space (percent-encoded)
+
+![Percent-encoded space](./ai%20flower.png)
+
+### Unicode Filename in Subdirectory
+
+![Unicode name](./image/人工智能生成的花朵.png)
+
+### Remote Image
+
+![External image](https://picsum.photos/128)
+
+### Data URI (small inline PNG)
+
+![Embedded image](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAAEYEpo5AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAGOSURBVDjLjZTdjqswDIS/RDxrz0vwwlwvpSLB9rlIyF/DahGqTGY8HtsUt71WMH7eHgf7wf7x7B/2D/vhttfKGfh5e0JkP9gPz/tIt9v+rRiEyBkIgTMuhEiInOkocoaF/ZPA8uu214qDKOXI4+ASYswKIXpEy0MCfH3O9+ULWHIT66q/Im57reTLEOUSRBBFhCsHSyYUoMEQ4Uok1czIGhloE5ZUtcfGhEQqDgZSTluIsWp8uzYDmu4cd+pYzmeYxNCOIYoKov6ekd5tCqo1oc5Jyxi1TqgaVw92Kw9wVfJNdgNoI6nie+WhYs5ZuOY+avVLPdok1b7aw4mnOyhrUPNjFemnpQb0SlfvTDUvrHkz28tQwwzVSWAJVbSeLxORkfodfGmNQrXgs5FyUtSzkAMDs1GlFJyoTJwulTEEYxdfBUpVM9SWvPehfg5sAk0a1yQkk0Z+m3RhdpZbRw+zeBp5F2jvyCx/HB7rt8HY2sRnMwumjXS7B+B29LT732Zs6cNWhCa7/MM7bcPf4T83XA+2virmxwAAAABJRU5ErkJggg==)
+
+### Missing Image (should show broken, no crash)
+
+![Missing image](./nonexistent.png)
+
+### SVG from File
+
+![SVG from file](./weird.svg)
+
+### Inline SVG
+
+Here is an inline SVG: <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="red"/></svg> inside text.
+
+### Same Basename
+
+![Square 1](square.png)
+![Square 2](square-2.png)

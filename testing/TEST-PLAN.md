@@ -17,7 +17,6 @@
 # Part 1 — Test Stories
 
 Each story is a self-contained walkthrough. Complete the stories in order.
-Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 
 ---
 
@@ -179,7 +178,7 @@ Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 | 6.11 | Look at "Fontsize Scaling (2×)". | The fraction `x²/y²` renders at 2× base size. |
 | 6.12 | Look at "Left-side Equation Numbers (leqno)". | Equation number (1) appears on the left. |
 | 6.13 | Look at "Flush-left Alignment (fleqn)". | The integral is left-aligned, not centered. |
-| 6.14 | Look at "Combined Attributes". | Equation number (2) on the left AND 1.5× size. |
+| 6.14 | Look at "Combined Attributes". | Equation number (3) on the left AND 1.5× size. |
 
 ### 6c. Math — HTML Comment Directives
 
@@ -221,7 +220,7 @@ Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 | 6.38 | Look at "Mermaid — Error Case". | A styled error block shows the source code with a "Mermaid rendering failed" message; no crash. |
 | 6.39 | Look at "Mermaid — Fence Attributes: Align Left, Max Width 400". | The diagram is left-aligned and constrained to 400px width. |
 | 6.40 | Look at "Mermaid — Fence Attributes: Fit to Width Disabled". | The diagram renders at natural size with a horizontal scrollbar; no vertical scrollbar. |
-| 6.41 | Look at "Mermaid — HTML Comment Directives". | The diagram below the `<!-- mermaid: align=center maxWidth=600 -->` directive is centered at 600px. After the reset directive, the next diagram uses defaults. |
+| 6.41 | Look at "Mermaid — HTML Comment Directives". | The diagram below the `<!-- mermaid: align=right maxWidth=300 -->` directive is right aligne at 300px. After the reset directive, the next diagram uses defaults. |
 | 6.42 | Look at "Mermaid — Theme Override via YAML". | The diagram uses the "forest" theme (different from the app's dark/light theme). |
 | 6.43 | Switch the app theme between dark and light. | Mermaid diagrams re-render with the matching Mermaid theme (dark → "dark", light → "default"). |
 
@@ -258,7 +257,7 @@ Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 | 8.3 | With "Untitled" file, click Save. | Save-as dialog appears. |
 | 8.4 | Open `Simple.md`, edit content, click Save. | File saved; `*` indicator disappears; `.bak` backup created. |
 | 8.5 | Use Save As to a new location (e.g. `/tmp/test-save.md`). | New file created; app tracks new path. |
-| 8.6 | Use Save As to an existing file (`Empty.md`). | OS overwrite confirmation appears; on confirm, file is replaced. |
+| 8.6 | Use Save As to an existing file. | OS overwrite confirmation appears; on confirm, file is replaced. |
 | 8.7 | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it. | Toast: "This file is read-only…" |
 | 8.8 | Edit content, click New (or Ctrl+N). | Dialog: "You have unsaved changes. Create a new file?" with Cancel / Discard / Save First. |
 | 8.9 | Edit content, click Open (Ctrl+O). | Same 3-button dialog. |
@@ -302,7 +301,7 @@ Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 | 9.8 | After deletion, press Ctrl+S. | Save-as dialog. |
 | 9.9 | Open file, modify externally, press Ctrl+S. | Overwrite warning dialog. |
 | 9.10 | Modify externally, press Ctrl+R. | If dirty: reload dialog. If clean: reloads silently. |
-| 9.11 | Edit externally without changing mtime (`echo x >> file; touch -r ref file`). | Warning icon appears (size comparison). |
+| 9.11 | Edit externally without changing mtime (`touch -r file.md .timestamp; echo x >> file.md; touch -r .timestamp file.md`). | Warning icon appears (size comparison). |
 | 9.12 | Press Ctrl+R with no external changes. | Content reloads; viewer re-renders; no toast. |
 
 ---
@@ -320,7 +319,7 @@ Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 | 10.3 | Click Cancel / press Escape / click backdrop. | No export runs. |
 | 10.4 | Press Enter. | Export runs. |
 | 10.5 | Tick "Do not show this message again", confirm. | Next export skips dialog. |
-| 10.6 | Untick "Show export confirmation" in dropdown footer. | Dialog reappears next export. |
+| 10.6 | Tick "Show export confirmation" in dropdown footer. | Dialog reappears next export. |
 
 ### 10b. Export as HTML
 
@@ -348,13 +347,13 @@ Stories S1–S4 need no pre-existing files; S5 onward open specific test files.
 | 10.17 | Open `index.html` in browser. | Renders identically; image srcs point to `images/...`. |
 | 10.18 | Check `fonts/` folder. | Contains KaTeX `.woff2` files. |
 | 10.19 | Repeat with a dark theme. | Output uses same theme. |
-| 10.20 | Export with two images sharing a basename. | Both present: `name.png` and `name-1.png`. |
+| 10.20 | Export with two images sharing a basename. | Both present: `square.png` and `square-2.png`. |
 | 10.21 | Export `MathChemMermaid-All.md`. | Math renders from extracted fonts. |
 | 10.22 | Successful export. | Toast: "Exported". |
 
 ### 10d. Export as ODT
 
-*Files: `Rendering-All.md`, `MathChemMermaid-All.md`*
+*Files: `MathChemMermaid-All.md`, `Rendering-All.md`*
 
 | Step | Action | Expected |
 |------|--------|----------|

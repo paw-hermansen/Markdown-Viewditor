@@ -246,4 +246,20 @@ describe("export-confirm-dialog select options", () => {
     await checkA11y(container);
     exportConfirmState.current = null;
   });
+
+  it("dismisses on Escape even when focus is outside the dialog", async () => {
+    // Regression: with focus on the toolbar trigger behind the dialog,
+    // the document-level keydown listener should still resolve the dialog.
+    const promise = openDialog();
+    render(ExportConfirmDialog);
+    await tick();
+
+    // Move focus outside the dialog — mirrors the DropdownButton.pick()
+    // timing where focus stays on the toolbar Export trigger.
+    document.body.focus();
+    await fireEvent.keyDown(document.body, { key: "Escape" });
+
+    const result = await promise;
+    expect(result.confirmed).toBe(false);
+  });
 });

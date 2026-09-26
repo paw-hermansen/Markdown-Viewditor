@@ -62,6 +62,7 @@
       aria-modal="true"
       aria-label={req.title}
       aria-describedby="export-confirm-message"
+      tabindex="-1"
       use:focusTrap={{ onEscape: () => resolveExportConfirm({ confirmed: false, dontShowAgain: false }) }}
     >
       <div class="icon-row">

@@ -4,7 +4,7 @@ author: Test Suite
 tags: [test, rendering, comprehensive]
 ---
 
-# Rendering Test — All Featuresfgh
+# Rendering Test — All Features
 
 This file exercises every viewer rendering feature, link/image edge case,
 HTML element, and frontmatter variant in one document.

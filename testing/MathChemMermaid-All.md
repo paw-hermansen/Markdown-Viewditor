@@ -348,7 +348,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A[->->INVALID SYNTAX<-<-]
+    A[->->INVALID SYNTAX<-<-
 ```
 
 (The above should show a styled error block with the source code, not crash.)

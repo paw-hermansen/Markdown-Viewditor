@@ -12,6 +12,8 @@
   let currentOptions = $state<Record<string, unknown>>({});
   /** Static option-group definitions, frozen at dialog open time. */
   let optionGroups = $state<OptionGroup[]>([]);
+  /** Action button — bound to the dialog so the focus trap can land on it. */
+  let confirmButton: HTMLButtonElement | undefined = $state(undefined);
 
   function disabledFor(group: OptionGroup): boolean {
     return group.options.every((opt) => {
@@ -63,7 +65,10 @@
       aria-label={req.title}
       aria-describedby="export-confirm-message"
       tabindex="-1"
-      use:focusTrap={{ onEscape: () => resolveExportConfirm({ confirmed: false, dontShowAgain: false }) }}
+      use:focusTrap={{
+        initialFocus: confirmButton,
+        onEscape: () => resolveExportConfirm({ confirmed: false, dontShowAgain: false }),
+      }}
     >
       <div class="icon-row">
         <span class="icon" aria-hidden="true">{'\u2139'}</span>
@@ -146,7 +151,13 @@
 
       <div class="actions">
         <button class="btn" onclick={handleCancel}>Cancel</button>
-        <button class="btn primary" onclick={handleConfirm}>{req.actionLabel}</button>
+        <button
+          bind:this={confirmButton}
+          class="btn primary"
+          onclick={handleConfirm}
+        >
+          {req.actionLabel}
+        </button>
       </div>
     </div>
   </div>

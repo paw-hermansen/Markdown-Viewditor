@@ -262,4 +262,15 @@ describe("export-confirm-dialog select options", () => {
     const result = await promise;
     expect(result.confirmed).toBe(false);
   });
+
+  it("focuses the Export button by default so Enter activates it", async () => {
+    // Default action per WAI-ARIA APG: non-destructive dialogs should
+    // focus the primary action so Enter confirms immediately.
+    openDialog();
+    render(ExportConfirmDialog);
+    await tick();
+
+    const exportButton = screen.getByRole("button", { name: "Export" });
+    expect(document.activeElement).toBe(exportButton);
+  });
 });

@@ -274,7 +274,7 @@ describe("odtExporter", () => {
     const labels = groups.map((g) => g.label);
     expect(labels).toContain("Frontmatter");
     expect(labels).toContain("Math formulas");
-    expect(labels).toContain("SVG images");
+    expect(labels).toContain("SVG images & Mermaid diagrams");
     expect(labels).toContain("Image resolution");
   });
 

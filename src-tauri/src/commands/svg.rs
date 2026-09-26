@@ -10,9 +10,10 @@
 //! frontend never calls it there — it uses the working `Image` fallback
 //! — but the stub keeps the IPC contract uniform across platforms.
 //!
-//! Default `resvg` features are enabled (text, filter, pattern, image)
-//! so the rasterized output matches the browser's fidelity on every SVG
-//! construct, including `<text>` and `<filter>`.
+//! Default `resvg` features are enabled (text, filter, pattern, image).
+//! Text support still needs a populated font database — `usvg::Options::default()`
+//! ships an empty `fontdb`, so we load system fonts here (mirroring resvg's
+//! own CLI) or every `<text>` span would be silently dropped.
 
 #[cfg(target_os = "linux")]
 use resvg::tiny_skia;
@@ -20,6 +21,72 @@ use resvg::tiny_skia;
 use usvg::{Options, Tree};
 
 use crate::error::AppError;
+
+/// Re-point fontdb's CSS generic families (`sans-serif`, `serif`,
+/// `monospace`) at faces that actually exist in `db`.
+///
+/// fontdb resolves each generic to exactly one family name — `prefer[0]`
+/// of the system's fontconfig alias ("Noto Sans" / "Noto Serif" on Ubuntu)
+/// or its built-in Windows defaults ("Arial" / "Times New Roman") when no
+/// alias is loaded — and `Database::query` matches family names exactly.
+/// When that single name is not installed (slim distros, containers, CI
+/// runners) usvg silently drops every `<text>` span. Re-pointing the
+/// generics keeps text rendering with whatever font the system does have.
+#[cfg(target_os = "linux")]
+fn ensure_generic_families_resolve(db: &mut usvg::fontdb::Database) {
+    use usvg::fontdb::{Family, Query, Stretch, Style, Weight};
+
+    fn resolves(db: &usvg::fontdb::Database, family: Family<'_>) -> bool {
+        db.query(&Query {
+            families: std::slice::from_ref(&family),
+            weight: Weight::NORMAL,
+            stretch: Stretch::Normal,
+            style: Style::Normal,
+        })
+        .is_some()
+    }
+
+    // Family names of loaded faces, in load order. Emoji-only faces are
+    // skipped: they "resolve" but cannot render ordinary text.
+    let mut families: Vec<String> = Vec::new();
+    for face in db.faces() {
+        for (name, _) in &face.families {
+            if name.to_ascii_lowercase().contains("emoji") {
+                continue;
+            }
+            if !families.contains(name) {
+                families.push(name.clone());
+            }
+        }
+    }
+    if families.is_empty() {
+        return;
+    }
+
+    let pick = |hint: &str| -> Option<String> {
+        families
+            .iter()
+            .find(|f| f.to_ascii_lowercase().contains(hint))
+            .cloned()
+            .or_else(|| families.first().cloned())
+    };
+
+    if !resolves(db, Family::SansSerif) {
+        if let Some(name) = pick("sans") {
+            db.set_sans_serif_family(name);
+        }
+    }
+    if !resolves(db, Family::Serif) {
+        if let Some(name) = pick("serif") {
+            db.set_serif_family(name);
+        }
+    }
+    if !resolves(db, Family::Monospace) {
+        if let Some(name) = pick("mono") {
+            db.set_monospace_family(name);
+        }
+    }
+}
 
 /// Render `svg` into a PNG whose pixel dimensions are exactly
 /// `width*scale` × `height*scale`. `width`/`height` are the SVG's intrinsic
@@ -57,7 +124,28 @@ pub fn rasterize_svg(
             return Err(AppError::Svg(format!("invalid scale: {scale}")));
         }
 
-        let tree = Tree::from_str(&svg, &Options::default())
+        let mut options = Options::default();
+        // `Options::default()` ships an empty fontdb (fontdb::Database::new()),
+        // which makes usvg silently drop every <text> span at layout time.
+        // resvg's own CLI calls load_system_fonts() — mirror that here so
+        // diagram / SVG labels actually appear in the PNG.
+        options.fontdb_mut().load_system_fonts();
+        // The generic families may point at fonts that are not installed;
+        // re-point them at faces that are actually present so <text> is
+        // never silently dropped.
+        let resolved_sans = {
+            let db = options.fontdb_mut();
+            ensure_generic_families_resolve(db);
+            db.family_name(&usvg::fontdb::Family::SansSerif).to_owned()
+        };
+        // `Options::font_family` is the fallback for a missing or unusable
+        // SVG font-family (e.g. the CSS-wide keyword `inherit`, which usvg
+        // drops). usvg wraps the value in `FontFamily::Named`, so it is a
+        // plain family-name lookup — not a generic alias — and must name a
+        // family that really resolves; use whatever "sans-serif" maps to.
+        options.font_family = resolved_sans;
+
+        let tree = Tree::from_str(&svg, &options)
             .map_err(|e| AppError::Svg(format!("usvg parse failed: {e}")))?;
 
         // The output PNG is width*scale × height*scale pixels; the SVG's
@@ -221,5 +309,64 @@ mod tests {
         let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>";
         let err = rasterize_svg(svg.to_string(), 10, 10, 0).unwrap_err();
         assert!(err.to_string().contains("invalid scale"));
+    }
+
+    #[test]
+    fn rasterizes_text_with_system_fonts() {
+        // Regression: Options::default() has an empty fontdb, so usvg used to
+        // silently drop every <text> span and the PNG contained no text at all.
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50">
+            <rect width="200" height="50" fill="white"/>
+            <text x="10" y="35" font-family="sans-serif" font-size="28" fill="black">Hi</text>
+        </svg>"##;
+        let pixmap = rasterize_to_pixels(svg, 200, 50, 1);
+        // If text is dropped the image is pure white. Sample the glyph area
+        // and require a meaningful number of dark pixels.
+        let mut dark = 0u32;
+        for y in 10..45 {
+            for x in 5..120 {
+                let p = pixmap.pixel(x, y).unwrap();
+                if p.red() < 128 && p.green() < 128 && p.blue() < 128 {
+                    dark += 1;
+                }
+            }
+        }
+        assert!(
+            dark > 20,
+            "expected dark text pixels in the glyph area, found {dark} — \
+             <text> was dropped because no usable font resolved; this test \
+             needs at least one installed Latin font (e.g. package \
+             `fonts-noto-core` on Debian/Ubuntu)"
+        );
+    }
+
+    #[test]
+    fn renders_text_when_font_family_is_unusable() {
+        // `font-family: inherit` has no parent in a standalone SVG; usvg
+        // drops the attribute and falls back to `Options::font_family`.
+        // That value is wrapped in `FontFamily::Named`, i.e. queried as a
+        // plain family name (not a generic alias), and may itself not
+        // resolve — text must still render via the default-font fallback.
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50">
+            <rect width="200" height="50" fill="white"/>
+            <text x="10" y="35" font-family="inherit" font-size="28" fill="black">Hi</text>
+        </svg>"##;
+        let pixmap = rasterize_to_pixels(svg, 200, 50, 1);
+        let mut dark = 0u32;
+        for y in 10..45 {
+            for x in 5..120 {
+                let p = pixmap.pixel(x, y).unwrap();
+                if p.red() < 128 && p.green() < 128 && p.blue() < 128 {
+                    dark += 1;
+                }
+            }
+        }
+        assert!(
+            dark > 20,
+            "expected dark text pixels via the font fallback, found {dark} — \
+             <text> was dropped because no usable font resolved; this test \
+             needs at least one installed Latin font (e.g. package \
+             `fonts-noto-core` on Debian/Ubuntu)"
+        );
     }
 }

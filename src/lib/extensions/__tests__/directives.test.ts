@@ -2,9 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import MarkdownIt from "markdown-it";
 import {
   extractMathDirectives,
+  extractDirectiveStateMap,
+  extractDirectives,
   extractMathDirectiveStateMap,
   lookupDirectiveState,
   directivePlugin,
+  getDirectiveState,
 } from "../directives";
 import { registerExtensionSchema, resetExtensions } from "../registry";
 import type { FenceOptionSchema } from "../types";
@@ -13,6 +16,16 @@ const schema: FenceOptionSchema = {
   leqno: { type: "boolean", default: false },
   fleqn: { type: "boolean", default: false },
   fontsize: { type: "number", default: 1.0, min: 0.3, max: 5.0 },
+};
+
+const mermaidSchema: FenceOptionSchema = {
+  theme: {
+    type: "string",
+    default: "default",
+    values: ["default", "dark", "forest"],
+  },
+  maxWidth: { type: "number", default: 800, min: 200, max: 2000 },
+  fitToWidth: { type: "boolean", default: true },
 };
 
 describe("extractMathDirectives", () => {
@@ -175,6 +188,57 @@ describe("extractMathDirectiveStateMap", () => {
   });
 });
 
+describe("extractDirectiveStateMap (namespace-parameterized)", () => {
+  beforeEach(() => {
+    resetExtensions();
+    registerExtensionSchema("math", schema);
+    registerExtensionSchema("mermaid", mermaidSchema);
+  });
+
+  it("collects only the requested namespace", () => {
+    const src = [
+      "<!-- math: leqno -->",
+      "<!-- mermaid: theme=dark -->",
+      "<!-- mermaid: maxWidth=1200 -->",
+    ].join("\n");
+    const mermaidEntries = extractDirectiveStateMap(src, "mermaid");
+    expect(mermaidEntries).toHaveLength(2);
+    expect(mermaidEntries[1][1]).toEqual({
+      theme: "dark",
+      maxWidth: 1200,
+    });
+    const mathEntries = extractDirectiveStateMap(src, "math");
+    expect(mathEntries).toHaveLength(1);
+    expect(mathEntries[0][1].leqno).toBe(true);
+  });
+
+  it("clamps numeric values to schema bounds", () => {
+    const src = "<!-- mermaid: maxWidth=9999 -->";
+    const entries = extractDirectiveStateMap(src, "mermaid");
+    expect(entries[0][1].maxWidth).toBe(2000);
+  });
+
+  it("drops string values outside the schema enum", () => {
+    const src = "<!-- mermaid: theme=neon -->";
+    const entries = extractDirectiveStateMap(src, "mermaid");
+    expect(entries[0][1].theme).toBeUndefined();
+  });
+
+  it("returns empty for an unregistered namespace", () => {
+    expect(
+      extractDirectiveStateMap("<!-- mermaid: theme=dark -->", "smiles"),
+    ).toEqual([]);
+  });
+
+  it("extractDirectives collects only the requested namespace", () => {
+    const src = ["<!-- math: leqno -->", "<!-- mermaid: theme=forest -->"].join(
+      "\n",
+    );
+    expect(extractDirectives(src, "mermaid")).toEqual({ theme: "forest" });
+    expect(extractDirectives(src, "math")).toEqual({ leqno: true });
+  });
+});
+
 describe("lookupDirectiveState", () => {
   it("returns empty when no directive precedes the line", () => {
     const stateMap: Array<[number, Record<string, unknown>]> = [
@@ -298,5 +362,53 @@ describe("directivePlugin (core rule)", () => {
     expect(entries[0][1].get("math")?.leqno).toBe(true);
     // The entry should be at a valid token index
     expect(entries[0][0]).toBeGreaterThanOrEqual(0);
+  });
+
+  it("keeps Mermaid-like directive state cumulative and positional", () => {
+    registerExtensionSchema("mermaid", mermaidSchema);
+    const env: Record<string, unknown> = {};
+    const src = [
+      "```mermaid",
+      "before",
+      "```",
+      "",
+      "<!-- mermaid: theme=dark maxWidth=1200 -->",
+      "",
+      "```mermaid",
+      "middle",
+      "```",
+      "",
+      "<!-- mermaid: fitToWidth=false -->",
+      "",
+      "```mermaid",
+      "after",
+      "```",
+      "",
+      "<!-- mermaid: theme=forest -->",
+      "",
+      "```mermaid",
+      "last",
+      "```",
+    ].join("\n");
+    const tokens = md.parse(src, env);
+    const fencePositions = tokens
+      .map((token, index) => (token.type === "fence" ? index : -1))
+      .filter((index) => index >= 0);
+
+    expect(getDirectiveState(env, "mermaid", fencePositions[0])).toEqual({});
+    expect(getDirectiveState(env, "mermaid", fencePositions[1])).toEqual({
+      theme: "dark",
+      maxWidth: 1200,
+    });
+    expect(getDirectiveState(env, "mermaid", fencePositions[2])).toEqual({
+      theme: "dark",
+      maxWidth: 1200,
+      fitToWidth: false,
+    });
+    expect(getDirectiveState(env, "mermaid", fencePositions[3])).toEqual({
+      theme: "forest",
+      maxWidth: 1200,
+      fitToWidth: false,
+    });
   });
 });

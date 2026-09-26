@@ -26,7 +26,7 @@ import {
   type MathmlRenderOptions,
 } from "../math-render";
 import {
-  extractMathDirectiveStateMap,
+  extractDirectiveStateMap,
   lookupDirectiveState,
 } from "$lib/extensions/directives";
 import {
@@ -37,6 +37,8 @@ import {
 import { mergeOptions } from "$lib/extensions/directive-merge";
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { rasterizeSvg } from "../svg-rasterize";
+import { renderMermaidSvgForExport } from "$lib/extensions/mermaid/renderer";
+import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
 import { fileState } from "$lib/stores/file.svelte";
 import {
   isSkill,
@@ -116,12 +118,12 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
     },
     {
       id: "svg",
-      label: "SVG images",
+      label: "SVG images & Mermaid diagrams",
       options: [
         {
           id: OPTION_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "Applies to inline <svg>, <img src=*.svg>, and markdown ![…](.svg). PNG: wider compatibility. SVG: vector, may not render in all viewers.",
+          hint: "Applies to inline <svg>, <img src=*.svg>, markdown ![…](.svg), and Mermaid diagrams. PNG: wider compatibility. SVG: vector, may not render in all viewers.",
           kind: "toggle",
           value: false,
         },
@@ -134,7 +136,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_RASTER_RESOLUTION,
           label: "Resolution",
-          hint: "Applies only when math or SVG rasterization is on. Higher = sharper print, larger file.",
+          hint: "Applies only when math or image/diagram rasterization is on. Higher = sharper print, larger file.",
           kind: "select",
           value: 2,
           choices: [
@@ -159,19 +161,35 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
 const ODT_PAGE_CONTENT_WIDTH_PX = MATH_HOST_WIDTH_PX;
 
 /**
- * Fit logical PNG dimensions inside the ODT page-content width.
- * Returns the frame dimensions in CSS px. If the formula is narrower
+ * Viewer content column width in CSS px. Keep in sync with
+ * `.viewer-content`'s max-width in `markdown.css` and
+ * `DEFAULT_VIEWER_MAX_WIDTH_PX` in `pdf.ts`.
+ */
+const VIEWER_CONTENT_WIDTH_PX = 800;
+
+/**
+ * Scale factor mapping viewer CSS px to ODT page-content px. The viewer
+ * column (800 px) corresponds to the ODT text column (600 px), so a
+ * diagram occupying N viewer px occupies N × 0.75 ODT px — preserving
+ * its relative width within the page, just like in the Viewer.
+ */
+const VIEWER_TO_PAGE_SCALE =
+  ODT_PAGE_CONTENT_WIDTH_PX / VIEWER_CONTENT_WIDTH_PX;
+
+/**
+ * Fit logical image dimensions inside the ODT page-content width.
+ * Returns the frame dimensions in CSS px. If the content is narrower
  * than the page, it keeps its natural width. If wider, it is
  * proportionally scaled down so the frame never exceeds the page width.
  *
- * This is a pure dimension helper — it does not resample the PNG.
+ * This is a pure dimension helper — it does not resample the image.
  * ODT frame scaling performs the visual shrink.
  *
- * @param logicalWidthPx - Logical width of the cropped PNG in CSS px.
- * @param logicalHeightPx - Logical height of the cropped PNG in CSS px.
+ * @param logicalWidthPx - Logical width of the PNG/SVG in CSS px.
+ * @param logicalHeightPx - Logical height of the PNG/SVG in CSS px.
  * @returns Frame dimensions in CSS px, ready for inch conversion.
  */
-function fitMathToPage(
+function fitFrameToPage(
   logicalWidthPx: number,
   logicalHeightPx: number,
 ): { frameWidthPx: number; frameHeightPx: number } {
@@ -183,6 +201,43 @@ function fitMathToPage(
     frameWidthPx: logicalWidthPx * fitScale,
     frameHeightPx: logicalHeightPx * fitScale,
   };
+}
+
+/**
+ * Compute the ODT frame dimensions for a mermaid diagram so its on-page
+ * size matches its Viewer proportions.
+ *
+ * Mirrors the Viewer's `.mermaid-block` sizing: the host box is
+ * `min(maxWidth, 800 px column)`; with `fitToWidth` (default) the SVG
+ * renders at `min(naturalWidth, host)` (scaled down when wider than
+ * `maxWidth`), with `fitToWidth=false` it renders at natural size
+ * (scrollable in the Viewer). ODF has no scroll container, so the
+ * natural-size path is still clamped to the page width for
+ * printability.
+ *
+ * @param naturalWidthPx - Natural SVG width in CSS px.
+ * @param naturalHeightPx - Natural SVG height in CSS px.
+ * @param opts - Resolved mermaid options (`maxWidth`, `fitToWidth`).
+ * @returns Frame dimensions in CSS px, ready for inch conversion.
+ */
+function computeMermaidFrameDims(
+  naturalWidthPx: number,
+  naturalHeightPx: number,
+  opts: { maxWidth: number; fitToWidth: boolean },
+): { frameWidthPx: number; frameHeightPx: number } {
+  if (naturalWidthPx <= 0 || naturalHeightPx <= 0) {
+    return { frameWidthPx: naturalWidthPx, frameHeightPx: naturalHeightPx };
+  }
+  const displayWidthPx =
+    opts.fitToWidth === false
+      ? naturalWidthPx
+      : Math.min(naturalWidthPx, opts.maxWidth, VIEWER_CONTENT_WIDTH_PX);
+  const scale = (displayWidthPx / naturalWidthPx) * VIEWER_TO_PAGE_SCALE;
+  const frameWidthPx = naturalWidthPx * scale;
+  const frameHeightPx = naturalHeightPx * scale;
+  return opts.fitToWidth === false
+    ? fitFrameToPage(frameWidthPx, frameHeightPx)
+    : { frameWidthPx, frameHeightPx };
 }
 
 /* ─────────────────────── hljs color map (printer-friendly theme) ──────── */
@@ -238,6 +293,12 @@ const S = {
   cell: "Table_20_Contents",
   cellHead: "Table_20_Heading",
   mathDisplay: "Math_20_Display",
+  diagramDisplay: (align: string): string =>
+    align === "left"
+      ? "Diagram_20_Display_20_Left"
+      : align === "right"
+        ? "Diagram_20_Display_20_Right"
+        : "Diagram_20_Display",
   fmTable: "FrontmatterTable",
   fmCell: "FrontmatterCell",
   fmHeading: "FrontmatterHeading",
@@ -843,6 +904,15 @@ function generateStylesXml(): string {
     <style:style style:name="${S.mathDisplay}" style:family="paragraph" style:class="text">
       <style:paragraph-properties fo:text-align="center" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
     </style:style>
+    <style:style style:name="${S.diagramDisplay("left")}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="left" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
+    <style:style style:name="${S.diagramDisplay("center")}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="center" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
+    <style:style style:name="${S.diagramDisplay("right")}" style:family="paragraph" style:class="text">
+      <style:paragraph-properties fo:text-align="right" fo:margin-top="0.16in" fo:margin-bottom="0.16in"/>
+    </style:style>
     ${[1, 2, 3, 4, 5, 6]
       .map(
         (l) => `
@@ -1077,6 +1147,7 @@ async function buildDocument(
   warnings: string[],
   options: ExportOptions,
   directiveStateMap: Array<[number, Record<string, unknown>]> = [],
+  mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
 ): Promise<BuildResult> {
   const autoStyles: Map<string, string> = new Map();
   const images = new Map<string, ResolvedImage>();
@@ -1116,6 +1187,24 @@ async function buildDocument(
     if (typeof merged.fontsize === "number" && merged.fontsize !== 1.0)
       opts.fontsize = merged.fontsize as number;
     return opts;
+  }
+
+  // Resolve the options for a mermaid diagram by looking up the
+  // directive state at that line and merging with optional fence attrs.
+  // Defaults match the viewer's `.mermaid-block` layout (align center,
+  // maxWidth 800, fitToWidth true).
+  function buildMermaidOptions(
+    sourceLine: number,
+    fenceOpts: Record<string, unknown> = {},
+  ): { align: string; maxWidth: number; fitToWidth: boolean } {
+    const dirState = lookupDirectiveState(mermaidDirectiveStateMap, sourceLine);
+    const merged = mergeOptions(MERMAID_OPTIONS_SCHEMA, dirState, fenceOpts);
+    return {
+      align: typeof merged.align === "string" ? merged.align : "center",
+      maxWidth: typeof merged.maxWidth === "number" ? merged.maxWidth : 800,
+      fitToWidth:
+        typeof merged.fitToWidth === "boolean" ? merged.fitToWidth : true,
+    };
   }
 
   // ── inline formatter state ──
@@ -1507,7 +1596,7 @@ async function buildDocument(
                 targetFontSize: mathTargetFontSize,
                 ...inlineOpts,
               });
-              const { frameWidthPx, frameHeightPx } = fitMathToPage(
+              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
                 widthPx,
                 heightPx,
               );
@@ -2159,7 +2248,7 @@ async function buildDocument(
                   targetFontSize: mathTargetFontSize,
                   ...blockRenderOpts,
                 });
-                const { frameWidthPx, frameHeightPx } = fitMathToPage(
+                const { frameWidthPx, frameHeightPx } = fitFrameToPage(
                   widthPx,
                   heightPx,
                 );
@@ -2201,6 +2290,61 @@ async function buildDocument(
             }
             i++;
             break;
+          }
+          // Mermaid diagrams embed as an image (vector SVG, or PNG when the
+          // shared SVG/diagram rasterize option is on). The frame sits in a
+          // paragraph whose text-align mirrors the viewer's horizontal
+          // alignment (align option, default center). On render failure we
+          // fall through and keep the source as a preformatted code block.
+          if (fenceLang === "mermaid") {
+            const label = `mermaid(token@${i})`;
+            // Parse fence attributes {key=val} from info string and merge
+            // with HTML comment directives (fence attrs override).
+            let mermaidFenceOpts: Record<string, unknown> = {};
+            const mermaidRawAttrs = extractBraceAttrs(language);
+            if (mermaidRawAttrs) {
+              const parsed = parseAttrString(mermaidRawAttrs);
+              mermaidFenceOpts = validateExplicitFenceOptions(
+                parsed,
+                MERMAID_OPTIONS_SCHEMA,
+              );
+            }
+            const mermaidOpts = buildMermaidOptions(
+              token.map?.[0] ?? 0,
+              mermaidFenceOpts,
+            );
+            try {
+              const svgXml = await renderMermaidSvgForExport(token.content);
+              const dims = sniffSvgDimensions(
+                new TextEncoder().encode(svgXml),
+                label,
+                warnings,
+              ) ?? { width: 0, height: 0 };
+              const { frameWidthPx, frameHeightPx } = computeMermaidFrameDims(
+                dims.width,
+                dims.height,
+                mermaidOpts,
+              );
+              const frameDims = {
+                width: Math.round(frameWidthPx),
+                height: Math.round(frameHeightPx),
+              };
+              const rasterized = await tryRasterizeSvg(
+                svgXml,
+                frameDims,
+                label,
+              );
+              const inner = rasterized ?? addSvgImage(svgXml, frameDims, label);
+              parts.push(
+                `      <text:p text:style-name="${S.diagramDisplay(mermaidOpts.align)}">${inner}</text:p>`,
+              );
+              i++;
+              break;
+            } catch (err) {
+              warnings.push(
+                `Mermaid rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
+              );
+            }
           }
           const code = token.content.trimEnd();
           const lines = code.split("\n");
@@ -2251,7 +2395,7 @@ async function buildDocument(
                 targetFontSize: mathTargetFontSize,
                 ...blockOpts,
               });
-              const { frameWidthPx, frameHeightPx } = fitMathToPage(
+              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
                 widthPx,
                 heightPx,
               );
@@ -2516,9 +2660,14 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
 
   const opts = readOptions(ctx.options);
 
-  // Extract HTML comment directives from the markdown source as a
-  // line-based state map so each math token can look up its own state.
-  const directiveStateMap = extractMathDirectiveStateMap(ctx.markdown);
+  // Extract HTML comment directives from the markdown source as
+  // line-based state maps so each math/mermaid token can look up its
+  // own state.
+  const directiveStateMap = extractDirectiveStateMap(ctx.markdown, "math");
+  const mermaidDirectiveStateMap = extractDirectiveStateMap(
+    ctx.markdown,
+    "mermaid",
+  );
 
   const { bodyXml, autoStyles, images, mathObjects } = await buildDocument(
     ctx.tokens,
@@ -2526,6 +2675,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     warnings,
     opts,
     directiveStateMap,
+    mermaidDirectiveStateMap,
   );
 
   // Prepend frontmatter/skill card if the option is enabled.

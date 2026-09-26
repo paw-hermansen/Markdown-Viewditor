@@ -4,8 +4,22 @@ import {
   parseAttrString,
   validateExplicitFenceOptions,
 } from "./fence-options";
+import {
+  getDirectiveState,
+  warnInvalidExplicitFenceOptions,
+} from "./directives";
 import { listExtensions } from "./registry";
 import { mergeOptions } from "./directive-merge";
+
+function injectDataLine(html: string, line: string): string {
+  const firstTag = html.match(/^\s*<[A-Za-z][\w-]*(?:\s[^>]*)?\s*\/?>/);
+  if (!firstTag || /\bdata-line\s*=/i.test(firstTag[0])) return html;
+
+  return html.replace(
+    /^(\s*<[A-Za-z][\w-]*)(?=\s|\/?>)/,
+    `$1 data-line="${line}"`,
+  );
+}
 
 /**
  * Extension-aware fence renderer plugin. Always registered on the base md
@@ -31,27 +45,32 @@ export function extensionFencePlugin(md: MarkdownIt): void {
         const rawAttrs = extractBraceAttrs(info);
         if (rawAttrs && ext.fenceOptionsSchema) {
           const parsed = parseAttrString(rawAttrs);
+          warnInvalidExplicitFenceOptions(parsed, ext.fenceOptionsSchema);
           fenceOpts = validateExplicitFenceOptions(
             parsed,
             ext.fenceOptionsSchema,
           );
         }
 
-        // Merge with directive state.
+        // Merge defaults, positional directive state, and this fence's attrs.
         let mergedOpts: Record<string, unknown> = fenceOpts;
         if (ext.fenceOptionsSchema) {
-          const directiveState = getDirectiveStateForExtension(env, ext.id);
-          if (Object.keys(directiveState).length > 0) {
-            mergedOpts = mergeOptions(
-              ext.fenceOptionsSchema,
-              directiveState,
-              fenceOpts,
-            );
-          }
+          const directiveState = getDirectiveState(env, ext.id, idx);
+          mergedOpts = mergeOptions(
+            ext.fenceOptionsSchema,
+            directiveState,
+            fenceOpts,
+          );
         }
 
         const rendered = ext.renderFence(token.content, lang, mergedOpts);
-        if (rendered !== null) return rendered;
+        if (rendered !== null) {
+          // Inject data-line into the first tag for scroll-sync.
+          if (token.map) {
+            return injectDataLine(rendered, String(token.map[0] + 1));
+          }
+          return rendered;
+        }
       }
     }
 
@@ -61,29 +80,4 @@ export function extensionFencePlugin(md: MarkdownIt): void {
       self.renderToken(tokens, idx, options)
     );
   };
-}
-
-/**
- * Get directive state for a specific extension from the env.
- * Directives are stored by the directive plugin as
- * `env.directives: Map<number, Map<string, Record<string, unknown>>>`.
- * We look up the last directive state for the given extension id.
- */
-function getDirectiveStateForExtension(
-  env: Record<string, unknown>,
-  extensionId: string,
-): Record<string, unknown> {
-  const directives = env.directives as
-    Map<number, Map<string, Record<string, unknown>>> | undefined;
-  if (!directives || directives.size === 0) return {};
-
-  // Walk backward through the directive map to find the most recent state
-  // for this extension.
-  const entries = [...directives.entries()].sort((a, b) => a[0] - b[0]);
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const nsMap = entries[i][1];
-    const state = nsMap.get(extensionId);
-    if (state) return state;
-  }
-  return {};
 }

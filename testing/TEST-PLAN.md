@@ -73,7 +73,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 3.6 | Select all text (Ctrl+A), delete. | Word count shows 0. |
 | 3.7 | Type some text, press Ctrl+F. | Search bar opens. Type a word that exists — editor jumps to the match. |
 | 3.8 | Press Escape. | Search bar closes. |
-| 3.9 | Press Ctrl+H (Find and Replace). Type a search term and replacement, click "Replace All". | Text is replaced; word count updates. Press Escape to close. |
+| 3.9 | Press Ctrl+F again (same search bar; the Find field keeps your term from 3.7 — retype it if empty). Type a replacement in the Replace field and click `replace all`. | Every occurrence is replaced (Find behavior was already checked in 3.7). Word count updates. Press Escape to close. |
 
 ---
 
@@ -547,7 +547,7 @@ within each story gives the precise check.
 | Editor | Cursor position (status bar) | **S3** (3.4) |
 | Editor | Word count | **S3** (3.5–3.6) |
 | Editor | Find (Ctrl+F) | **S3** (3.7–3.8) |
-| Editor | Find & Replace (Ctrl+H) | **S3** (3.9) |
+| Editor | Replace All (Replace field in search bar) | **S3** (3.9) |
 | Editor | Format Document (Shift+Alt+F) | **S4** (4.30–4.31) |
 | Editor | Focus retained after toolbar click | **S4** (4.18) |
 | Editor toolbar | Bold | **S4** (4.1, 4.19) |

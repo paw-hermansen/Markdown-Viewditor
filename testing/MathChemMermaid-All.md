@@ -119,16 +119,16 @@ The formula below uses `fontsize=2.0` to render at double size:
 E = mc^2 \tag{1}
 ```
 
-### Flush-left Alignment (fleqn)
+### Flush-left Alignment with Left-side Equation Number (fleqn leqno)
 
-```math {fleqn}
-\int_0^1 f(x)\,dx = F(1) - F(0)
+```math {fleqn leqno}
+\int_0^1 f(x)\,dx = F(1) - F(0)\tag{2}
 ```
 
 ### Combined Attributes (leqno + fontsize)
 
 ```math {leqno fontsize=1.5}
-a^2 + b^2 = c^2 \tag{2}
+a^2 + b^2 = c^2 \tag{3}
 ```
 
 ---
@@ -371,12 +371,12 @@ graph LR
 
 ## Mermaid — HTML Comment Directives
 
-<!-- mermaid: align=center maxWidth=600 -->
+<!-- mermaid: align=right maxWidth=300 -->
 
-The directive above sets center alignment and max width 600px for following diagrams.
+The directive above sets right alignment and max width 300px for following diagrams.
 
 ```mermaid
-graph TD
+graph LR
     P --> Q --> R
 ```
 

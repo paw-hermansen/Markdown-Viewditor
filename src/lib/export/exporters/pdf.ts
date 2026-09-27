@@ -244,22 +244,75 @@ function waitForLayout(): Promise<void> {
 }
 
 /**
- * WebKitGTK can return from window.print() before its native print operation
- * has captured the page. Keep the print clone alive until afterprint so the
- * native operation never sees the cleaned-up document.
+ * Wait for the print dialog to finish. Three interchangeable signals, all
+ * routed through one idempotent `finish()`:
+ *
+ * - `afterprint` — fired by Chromium (Windows/WebView2) when the print dialog
+ *   closes, whether the user printed or cancelled. WebKitGTK (Linux) does not
+ *   implement this event at all, so it is not sufficient on its own.
+ * - blur → focus — the print dialog is a separate modal OS window: while it
+ *   is open the webview is unfocused, and focus returns when it closes. Every
+ *   engine captures the page from the DOM while the dialog is open (preview at
+ *   open, final render at the Print click), so the moment focus returns the
+ *   capture is guaranteed done or cancelled — the earliest safe cleanup point.
+ *   Gating on a prior blur avoids finishing early from pre-dialog focus noise.
+ * - a re-arming timer (last resort) — for environments where focus events
+ *   never arrive. It never cleans up while `document.hasFocus()` is false (the
+ *   dialog is still open); it re-arms instead and finishes once the document
+ *   is focused again.
+ *
+ * The clone must stay alive until one of these fires: WebKitGTK can return
+ * from window.print() before its native print operation has captured the
+ * page, and cleanup mid-capture would make the dialog print the restored app
+ * UI instead of the print clone.
  */
 function printAndWaitForCompletion(): Promise<void> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let blurred = false;
+    let rearmTimer: number | undefined;
+
     const finish = () => {
+      if (settled) return;
+      settled = true;
       window.removeEventListener("afterprint", finish);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+      window.clearTimeout(rearmTimer);
       resolve();
     };
 
+    const onBlur = () => {
+      blurred = true;
+    };
+    const onFocus = () => {
+      if (blurred) finish();
+    };
+
+    const armTimer = () => {
+      rearmTimer = window.setTimeout(() => {
+        if (settled) return;
+        if (document.hasFocus()) {
+          finish();
+        } else {
+          armTimer();
+        }
+      }, 500);
+    };
+
     window.addEventListener("afterprint", finish, { once: true });
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    armTimer();
+
     try {
       window.print();
     } catch (error) {
+      settled = true;
+      window.clearTimeout(rearmTimer);
       window.removeEventListener("afterprint", finish);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
       reject(error);
     }
   });

@@ -367,7 +367,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 10.30 | Neither raster option ticked. | Resolution selector is greyed out. |
 | 10.31 | Frontmatter: toggle OFF, export. | No frontmatter card in ODT. |
 | 10.32 | Frontmatter: toggle ON. | Frontmatter card table appears in ODF body. |
-| 10.33 | Frontmatter toggle OFF. | `meta.xml` still carries `<dc:title>` from frontmatter. |
+| 10.33 | Frontmatter toggle OFF. | `meta.xml` still carries `<dc:title>` from frontmatter (`title`, or `name` for skill files) and `<dc:creator>` from `author` — not the filename. |
 | 10.34 | Export file with footnotes. | Rendered as ODF footnotes. |
 | 10.35 | Export `Rendering-All.md`. | Local images embedded; remote fetched (or warning). |
 | 10.36 | Export with unreachable remote image. | Warnings dialog lists the failed fetch. |

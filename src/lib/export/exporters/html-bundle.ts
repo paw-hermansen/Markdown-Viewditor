@@ -28,6 +28,7 @@ import { fileState } from "$lib/stores/file.svelte";
 import { getThemeType } from "$lib/stores/viewer.svelte";
 import {
   generateFrontmatterCardHtml,
+  deriveTitle,
   OPTION_INCLUDE_FRONTMATTER,
 } from "../frontmatter-card";
 
@@ -82,20 +83,6 @@ function collectStylesheets(cssTextFallback: string): string {
     }
   }
   return out.length > 0 ? out.join("\n") : cssTextFallback;
-}
-
-/** Derive a sensible <title> from frontmatter or the file name. */
-function deriveTitle(
-  frontmatter: Frontmatter | null,
-  fileName: string,
-): string {
-  if (frontmatter?.name && typeof frontmatter.name === "string") {
-    return frontmatter.name;
-  }
-  if (frontmatter?.title && typeof frontmatter.title === "string") {
-    return frontmatter.title;
-  }
-  return fileName || "Untitled";
 }
 
 function isTransparent(color: string): boolean {

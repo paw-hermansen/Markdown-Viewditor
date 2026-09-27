@@ -109,6 +109,26 @@ async function runOdtExport(
   return odtExporter.export(ctx);
 }
 
+async function runOdtExportWithFrontmatter(
+  src: string,
+  frontmatter: Record<string, unknown>,
+  fileName = "test",
+  options?: Record<string, unknown>,
+) {
+  const tokens = makeTokens(src);
+  const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
+  const html = md.render(src);
+  const ctx: ExportContext = {
+    markdown: src,
+    html,
+    frontmatter,
+    fileName,
+    tokens,
+    options,
+  };
+  return odtExporter.export(ctx);
+}
+
 async function runOdtExportWithMark(
   src: string,
   fileName = "test",
@@ -498,6 +518,74 @@ describe("odtExporter", () => {
     const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
     const zip = await JSZip.loadAsync(new Uint8Array(content.content));
     expect(await zip.file("meta.xml")!.async("text")).toContain("my-doc");
+  });
+
+  it("meta.xml dc:title uses frontmatter title when no name", async () => {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await runOdtExportWithFrontmatter(
+      "# Hello",
+      { title: "Render Title" },
+      "my-doc",
+    );
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const meta = await zip.file("meta.xml")!.async("text");
+    expect(meta).toContain(
+      '<dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Render Title</dc:title>',
+    );
+    expect(meta).not.toContain("my-doc");
+  });
+
+  it("meta.xml dc:title prefers frontmatter name over title", async () => {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await runOdtExportWithFrontmatter(
+      "# Hello",
+      { name: "Skill Name", title: "Doc Title" },
+      "my-doc",
+    );
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const meta = await zip.file("meta.xml")!.async("text");
+    expect(meta).toContain(
+      '<dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Skill Name</dc:title>',
+    );
+    expect(meta).not.toContain("Doc Title</dc:title>");
+  });
+
+  it("meta.xml dc:creator uses frontmatter author", async () => {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await runOdtExportWithFrontmatter(
+      "# Hello",
+      { title: "Render Title", author: "Test Suite" },
+      "my-doc",
+    );
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const meta = await zip.file("meta.xml")!.async("text");
+    expect(meta).toContain(
+      '<dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Test Suite</dc:creator>',
+    );
+  });
+
+  it("meta.xml omits dc:creator when frontmatter has no author", async () => {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await runOdtExport("# Hello", "my-doc");
+    const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
+    const zip = await JSZip.loadAsync(new Uint8Array(content.content));
+    const meta = await zip.file("meta.xml")!.async("text");
+    expect(meta).not.toContain("dc:creator");
   });
 
   it("empty document produces valid XML", async () => {

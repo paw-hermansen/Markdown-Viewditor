@@ -203,6 +203,7 @@ describe("buildBundleHtml", () => {
 
     expect(result.warnings).toEqual([]);
     expect(result.html).toContain("<!DOCTYPE html>");
+    expect(result.html).toContain('<html lang="en" data-theme="light">');
     expect(result.html).toContain("<title>doc</title>");
     expect(result.html).toContain('src="images/pic.png"');
     expect(result.html).toContain("url(fonts/F.woff2)");
@@ -249,6 +250,30 @@ describe("buildBundleHtml", () => {
     });
     expect(result.html).toContain('class="viewer-content"');
     expect(result.html).toContain('id="viewer-content"');
+  });
+
+  it("emits data-theme='light' when themeType is 'light'", async () => {
+    const result = await buildBundleHtml("<p>x</p>", null, "d", {
+      cssText: "",
+      themeType: "light",
+    });
+    expect(result.html).toContain('<html lang="en" data-theme="light">');
+  });
+
+  it("emits data-theme='dark' when themeType is 'dark'", async () => {
+    const result = await buildBundleHtml("<p>x</p>", null, "d", {
+      cssText: "",
+      themeType: "dark",
+    });
+    expect(result.html).toContain('<html lang="en" data-theme="dark">');
+  });
+
+  it("defaults themeType to 'light' when not provided", async () => {
+    const result = await buildBundleHtml("<p>x</p>", null, "d", {
+      cssText: "",
+    });
+    expect(result.html).toContain('data-theme="light"');
+    expect(result.html).not.toContain('data-theme="dark"');
   });
 
   it("strips KaTeX fonts when document has no math", async () => {

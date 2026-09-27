@@ -25,6 +25,7 @@ import type {
 } from "../types";
 import type { Frontmatter } from "$lib/types";
 import { fileState } from "$lib/stores/file.svelte";
+import { getThemeType } from "$lib/stores/viewer.svelte";
 import {
   generateFrontmatterCardHtml,
   OPTION_INCLUDE_FRONTMATTER,
@@ -367,6 +368,13 @@ export interface BuildBundleHtmlOptions {
   invokeImpl?: InvokeImpl;
   cssText?: string;
   frontmatterCardHtml?: string;
+  /**
+   * Active theme's color-scheme type. Emitted as `data-theme="<themeType>"`
+   * on the exported `<html>` so the inlined CSS's `[data-theme="light"]`
+   * / `[data-theme="dark"]` selectors resolve correctly. Defaults to
+   * `"light"` — the safe default for standalone shareable documents.
+   */
+  themeType?: "light" | "dark";
 }
 
 export interface BuildBundleHtmlResult {
@@ -413,9 +421,10 @@ export async function buildBundleHtml(
 
   const title = deriveTitle(frontmatter, fileName);
   const cardHtml = options.frontmatterCardHtml ?? "";
+  const themeType = options.themeType ?? "light";
 
   const doc = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="${themeType}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -476,6 +485,7 @@ export async function exportHtmlBundle(
   const bundle = await buildBundleHtml(html, frontmatter, fileName, {
     invokeImpl: invoke,
     frontmatterCardHtml,
+    themeType: getThemeType(),
   });
   warnings.push(...bundle.warnings);
 

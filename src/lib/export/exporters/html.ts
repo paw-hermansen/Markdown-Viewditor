@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import { buildStandaloneHtml } from "../document";
 import { fileState, getFileName } from "$lib/stores/file.svelte";
+import { getThemeType } from "$lib/stores/viewer.svelte";
 import {
   generateFrontmatterCardHtml,
   OPTION_INCLUDE_FRONTMATTER,
@@ -84,6 +85,7 @@ export async function exportHtml(
     await buildStandaloneHtml(html, frontmatter, fileName, {
       invokeImpl: invoke,
       frontmatterCardHtml,
+      themeType: getThemeType(),
     });
   warnings.push(...buildWarnings);
 

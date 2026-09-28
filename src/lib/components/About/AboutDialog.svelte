@@ -238,6 +238,7 @@
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md')}>Custom Themes</button> &mdash; creating and installing custom CSS themes</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md')}>Math Formulas</button> &mdash; KaTeX math rendering and delimiter syntax</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md')}>Chemical Formulas</button> &mdash; mhchem equations and physical units</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Mermaid.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Mermaid.md')}>Mermaid Diagrams</button> &mdash; flowcharts, sequence diagrams, and more</li>
             </ul>
           </section>
           </div>

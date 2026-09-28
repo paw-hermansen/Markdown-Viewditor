@@ -146,32 +146,31 @@
         </div>
       {/if}
     </div>
-    {#if violations.length > 0}
-      <span class="separator">|</span>
-      <div class="level-popover-area">
-        <button
-          class="violation-badge"
-          onclick={onViolationBadgeClick}
-          title={`${violations.length} feature violation${violations.length === 1 ? '' : 's'}`}
-          aria-label={`${violations.length} markdown feature violations`}
-          aria-expanded={showViolations}
-        >
-          &#x26A0; {violations.length}
-        </button>
-        {#if showViolations}
-          <div class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
-            {#each violations as v}
-              <div class="violation-row">
-                <div class="violation-msg">{violationMessageFor(v)}</div>
-                {#if v.lines.length > 0}
-                  <div class="violation-lines">line{v.lines.length === 1 ? '' : 's'}: {v.lines.slice(0, MAX_DISPLAY_LINES).join(', ')}{v.lines.length > MAX_DISPLAY_LINES ? '\u2026' : ''}</div>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
-    {/if}
+    <span class="separator" class:hidden={violations.length === 0}>|</span>
+    <div class="level-popover-area">
+      <button
+        class="violation-badge"
+        class:hidden={violations.length === 0}
+        onclick={onViolationBadgeClick}
+        title={`${violations.length} feature violation${violations.length === 1 ? '' : 's'}`}
+        aria-label={`${violations.length} markdown feature violations`}
+        aria-expanded={showViolations}
+      >
+        &#x26A0; {violations.length}
+      </button>
+      {#if showViolations && violations.length > 0}
+        <div class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
+          {#each violations as v}
+            <div class="violation-row">
+              <div class="violation-msg">{violationMessageFor(v)}</div>
+              {#if v.lines.length > 0}
+                <div class="violation-lines">line{v.lines.length === 1 ? '' : 's'}: {v.lines.slice(0, MAX_DISPLAY_LINES).join(', ')}{v.lines.length > MAX_DISPLAY_LINES ? '\u2026' : ''}</div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
     <span class="separator">|</span>
     <span>Markdown</span>
     <span class="separator">|</span>
@@ -209,6 +208,12 @@
     opacity: 0.5;
   }
 
+  .separator.hidden,
+  .violation-badge.hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   .level-btn {
     display: flex;
     align-items: center;
@@ -242,6 +247,8 @@
     border-radius: 4px;
     font: inherit;
     height: 20px;
+    min-width: 48px;
+    text-align: center;
   }
 
   .violation-badge:hover {

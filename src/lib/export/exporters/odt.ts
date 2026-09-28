@@ -43,6 +43,7 @@ import { fileState } from "$lib/stores/file.svelte";
 import {
   isSkill,
   formatValue,
+  deriveTitle,
   OPTION_INCLUDE_FRONTMATTER,
 } from "../frontmatter-card";
 import type { Frontmatter } from "$lib/types";
@@ -757,7 +758,13 @@ function generateMimetype(): string {
   return "application/vnd.oasis.opendocument.text";
 }
 
-function generateMetaXml(title: string): string {
+function generateMetaXml(title: string, author: string): string {
+  const dcTitle = title
+    ? `    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">${esc(title)}</dc:title>\n`
+    : "";
+  const dcCreator = author
+    ? `    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">${esc(author)}</dc:creator>\n`
+    : "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <office:document-meta
   xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
@@ -765,8 +772,7 @@ function generateMetaXml(title: string): string {
   office:version="1.2">
   <office:meta>
     <meta:generator>Markdown Viewditor</meta:generator>
-${title ? `    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">${esc(title)}</dc:title>` : ""}
-  </office:meta>
+${dcTitle}${dcCreator}  </office:meta>
 </office:document-meta>`;
 }
 
@@ -2684,7 +2690,11 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     finalBodyXml = generateFrontmatterCardOdf(ctx.frontmatter) + bodyXml;
   }
 
-  const title = ctx.frontmatter?.name ?? ctx.fileName ?? "";
+  const title = deriveTitle(ctx.frontmatter, ctx.fileName);
+  const author =
+    ctx.frontmatter?.author && typeof ctx.frontmatter.author === "string"
+      ? ctx.frontmatter.author
+      : "";
 
   const zip = new JSZip();
 
@@ -2693,7 +2703,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
 
   zip.file("content.xml", generateContentXml(finalBodyXml, autoStyles));
   zip.file("styles.xml", generateStylesXml());
-  zip.file("meta.xml", generateMetaXml(title));
+  zip.file("meta.xml", generateMetaXml(title, author));
 
   // Add images
   for (const [, img] of images) {

@@ -24,6 +24,7 @@
       aria-modal="true"
       aria-label={req.title}
       aria-describedby="confirm-message"
+      tabindex="-1"
       use:focusTrap={{ onEscape: () => resolveConfirm(null) }}
     >
       <div class="icon-row">

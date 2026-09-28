@@ -19,6 +19,7 @@
       aria-modal="true"
       aria-label="Export Warnings"
       aria-describedby="warning-dialog-message"
+      tabindex="-1"
       use:focusTrap={{ onEscape: () => dismissWarningDialog() }}
     >
       <div class="icon-row">

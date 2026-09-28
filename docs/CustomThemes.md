@@ -32,6 +32,18 @@ Both code highlighting and viewer elements are rendered inside `#viewer-content`
 
 For code blocks, set the background on `#viewer-content pre` and clear it on `#viewer-content pre code` so the background covers the whole block, not each line.
 
+### Rounded Image Corners
+
+Images are rendered with square corners by default. To round them, set `border-radius` on `img` in your theme:
+
+```css
+#viewer-content img {
+  border-radius: 8px;
+}
+```
+
+Use `border-radius: 50%` for circular avatars. This also applies to HTML/PDF exports, which share the viewer styles.
+
 ## Highlight.js Token Reference
 
 The following `.hljs-*` classes are emitted by the app's registered languages (JavaScript, TypeScript, Python, CSS, XML, HTML, JSON, Bash, Markdown, SQL):

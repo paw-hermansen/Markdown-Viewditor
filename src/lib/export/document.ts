@@ -1,4 +1,5 @@
 import type { Frontmatter } from "$lib/types";
+import { deriveTitle } from "./frontmatter-card";
 import { inlineCssAssets, inlineImages } from "./assets";
 
 /**
@@ -26,20 +27,6 @@ function collectStylesheets(cssTextFallback: string): string {
     }
   }
   return out.length > 0 ? out.join("\n") : cssTextFallback;
-}
-
-/** Derive a sensible <title> from frontmatter or the file name. */
-function deriveTitle(
-  frontmatter: Frontmatter | null,
-  fileName: string,
-): string {
-  if (frontmatter?.name && typeof frontmatter.name === "string") {
-    return frontmatter.name;
-  }
-  if (frontmatter?.title && typeof frontmatter.title === "string") {
-    return frontmatter.title;
-  }
-  return fileName || "Untitled";
 }
 
 function isTransparent(color: string): boolean {
@@ -83,6 +70,15 @@ export interface BuildStandaloneHtmlOptions {
    * is produced by `generateFrontmatterCardHtml()` from `frontmatter-card.ts`.
    */
   frontmatterCardHtml?: string;
+  /**
+   * Active theme's color-scheme type. Emitted as `data-theme="<themeType>"`
+   * on the exported `<html>` so the inlined CSS's `[data-theme="light"]`
+   * / `[data-theme="dark"]` selectors resolve correctly — without it,
+   * `color-scheme: dark` from `:root` wins and native form controls (GFM
+   * checkboxes) render dark even for light themes. Defaults to `"light"`,
+   * which is the safe default for standalone shareable documents.
+   */
+  themeType?: "light" | "dark";
 }
 
 export async function buildStandaloneHtml(
@@ -121,9 +117,10 @@ export async function buildStandaloneHtml(
   const title = deriveTitle(frontmatter, fileName);
 
   const cardHtml = options.frontmatterCardHtml ?? "";
+  const themeType = options.themeType ?? "light";
 
   const doc = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="${themeType}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

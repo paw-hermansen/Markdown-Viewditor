@@ -197,4 +197,62 @@ describe("exportPdf print lifecycle", () => {
     expect(document.querySelector(".print-content")).toBeNull();
     printSpy.mockRestore();
   });
+
+  it("resolves via window focus when afterprint never fires (WebKitGTK)", async () => {
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
+    const exportPromise = exportPdf("<p>math</p>", "document");
+
+    // Let the build phase (font loading + layout rAFs) complete.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector(".print-content")).not.toBeNull();
+    expect(document.body.classList.contains("exporting")).toBe(true);
+
+    // The dialog opens (blur) and closes without printing (focus) — exactly
+    // the Linux cancel flow, where WebKitGTK never fires afterprint.
+    window.dispatchEvent(new Event("blur"));
+    window.dispatchEvent(new Event("focus"));
+
+    await expect(exportPromise).resolves.toEqual({ warnings: [] });
+    expect(document.querySelector(".print-content")).toBeNull();
+    expect(document.body.classList.contains("exporting")).toBe(false);
+    expect(document.documentElement.classList.contains("exporting")).toBe(
+      false,
+    );
+    printSpy.mockRestore();
+  });
+
+  it("fallback timer waits for the dialog to close when focus events never fire", async () => {
+    vi.useFakeTimers();
+    try {
+      const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
+      const hasFocusSpy = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+
+      const exportPromise = exportPdf("<p>math</p>", "document");
+
+      // Let the build phase (fonts.ready + layout rAFs) complete, then let
+      // the fallback timer fire repeatedly while the dialog is still open.
+      await vi.advanceTimersByTimeAsync(50);
+      await vi.advanceTimersByTimeAsync(50);
+      await vi.advanceTimersByTimeAsync(2000);
+
+      // Cleanup must NOT have run yet: the dialog may still be capturing.
+      expect(document.querySelector(".print-content")).not.toBeNull();
+      expect(document.body.classList.contains("exporting")).toBe(true);
+
+      // Dialog closes — focus returns to the document, cleanup runs.
+      hasFocusSpy.mockReturnValue(true);
+      await vi.advanceTimersByTimeAsync(500);
+      await expect(exportPromise).resolves.toEqual({ warnings: [] });
+
+      expect(document.querySelector(".print-content")).toBeNull();
+      expect(document.body.classList.contains("exporting")).toBe(false);
+      expect(document.documentElement.classList.contains("exporting")).toBe(
+        false,
+      );
+      printSpy.mockRestore();
+      hasFocusSpy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -218,7 +218,9 @@ describe("StatusBar", () => {
 
   it("hides the violation badge when there are no violations", () => {
     render(StatusBar);
-    expect(screen.queryByLabelText(/markdown feature violations/)).toBeNull();
+    const badge = screen.queryByLabelText(/markdown feature violations/);
+    expect(badge).not.toBeNull();
+    expect(badge!.className).toContain("hidden");
   });
 
   it("shows the violation badge when violations exist and lists them", async () => {

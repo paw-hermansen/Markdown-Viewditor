@@ -121,6 +121,14 @@ code.hljs {
 #viewer-content {
   background: #0d1117;
   color: #c9d1d9;
+  --border: #21262d;
+  --bg-tertiary: #161b22;
+  --accent: #58a6ff;
+  --text-secondary: #8b949e;
+  --text-primary: #c9d1d9;
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-hover: rgba(255, 255, 255, 0.05);
 }
 #viewer-content h1 {
   color: #e6edf3;
@@ -133,18 +141,25 @@ code.hljs {
 #viewer-content h6 {
   color: #e6edf3;
 }
+#viewer-content h2 {
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 0.3em;
+}
+#viewer-content h6 {
+  color: #8b949e;
+}
 #viewer-content a {
   color: #58a6ff;
 }
 #viewer-content blockquote {
-  border-left-color: #3b5998;
+  border-left-color: #30363d;
   color: #8b949e;
 }
 #viewer-content code {
   background: #161b22;
 }
 #viewer-content pre {
-  background: #0d1117;
+  background: #161b22;
 }
 #viewer-content pre code {
   background: transparent;

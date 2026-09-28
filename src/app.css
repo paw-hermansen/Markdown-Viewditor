@@ -1,6 +1,6 @@
 :root {
-  /* Dark theme (default) */
-  color-scheme: dark;
+  /* Light theme (default). Dark theme overrides via [data-theme="dark"]. */
+  color-scheme: light;
   --bg-primary: #1a1a2e;
   --bg-secondary: #16213e;
   --bg-tertiary: #0f3460;

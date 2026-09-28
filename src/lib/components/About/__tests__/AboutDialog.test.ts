@@ -96,6 +96,17 @@ describe("AboutDialog", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("calls onClose on Escape key even when focus is outside the dialog", async () => {
+    // Regression: with focus on body (e.g. an async opener left focus
+    // outside the dialog), the document-level Escape listener must still
+    // dismiss the dialog.
+    const onClose = vi.fn();
+    render(AboutDialog, { props: { open: true, onClose } });
+    document.body.focus();
+    await fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it("calls onClose on close button click", async () => {
     const onClose = vi.fn();
     render(AboutDialog, { props: { open: true, onClose } });

@@ -246,4 +246,31 @@ describe("export-confirm-dialog select options", () => {
     await checkA11y(container);
     exportConfirmState.current = null;
   });
+
+  it("dismisses on Escape even when focus is outside the dialog", async () => {
+    // Regression: with focus on the toolbar trigger behind the dialog,
+    // the document-level keydown listener should still resolve the dialog.
+    const promise = openDialog();
+    render(ExportConfirmDialog);
+    await tick();
+
+    // Move focus outside the dialog — mirrors the DropdownButton.pick()
+    // timing where focus stays on the toolbar Export trigger.
+    document.body.focus();
+    await fireEvent.keyDown(document.body, { key: "Escape" });
+
+    const result = await promise;
+    expect(result.confirmed).toBe(false);
+  });
+
+  it("focuses the Export button by default so Enter activates it", async () => {
+    // Default action per WAI-ARIA APG: non-destructive dialogs should
+    // focus the primary action so Enter confirms immediately.
+    openDialog();
+    render(ExportConfirmDialog);
+    await tick();
+
+    const exportButton = screen.getByRole("button", { name: "Export" });
+    expect(document.activeElement).toBe(exportButton);
+  });
 });

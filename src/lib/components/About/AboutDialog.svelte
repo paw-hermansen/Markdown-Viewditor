@@ -130,7 +130,7 @@
 
 {#if open}
   <div class="backdrop" role="presentation" onclick={handleBackdropClick}>
-    <div class="dialog" role="dialog" aria-label="About Markdown Viewditor" aria-modal="true" use:focusTrap={{ onEscape: onClose }}>
+    <div class="dialog" role="dialog" aria-label="About Markdown Viewditor" aria-modal="true" tabindex="-1" use:focusTrap={{ onEscape: onClose }}>
       <button class="close-btn" onclick={onClose} aria-label="Close">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/>

@@ -10,6 +10,10 @@ import type { FenceOptionSchema } from "../types";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
+interface AppThemeInfo {
+  type: AppTheme;
+  themeId: string;
+}
 /**
  * Which Mermaid config / cache family a render belongs to. The viewer
  * inherits the page font and uses HTML labels; export must stand alone
@@ -40,14 +44,18 @@ const EXPORT_FONT_FAMILY = "'trebuchet ms', verdana, arial, sans-serif";
 // rendered, so changing alignment or sizing never duplicates Mermaid work.
 const svgCache = new Map<string, string>();
 
-function getAppTheme(): AppTheme {
+function getAppTheme(): AppThemeInfo {
   // Read from DOM to avoid circular dependency with viewer store.
   if (typeof document !== "undefined") {
-    return document.documentElement.getAttribute("data-theme") === "dark"
-      ? "dark"
-      : "default";
+    const type: AppTheme =
+      document.documentElement.getAttribute("data-theme") === "dark"
+        ? "dark"
+        : "default";
+    const themeId =
+      document.documentElement.getAttribute("data-theme-id") ?? "unknown";
+    return { type, themeId };
   }
-  return "default";
+  return { type: "default", themeId: "unknown" };
 }
 
 /**
@@ -60,10 +68,10 @@ function getAppTheme(): AppTheme {
  */
 function cacheKey(
   content: string,
-  appTheme: AppTheme,
+  appTheme: AppThemeInfo,
   variant: RenderVariant = "viewer",
 ): string {
-  return JSON.stringify([appTheme, variant, content]);
+  return JSON.stringify([appTheme.type, appTheme.themeId, variant, content]);
 }
 
 async function ensureLoaded(): Promise<MermaidModule> {
@@ -75,10 +83,10 @@ async function ensureLoaded(): Promise<MermaidModule> {
 
 async function ensureInitialized(
   mod: MermaidModule,
-  theme: AppTheme,
+  theme: AppThemeInfo,
   variant: RenderVariant = "viewer",
 ): Promise<void> {
-  const key = `${variant}:${theme}`;
+  const key = `${variant}:${theme.type}:${theme.themeId}`;
   if (initialized && lastInitKey === key) return;
   const config: MermaidConfig =
     variant === "export"
@@ -94,14 +102,38 @@ async function ensureInitialized(
         }
       : {
           startOnLoad: false,
-          theme: theme as MermaidConfig["theme"],
+          theme: theme.type as MermaidConfig["theme"],
           securityLevel: "strict",
           fontFamily: "inherit",
           suppressErrorRendering: true,
+          ...getViewerThemeOverrides(theme.type),
         };
   await mod.default.initialize(config);
   initialized = true;
   lastInitKey = key;
+}
+
+/**
+ * Read theme-specific Mermaid overrides from the viewer's CSS.
+ *
+ * Some themes (e.g. Nord Light) define `--mermaid-main-bkg` to
+ * override Mermaid's default `mainBkg` palette color, which would
+ * otherwise be nearly invisible against the viewer background.
+ * Custom themes can opt in by setting this CSS variable on
+ * `#viewer-content`.
+ */
+function getViewerThemeOverrides(theme: AppTheme): {
+  themeVariables?: Record<string, string>;
+} {
+  if (theme !== "default") return {};
+  if (typeof document === "undefined") return {};
+  const viewerEl = document.getElementById("viewer-content");
+  if (!viewerEl) return {};
+  const mainBkg = getComputedStyle(viewerEl)
+    .getPropertyValue("--mermaid-main-bkg")
+    .trim();
+  if (!mainBkg) return {};
+  return { themeVariables: { mainBkg } };
 }
 
 export function preRenderMermaidBlocks(
@@ -235,13 +267,14 @@ export function clearMermaidCache(): void {
 export async function renderMermaidSvgForExport(
   content: string,
 ): Promise<string> {
-  const key = cacheKey(content, "default", "export");
+  const exportTheme: AppThemeInfo = { type: "default", themeId: "export" };
+  const key = cacheKey(content, exportTheme, "export");
   let raw = svgCache.get(key);
   if (raw === ERROR) raw = undefined;
 
   if (!raw) {
     const mod = await ensureLoaded();
-    await ensureInitialized(mod, "default", "export");
+    await ensureInitialized(mod, exportTheme, "export");
     try {
       const { svg } = await mod.default.render(
         `mmd-export-${nextRenderId++}`,

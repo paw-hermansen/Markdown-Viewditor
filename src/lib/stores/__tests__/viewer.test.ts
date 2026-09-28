@@ -65,6 +65,10 @@ describe("viewer store", () => {
       setTheme("github-light");
 
       expect(setAttribute).toHaveBeenCalledWith("data-theme", "light");
+      expect(setAttribute).toHaveBeenCalledWith(
+        "data-theme-id",
+        "github-light",
+      );
 
       vi.unstubAllGlobals();
     });

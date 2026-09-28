@@ -20,6 +20,7 @@ export function setTheme(theme: string) {
 function applyThemeType(type: "light" | "dark") {
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-theme", type);
+    document.documentElement.setAttribute("data-theme-id", viewerState.theme);
   }
 }
 

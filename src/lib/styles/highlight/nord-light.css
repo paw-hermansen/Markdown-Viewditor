@@ -155,6 +155,7 @@ Original Nord palette:
   --bg-primary: #ECEFF4;
   --bg-secondary: #E5E9F0;
   --bg-hover: rgba(0, 0, 0, 0.05);
+  --mermaid-main-bkg: #D8DEE9;
 }
 #viewer-content h1 {
   color: #2E3440;

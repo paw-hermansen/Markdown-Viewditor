@@ -21,10 +21,31 @@ const mermaidMock = vi.hoisted(() => ({
 
 vi.mock("mermaid", () => ({ default: mermaidMock }));
 
-function setAppTheme(theme: "light" | "dark") {
-  const getAttribute = vi.fn(() => theme);
-  vi.stubGlobal("document", { documentElement: { getAttribute } });
-  return getAttribute;
+function setAppTheme(
+  theme: "light" | "dark",
+  themeId?: string,
+  mermaidMainBkg?: string,
+) {
+  const id = themeId ?? (theme === "dark" ? "github-dark" : "github-light");
+  const getAttribute = vi.fn((attr: string) =>
+    attr === "data-theme-id" ? id : theme,
+  );
+  const viewerEl = {
+    style: { setProperty: vi.fn() },
+  };
+  const getElementById = vi.fn((elementId: string) =>
+    elementId === "viewer-content" ? viewerEl : null,
+  );
+  const getComputedStyle = vi.fn(() => ({
+    getPropertyValue: (prop: string) =>
+      prop === "--mermaid-main-bkg" ? (mermaidMainBkg ?? "") : "",
+  }));
+  vi.stubGlobal("document", {
+    documentElement: { getAttribute },
+    getElementById,
+  });
+  vi.stubGlobal("getComputedStyle", getComputedStyle);
+  return { getAttribute, getElementById, getComputedStyle };
 }
 
 function fenceToken(
@@ -229,6 +250,73 @@ describe("mermaid extension", () => {
         source,
       );
     });
+
+    it("passes themeVariables.mainBkg when viewer defines --mermaid-main-bkg", async () => {
+      setAppTheme("light", "nord-light", "#D8DEE9");
+
+      await preRenderMermaidBlocks(
+        [fenceToken("graph LR\n    A-->B\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          theme: "default",
+          themeVariables: { mainBkg: "#D8DEE9" },
+        }),
+      );
+    });
+
+    it("does not pass themeVariables when no --mermaid-main-bkg is set", async () => {
+      setAppTheme("light", "github-light");
+
+      await preRenderMermaidBlocks(
+        [fenceToken("graph LR\n    A-->B\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.not.objectContaining({ themeVariables: expect.anything() }),
+      );
+    });
+
+    it("does not pass themeVariables for dark themes", async () => {
+      setAppTheme("dark", "github-dark", "#D8DEE9");
+
+      await preRenderMermaidBlocks(
+        [fenceToken("graph LR\n    A-->B\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.not.objectContaining({ themeVariables: expect.anything() }),
+      );
+    });
+
+    it("gives Nord Light its own SVG cache separate from other light themes", async () => {
+      setAppTheme("light", "github-light");
+      const source = "graph LR\n    A-->B\n";
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source)],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+      expect(mermaidMock.render).toHaveBeenCalledTimes(1);
+
+      clearMermaidCache();
+      setAppTheme("light", "nord-light", "#D8DEE9");
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source)],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+      expect(mermaidMock.render).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("directive and fence options", () => {
@@ -332,12 +420,14 @@ describe("mermaid extension", () => {
     });
 
     it("creates a fresh raw SVG when the app theme changes", async () => {
-      const getAttribute = setAppTheme("light");
+      const { getAttribute } = setAppTheme("light");
       const source = "graph LR\n    A-->B\n";
       const tokens = [fenceToken(source)];
 
       await preRenderMermaidBlocks(tokens, {}, MERMAID_OPTIONS_SCHEMA);
-      getAttribute.mockReturnValue("dark");
+      getAttribute.mockImplementation((attr: string) =>
+        attr === "data-theme-id" ? "github-dark" : "dark",
+      );
       await preRenderMermaidBlocks(tokens, {}, MERMAID_OPTIONS_SCHEMA);
 
       expect(mermaidMock.render).toHaveBeenCalledTimes(2);
@@ -352,7 +442,7 @@ describe("mermaid extension", () => {
     });
 
     it("serializes overlapping passes and keeps each pass theme-scoped", async () => {
-      const getAttribute = setAppTheme("light");
+      const { getAttribute } = setAppTheme("light");
       const source = "graph LR\n    A-->B\n";
       let releaseFirstRender!: () => void;
       let resolveFirstRenderStarted!: () => void;
@@ -381,7 +471,9 @@ describe("mermaid extension", () => {
       );
       await firstRenderStarted;
 
-      getAttribute.mockReturnValue("dark");
+      getAttribute.mockImplementation((attr: string) =>
+        attr === "data-theme-id" ? "github-dark" : "dark",
+      );
       const secondPass = preRenderMermaidBlocks(
         [fenceToken(source)],
         {},
@@ -443,6 +535,7 @@ describe("mermaid extension", () => {
       const querySelectorAll = vi.fn(() => [leftoverDiv, leftoverIframe]);
       vi.stubGlobal("document", {
         documentElement: { getAttribute: () => "light" },
+        getElementById: () => null,
         querySelectorAll,
       });
       mermaidMock.render.mockRejectedValueOnce(new Error("render failed"));

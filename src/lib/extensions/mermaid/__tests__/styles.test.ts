@@ -76,6 +76,50 @@ describe("Mermaid host-layout styles", () => {
     expect(fitSvg).toContain("height: auto;");
     expect(ruleFor(".mermaid-block {")).toContain("overflow: visible;");
     expect(MERMAID_STYLES).not.toContain("max-height:");
+    expect(MERMAID_STYLES).not.toContain(".print-content .mermaid-block svg");
+  });
+
+  it("clamps over-wide natural-size diagrams to the column in print", () => {
+    const printWrapper = ruleFor(
+      '.print-content .mermaid-block[data-fit-to-width="false"]',
+    );
+    const printScroll = ruleFor(
+      '.print-content .mermaid-block[data-fit-to-width="false"] .mermaid-scroll-content',
+    );
+    const printSvg = ruleFor(
+      '.print-content .mermaid-block[data-fit-to-width="false"] svg',
+    );
+
+    expect(printWrapper).toContain("width: 100%;");
+    expect(printWrapper).toContain("max-width: 100%;");
+    expect(printWrapper).toContain("overflow: visible;");
+    expect(printWrapper).toContain("justify-content: center;");
+    expect(printWrapper).not.toContain("overflow-x: auto;");
+
+    expect(printScroll).toContain("max-width: 100%;");
+
+    expect(printSvg).toContain("max-width: 100% !important;");
+    expect(printSvg).toContain("width: auto !important;");
+    expect(printSvg).toContain("height: auto !important;");
+  });
+
+  it("honors data-align for natural-size diagrams in print", () => {
+    expect(
+      ruleFor(
+        '.print-content .mermaid-block[data-fit-to-width="false"][data-align="left"]',
+      ),
+    ).toContain("justify-content: flex-start;");
+    expect(
+      ruleFor(
+        '.print-content .mermaid-block[data-fit-to-width="false"][data-align="right"]',
+      ),
+    ).toContain("justify-content: flex-end;");
+  });
+
+  it("keeps diagrams from being split across pages in print", () => {
+    expect(ruleFor(".print-content .mermaid-block {")).toContain(
+      "break-inside: avoid;",
+    );
   });
 
   it("stacks error content instead of laying it out beside the message", () => {

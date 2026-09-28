@@ -71,6 +71,40 @@ export const MERMAID_STYLES = `
         font-size: 0.85em;
         margin-top: 0.25em;
       }
+      /* Print/PDF export (the .print-content clone in exporters/pdf.ts):
+         there is no scrolling in print, so natural-size diagrams wider
+         than the content column are scaled down to it instead of being
+         cut off. Only what is too wide shrinks — diagrams whose natural
+         size fits the column, and fitToWidth-scaled diagrams, render
+         untouched. The host is widened to the full column so the clamp
+         basis is the page width, not the maxWidth scroll viewport
+         (meaningless in print); data-align still positions the diagram.
+         The svg rule needs !important plus the extra .print-content
+         specificity to outrank the viewer's max-width: none !important. */
+      .print-content .mermaid-block[data-fit-to-width="false"] {
+        width: 100%;
+        max-width: 100%;
+        overflow: visible;
+        justify-content: center;
+      }
+      .print-content .mermaid-block[data-fit-to-width="false"][data-align="left"] {
+        justify-content: flex-start;
+      }
+      .print-content .mermaid-block[data-fit-to-width="false"][data-align="right"] {
+        justify-content: flex-end;
+      }
+      .print-content .mermaid-block[data-fit-to-width="false"] .mermaid-scroll-content {
+        max-width: 100%;
+      }
+      .print-content .mermaid-block[data-fit-to-width="false"] svg {
+        max-width: 100% !important;
+        width: auto !important;
+        height: auto !important;
+      }
+      /* Keep diagrams from being split across pages. */
+      .print-content .mermaid-block {
+        break-inside: avoid;
+      }
     `;
 
 export function injectMermaidStyles(): void {

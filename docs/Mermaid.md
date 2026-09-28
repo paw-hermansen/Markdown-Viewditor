@@ -325,6 +325,8 @@ The outer host width is the smaller of `maxWidth` and the available content widt
 - **`fitToWidth=true`** (default) - the diagram scales to fit the host width. Content is not clipped, but very large diagrams may become small.
 - **`fitToWidth=false`** - the diagram renders at its natural size and uses horizontal scrolling when it exceeds the host width. There is no vertical scrolling and no `maxHeight` option; tall diagrams expand vertically.
 
+Print and PDF export have no scrolling: every diagram wider than the page content width is scaled down to fit it (even with `fitToWidth=false`), while diagrams that already fit the page — at natural size or already fit-scaled — print as they are. Diagrams are never split across pages.
+
 ### Scaling
 
 ````
@@ -426,8 +428,12 @@ nonsense
 | Format | Behavior                                                                                                                                                                                   |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | HTML   | Diagrams are inline SVG — fully self-contained                                                                                                                                             |
-| PDF    | Vector SVG — prints cleanly at any resolution                                                                                                                                              |
+| PDF    | Vector SVG — prints cleanly at any resolution. Diagrams wider than the page content width are scaled down to fit it, including `fitToWidth=false` ones                                     |
 | ODT    | Diagrams embedded as vector SVG; the shared "SVG images & Mermaid diagrams" → "Rasterize as PNG images" option converts them to PNG. On render failure the source is kept as a code block. |
+
+In PDF and print, `fitToWidth=false` keeps the diagram at its natural
+size when it fits the page content width, and is scaled down to that
+width when it does not (there is no scroll container on paper).
 
 In ODT export, diagram widths map proportionally from the 800 px Viewer
 column to the ODT text column, so `maxWidth` and `align` produce the same

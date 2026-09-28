@@ -93,9 +93,17 @@ hue-6-2: #e6c07b
 #viewer-content {
   background: #282c34;
   color: #abb2bf;
+  --border: #3e4451;
+  --bg-tertiary: #2c313a;
+  --accent: #61aeee;
+  --text-secondary: #5c6370;
+  --text-primary: #abb2bf;
+  --bg-primary: #282c34;
+  --bg-secondary: #2c313a;
+  --bg-hover: rgba(255, 255, 255, 0.05);
 }
 #viewer-content h1 {
-  color: #e5c07b;
+  color: #e6c07b;
   border-bottom-color: #3e4451;
 }
 #viewer-content h2,
@@ -103,10 +111,10 @@ hue-6-2: #e6c07b
 #viewer-content h4,
 #viewer-content h5,
 #viewer-content h6 {
-  color: #e5c07b;
+  color: #e6c07b;
 }
 #viewer-content a {
-  color: #61afef;
+  color: #61aeee;
 }
 #viewer-content blockquote {
   border-left-color: #c678dd;
@@ -137,7 +145,7 @@ hue-6-2: #e6c07b
   border-color: #3e4451;
 }
 #viewer-content .skill-badge {
-  background: #61afef;
+  background: #61aeee;
   color: #282c34;
 }
 #viewer-content img {

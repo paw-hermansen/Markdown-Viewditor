@@ -278,6 +278,14 @@ Aurora
 #viewer-content {
   background: #2E3440;
   color: #D8DEE9;
+  --border: #3B4252;
+  --bg-tertiary: #3B4252;
+  --accent: #88C0D0;
+  --text-secondary: #4C566A;
+  --text-primary: #D8DEE9;
+  --bg-primary: #2E3440;
+  --bg-secondary: #3B4252;
+  --bg-hover: rgba(255, 255, 255, 0.05);
 }
 #viewer-content h1 {
   color: #ECEFF4;

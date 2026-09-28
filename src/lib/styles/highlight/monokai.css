@@ -7,72 +7,110 @@ code.hljs {
   padding: 3px 5px
 }
 /*
-Monokai style - ported by Luigi Maselli - http://grigio.org
+Monokai - classic TextMate/Sublime Monokai color scheme
+Reference: Monokai.tmTheme (background #272822, foreground #F8F8F2)
+String #E6DB74, constant #AE81FF, keyword/tag #F92672, function/class #A6E22E,
+support/type #66D9EF, parameter #FD971F, comment #75715E
 */
 .hljs {
   background: #272822;
-  color: #ddd
+  color: #F8F8F2
 }
-.hljs-tag,
-.hljs-keyword,
-.hljs-selector-tag,
-.hljs-literal,
-.hljs-strong,
-.hljs-number,
-.hljs-name {
-  color: #f92672
-}
-.hljs-code {
-  color: #66d9ef
-}
-.hljs-attribute,
-.hljs-attr,
-.hljs-symbol,
-.hljs-regexp,
-.hljs-link {
-  color: #bf79db
-}
-.hljs-string,
-.hljs-bullet,
-.hljs-subst,
-.hljs-title,
-.hljs-section,
-.hljs-emphasis,
-.hljs-type,
-.hljs-built_in,
-.hljs-selector-attr,
-.hljs-selector-pseudo,
-.hljs-addition,
-.hljs-variable,
-.hljs-template-tag,
-.hljs-template-variable {
-  color: #a6e22e
-}
-.hljs-title.class_,
-.hljs-class .hljs-title {
-  color: white
+.hljs-subst {
+  color: #F8F8F2
 }
 .hljs-comment,
 .hljs-quote,
-.hljs-deletion,
 .hljs-meta {
-  color: #75715e
+  color: #75715E
+}
+.hljs-meta .hljs-keyword {
+  color: #F92672
+}
+.hljs-meta .hljs-string {
+  color: #E6DB74
+}
+.hljs-string,
+.hljs-regexp {
+  color: #E6DB74
+}
+.hljs-addition {
+  color: #A6E22E
+}
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet {
+  color: #AE81FF
 }
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-literal,
+.hljs-name,
+.hljs-tag,
 .hljs-doctag,
+.hljs-template-tag {
+  color: #F92672
+}
 .hljs-title,
-.hljs-section,
+.hljs-title.function_,
+.hljs-section {
+  color: #A6E22E
+}
+.hljs-title.class_,
+.hljs-class .hljs-title {
+  color: #A6E22E
+}
 .hljs-type,
-.hljs-selector-id {
+.hljs-built_in {
+  color: #66D9EF
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-selector-pseudo {
+  color: #A6E22E
+}
+.hljs-params {
+  color: #FD971F
+}
+.hljs-variable,
+.hljs-template-variable {
+  color: #F8F8F2
+}
+.hljs-link {
+  color: #E6DB74;
+  text-decoration: underline
+}
+.hljs-deletion {
+  color: #F92672
+}
+.hljs-emphasis {
+  font-style: italic
+}
+.hljs-strong {
   font-weight: bold
+}
+.hljs-code {
+  color: #66D9EF
+}
+.hljs-formula {
+  color: #66D9EF
 }
 
 /* Full viewer theme */
 #viewer-content {
   background: #272822;
-  color: #ddd;
+  color: #f8f8f2;
+  --border: #3e3d32;
+  --bg-tertiary: #2d2e27;
+  --accent: #a6e22e;
+  --text-secondary: #75715e;
+  --text-primary: #f8f8f2;
+  --bg-primary: #272822;
+  --bg-secondary: #2d2e27;
+  --bg-hover: rgba(255, 255, 255, 0.05);
 }
 #viewer-content h1 {
   color: #f8f8f2;

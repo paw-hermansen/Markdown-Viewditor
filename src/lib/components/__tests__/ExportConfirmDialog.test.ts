@@ -36,7 +36,7 @@ describe("export-confirm-dialog store", () => {
     expect(exportConfirmState.current!.themeKind).toBe("viewer");
     expect(exportConfirmState.current!.optionGroups).toEqual([]);
 
-    resolveExportConfirm({ confirmed: true, dontShowAgain: false });
+    resolveExportConfirm({ confirmed: true });
     await promise;
   });
 
@@ -51,10 +51,9 @@ describe("export-confirm-dialog store", () => {
       currentOptions: {},
     });
 
-    resolveExportConfirm({ confirmed: true, dontShowAgain: true });
+    resolveExportConfirm({ confirmed: true });
     const result = await promise;
     expect(result.confirmed).toBe(true);
-    expect(result.dontShowAgain).toBe(true);
   });
 
   it("clears current after resolution", async () => {
@@ -68,7 +67,7 @@ describe("export-confirm-dialog store", () => {
       currentOptions: {},
     });
 
-    resolveExportConfirm({ confirmed: false, dontShowAgain: false });
+    resolveExportConfirm({ confirmed: false });
     await promise;
     expect(exportConfirmState.current).toBeNull();
   });
@@ -84,7 +83,7 @@ describe("export-confirm-dialog store", () => {
       currentOptions: {},
     });
 
-    resolveExportConfirm({ confirmed: false, dontShowAgain: false });
+    resolveExportConfirm({ confirmed: false });
     const result = await promise;
     expect(result.confirmed).toBe(false);
   });
@@ -103,7 +102,7 @@ describe("export-confirm-dialog store", () => {
     expect(exportConfirmState.current!.actionLabel).toBe("Print");
     expect(exportConfirmState.current!.isMacOS).toBe(false);
 
-    resolveExportConfirm({ confirmed: true, dontShowAgain: false });
+    resolveExportConfirm({ confirmed: true });
     await promise;
   });
 
@@ -120,7 +119,6 @@ describe("export-confirm-dialog store", () => {
 
     resolveExportConfirm({
       confirmed: true,
-      dontShowAgain: false,
       options: { "odt.rasterizeMath": true, "odt.rasterResolution": 3 },
     });
     const result = await promise;
@@ -144,6 +142,62 @@ describe("export-confirm-dialog store", () => {
     const { container } = render(ExportConfirmDialog);
     await checkA11y(container);
     exportConfirmState.current = null;
+  });
+});
+
+describe("export-confirm-dialog setting hint", () => {
+  beforeEach(() => {
+    exportConfirmState.current = null;
+  });
+
+  function openHintDialog(isMacOS: boolean) {
+    return showExportConfirmDialog({
+      title: isMacOS ? "Export PDF" : "Print / PDF",
+      themeKind: "viewer",
+      themeLabel: "GitHub Dark",
+      actionLabel: "Export",
+      isMacOS,
+      optionGroups: [],
+      currentOptions: {},
+    });
+  }
+
+  it("names the Export as… menu setting (non-macOS)", async () => {
+    const promise = openHintDialog(false);
+    render(ExportConfirmDialog);
+    await tick();
+
+    const hint = screen.getByText(/turn this confirmation off/);
+    expect(hint).toHaveTextContent("Show export and print confirmation");
+    expect(hint).toHaveTextContent("Export as…");
+
+    resolveExportConfirm({ confirmed: false });
+    await promise;
+  });
+
+  it("names the Export as… menu setting (macOS)", async () => {
+    const promise = openHintDialog(true);
+    render(ExportConfirmDialog);
+    await tick();
+
+    const hint = screen.getByText(/turn this confirmation off/);
+    expect(hint).toHaveTextContent("Show export confirmation");
+    expect(hint).not.toHaveTextContent("Show export and print confirmation");
+
+    resolveExportConfirm({ confirmed: false });
+    await promise;
+  });
+
+  it("no longer offers a 'do not show again' checkbox", async () => {
+    const promise = openHintDialog(false);
+    render(ExportConfirmDialog);
+    await tick();
+
+    expect(screen.queryByText("Do not show this message again")).toBeNull();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+
+    resolveExportConfirm({ confirmed: false });
+    await promise;
   });
 });
 
@@ -196,7 +250,7 @@ describe("export-confirm-dialog select options", () => {
     expect(trigger).toHaveAttribute("aria-haspopup", "listbox");
     expect(trigger).toHaveTextContent("2x (192 DPI)");
 
-    resolveExportConfirm({ confirmed: false, dontShowAgain: false });
+    resolveExportConfirm({ confirmed: false });
     await promise;
   });
 

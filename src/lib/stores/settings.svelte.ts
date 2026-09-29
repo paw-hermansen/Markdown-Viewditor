@@ -92,3 +92,14 @@ export function updateSplitRatio(ratio: number): void {
   settingsState.splitRatio = Math.max(0.2, Math.min(0.8, ratio));
   saveSettings();
 }
+
+/**
+ * Label for the `exportConfirmDismissed` setting. Shared by the Export as…
+ * menu checkbox and the export confirmation dialog hint so the two can never
+ * drift apart — the hint quotes this label verbatim.
+ */
+export function exportConfirmSettingLabel(isMacOS: boolean): string {
+  return isMacOS
+    ? "Show export confirmation"
+    : "Show export and print confirmation";
+}

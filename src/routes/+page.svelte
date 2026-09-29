@@ -328,6 +328,14 @@
    * `theme-export` body classes that app.css keys off of.
    */
   async function handlePrint() {
+    // Bail out before any dialog when the viewer pane is not mounted (e.g.
+    // editor-only mode) — there is nothing to print, and the confirmation
+    // dialog's hint points at the Export as… menu, which is only rendered
+    // alongside the viewer. Mirrors handleExport's up-front guard.
+    await viewerComponent?.waitForRender();
+    const viewerContent = viewerComponent?.getViewerContentElement();
+    if (!viewerContent) return;
+
     // Render markdown to detect frontmatter for the option dialog.
     const { frontmatter } = await renderMarkdown(
       editorState.content,
@@ -368,18 +376,12 @@
         currentOptions,
       });
       if (!result.confirmed) return;
-      if (result.dontShowAgain) {
-        updateSetting("exportConfirmDismissed", true);
-      }
       if (result.options) {
         resolvedIncludeFrontmatter = !!result.options[PDF_OPTION_ID];
         updateSetting("pdfIncludeFrontmatter", resolvedIncludeFrontmatter);
       }
     }
 
-    await viewerComponent?.waitForRender();
-    const viewerContent = viewerComponent?.getViewerContentElement();
-    if (!viewerContent) return;
     startExporting();
     try {
       let htmlForPdf = viewerContent.innerHTML;
@@ -474,9 +476,6 @@
         currentOptions,
       });
       if (!result.confirmed) return;
-      if (result.dontShowAgain && exporter.themeCapable) {
-        updateSetting("exportConfirmDismissed", true);
-      }
       // Persist the chosen option values so future exports reflect the
       // last-used preference even when the dialog is dismissed.
       if (result.options) {

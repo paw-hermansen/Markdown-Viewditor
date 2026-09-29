@@ -3,11 +3,11 @@
     exportConfirmState,
     resolveExportConfirm,
   } from '$lib/stores/export-confirm-dialog.svelte';
+  import { exportConfirmSettingLabel } from '$lib/stores/settings.svelte';
   import type { OptionGroup } from '$lib/export/types';
   import { focusTrap } from '$lib/utils/focus-trap';
   import SelectField from '$lib/components/SelectField.svelte';
 
-  let dontShowAgain = $state(false);
   /** Working copy of the option values — mutated as the user toggles. */
   let currentOptions = $state<Record<string, unknown>>({});
   /** Static option-group definitions, frozen at dialog open time. */
@@ -28,18 +28,17 @@
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
-      resolveExportConfirm({ confirmed: false, dontShowAgain: false });
+      resolveExportConfirm({ confirmed: false });
     }
   }
 
   function handleCancel() {
-    resolveExportConfirm({ confirmed: false, dontShowAgain: false });
+    resolveExportConfirm({ confirmed: false });
   }
 
   function handleConfirm() {
     resolveExportConfirm({
       confirmed: true,
-      dontShowAgain,
       options: { ...currentOptions },
     });
   }
@@ -48,7 +47,6 @@
   $effect(() => {
     const req = exportConfirmState.current;
     if (req) {
-      dontShowAgain = false;
       currentOptions = { ...req.currentOptions };
       optionGroups = req.optionGroups;
     }
@@ -67,7 +65,7 @@
       tabindex="-1"
       use:focusTrap={{
         initialFocus: confirmButton,
-        onEscape: () => resolveExportConfirm({ confirmed: false, dontShowAgain: false }),
+        onEscape: () => resolveExportConfirm({ confirmed: false }),
       }}
     >
       <div class="icon-row">
@@ -144,10 +142,10 @@
         </div>
       {/if}
 
-      <label class="checkbox-row">
-        <input type="checkbox" bind:checked={dontShowAgain} />
-        <span>Do not show this message again</span>
-      </label>
+      <p class="setting-hint">
+        You can turn this confirmation off with the "{exportConfirmSettingLabel(req.isMacOS)}"
+        checkbox in the Export as… menu.
+      </p>
 
       <div class="actions">
         <button class="btn" onclick={handleCancel}>Cancel</button>
@@ -333,18 +331,12 @@
     margin: 2px 0 0 24px;
   }
 
-  .checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-primary);
+  .setting-hint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
     margin: 16px 0 12px 0;
-    cursor: pointer;
-  }
-
-  .checkbox-row input[type="checkbox"] {
-    cursor: pointer;
+    font-style: italic;
   }
 
   .actions {

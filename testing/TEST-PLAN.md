@@ -371,8 +371,8 @@ This story tests how the app handles files modified or deleted by external progr
 | 10.2 | With confirmation ON, click ODT export. | Dialog: "This export always uses a neutral, printer-friendly style."; shows ODT options (math rasterize, "SVG images & Mermaid diagrams" rasterize, resolution). |
 | 10.3 | Click Cancel / press Escape / click backdrop. | No export runs. |
 | 10.4 | Press Enter. | Export runs. |
-| 10.5 | Tick "Do not show this message again", confirm. | Next export skips dialog. |
-| 10.6 | Tick "Show export confirmation" in dropdown footer. | Dialog reappears next export. |
+| 10.5 | With confirmation ON, open the confirm dialog. | Hint below the options names the "Show export and print confirmation" checkbox (macOS: "Show export confirmation") in the Export as… menu. No "Do not show this message again" checkbox. |
+| 10.6 | Untick "Show export and print confirmation" in the dropdown footer. | Next export/print skips the dialog. Re-tick it: the dialog reappears. |
 
 ### 10b. Export as HTML
 

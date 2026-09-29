@@ -21,7 +21,6 @@ export interface ExportConfirmRequest {
 
 export interface ExportConfirmResult {
   confirmed: boolean;
-  dontShowAgain: boolean;
   /**
    * The user's final option values keyed by option id. Only populated when
    * `confirmed === true`; otherwise undefined.

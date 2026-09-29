@@ -15,7 +15,10 @@ import { analyzeTokens, type UsedFeature } from "$lib/utils/markdown-levels";
 import { directivePlugin } from "$lib/extensions/directives";
 import { extensionFencePlugin } from "$lib/extensions/fence-plugin";
 import { registerBuiltinExtensions } from "$lib/extensions/builtins";
-import { loadExtensionsForContent } from "$lib/extensions/registry";
+import {
+  loadExtensionsForContent,
+  preRenderExtensionsForContent,
+} from "$lib/extensions/registry";
 
 // Highlight.js languages are loaded lazily inside initMarkdownIt() via
 // dynamic imports so the module itself can be imported without triggering
@@ -644,6 +647,7 @@ export async function renderMarkdown(
     }
     const tokens = parser.parse(content, env);
     normalizeFootnoteLineMaps(tokens, content);
+    await preRenderExtensionsForContent(content, { tokens, env });
     const html = parser.renderer.render(tokens, parser.options, env);
 
     let frontmatter: Frontmatter | null = null;

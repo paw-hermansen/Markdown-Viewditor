@@ -1,6 +1,7 @@
 import type MarkdownIt from "markdown-it";
-import { parseAttrString, validateFenceOptions } from "./fence-options";
+import { parseAttrString, validateExplicitFenceOptions } from "./fence-options";
 import { getExtensionSchema } from "./registry";
+import type { FenceOptionSchema } from "./types";
 
 /**
  * Pattern to match HTML comment directives:
@@ -10,6 +11,54 @@ import { getExtensionSchema } from "./registry";
  * Group 2: attribute string (rest of line before -->)
  */
 const DIRECTIVE_RE = /^<!--\s*(\w+)\s*:\s*(.+?)\s*-->$/;
+
+/**
+ * Preserve warnings for invalid explicit values without filling omitted keys.
+ */
+export function warnInvalidExplicitFenceOptions(
+  parsed: Record<string, string | number | boolean>,
+  schema: FenceOptionSchema,
+): void {
+  for (const [key, raw] of Object.entries(parsed)) {
+    const def = schema[key];
+    if (!def || raw === false) continue;
+
+    if (raw === true) {
+      if (def.type !== "boolean") {
+        console.warn(
+          `fence-options: bare flag "${key}" used on non-boolean type (${def.type}), using default`,
+        );
+      }
+      continue;
+    }
+
+    switch (def.type) {
+      case "boolean":
+        if (raw !== "true" && raw !== "1" && raw !== "false" && raw !== "0") {
+          console.warn(
+            `fence-options: invalid boolean value "${raw}" for "${key}", using default`,
+          );
+        }
+        break;
+      case "number":
+        if (!Number.isFinite(parseFloat(String(raw)))) {
+          console.warn(
+            `fence-options: invalid number value "${raw}" for "${key}", using default`,
+          );
+        }
+        break;
+      case "string": {
+        const value = String(raw);
+        if (def.values && !def.values.includes(value)) {
+          console.warn(
+            `fence-options: invalid value "${value}" for "${key}", allowed: ${def.values.join(", ")}`,
+          );
+        }
+        break;
+      }
+    }
+  }
+}
 
 /**
  * Markdown-it core plugin that parses HTML comment directives.
@@ -58,7 +107,8 @@ export function directivePlugin(md: MarkdownIt): void {
 
           // Parse and validate attributes.
           const parsed = parseAttrString(rawAttrs);
-          const validated = validateFenceOptions(parsed, schema);
+          warnInvalidExplicitFenceOptions(parsed, schema);
+          const validated = validateExplicitFenceOptions(parsed, schema);
 
           // Update cumulative state.
           if (!cumulative[namespace]) {
@@ -183,17 +233,18 @@ function isInsideFence(line: string, state: FenceState): boolean {
 }
 
 /**
- * Extract all math directives from the entire document.
+ * Extract all directives for a namespace from the entire document.
  * Returns ONLY explicitly-set values (no schema defaults).
  * Used by the export pipeline which doesn't go through the render chain.
  *
  * Lines inside fenced code blocks (``` or ~~~) are skipped.
  */
-export function extractMathDirectives(
+export function extractDirectives(
   content: string,
+  namespace: string,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  const schema = getExtensionSchema("math");
+  const schema = getExtensionSchema(namespace);
   if (!schema) return result;
 
   const lines = content.split("\n");
@@ -204,49 +255,18 @@ export function extractMathDirectives(
     const match = DIRECTIVE_RE.exec(line.trim());
     if (!match) continue;
 
-    const namespace = match[1];
-    if (namespace !== "math") continue;
+    if (match[1] !== namespace) continue;
 
-    const rawAttrs = match[2];
-    const parsed = parseAttrString(rawAttrs);
-
-    // Only include keys the user explicitly set, not schema defaults.
-    for (const [key, raw] of Object.entries(parsed)) {
-      const def = schema[key];
-      if (!def) continue;
-
-      if (raw === false && def.type === "boolean") {
-        result[key] = false;
-      } else if (raw === false) {
-        // !key on non-boolean → reset to default (skip, don't override)
-        delete result[key];
-      } else if (raw === true && def.type === "boolean") {
-        result[key] = true;
-      } else if (raw === true) {
-        // bare flag on non-boolean → use default (skip)
-      } else {
-        // Coerce numeric strings.
-        if (def.type === "number") {
-          const num = typeof raw === "number" ? raw : parseFloat(String(raw));
-          if (Number.isFinite(num)) {
-            let clamped = num;
-            if (def.min !== undefined && clamped < def.min) clamped = def.min;
-            if (def.max !== undefined && clamped > def.max) clamped = def.max;
-            result[key] = clamped;
-          }
-        } else if (def.type === "string") {
-          const str = String(raw);
-          if (!def.values || def.values.includes(str)) {
-            result[key] = str;
-          }
-        } else {
-          result[key] = raw;
-        }
-      }
-    }
+    applyDirectiveAttrs(result, parseAttrString(match[2]), schema);
   }
 
   return result;
+}
+
+export function extractMathDirectives(
+  content: string,
+): Record<string, unknown> {
+  return extractDirectives(content, "math");
 }
 
 /**
@@ -255,15 +275,16 @@ export function extractMathDirectives(
  * only explicitly-set values (no schema defaults). The line number
  * is the 0-based line where the directive appears.
  *
- * Callers look up the latest entry at or before a math token's source
+ * Callers look up the latest entry at or before a token's source
  * line to get the effective directive state at that position.
  *
  * Lines inside fenced code blocks (``` or ~~~) are skipped.
  */
-export function extractMathDirectiveStateMap(
+export function extractDirectiveStateMap(
   content: string,
+  namespace: string,
 ): Array<[number, Record<string, unknown>]> {
-  const schema = getExtensionSchema("math");
+  const schema = getExtensionSchema(namespace);
   if (!schema) return [];
 
   const entries: Array<[number, Record<string, unknown>]> = [];
@@ -277,50 +298,65 @@ export function extractMathDirectiveStateMap(
     const match = DIRECTIVE_RE.exec(lines[lineIdx].trim());
     if (!match) continue;
 
-    const namespace = match[1];
-    if (namespace !== "math") continue;
+    if (match[1] !== namespace) continue;
 
-    const rawAttrs = match[2];
-    const parsed = parseAttrString(rawAttrs);
-
-    for (const [key, raw] of Object.entries(parsed)) {
-      const def = schema[key];
-      if (!def) continue;
-
-      if (raw === false && def.type === "boolean") {
-        cumulative[key] = false;
-      } else if (raw === false) {
-        // !key on non-boolean → reset to default
-        delete cumulative[key];
-      } else if (raw === true && def.type === "boolean") {
-        cumulative[key] = true;
-      } else if (raw === true) {
-        // bare flag on non-boolean → skip
-      } else {
-        if (def.type === "number") {
-          const num = typeof raw === "number" ? raw : parseFloat(String(raw));
-          if (Number.isFinite(num)) {
-            let clamped = num;
-            if (def.min !== undefined && clamped < def.min) clamped = def.min;
-            if (def.max !== undefined && clamped > def.max) clamped = def.max;
-            cumulative[key] = clamped;
-          }
-        } else if (def.type === "string") {
-          const str = String(raw);
-          if (!def.values || def.values.includes(str)) {
-            cumulative[key] = str;
-          }
-        } else {
-          cumulative[key] = raw;
-        }
-      }
-    }
+    applyDirectiveAttrs(cumulative, parseAttrString(match[2]), schema);
 
     // Snapshot the current state at this line.
     entries.push([lineIdx, { ...cumulative }]);
   }
 
   return entries;
+}
+
+export function extractMathDirectiveStateMap(
+  content: string,
+): Array<[number, Record<string, unknown>]> {
+  return extractDirectiveStateMap(content, "math");
+}
+
+/**
+ * Apply parsed directive attributes onto a cumulative state object.
+ * Only keys the user explicitly set are kept (no schema defaults).
+ */
+function applyDirectiveAttrs(
+  target: Record<string, unknown>,
+  parsed: Record<string, string | number | boolean>,
+  schema: FenceOptionSchema,
+): void {
+  for (const [key, raw] of Object.entries(parsed)) {
+    const def = schema[key];
+    if (!def) continue;
+
+    if (raw === false && def.type === "boolean") {
+      target[key] = false;
+    } else if (raw === false) {
+      // !key on non-boolean → reset to default (skip, don't override)
+      delete target[key];
+    } else if (raw === true && def.type === "boolean") {
+      target[key] = true;
+    } else if (raw === true) {
+      // bare flag on non-boolean → use default (skip)
+    } else {
+      // Coerce numeric strings.
+      if (def.type === "number") {
+        const num = typeof raw === "number" ? raw : parseFloat(String(raw));
+        if (Number.isFinite(num)) {
+          let clamped = num;
+          if (def.min !== undefined && clamped < def.min) clamped = def.min;
+          if (def.max !== undefined && clamped > def.max) clamped = def.max;
+          target[key] = clamped;
+        }
+      } else if (def.type === "string") {
+        const str = String(raw);
+        if (!def.values || def.values.includes(str)) {
+          target[key] = str;
+        }
+      } else {
+        target[key] = raw;
+      }
+    }
+  }
 }
 
 /**

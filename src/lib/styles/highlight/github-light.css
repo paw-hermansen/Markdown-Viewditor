@@ -121,6 +121,14 @@ code.hljs {
 #viewer-content {
   background: #ffffff;
   color: #24292e;
+  --border: #d1d9e0;
+  --bg-tertiary: #f6f8fa;
+  --accent: #0969da;
+  --text-secondary: #57606a;
+  --text-primary: #24292e;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-hover: rgba(0, 0, 0, 0.05);
 }
 #viewer-content h1 {
   color: #1f2328;
@@ -133,11 +141,18 @@ code.hljs {
 #viewer-content h6 {
   color: #1f2328;
 }
+#viewer-content h2 {
+  border-bottom: 1px solid #d1d9e0;
+  padding-bottom: 0.3em;
+}
+#viewer-content h6 {
+  color: #57606a;
+}
 #viewer-content a {
   color: #0969da;
 }
 #viewer-content blockquote {
-  border-left-color: #0969da;
+  border-left-color: #d0d7de;
   color: #57606a;
 }
 #viewer-content code {

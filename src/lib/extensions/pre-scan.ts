@@ -12,7 +12,9 @@ export const MATH_PATTERNS = [
   /```math\b/,
 ];
 
-export const MERMAID_PATTERNS = [/```mermaid\b/];
+export const MERMAID_PATTERNS = [
+  /^ {0,3}(?:`{3,}|~{3,})[ \t]*mermaid(?=$|[ \t{])[^\r\n]*$/im,
+];
 
 export const ABC_PATTERNS = [/```abc\b/];
 

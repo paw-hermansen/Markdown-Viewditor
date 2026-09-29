@@ -93,6 +93,14 @@ hue-6-2: #c18401
 #viewer-content {
   background: #fafafa;
   color: #383a42;
+  --border: #e5e5e6;
+  --bg-tertiary: #f0f0f1;
+  --accent: #4078f2;
+  --text-secondary: #686b77;
+  --text-primary: #383a42;
+  --bg-primary: #fafafa;
+  --bg-secondary: #f0f0f1;
+  --bg-hover: rgba(0, 0, 0, 0.05);
 }
 #viewer-content h1 {
   color: #1f2328;

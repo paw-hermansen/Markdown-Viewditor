@@ -21,6 +21,20 @@ export function isSkill(fm: Frontmatter): boolean {
   return Boolean(fm.name) && Boolean(fm.description);
 }
 
+/** Derive a sensible document title from frontmatter or the file name. */
+export function deriveTitle(
+  frontmatter: Frontmatter | null,
+  fileName: string,
+): string {
+  if (frontmatter?.name && typeof frontmatter.name === "string") {
+    return frontmatter.name;
+  }
+  if (frontmatter?.title && typeof frontmatter.title === "string") {
+    return frontmatter.title;
+  }
+  return fileName || "Untitled";
+}
+
 /** Convert any frontmatter value to a displayable string. */
 export function formatValue(v: unknown): string {
   if (v === null || v === undefined) return "";

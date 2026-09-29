@@ -104,10 +104,13 @@
     { name: 'markdown-it', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it' },
     { name: 'markdown-it-highlightjs', license: 'Unlicense', copyright: 'Valérian Galliat', url: 'https://github.com/valeriangalliat/markdown-it-highlightjs' },
     { name: 'markdown-it-task-lists', license: 'ISC', copyright: 'Revin Guillen', url: 'https://github.com/revin/markdown-it-task-lists' },
+    { name: 'mermaid', license: 'MIT', copyright: 'Knut Sveidqvist', url: 'https://github.com/mermaid-js/mermaid' },
     { name: 'markdown-it-footnote', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it-footnote' },
+    { name: 'markdown-it-mark', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it-mark' },
     { name: 'markdown-it-anchor', license: 'Unlicense', copyright: 'Valérian Galliat', url: 'https://github.com/valeriangalliat/markdown-it-anchor' },
     { name: 'js-yaml', license: 'MIT', copyright: 'Vitaly Puzrin', url: 'https://github.com/nodeca/js-yaml' },
     { name: 'highlight.js', license: 'BSD 3-Clause', copyright: 'Ivan Sagalaev', url: 'https://highlightjs.org' },
+    { name: 'html2canvas', license: 'MIT', copyright: 'Niklas von Hertzen', url: 'https://html2canvas.hertzen.com' },
     { name: 'serde', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://serde.rs' },
     { name: 'serde_json', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://github.com/serde-rs/json' },
     { name: 'thiserror', license: 'MIT / Apache-2.0', copyright: 'David Tolnay', url: 'https://github.com/dtolnay/thiserror' },
@@ -130,7 +133,7 @@
 
 {#if open}
   <div class="backdrop" role="presentation" onclick={handleBackdropClick}>
-    <div class="dialog" role="dialog" aria-label="About Markdown Viewditor" aria-modal="true" use:focusTrap={{ onEscape: onClose }}>
+    <div class="dialog" role="dialog" aria-label="About Markdown Viewditor" aria-modal="true" tabindex="-1" use:focusTrap={{ onEscape: onClose }}>
       <button class="close-btn" onclick={onClose} aria-label="Close">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -238,6 +241,7 @@
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md')}>Custom Themes</button> &mdash; creating and installing custom CSS themes</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md')}>Math Formulas</button> &mdash; KaTeX math rendering and delimiter syntax</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md')}>Chemical Formulas</button> &mdash; mhchem equations and physical units</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Mermaid.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Mermaid.md')}>Mermaid Diagrams</button> &mdash; flowcharts, sequence diagrams, and more</li>
             </ul>
           </section>
           </div>

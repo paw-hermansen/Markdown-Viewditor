@@ -44,6 +44,18 @@ export interface MarkdownExtension {
   postRegister?(md: any): void;
 
   /**
+   * Pre-render blocks that require async processing (e.g. mermaid diagrams).
+   * Called after parsing, so extensions can use the final token stream and
+   * parser environment (including positional directive state), but before
+   * rendering begins. Extensions cache rendered output so renderFence can
+   * return synchronously.
+   */
+  preRenderBlocks?(
+    content: string,
+    context: MarkdownPreRenderContext,
+  ): Promise<void>;
+
+  /**
    * Schema for per-block fence attributes parsed from {key=val} after
    * the info string. The shared fence-options utility uses this to
    * validate and coerce parsed values. Extensions declare their accepted
@@ -78,6 +90,12 @@ export interface MarkdownExtension {
    * Registered automatically when the extension loads.
    */
   featureDetectors?(): FeatureDetector[];
+}
+
+export interface MarkdownPreRenderContext {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tokens: any[];
+  env: Record<string, unknown>;
 }
 
 /** Schema for a single fence attribute property. */

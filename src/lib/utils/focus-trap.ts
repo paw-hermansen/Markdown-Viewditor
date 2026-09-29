@@ -29,7 +29,12 @@ const FOCUSABLE_SELECTOR = [
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
-    (el) => !el.closest('[aria-hidden="true"]'),
+    (el) => {
+      if (el.closest('[aria-hidden="true"]')) return false;
+      if (el.matches(":disabled")) return false;
+      if (el.closest("fieldset[disabled]")) return false;
+      return true;
+    },
   ) as HTMLElement[];
 }
 
@@ -71,7 +76,11 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
   function activate() {
     previousFocus = document.activeElement as HTMLElement;
 
-    node.addEventListener("keydown", handleKeydown);
+    // Listen on `document` (not on `node`) so the trap fires even when focus
+    // lives outside the dialog — e.g. a toolbar button left focused by an
+    // async opener. The listener is still scoped to the dialog's mount
+    // lifecycle, so it only exists while the dialog is open.
+    document.addEventListener("keydown", handleKeydown);
 
     // Set initial focus
     if (initialFocus) {
@@ -87,7 +96,7 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
   }
 
   function deactivate() {
-    node.removeEventListener("keydown", handleKeydown);
+    document.removeEventListener("keydown", handleKeydown);
 
     if (restoreFocus && previousFocus) {
       previousFocus.focus();

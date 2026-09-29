@@ -147,6 +147,15 @@ Original Nord palette:
 #viewer-content {
   background: #ECEFF4;
   color: #2E3440;
+  --border: #D8DEE9;
+  --bg-tertiary: #E5E9F0;
+  --accent: #5E81AC;
+  --text-secondary: #4C566A;
+  --text-primary: #2E3440;
+  --bg-primary: #ECEFF4;
+  --bg-secondary: #E5E9F0;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --mermaid-main-bkg: #D8DEE9;
 }
 #viewer-content h1 {
   color: #2E3440;

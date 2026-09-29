@@ -23,7 +23,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 12 toggles from plans 1, 2, mhchem, highlight, and extension-settings", () => {
+  it("registers the 13 toggles from plans 1, 2, mhchem, highlight, extension-settings, and mermaid", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -38,6 +38,7 @@ describe("markdown-levels registry & presets", () => {
       "math-dollar",
       "math-latex",
       "chemical-formulas",
+      "mermaid",
     ]);
   });
 
@@ -45,7 +46,7 @@ describe("markdown-levels registry & presets", () => {
     expect(presetFor("basic")).toEqual([]);
   });
 
-  it("github preset enables toggles #1-6 and math-dollar (not frontmatter, not math-latex)", () => {
+  it("github preset enables toggles #1-6, math-dollar, and mermaid (not frontmatter, not math-latex)", () => {
     expect(presetFor("github").sort()).toEqual(
       [
         "tables",
@@ -55,11 +56,12 @@ describe("markdown-levels registry & presets", () => {
         "footnotes",
         "raw-html",
         "math-dollar",
+        "mermaid",
       ].sort(),
     );
   });
 
-  it("advanced preset enables all 12 toggles", () => {
+  it("advanced preset enables all 13 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -74,6 +76,7 @@ describe("markdown-levels registry & presets", () => {
         "chemical-formulas",
         "highlight",
         "extension-settings",
+        "mermaid",
       ].sort(),
     );
   });

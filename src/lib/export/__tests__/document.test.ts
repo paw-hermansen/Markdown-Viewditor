@@ -23,6 +23,7 @@ describe("buildStandaloneHtml", () => {
     );
     expect(warnings).toEqual([]);
     expect(html.startsWith("<!DOCTYPE html>")).toBe(true);
+    expect(html).toContain('<html lang="en" data-theme="light">');
     expect(html).toContain("<title>Doc</title>");
     expect(html).toContain("<style>");
     expect(html).toContain("body{color:red}");
@@ -119,5 +120,29 @@ describe("buildStandaloneHtml", () => {
     });
     expect(html).toContain('class="viewer-content"');
     expect(html).toContain('id="viewer-content"');
+  });
+
+  it("emits data-theme='light' when themeType is 'light'", async () => {
+    const { html } = await buildStandaloneHtml("<p>x</p>", null, "d", {
+      cssText: "",
+      themeType: "light",
+    });
+    expect(html).toContain('<html lang="en" data-theme="light">');
+  });
+
+  it("emits data-theme='dark' when themeType is 'dark'", async () => {
+    const { html } = await buildStandaloneHtml("<p>x</p>", null, "d", {
+      cssText: "",
+      themeType: "dark",
+    });
+    expect(html).toContain('<html lang="en" data-theme="dark">');
+  });
+
+  it("defaults themeType to 'light' when not provided", async () => {
+    const { html } = await buildStandaloneHtml("<p>x</p>", null, "d", {
+      cssText: "",
+    });
+    expect(html).toContain('data-theme="light"');
+    expect(html).not.toContain('data-theme="dark"');
   });
 });

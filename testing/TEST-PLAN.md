@@ -144,11 +144,12 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 5.19 | Hover over a link in the viewer. | A tooltip appears showing the link's destination URL. |
 | 5.20 | Look at "Images". | Local relative path, HTML `<img>`, filenames with spaces (quoted and percent-encoded), unicode filename in subdirectory all render. |
 | 5.21 | Look at the remote image. | Loads from the internet (random photo from picsum.photos). |
-| 5.22 | Look at the data URI image. | A small colored square renders inline. |
-| 5.23 | Look at the missing image. | Shows a broken-image placeholder; no crash. |
-| 5.24 | Look at the SVG images. | The SVG from file and the inline SVG both render. |
-| 5.25 | Hover over an image in the viewer. | A tooltip shows the alt text or image source path. |
-| 5.26 | Tab to a link, press Enter. | Same behavior as clicking (opens in browser/handler). |
+| 5.22 | Press Ctrl+R to reload the file. | The remote image changes (picsum.photos returns a random photo each load); viewer re-renders. |
+| 5.23 | Look at the data URI image. | A small colored square renders inline. |
+| 5.24 | Look at the missing image. | Shows a broken-image placeholder; no crash. |
+| 5.25 | Look at the SVG images. | The SVG from file and the inline SVG both render. |
+| 5.26 | Hover over an image in the viewer. | A tooltip shows the alt text or image source path. |
+| 5.27 | Tab to a link, press Enter. | Same behavior as clicking (opens in browser/handler). |
 
 ---
 
@@ -250,6 +251,10 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 
 *Files: `Simple.md`, `Empty.md`, `Large.md`, `BOM_Simple.md`, `CRLF_Simple.md`, `ISO8859-1_Simple.md`, `简单.md`, `Space Simple.md`*
 
+This story walks through all file operations: opening, saving, handling unsaved changes, reloading, and encoding edge cases.
+
+### 8a. Open & Save
+
 | Step | Action | Expected |
 |------|--------|----------|
 | 8.1 | Click Open, select `Simple.md`. | Content loads into editor, viewer renders it; "Simple.md" shown in toolbar. |
@@ -259,6 +264,11 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 8.5 | Use Save As to a new location (e.g. `/tmp/test-save.md`). | New file created; app tracks new path. |
 | 8.6 | Use Save As to an existing file. | OS overwrite confirmation appears; on confirm, file is replaced. |
 | 8.7 | Create a read-only file (`chmod 444 /tmp/readonly.md`), Save As to it. | Toast: "This file is read-only…" |
+
+### 8b. Unsaved Changes Dialog
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 8.8 | Edit content, click New (or Ctrl+N). | Dialog: "You have unsaved changes. Create a new file?" with Cancel / Discard / Save First. |
 | 8.9 | Edit content, click Open (Ctrl+O). | Same 3-button dialog. |
 | 8.10 | Edit content, click Reload (Ctrl+R). | 2-button dialog: Cancel / Yes, Discard My Changes. |
@@ -266,42 +276,85 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 8.12 | In the 3-button dialog, click Save First (with filename). | File saved (no clear); action proceeds. |
 | 8.13 | In the 3-button dialog, click Discard. | Editor clears (New) or action proceeds; changes lost. |
 | 8.14 | In the 3-button dialog, click Cancel. | No change. |
+
+### 8c. Reload & Deletion
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 8.15 | Open `Simple.md`, edit externally, click Reload (no local edits). | Content updates from disk. |
-| 8.16 | Click Reload again (no external changes). | Content reloads from disk; viewer re-renders. |
-| 8.17 | Open a temp file, delete externally, click Reload. | Dialog: "This file no longer exists…" with OK. |
-| 8.18 | After deletion, press Ctrl+S. | Save-as dialog (does not recreate at old path). |
-| 8.19 | Edit content. | `*` after filename; dot on Save button. |
-| 8.20 | Open a read-only file (`chmod 444`). | Lock icon with tooltip "Read-only". |
-| 8.21 | Edit the read-only file, click Save. | Toast: "This file is read-only…" |
-| 8.22 | Open `Empty.md`. | Viewer empty; word count 0; no crash. |
-| 8.23 | Open `Large.md`. | Loads without freezing; scroll works. |
-| 8.24 | Open `BOM_Simple.md`. | Content reads correctly, no BOM artifact. |
-| 8.25 | Open `CRLF_Simple.md`. | Content reads correctly, no `^M` artifacts. |
-| 8.26 | Open `ISO8859-1_Simple.md`. | Decoded losslessly (Æ Ø Å visible). |
-| 8.27 | Open `简单.md`. | Opens correctly; filename displays in toolbar. |
-| 8.28 | Open `Space Simple.md`. | Opens and saves correctly. |
-| 8.29 | Save to a read-only directory. | Toast: "Failed to save the file." |
-| 8.30 | Open a file that fails (permission denied). | Toast: "Failed to open the file." |
+| 8.16 | Open a temp file, delete externally, click Reload. | Dialog: "This file no longer exists…" with OK. |
+| 8.17 | After deletion, press Ctrl+S. | Save-as dialog (does not recreate at old path). |
+| 8.18 | Edit content. | `*` after filename; dot on Save button. |
+
+### 8d. Read-only Files
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 8.19 | Open a read-only file (`chmod 444`). | Lock icon with tooltip "Read-only". |
+| 8.20 | Edit the read-only file, click Save. | Toast: "This file is read-only…" |
+
+### 8e. Encoding & Special Filenames
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 8.21 | Open `Empty.md`. | Viewer empty; word count 0; no crash. |
+| 8.22 | Open `Large.md`. | Loads without freezing; scroll works. |
+| 8.23 | Open `BOM_Simple.md`. | Content reads correctly, no BOM artifact. |
+| 8.24 | Open `CRLF_Simple.md`. | Content reads correctly, no `^M` artifacts. |
+| 8.25 | Open `ISO8859-1_Simple.md`. | Decoded losslessly (Æ Ø Å visible). |
+| 8.26 | Open `简单.md`. | Opens correctly; filename displays in toolbar. |
+| 8.27 | Open `Space Simple.md`. | Opens and saves correctly. |
+
+### 8f. Error Handling
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 8.28 | Save to a read-only directory. | Toast: "Failed to save the file." |
+| 8.29 | Open a file that fails (permission denied). | Toast: "Failed to open the file." |
 
 ---
 
 ## S9: External Modification
 
-*Create a temporary file `/tmp/ext-test.md` with some content. Use a second editor to modify it.*
+*Create a temporary file `/tmp/ext-test.md` with some content. Use a second editor (or terminal) to modify it while the app has it open.*
+
+This story tests how the app handles files modified or deleted by external programs.
+
+### 9a. Detect External Changes
 
 | Step | Action | Expected |
 |------|--------|----------|
 | 9.1 | Open `/tmp/ext-test.md`, edit externally, focus app. | Dialog: "This file has been modified by another application. Do you want to reload it?" with Cancel / Reload. |
 | 9.2 | Edit in app, edit externally, focus app. | Dialog: "…You also have unsaved changes. Reload and discard your changes?" with Cancel / Yes, Discard. |
+
+### 9b. Decline Reload
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 9.3 | Click Cancel (decline). | Warning icon appears on filename; no re-prompt until file changes again. |
 | 9.4 | After declining, press Ctrl+S. | Dialog: "…Overwrite the external changes?" with Cancel / Overwrite. |
+
+### 9c. Accept Reload
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 9.5 | Accept reload (no local edits). | Content updates; warning clears; baseline reset. |
 | 9.6 | Accept reload (with local edits). | Content updates; warning clears; local edits lost. |
+
+### 9d. File Deleted Externally
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 9.7 | Delete file externally, focus app. | Dialog: "This file no longer exists…" with OK. |
 | 9.8 | After deletion, press Ctrl+S. | Save-as dialog. |
+
+### 9e. Edge Cases
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 9.9 | Open file, modify externally, press Ctrl+S. | Overwrite warning dialog. |
 | 9.10 | Modify externally, press Ctrl+R. | If dirty: reload dialog. If clean: reloads silently. |
-| 9.11 | Edit externally without changing mtime (`touch -r file.md .timestamp; echo x >> file.md; touch -r .timestamp file.md`). | Warning icon appears (size comparison). |
+| 9.11 | **Linux/macOS:** Edit externally without changing mtime: `touch -r file.md .timestamp; echo x >> file.md; touch -r .timestamp file.md`. **Windows (PowerShell):** `$f = 'ext-test.md'; $t = (Get-Item $f).LastWriteTime; Add-Content $f 'x'; (Get-Item $f).LastWriteTime = $t`. | Warning icon appears (size comparison). |
 | 9.12 | Press Ctrl+R with no external changes. | Content reloads; viewer re-renders; no toast. |
 
 ---
@@ -318,8 +371,8 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 10.2 | With confirmation ON, click ODT export. | Dialog: "This export always uses a neutral, printer-friendly style."; shows ODT options (math rasterize, "SVG images & Mermaid diagrams" rasterize, resolution). |
 | 10.3 | Click Cancel / press Escape / click backdrop. | No export runs. |
 | 10.4 | Press Enter. | Export runs. |
-| 10.5 | Tick "Do not show this message again", confirm. | Next export skips dialog. |
-| 10.6 | Tick "Show export confirmation" in dropdown footer. | Dialog reappears next export. |
+| 10.5 | With confirmation ON, open the confirm dialog. | Hint below the options names the "Show export and print confirmation" checkbox (macOS: "Show export confirmation") in the Export as… menu. No "Do not show this message again" checkbox. |
+| 10.6 | Untick "Show export and print confirmation" in the dropdown footer. | Next export/print skips the dialog. Re-tick it: the dialog reappears. |
 
 ### 10b. Export as HTML
 
@@ -343,9 +396,9 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | Step | Action | Expected |
 |------|--------|----------|
 | 10.15 | Choose Export as HTML Bundle. | Save dialog with `.zip`, ZIP filter. |
-| 10.16 | Save and extract. | Contains `index.html`, `images/`, `fonts/`. |
+| 10.16 | Save and extract. | Contains `index.html` and `images/`. If the document has math (KaTeX), also contains `fonts/` with `.woff2` files. |
 | 10.17 | Open `index.html` in browser. | Renders identically; image srcs point to `images/...`. |
-| 10.18 | Check `fonts/` folder. | Contains KaTeX `.woff2` files. |
+| 10.18 | If `fonts/` is present, check contents. | Contains KaTeX `.woff2` files needed for math rendering. |
 | 10.19 | Repeat with a dark theme. | Output uses same theme. |
 | 10.20 | Export with two images sharing a basename. | Both present: `square.png` and `square-2.png`. |
 | 10.21 | Export `MathChemMermaid-All.md`. | Math renders from extracted fonts. |
@@ -353,30 +406,54 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 
 ### 10d. Export as ODT
 
-*Files: `MathChemMermaid-All.md`, `Rendering-All.md`*
+*Files: `MathChemMermaid-All.md` (for math/chemistry/mermaid tests), `Rendering-All.md` (for images and HTML elements)*
+
+This section tests ODT export with various content types and rasterization options.
+
+#### Basic ODT Export
 
 | Step | Action | Expected |
 |------|--------|----------|
 | 10.23 | Choose Export as ODT. | Save dialog with `.odt`, ODT filter. |
 | 10.24 | Open in LibreOffice. | Text, headings, lists, tables, code highlighting render. Code uses printer-friendly colors. |
+| 10.42 | Successful export. | Toast: "Exported". |
+
+#### Math Rendering Options (use `MathChemMermaid-All.md`)
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 10.25 | Math — rasterize OFF (default). | Formulas appear as editable ODF Math objects. |
 | 10.26 | Math — rasterize ON (tick "Rasterize as PNG"). | Formulas render as inline PNG frames. |
+
+#### SVG & Mermaid Options (use `MathChemMermaid-All.md`)
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 10.27 | SVG — rasterize OFF. | SVG embedded as `Pictures/*.svg` (vector). |
 | 10.28 | SVG — rasterize ON. | SVG replaced with PNG image. |
 | 10.29 | Resolution: switch to 2×, re-export. | PNG file size scales up. |
 | 10.30 | Neither raster option ticked. | Resolution selector is greyed out. |
+| 10.39 | Mermaid — rasterize OFF. | Diagram embedded as SVG. |
+| 10.40 | Mermaid — rasterize ON ("SVG images & Mermaid diagrams"). | Diagram replaced with PNG. |
+| 10.41 | Invalid mermaid fence. | Source kept as preformatted code block. |
+
+#### Frontmatter & Metadata
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 10.31 | Frontmatter: toggle OFF, export. | No frontmatter card in ODT. |
 | 10.32 | Frontmatter: toggle ON. | Frontmatter card table appears in ODF body. |
 | 10.33 | Frontmatter toggle OFF. | `meta.xml` still carries `<dc:title>` from frontmatter (`title`, or `name` for skill files) and `<dc:creator>` from `author` — not the filename. |
+
+#### Content Fidelity (use `Rendering-All.md`)
+
+| Step | Action | Expected |
+|------|--------|----------|
 | 10.34 | Export file with footnotes. | Rendered as ODF footnotes. |
 | 10.35 | Export `Rendering-All.md`. | Local images embedded; remote fetched (or warning). |
 | 10.36 | Export with unreachable remote image. | Warnings dialog lists the failed fetch. |
 | 10.37 | Export file with `<sub>`, `<sup>`, `<kbd>`, `<mark>`. | Rendered as text spans with character styles. |
 | 10.38 | Export file with GFM table. | Rendered as ODF table. |
-| 10.39 | Mermaid — rasterize OFF. | Diagram embedded as SVG. |
-| 10.40 | Mermaid — rasterize ON ("SVG images & Mermaid diagrams"). | Diagram replaced with PNG. |
-| 10.41 | Invalid mermaid fence. | Source kept as preformatted code block. |
-| 10.42 | Successful export. | Toast: "Exported". |
 | 10.43 | Change ODT rasterize/resolution, export, re-export later. | Last-used options are pre-selected. |
 
 ### 10e. Frontmatter Toggle — All Exporters
@@ -429,9 +506,8 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 12.14 | Click Dependencies tab. | Table of third-party libraries. |
 | 12.15 | Click Keyboard Shortcuts tab. | Lists all shortcuts including Quit. |
 | 12.16 | Click License tab. | Full MIT license text. |
-| 12.17 | Click Themes tab. | Theme information displayed. |
-| 12.18 | Click "Check for Updates". | Shows status (checking, up-to-date, or available). |
-| 12.19 | Click any link in About. | Opens in external browser. |
+| 12.17 | Click "Check for Updates". | Shows status (checking, up-to-date, or available). |
+| 12.18 | Click any link in About. | Opens in external browser. |
 
 ---
 
@@ -449,7 +525,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 13.8 | Resize window, quit, reopen. | Position and size restored. |
 | 13.9 | Open `Large.md`. | Loads without freezing; scroll works. |
 | 13.10 | Type fast for 30 seconds. | No lost characters; viewer catches up. |
-| 13.11 | Open a file with every feature combined. | All features render together. |
+| 13.11 | Open `MathChemMermaid-All.md`. | All features (math, chemistry, mermaid, tables, code) render together without conflicts. |
 | 13.12 | Rapidly toggle view modes. | No crashes or glitches. |
 
 ---
@@ -467,7 +543,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 14.3 | Save and open in Preview. | Vector PDF, selectable text, one long page, edge-to-edge. |
 | 14.4 | Trigger PDF export. | "Exporting…" overlay visible during build phase. |
 | 14.5 | Export successfully. | Toast: "PDF saved" with path. |
-| 14.6 | Trigger a failure. | Toast: "Create PDF failed" with detail. |
+| 14.6 | Trigger a failure (e.g. save to a read-only location like `/System/test.pdf`). | Toast: "Create PDF failed" with detail. |
 
 ### Linux & Windows
 
@@ -478,7 +554,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 14.9 | Choose "Save as PDF". | Vector PDF written, opens correctly. |
 | 14.10 | Enable "Background graphics" if needed. | Background paints to paper edge (Chromium). |
 | 14.11 | Pick a real printer, print. | Document prints with correct styling. |
-| 14.12 | Trigger a failure. | Toast: "Print failed" with detail. |
+| 14.12 | Trigger a failure (e.g. select a printer that is offline or disconnected, then print). | Toast: "Print failed" with detail. |
 | 14.13 | Trigger PDF export. | Overlay may flash; print dialog confirms export started. |
 
 ### Common (all platforms)
@@ -505,9 +581,8 @@ within each story gives the precise check.
 | About dialog | Dependencies tab | **S12** (12.14) |
 | About dialog | Keyboard Shortcuts tab | **S12** (12.15) |
 | About dialog | License tab | **S12** (12.16) |
-| About dialog | Themes tab | **S12** (12.17) |
-| About dialog | Check for updates | **S12** (12.18) |
-| About dialog | External links | **S12** (12.19) |
+| About dialog | Check for updates | **S12** (12.17) |
+| About dialog | External links | **S12** (12.18) |
 | Anchor links | Regular headings | **S5** (5.16) |
 | Anchor links | Custom heading IDs `{#id}` | **S5** (5.15) |
 | Anchor links | Special characters (CSS.escape) | **S5** (5.16) |
@@ -563,11 +638,11 @@ within each story gives the precise check.
 | Editor toolbar | Task list | **S4** (4.15) |
 | Editor toolbar | Blockquote | **S4** (4.16) |
 | Editor toolbar | Horizontal rule | **S4** (4.17) |
-| Encoding | UTF-8 BOM | **S8** (8.24) |
-| Encoding | CRLF line endings | **S8** (8.25) |
-| Encoding | ISO-8859-1 (Latin-1) | **S8** (8.26) |
-| Encoding | Unicode filename | **S8** (8.27) |
-| Encoding | Filename with spaces | **S8** (8.28) |
+| Encoding | UTF-8 BOM | **S8** (8.23) |
+| Encoding | CRLF line endings | **S8** (8.24) |
+| Encoding | ISO-8859-1 (Latin-1) | **S8** (8.25) |
+| Encoding | Unicode filename | **S8** (8.26) |
+| Encoding | Filename with spaces | **S8** (8.27) |
 | Export | Confirm dialog (appearance) | **S10** (10.1–10.2) |
 | Export | Confirm dialog (cancel/escape) | **S10** (10.3) |
 | Export | Confirm dialog (confirm/enter) | **S10** (10.4) |
@@ -646,16 +721,15 @@ within each story gives the precise check.
 | File operations | Discard | **S8** (8.13) |
 | File operations | Cancel | **S8** (8.14) |
 | File operations | Reload from disk | **S8** (8.15) |
-| File operations | Reload always reloads | **S8** (8.16) |
-| File operations | Reload deleted file | **S8** (8.17) |
-| File operations | Save after deletion | **S8** (8.18) |
-| File operations | Modified indicator | **S8** (8.19) |
-| File operations | Read-only indicator | **S8** (8.20) |
-| File operations | Save read-only | **S8** (8.21) |
-| File operations | Empty file | **S8** (8.22) |
-| File operations | Large file | **S8** (8.23) |
-| File operations | Toast on save failure | **S8** (8.29) |
-| File operations | Toast on open failure | **S8** (8.30) |
+| File operations | Reload deleted file | **S8** (8.16) |
+| File operations | Save after deletion | **S8** (8.17) |
+| File operations | Modified indicator | **S8** (8.18) |
+| File operations | Read-only indicator | **S8** (8.19) |
+| File operations | Save read-only | **S8** (8.20) |
+| File operations | Empty file | **S8** (8.21) |
+| File operations | Large file | **S8** (8.22) |
+| File operations | Toast on save failure | **S8** (8.28) |
+| File operations | Toast on open failure | **S8** (8.29) |
 | Layout | Default split view | **S2** (2.2) |
 | Layout | Resize handle drag | **S2** (2.3) |
 | Layout | Snap to viewer/editor | **S2** (2.4–2.5) |
@@ -664,7 +738,7 @@ within each story gives the precise check.
 | Links | External URL | **S5** (5.17) |
 | Links | Local file path | **S5** (5.18) |
 | Links | Link tooltip on hover | **S5** (5.19) |
-| Links | Keyboard activation (Tab + Enter) | **S5** (5.26) |
+| Links | Keyboard activation (Tab + Enter) | **S5** (5.27) |
 | Loading overlay | During file load | **S2** (2.1) |
 | Math | Dollar inline `$…$` | **S6** (6.1) |
 | Math | Dollar block `$$…$$` | **S6** (6.2) |
@@ -738,11 +812,12 @@ within each story gives the precise check.
 | Rendering — images | Filename with spaces | **S5** (5.20) |
 | Rendering — images | Unicode filename in subdir | **S5** (5.20) |
 | Rendering — images | Remote image | **S5** (5.21) |
-| Rendering — images | Data URI | **S5** (5.22) |
-| Rendering — images | Missing image (no crash) | **S5** (5.23) |
-| Rendering — images | SVG from file | **S5** (5.24) |
-| Rendering — images | Inline SVG | **S5** (5.24) |
-| Rendering — images | Image tooltip on hover | **S5** (5.25) |
+| Rendering — images | Reload re-renders | **S5** (5.22) |
+| Rendering — images | Data URI | **S5** (5.23) |
+| Rendering — images | Missing image (no crash) | **S5** (5.24) |
+| Rendering — images | SVG from file | **S5** (5.25) |
+| Rendering — images | Inline SVG | **S5** (5.25) |
+| Rendering — images | Image tooltip on hover | **S5** (5.26) |
 | Scroll sync | Editor↔Viewer | **S2** (2.9–2.10) |
 | Scroll sync | Rapid scrolling | **S2** (2.11) |
 | Scroll sync | Single view disables sync | **S2** (2.12–2.13) |
@@ -766,5 +841,5 @@ within each story gives the precise check.
 | Window | Restore last file | **S1** (1.7) |
 | Edge cases | Very large file | **S13** (13.9) |
 | Edge cases | Rapid typing | **S13** (13.10) |
-| Edge cases | Mixed content stress test | **S13** (13.11) |
+| Edge cases | Mixed content stress test (`MathChemMermaid-All.md`) | **S13** (13.11) |
 | Edge cases | View mode switching | **S13** (13.12) |

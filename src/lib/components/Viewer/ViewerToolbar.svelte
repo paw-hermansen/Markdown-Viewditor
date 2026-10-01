@@ -3,7 +3,7 @@
   import DropdownButton from '$lib/components/DropdownButton.svelte';
   import { getThemeLabel } from '$lib/utils/themes';
   import { viewerState } from '$lib/stores/viewer.svelte';
-  import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
+  import { settingsState, updateSetting, exportConfirmSettingLabel } from '$lib/stores/settings.svelte';
   import { modLabel } from '$lib/utils/keyboard';
   import { listExporters } from '$lib/export/registry.svelte';
 
@@ -15,6 +15,7 @@
   let { onPrint, onExport }: Props = $props();
 
   const isMacOS = navigator.userAgent.includes('Macintosh');
+  const confirmSettingLabel = exportConfirmSettingLabel(isMacOS);
 
   const themeLabel = $derived(getThemeLabel(viewerState.theme));
 
@@ -65,7 +66,7 @@
               checked={!settingsState.exportConfirmDismissed}
               onchange={() => updateSetting('exportConfirmDismissed', !settingsState.exportConfirmDismissed)}
             />
-            {isMacOS ? 'Show export confirmation' : 'Show export and print confirmation'}
+            {confirmSettingLabel}
           </label>
         {/snippet}
       </DropdownButton>

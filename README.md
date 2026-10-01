@@ -13,6 +13,7 @@ A feature-rich and simple cross-platform markdown viewer and editor with live pr
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
 - **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
+- **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts and more, rendered with [Mermaid](https://mermaid.js.org)
 - **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
 - **Dark/light Themes** — 8 built-in themes + custom CSS themes (see `F1`/ ⓘ inside the app)
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
@@ -87,6 +88,7 @@ Detailed guides for end users:
 | [Custom Themes](docs/CustomThemes.md)  | Creating and installing custom CSS themes            |
 | [Math Formulas](docs/Math.md)          | KaTeX math rendering and delimiter syntax            |
 | [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
+| [Mermaid Diagrams](docs/Mermaid.md)    | Diagram types, host options and export behavior      |
 
 ## Markdown Compatibility Levels
 
@@ -145,6 +147,26 @@ $\pu{123 kJ/mol}$    — physical units
 
 The `\ce{…}` and `\pu{…}` commands work inside all supported math delimiters
 (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, bare `\begin{}`, and ` ```math ` fences).
+
+## Mermaid Diagrams
+
+See [Mermaid.md](docs/Mermaid.md) for diagram types, host options, and export behavior.
+
+Markdown Viewditor renders [Mermaid](https://mermaid.js.org) diagrams from fenced
+code blocks with the `mermaid` language identifier. Mermaid is loaded lazily — it
+only activates when your document contains a `mermaid` code block:
+
+```mermaid
+graph LR
+    A[Start] --> B[End]
+```
+
+Supported diagram types include flowcharts, sequence diagrams, class diagrams,
+state diagrams, ER diagrams, Gantt charts, pie charts, mind maps, and more.
+Diagram themes follow the app's dark/light theme unless overridden with Mermaid
+YAML frontmatter, and layout options (alignment, maximum width, width fitting)
+can be set per block with fence attributes or document-wide with HTML comment
+directives. Diagrams export to HTML and PDF as inline/vector SVG.
 
 ## Themes
 

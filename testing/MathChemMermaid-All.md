@@ -366,7 +366,7 @@ graph LR
 
 ```mermaid {fitToWidth=false}
 graph LR
-    A[Very long node name here] --> B[Another very long node name] --> C[Yet another long node] --> D[And one more for good measure]
+    A[Very long node name here] --> B[Another very long node name] --> C[Yet another long node] --> D[One more node] --> E[And one more for good measure]
 ```
 
 ## Mermaid — HTML Comment Directives

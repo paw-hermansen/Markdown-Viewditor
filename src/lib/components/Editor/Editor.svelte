@@ -77,7 +77,7 @@
       borderLeftColor: 'var(--accent)'
     },
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-      backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)'
+      backgroundColor: 'var(--accent-tint, rgba(127, 127, 127, 0.2))'
     },
     '.cm-activeLine': {
       backgroundColor: 'var(--bg-hover)'

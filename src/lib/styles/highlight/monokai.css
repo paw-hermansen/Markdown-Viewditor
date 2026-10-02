@@ -106,6 +106,7 @@ support/type #66D9EF, parameter #FD971F, comment #75715E
   --border: #3e3d32;
   --bg-tertiary: #2d2e27;
   --accent: #a6e22e;
+  --accent-tint: rgba(166, 226, 46, 0.2);
   --text-secondary: #75715e;
   --text-primary: #f8f8f2;
   --bg-primary: #272822;

@@ -9,6 +9,7 @@
   --text-secondary: #8892b0;
   --text-muted: #9ca3af;
   --accent: #ff6b81;
+  --accent-tint: rgba(255, 107, 129, 0.2);
   --accent-danger: #ff6b6b;
   --accent-snap: #4ade80;
   --border: #233554;
@@ -35,6 +36,7 @@
   --text-secondary: #6b7280;
   --text-muted: #6b7280;
   --accent: #e94560;
+  --accent-tint: rgba(233, 69, 96, 0.2);
   --accent-danger: #dc2626;
   --accent-snap: #16a34a;
   --border: #e5e7eb;

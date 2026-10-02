@@ -98,6 +98,7 @@ code.hljs {
   --border: #d1d9e0;
   --bg-tertiary: #f6f8fa;
   --accent: #0969da;
+  --accent-tint: rgba(9, 105, 218, 0.2);
   --text-secondary: #656d76;
   --text-primary: #1f2328;
   --bg-primary: #ffffff;

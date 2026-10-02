@@ -281,6 +281,7 @@ Aurora
   --border: #3B4252;
   --bg-tertiary: #3B4252;
   --accent: #88C0D0;
+  --accent-tint: rgba(136, 192, 208, 0.2);
   --text-secondary: #4C566A;
   --text-primary: #D8DEE9;
   --bg-primary: #2E3440;

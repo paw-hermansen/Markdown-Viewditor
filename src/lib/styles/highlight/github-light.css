@@ -124,6 +124,7 @@ code.hljs {
   --border: #d1d9e0;
   --bg-tertiary: #f6f8fa;
   --accent: #0969da;
+  --accent-tint: rgba(9, 105, 218, 0.2);
   --text-secondary: #57606a;
   --text-primary: #24292e;
   --bg-primary: #ffffff;

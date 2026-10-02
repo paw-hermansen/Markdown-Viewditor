@@ -252,7 +252,7 @@
   }
 
   .violation-badge:hover {
-    background: color-mix(in srgb, #f59e0b 15%, transparent);
+    background: rgba(245, 158, 11, 0.15);
     border-color: #f59e0b;
   }
 
@@ -297,7 +297,7 @@
   }
 
   .level-option.active {
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    background: var(--accent-tint, rgba(127, 127, 127, 0.2));
     color: var(--text-primary);
   }
 

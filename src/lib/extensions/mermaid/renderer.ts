@@ -7,6 +7,7 @@ import {
 import { getDirectiveState } from "../directives";
 import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
+import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
@@ -76,6 +77,10 @@ function cacheKey(
 
 async function ensureLoaded(): Promise<MermaidModule> {
   if (!mermaidModule) {
+    // Must run before Mermaid's first render: it builds every diagram's CSS
+    // with `new CSSStyleSheet()`, which older WebKit (WKWebView on
+    // macOS <= 13.2 / iOS <= 16.4) rejects with "Illegal constructor".
+    ensureConstructableStylesheet();
     mermaidModule = await import("mermaid");
   }
   return mermaidModule;

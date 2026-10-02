@@ -215,6 +215,19 @@ would otherwise consume the backslash and hide the delimiter.
   splice math tokens into html_block content with `map: null`, which strips
   `data-line` anchors and breaks scroll-sync.
 
+### Mermaid on Older WebKit (CSSStyleSheet shim)
+
+Mermaid (>= 11.6) builds every diagram's CSS with the Constructable
+Stylesheets API (`new CSSStyleSheet()`), which WebKit only supports from
+Safari 16.4 (macOS 13.3 / iOS 16.4). On older WKWebView (e.g. macOS 12) the
+constructor throws `TypeError: Illegal constructor` and every diagram falls
+into the "Mermaid rendering failed" block. `css-stylesheet-shim.ts`
+(feature-detected, no-op on healthy engines) backs a real `CSSStyleSheet`
+with an inert `<style>` element so Mermaid's output stays identical across
+platforms. It is called from `ensureLoaded()` in the mermaid `renderer.ts`
+before `import("mermaid")`. Upstream: mermaid-js/mermaid#6666 — remove the
+shim if Mermaid ever ships its own fallback.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only

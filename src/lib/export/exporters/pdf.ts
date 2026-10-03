@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import { fileState } from "$lib/stores/file.svelte";
 import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
+import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
@@ -22,9 +23,25 @@ import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
  * container carries the `.viewer-content` class — and in theme mode the
  * `#viewer-content` id — so markdown.css and the active theme CSS style it
  * exactly like the on-screen Viewer. The container is laid out at the
- * viewer's maximum content width and then scaled to the paper with CSS
- * `zoom`, so line wrapping in the PDF matches the viewer word-for-word.
- * KaTeX fonts are loaded in-document, so math prints correctly.
+ * viewer's maximum content width and then scaled to the paper (see
+ * `PrintLayout`), so line wrapping in the PDF matches the viewer
+ * word-for-word. KaTeX fonts are loaded in-document, so math prints
+ * correctly.
+ *
+ * Scaling is platform-split because WebKit's CSS `zoom` mis-scales inline
+ * SVG (font-size inside `<foreignObject>` gets the zoom factor applied
+ * twice — webkit.org/show_bug.cgi?id=279041 — and SVG geometry/markers
+ * distort under zoom on older WebKit):
+ *   - Linux/Windows print through the print dialog, which needs
+ *     layout-affecting scaling to paginate the clone across A4 pages →
+ *     CSS `zoom`.
+ *   - macOS captures the web view's content bounds (1 CSS px = 1 PDF pt)
+ *     as one long page → a paint-time `transform: scale()` inside a sized
+ *     wrapper, which leaves the SVG geometry untouched. The scale targets
+ *     the A4 printable width in points, so the PDF's physical scale matches
+ *     the Linux/Windows A4 output. Diagrams are additionally swapped for
+ *     their foreignObject-free text-label variant (`prepareMermaidForPrint`)
+ *     before the capture.
  *
  * Print mode is deferred until the moment of capture (see `beginPrint()` on
  * `PrintContainerHandle`): `buildPrintContainer()` only stages the clone
@@ -50,6 +67,14 @@ export interface PrintContainerHandle {
    * build phase. Idempotent.
    */
   beginPrint: () => void;
+  /**
+   * Size the transform-mode scaler wrapper to the scaled clone (see
+   * `PrintLayout.scaleMode`), so the capture's content bounds neither clip
+   * the bottom of the document nor extend past the scaled height. Call
+   * after the print layout has settled (post-`beginPrint()`); no-op in
+   * zoom mode.
+   */
+  syncScaleHeight: () => void;
   /** Restore the document to its pre-export state. Idempotent. */
   cleanup: () => void;
 }
@@ -57,26 +82,51 @@ export interface PrintContainerHandle {
 export interface PrintLayout {
   /** Full laid-out width of the clone in CSS px, before scaling. */
   layoutWidthPx: number;
-  /** CSS zoom factor mapping the laid-out width onto the paper. */
-  zoom: number;
+  /** Scale factor mapping the laid-out width onto the paper width. */
+  scale: number;
+  /**
+   * How the scale is applied to the clone:
+   * - "zoom" — CSS `zoom` on the clone (Linux/Windows print path). Zoom is
+   *   layout-affecting, which is what lets the print engine paginate the
+   *   clone across A4 pages.
+   * - "transform" — paint-time `transform: scale()` on the clone inside a
+   *   sized `.print-scaler` wrapper (macOS capture path). Layout still
+   *   happens at the un-scaled `layoutWidthPx`, so wrapping matches the
+   *   viewer exactly, but no SVG is laid out under CSS `zoom`.
+   */
+  scaleMode: "zoom" | "transform";
 }
 
 /* ===== Page geometry =====
    On Linux/Windows the paper target is A4 with 10mm margins: the @page rule
    in app.css makes A4 the preselected default in the print dialog and sizes
    the printable area in CSS px (96 dpi). On macOS the capture page is the
-   webview's bounds (not A4 — WKWebView can't honor @page size), so the
-   layout is scaled to fill the webview width instead. Both compute zoom so
-   the laid-out 832px maps onto the target width, preserving the viewer's
+   web view's content bounds (not A4 — WKWebView can't honor @page size) and
+   createPDF maps 1 CSS px to 1 PDF point (72 dpi), so the same 190mm
+   printable width is expressed in points instead — which gives the macOS
+   PDF the same physical content width (and the same zoom-100% appearance in
+   a PDF viewer) as the Linux/Windows output. Both compute a scale so the
+   laid-out 832px maps onto the target width, preserving the viewer's
    wrapping. */
 const A4_WIDTH_MM = 210;
 const PAGE_MARGIN_MM = 10;
 const MM_PER_INCH = 25.4;
 const CSS_PX_PER_INCH = 96;
+const POINTS_PER_INCH = 72;
 
 /** Printable width inside the A4 margins, in CSS px (Linux/Windows). */
 const PRINT_CONTENT_WIDTH_PX =
   ((A4_WIDTH_MM - 2 * PAGE_MARGIN_MM) / MM_PER_INCH) * CSS_PX_PER_INCH;
+
+/** Printable width inside the A4 margins, in PDF points (macOS capture). */
+const PRINT_CONTENT_WIDTH_PT =
+  ((A4_WIDTH_MM - 2 * PAGE_MARGIN_MM) / MM_PER_INCH) * POINTS_PER_INCH;
+
+/** Full A4 sheet width in PDF points — the macOS capture page width. */
+const A4_WIDTH_PT = (A4_WIDTH_MM / MM_PER_INCH) * POINTS_PER_INCH;
+
+/** Top/bottom page margin on the macOS capture, in PDF points. */
+const PAGE_MARGIN_PT = (PAGE_MARGIN_MM / MM_PER_INCH) * POINTS_PER_INCH;
 
 /* ===== Viewer geometry =====
    Defaults mirror the Viewer: markdown.css caps .viewer-content at 800px and
@@ -164,6 +214,12 @@ function resolvePageBackground(viewerContentElement?: HTMLElement): {
  * because the clone already needs to size to the printed page area; the
  * inline value on html/body is hidden behind the app shell until
  * `beginPrint()` reveals the clone.
+ *
+ * In `scaleMode: "transform"` (macOS) the clone is wrapped in a sized
+ * `.print-scaler` div and scaled with a paint-time transform instead of
+ * CSS `zoom`, because WebKit's zoom handling mis-scales inline SVG (see
+ * PrintLayout). The wrapper clips the clone's un-scaled layout overflow so
+ * the capture's content bounds stay at the scaled size.
  */
 export function buildPrintContainer(
   viewerHtml: string,
@@ -173,13 +229,31 @@ export function buildPrintContainer(
   // Resolve the page background now — the value comes from the live
   // viewer, which still owns the #viewer-content id until beginPrint().
   const pageBackground = resolvePageBackground(viewerContentElement);
+  const useTransform = layout.scaleMode === "transform";
 
   const printDiv = document.createElement("div");
   printDiv.classList.add("viewer-content", "print-content");
   printDiv.innerHTML = viewerHtml;
   printDiv.style.width = `${layout.layoutWidthPx}px`;
-  printDiv.style.zoom = String(layout.zoom);
-  document.body.appendChild(printDiv);
+
+  let scalerDiv: HTMLDivElement | null = null;
+  if (useTransform) {
+    printDiv.style.transform = `scale(${layout.scale})`;
+    printDiv.style.transformOrigin = "top left";
+    scalerDiv = document.createElement("div");
+    scalerDiv.classList.add("print-scaler");
+    scalerDiv.style.width = `${layout.layoutWidthPx * layout.scale}px`;
+    // The clone lays out at layoutWidthPx inside a scaled-width wrapper;
+    // clip that (painted-transposed) overflow or the capture's content
+    // bounds would extend to the un-scaled size.
+    scalerDiv.style.overflow = "hidden";
+    scalerDiv.style.margin = "0 auto";
+    scalerDiv.appendChild(printDiv);
+    document.body.appendChild(scalerDiv);
+  } else {
+    printDiv.style.zoom = String(layout.scale);
+    document.body.appendChild(printDiv);
+  }
 
   // Full-bleed page background, two complementary mechanisms:
   // 1. Inline background on html/body — the root element's background
@@ -217,6 +291,29 @@ export function buildPrintContainer(
       }
       document.documentElement.classList.add("exporting", "theme-export");
       document.body.classList.add("exporting", "theme-export");
+      if (useTransform && scalerDiv) {
+        // Size the capture page like an A4 sheet: createPDF captures the
+        // web page's content bounds, so constraining the document to the
+        // A4 width (with 10mm vertical margins around the clone, which the
+        // .print-scaler auto margins center horizontally) yields A4-width
+        // pages with 10mm margins. Applied only now so the live app UI
+        // keeps its full-width layout during the build phase. The root
+        // background still paints the full captured area.
+        document.documentElement.style.width = `${A4_WIDTH_PT}px`;
+        document.body.style.width = `${A4_WIDTH_PT}px`;
+        document.body.style.margin = "0 auto";
+        document.body.style.padding = `${PAGE_MARGIN_PT}px 0`;
+      }
+    },
+    syncScaleHeight() {
+      if (!scalerDiv) return;
+      // getBoundingClientRect is transform-aware (offsetHeight is not):
+      // size the wrapper to the painted height so the capture can neither
+      // clip the last lines nor extend past the scaled content.
+      const scaledHeight = printDiv.getBoundingClientRect().height;
+      if (scaledHeight > 0) {
+        scalerDiv.style.height = `${Math.ceil(scaledHeight)}px`;
+      }
     },
     cleanup() {
       if (inPrintMode) {
@@ -228,7 +325,12 @@ export function buildPrintContainer(
       }
       document.documentElement.style.background = "";
       document.body.style.background = "";
+      document.documentElement.style.width = "";
+      document.body.style.width = "";
+      document.body.style.margin = "";
+      document.body.style.padding = "";
       pageStyleEl.remove();
+      scalerDiv?.remove();
       printDiv.remove();
     },
   };
@@ -327,14 +429,20 @@ export async function exportPdf(
   viewerContentElement?: HTMLElement,
 ): Promise<ExportResult> {
   const layoutWidthPx = computeViewerLayoutWidth(viewerContentElement);
-  // macOS captures the page at the webview's bounds, so scale the laid-out
-  // width up to fill the webview width (content fills the PDF edge-to-edge,
-  // wrapping still computed at the viewer's 800px column). Other platforms
-  // print to A4, so scale to the A4 printable width instead.
-  const targetWidthPx = isMacOS ? window.innerWidth : PRINT_CONTENT_WIDTH_PX;
+  // Both platforms scale the laid-out width onto the A4 printable width —
+  // macOS in PDF points (1 CSS px = 1 pt in the capture, so the PDF's
+  // physical scale matches the A4 print output), Linux/Windows in print CSS
+  // px — so wrapping still happens at the viewer's 800px column on both.
+  const targetWidthPx = isMacOS
+    ? PRINT_CONTENT_WIDTH_PT
+    : PRINT_CONTENT_WIDTH_PX;
   const layout: PrintLayout = {
     layoutWidthPx,
-    zoom: targetWidthPx / layoutWidthPx,
+    scale: targetWidthPx / layoutWidthPx,
+    // The macOS capture lays the SVGs under a paint-time transform (WebKit's
+    // CSS `zoom` mis-scales inline SVG); the print path needs zoom's
+    // layout-affecting scaling so the print engine paginates the clone.
+    scaleMode: isMacOS ? "transform" : "zoom",
   };
   const handle = buildPrintContainer(viewerHtml, layout, viewerContentElement);
 
@@ -359,6 +467,14 @@ export async function exportPdf(
     // optional chaining only guards non-browser test environments.)
     await document.fonts?.ready;
 
+    // macOS: swap the Mermaid diagrams for their foreignObject-free
+    // text-label variant before the capture (belt and braces alongside the
+    // transform scaling — WebKit mis-scales <foreignObject> content even
+    // under transforms on older releases).
+    if (isMacOS) {
+      await prepareMermaidForPrint(handle.printDiv);
+    }
+
     // Switch to print mode right before the capture (macOS createPDF or
     // Linux/Windows window.print). Up to this point the live viewer keeps
     // its theme styling and the export-overlay spinner stays visible.
@@ -371,6 +487,7 @@ export async function exportPdf(
     // Wait for the just-applied print rules (max-width, padding, etc.) to
     // take effect and for the layout to settle before the capture fires.
     await waitForLayout();
+    handle.syncScaleHeight();
 
     if (isMacOS && savePath) {
       // The capture paginates the full document from its top, so make sure

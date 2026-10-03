@@ -273,23 +273,52 @@ The print clone reproduces the Viewer exactly, then scales to paper:
 - The clone is laid out at the viewer's maximum content width (default
   800px column + 2×16px gutters = 832px; `computeViewerLayoutWidth()` reads
   the live viewer's computed `max-width` and container padding so custom
-  themes that change them still match). CSS `zoom` on the clone then maps
-  that width onto the paper. Because layout (fonts, widths, line breaking)
-  happens identically to the viewer and zoom only rescales, **line wrapping
-  in the PDF matches the viewer word-for-word**. Never scale via
-  `transform: scale()` (doesn't affect layout/pagination) and never
-  re-declare content styles for print (that's why app.css holds only shell,
-  geometry, and color-mode rules).
+  themes that change them still match). `exportPdf()` then maps that width
+  onto the paper, platform-split:
+  - Linux/Windows print through the print dialog with CSS `zoom` on the
+    clone, mapping 832px onto the A4 printable width (718 CSS px at 96dpi).
+    Zoom is required here — it is layout-affecting, which is what lets the
+    print engine paginate the clone across A4 pages (never scale the print
+    path with a bare `transform: scale()`: it doesn't affect
+    layout/pagination).
+  - macOS captures the web view's content bounds with
+    `createPDFWithConfiguration` (1 CSS px = 1 PDF pt) as one long page, so
+    the clone is scaled by a paint-time `transform: scale()` inside a sized
+    `.print-scaler` wrapper (which clips the un-scaled layout overflow;
+    `syncScaleHeight()` sizes it to the scaled height after `beginPrint()`),
+    mapping 832px onto the A4 printable width **in points** (538.6pt) so
+    the PDF's physical scale matches the Linux/Windows output. CSS `zoom`
+    must NOT be used on this path: WebKit's zoom handling mis-scales inline
+    SVG (font-size inside `<foreignObject>` is multiplied by the zoom factor
+    twice — webkit.org/show_bug.cgi?id=279041 — and SVG geometry/markers
+    distort under zoom on older WebKit), which produced giant diagram labels
+    and missing arrow heads/boxes in the PDF.
+    Because layout (fonts, widths, line breaking) happens identically to the
+    viewer on both paths and only the paint is rescaled, **line wrapping in
+    the PDF matches the viewer word-for-word**. Never re-declare content
+    styles for print (that's why app.css holds only shell, geometry, and
+    color-mode rules).
+- Mermaid diagrams in the macOS clone are swapped for their foreignObject-
+  free text-label variant before the capture (`prepareMermaidForPrint` →
+  `renderMermaidSvgForPrint`: `htmlLabels: false` + `textPlacement: "tspan"`,
+  same theme and `font-family: inherit` as the viewer) — belt and braces
+  next to the transform scaling, since old WebKit mis-scales
+  `<foreignObject>` even under transforms. The wrapper markup (`data-align`,
+  `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is preserved.
+  Linux/Windows keep the viewer SVGs unchanged.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
-  The macOS `createPDF` capture paginates at the webview's page bounds, so
-  its page size is the viewport, not A4 — the layout is scaled to fill the
-  webview width so content fills the PDF edge-to-edge. The capture produces
-  one long page (WKWebView can't tile a nil rect); that's accepted.
+  The macOS capture cannot honor `@page` size, so `beginPrint()` constrains
+  the document to the A4 width (210mm in points) with 10mm margins instead;
+  with content-bounds capture that yields A4-width pages at the same
+  physical scale as the Linux/Windows output (if a WebKit build captures the
+  web view bounds instead, the column keeps its correct scale but sits on a
+  window-wide page). The capture produces one long page (WKWebView can't
+  tile a nil rect); that's accepted.
 - Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
   inline `background` on `html`/`body` (page content area everywhere; whole
-  captured page on macOS, which has no physical margins) and an injected
+  captured area on macOS, whose capture has no physical margins) and an injected
   `@page { background: … }` rule (Chromium extends it over the margins too;
   WebKit can't paint the physical margin ring — engine limitation, same on
   Linux and macOS). `print-color-adjust: exact` on

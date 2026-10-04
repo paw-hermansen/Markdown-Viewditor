@@ -40,6 +40,40 @@ describe("buildPrintContainer", () => {
     handle.cleanup();
   });
 
+  it("scopes the clone's ids so url() references never resolve outside it", () => {
+    // The live viewer keeps its own copy of the same markup (that is what
+    // handlePrint clones) and is display:none at capture time. If the clone's
+    // marker references resolved into that hidden copy, Blink would paint no
+    // arrowheads in the PDF (Windows bug this guards against).
+    const live = document.createElement("div");
+    live.id = "viewer-content";
+    live.innerHTML =
+      '<svg id="mmd-1"><defs><marker id="mmd-1-arrow"><path d="M0 0"/></marker></defs>' +
+      '<path marker-end="url(#mmd-1-arrow)"></path></svg>';
+    document.body.appendChild(live);
+
+    const handle = buildPrintContainer(live.innerHTML, layout, live);
+    const clone = handle.printDiv;
+
+    const cloneIds = [...clone.querySelectorAll("[id]")].map((el) =>
+      el.getAttribute("id"),
+    );
+    expect(cloneIds.length).toBeGreaterThan(0);
+    for (const id of cloneIds) {
+      // No id in the clone may collide with the (hidden) live viewer.
+      expect(live.querySelector(`[id="${id}"]`)).toBeNull();
+    }
+
+    // The marker reference must resolve to a marker inside the clone itself.
+    const path = clone.querySelector("path[marker-end]")!;
+    const ref = path.getAttribute("marker-end")!.match(/url\(#([^)]+)\)/)![1];
+    expect(clone.querySelector(`[id="${ref}"]`)).not.toBeNull();
+    expect(live.querySelector(`[id="${ref}"]`)).toBeNull();
+
+    handle.cleanup();
+    expect(live.querySelector("#mmd-1")).not.toBeNull();
+  });
+
   it("does not add html/body exporting classes until beginPrint() is called", () => {
     const handle = buildPrintContainer("<p>hi</p>", layout);
     expect(document.documentElement.classList.contains("exporting")).toBe(

@@ -9,6 +9,7 @@ import type {
 import { fileState } from "$lib/stores/file.svelte";
 import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
 import { scaleWideMathForPrint } from "../math-fit";
+import { scopeSubtreeIds } from "../id-scope";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
@@ -160,6 +161,9 @@ function resolvePageBackground(viewerContentElement?: HTMLElement): {
   return { color, image };
 }
 
+/** Monotonic counter so each print clone's id scope is unique per export. */
+let nextPrintScopeId = 0;
+
 /**
  * Build the off-screen `.print-content` container used by both the in-app
  * Print button and this exporter. The clone carries the `.viewer-content`
@@ -184,6 +188,16 @@ export function buildPrintContainer(
   const printDiv = document.createElement("div");
   printDiv.classList.add("viewer-content", "print-content");
   printDiv.innerHTML = viewerHtml;
+  // The clone normally copies the live viewer's markup wholesale (see
+  // handlePrint in +page.svelte), so its element ids — Mermaid's
+  // `<marker id="…">` above all — collide with the originals, which stay in
+  // the document inside the display:none app shell at capture time. Blink
+  // refuses to paint SVG resource references whose target sits under a
+  // display:none ancestor, which is exactly how Mermaid's arrowheads vanish
+  // from Windows PDFs while the plain edge paths still print. Renaming the
+  // clone's ids (and its internal url(#…)/href/aria/style references) makes
+  // it self-contained; see ../id-scope.ts.
+  scopeSubtreeIds(printDiv, `print-clone-${nextPrintScopeId++}-`);
   printDiv.style.width = `${layout.layoutWidthPx}px`;
   printDiv.style.zoom = String(layout.zoom);
   document.body.appendChild(printDiv);

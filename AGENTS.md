@@ -288,11 +288,11 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   ink extent (via `measureMathVisualBounds`, zoom-safe: both sides of the
   ratio come from `getBoundingClientRect`) and sets KaTeX's em-based
   `--katex-font-scale` on the formula, merged multiplicatively with any
-  `fontsize` directive value. It runs in `exportPdf()` *after* `beginPrint()`
-  + layout settle (theme `#viewer-content` metrics change KaTeX widths) and
-  before the capture. Inline math is never scaled. The only CSS it needs is
-  `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
-  in app.css.
+  `fontsize` directive value. It runs in `exportPdf()` _after_ `beginPrint()`
+  - layout settle (theme `#viewer-content` metrics change KaTeX widths) and
+    before the capture. Inline math is never scaled. The only CSS it needs is
+    `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
+    in app.css.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
@@ -308,6 +308,19 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   Linux and macOS). `print-color-adjust: exact` on
   `html.exporting`/`body.exporting`/`.print-content` makes backgrounds print
   without the dialog's "Background graphics" option.
+- The print clone's element IDs are scoped (`scopeSubtreeIds()` in
+  `src/lib/export/id-scope.ts`, called from `buildPrintContainer`): the clone
+  normally duplicates the live viewer's markup, and at capture time the
+  original stays in the DOM inside the `display: none` app shell. Blink
+  (Windows/WebView2) won't paint SVG resource references whose target sits
+  under a `display: none` ancestor — the ones that matter are the marker and
+  paint-server URLs (`marker-end` / `fill` with `url(#…)`), so unscoped clones
+  lose Mermaid's arrowheads in Windows PDFs while the plain edge paths still
+  print (WebKitGTK/WKWebView paint them fine). Every id in the clone is
+  renamed with a per-export prefix and the clone's own `url(#…)` / `href` /
+  aria / `for` / `<style>` references are rewritten to follow — including
+  `#id` selectors inside Mermaid's per-SVG `<style>`, or the diagram loses
+  its styles.
 - Printer-friendly mode is fully theme-independent: a small CSS-variable
   override palette in app.css plus GitHub Light `.hljs` token rules re-scoped
   to `body.print-friendly .print-content` at export time

@@ -202,6 +202,18 @@ body.exporting .print-content {
   break-inside: avoid;
 }
 
+/* Wide-math fit (see src/lib/export/math-fit.ts): export time sets
+   --katex-font-scale per display formula so it shrinks to the printable
+   width instead of being clipped at the page edge (print media cannot
+   scroll the .katex-block overflow). KaTeX's em-based output scales
+   uniformly with font-size. Same rule the katex extension injects
+   (extensions/katex/styles.ts); restated here so the print clone is
+   self-sufficient. With the variable unset this is KaTeX's stock
+   `font: 1.21em` size. */
+.print-content .katex {
+  font-size: calc(1.21em * var(--katex-font-scale, 1));
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

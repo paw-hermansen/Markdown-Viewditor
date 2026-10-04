@@ -280,6 +280,19 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   `transform: scale()` (doesn't affect layout/pagination) and never
   re-declare content styles for print (that's why app.css holds only shell,
   geometry, and color-mode rules).
+- One deliberate deviation from viewer-identical layout: display math wider
+  than the column (the Viewer scrolls it via `.katex-block`'s horizontal
+  scrollbar) is scaled down to the printable width at export time, because
+  print media clips overflow instead of scrolling it. `scaleWideMathForPrint()`
+  in `src/lib/export/math-fit.ts` measures each `.katex-display > .katex`
+  ink extent (via `measureMathVisualBounds`, zoom-safe: both sides of the
+  ratio come from `getBoundingClientRect`) and sets KaTeX's em-based
+  `--katex-font-scale` on the formula, merged multiplicatively with any
+  `fontsize` directive value. It runs in `exportPdf()` *after* `beginPrint()`
+  + layout settle (theme `#viewer-content` metrics change KaTeX widths) and
+  before the capture. Inline math is never scaled. The only CSS it needs is
+  `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
+  in app.css.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).

@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import { fileState } from "$lib/stores/file.svelte";
 import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
+import { scaleWideMathForPrint } from "../math-fit";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
@@ -25,6 +26,12 @@ import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
  * viewer's maximum content width and then scaled to the paper with CSS
  * `zoom`, so line wrapping in the PDF matches the viewer word-for-word.
  * KaTeX fonts are loaded in-document, so math prints correctly.
+ *
+ * One deliberate deviation from viewer-identical layout: display math that
+ * is wider than the column (the Viewer scrolls it via `.katex-block`'s
+ * horizontal scrollbar) is scaled down to fit the printable width — print
+ * media cannot scroll, so unscaled wide formulas would be clipped at the
+ * page edge. See `scaleWideMathForPrint()` in ../math-fit.ts.
  *
  * Print mode is deferred until the moment of capture (see `beginPrint()` on
  * `PrintContainerHandle`): `buildPrintContainer()` only stages the clone
@@ -370,6 +377,16 @@ export async function exportPdf(
 
     // Wait for the just-applied print rules (max-width, padding, etc.) to
     // take effect and for the layout to settle before the capture fires.
+    await waitForLayout();
+
+    // Fit wide display math to the printable width. Runs after beginPrint()
+    // on purpose: the theme's #viewer-content rules only apply to the clone
+    // once the id swaps, and a theme's font size changes KaTeX's em-based
+    // formula widths — measuring earlier would fit to the wrong metrics.
+    scaleWideMathForPrint(handle.printDiv);
+
+    // The fit changes formula font sizes (and therefore block heights), so
+    // let the layout settle again before the capture.
     await waitForLayout();
 
     if (isMacOS && savePath) {

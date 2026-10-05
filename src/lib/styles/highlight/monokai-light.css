@@ -107,6 +107,7 @@ class/function #679c00, parameter #cf7000
   --border: #e0e0e0;
   --bg-tertiary: #f0f0ea;
   --accent: #0089b3;
+  --accent-tint: rgba(0, 137, 179, 0.2);
   --text-secondary: #75715e;
   --text-primary: #49483e;
   --bg-primary: #fafafa;

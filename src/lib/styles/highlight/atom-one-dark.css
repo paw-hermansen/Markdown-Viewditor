@@ -96,6 +96,7 @@ hue-6-2: #e6c07b
   --border: #3e4451;
   --bg-tertiary: #2c313a;
   --accent: #61aeee;
+  --accent-tint: rgba(97, 174, 238, 0.2);
   --text-secondary: #5c6370;
   --text-primary: #abb2bf;
   --bg-primary: #282c34;

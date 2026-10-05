@@ -620,6 +620,40 @@ describe("mermaid extension", () => {
       expect(second).not.toContain("mmd-svg-0-");
     });
 
+    it("rewrites compact style selectors that butt against a declaration block", async () => {
+      setAppTheme("light");
+      const source = "graph LR\n    A-->B\n";
+      // Mermaid serializes its <style> CSS compactly, so id selectors are
+      // followed directly by `{`. The root rule carries the diagram's
+      // font-family/font-size/fill and must follow the renamed id — if it is
+      // orphaned, labels render at whatever the engine inherits into
+      // <foreignObject> instead of the size the layout was measured at.
+      const compactSvg = [
+        '<svg id="diagram" viewBox="0 0 10 10">',
+        "<style>#diagram{font-family:inherit;font-size:16px;fill:#333;}" +
+          "#diagram .label{color:#333;}</style>",
+        '<rect id="node" />',
+        "</svg>",
+      ].join("");
+      mermaidMock.render.mockResolvedValue({ svg: compactSvg });
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source)],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      const out = renderMermaid(source, {});
+
+      expect(out).toContain(
+        "#mmd-svg-0-diagram{font-family:inherit;font-size:16px;fill:#333;}",
+      );
+      expect(out).toContain("#mmd-svg-0-diagram .label{color:#333;}");
+      // Invariant: no pre-rename id selector may survive in the style block.
+      expect(out).not.toMatch(/#diagram(?![\w-])/);
+      expect(out).not.toMatch(/#node(?![\w-])/);
+    });
+
     it("normalizes responsive SVG dimensions only for natural-size wrappers", async () => {
       setAppTheme("light");
       const source = "graph LR\n    A-->B\n";

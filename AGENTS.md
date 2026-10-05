@@ -228,6 +228,20 @@ platforms. It is called from `ensureLoaded()` in the mermaid `renderer.ts`
 before `import("mermaid")`. Upstream: mermaid-js/mermaid#6666 — remove the
 shim if Mermaid ever ships its own fallback.
 
+### Mermaid SVG Id Scoping
+
+`namespaceSvgIds()` in the mermaid `renderer.ts` renames every id of a
+rendered diagram (`mmd-0` → `mmd-svg-{wrapper}-mmd-0`) so several copies can
+coexist, and rewrites the diagram's own `<style>` references to follow.
+Mermaid serializes that CSS **compactly** (`#mmd-0{font-size:16px;…}`), so the
+selector match must accept an id directly followed by `{` — the root rule
+carries the label `font-family`/`font-size`/`fill`, and an orphaned rule makes
+labels render at whatever the engine inherits into `<foreignObject>`
+(WebKitGTK multiplies implicitly inherited font sizes by the device scale
+factor, so 90% desktop text scaling turned 16px labels into 12.6px and node
+boxes kept dead space for lines that were never drawn). Keep the "no orphaned
+id selectors" invariant in `__tests__/mermaid.test.ts` green.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only

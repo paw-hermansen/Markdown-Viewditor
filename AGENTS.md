@@ -239,8 +239,18 @@ carries the label `font-family`/`font-size`/`fill`, and an orphaned rule makes
 labels render at whatever the engine inherits into `<foreignObject>`
 (WebKitGTK multiplies implicitly inherited font sizes by the device scale
 factor, so 90% desktop text scaling turned 16px labels into 12.6px and node
-boxes kept dead space for lines that were never drawn). Keep the "no orphaned
-id selectors" invariant in `__tests__/mermaid.test.ts` green.
+boxes kept dead space for lines that were never drawn).
+
+The PDF/print clone runs a **second** id-scoping pass over the same markup
+(`export/id-scope.ts` → `scopeSubtreeIds()`); it must accept the identical
+selector forms or it re-orphans what the first pass fixed — that is how small
+Mermaid label text ended up in Linux PDFs even after the renderer fix: the
+clone's labels fell back to implicit inheritance again, which WebKitGTK also
+mis-scales under the clone's CSS `zoom` (the zoom factor gets applied twice).
+Both passes now share `rewriteIdSelectors()` in
+`src/lib/utils/css-id-rewrite.ts` — extend the contract there, never in a
+local copy — and keep the "no orphaned id selectors" invariants in
+`__tests__/mermaid.test.ts` and `export/__tests__/id-scope.test.ts` green.
 
 ### Scroll-Sync Anchor Contract for Math
 

@@ -557,6 +557,7 @@ This section tests ODT export with various content types and rasterization optio
 | 14.11 | Pick a real printer, print. | Document prints with correct styling. |
 | 14.12 | Trigger a failure (e.g. select a printer that is offline or disconnected, then print). | Toast: "Print failed" with detail. |
 | 14.13 | Trigger PDF export. | Overlay may flash; print dialog confirms export started. |
+| 14.21 | Export `MathChemMermaid-All.md` from Linux; inspect the Mermaid diagrams. | Node label text is the same size as in the Viewer (same line count, e.g. 3/4 lines, and no dead space below the label inside the boxes). |
 
 ### Common (all platforms)
 
@@ -694,6 +695,7 @@ within each story gives the precise check.
 | Export PDF | macOS — success/error toast | **S14** (14.5–14.6) |
 | Export PDF | macOS — A4 page scale matches other platforms | **S14** (14.18) |
 | Export PDF | Mermaid diagrams intact (arrows, boxes, labels) | **S14** (14.19) |
+| Export PDF | Mermaid label size matches viewer (Linux) | **S14** (14.21) |
 | Export PDF | Mermaid wide diagram scaled to page | **S14** (14.20) |
 | Export PDF | Linux/Win — print dialog | **S14** (14.8) |
 | Export PDF | Linux/Win — save as PDF | **S14** (14.9) |

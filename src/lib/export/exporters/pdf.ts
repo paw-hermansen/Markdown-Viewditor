@@ -257,7 +257,12 @@ export function buildPrintContainer(
   // display:none ancestor, which is exactly how Mermaid's arrowheads vanish
   // from Windows PDFs while the plain edge paths still print. Renaming the
   // clone's ids (and its internal url(#…)/href/aria/style references) makes
-  // it self-contained; see ../id-scope.ts.
+  // it self-contained; see ../id-scope.ts. The `<style>` rewrite is
+  // load-bearing for more than styling: it must follow Mermaid's compact
+  // `#id{font-size:16px;…}` root rule, or the labels fall back to an
+  // implicitly inherited font size — which WebKitGTK mis-scales under this
+  // container's CSS `zoom`, shrinking the label text inside correctly sized
+  // boxes in Linux PDFs.
   scopeSubtreeIds(printDiv, `print-clone-${nextPrintScopeId++}-`);
   printDiv.style.width = `${layout.layoutWidthPx}px`;
 

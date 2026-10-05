@@ -8,6 +8,7 @@ import { getDirectiveState } from "../directives";
 import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
+import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
@@ -556,22 +557,10 @@ function namespaceSvgIds(svg: string, namespace: string): string {
       );
 
       if (/^<style\b/i.test(fragment)) {
-        for (const [id, namespaced] of idMap) {
-          // The lookahead must accept `{` as well: Mermaid serializes its CSS
-          // compactly (css-tree), so the root rule that carries the diagram's
-          // `font-family`/`font-size`/`fill` looks like `#mmd-0{…}`. Missing
-          // that case orphaned the rule after the id rename and labels fell
-          // back to the engine's inherited font size — which WebKitGTK scales
-          // by the device scale factor when crossing into <foreignObject>
-          // (16px labels rendered at 12.6px with 90% desktop text scaling,
-          // leaving node boxes sized for lines that were never drawn).
-          const selector = new RegExp(
-            `#${escapeRegExp(id)}(?=[\\s.#:[>+~,{]|$)`,
-            "g",
-          );
-          result = result.replace(selector, `#${namespaced}`);
-        }
-        return result;
+        // Shared contract: must also match ids sitting directly against a
+        // declaration block (Mermaid's compact `#mmd-0{font-size:16px;…}` root
+        // rule). See $lib/utils/css-id-rewrite.
+        return rewriteIdSelectors(result, idMap);
       }
 
       result = result.replace(
@@ -605,10 +594,6 @@ function namespaceSvgIds(svg: string, namespace: string): string {
       );
     },
   );
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeSvgForNaturalSize(svg: string): string {

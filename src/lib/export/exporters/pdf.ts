@@ -8,6 +8,8 @@ import type {
 } from "../types";
 import { fileState } from "$lib/stores/file.svelte";
 import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
+import { scaleWideMathForPrint } from "../math-fit";
+import { scopeSubtreeIds } from "../id-scope";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
@@ -25,6 +27,12 @@ import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
  * viewer's maximum content width and then scaled to the paper with CSS
  * `zoom`, so line wrapping in the PDF matches the viewer word-for-word.
  * KaTeX fonts are loaded in-document, so math prints correctly.
+ *
+ * One deliberate deviation from viewer-identical layout: display math that
+ * is wider than the column (the Viewer scrolls it via `.katex-block`'s
+ * horizontal scrollbar) is scaled down to fit the printable width — print
+ * media cannot scroll, so unscaled wide formulas would be clipped at the
+ * page edge. See `scaleWideMathForPrint()` in ../math-fit.ts.
  *
  * Print mode is deferred until the moment of capture (see `beginPrint()` on
  * `PrintContainerHandle`): `buildPrintContainer()` only stages the clone
@@ -153,6 +161,9 @@ function resolvePageBackground(viewerContentElement?: HTMLElement): {
   return { color, image };
 }
 
+/** Monotonic counter so each print clone's id scope is unique per export. */
+let nextPrintScopeId = 0;
+
 /**
  * Build the off-screen `.print-content` container used by both the in-app
  * Print button and this exporter. The clone carries the `.viewer-content`
@@ -177,6 +188,16 @@ export function buildPrintContainer(
   const printDiv = document.createElement("div");
   printDiv.classList.add("viewer-content", "print-content");
   printDiv.innerHTML = viewerHtml;
+  // The clone normally copies the live viewer's markup wholesale (see
+  // handlePrint in +page.svelte), so its element ids — Mermaid's
+  // `<marker id="…">` above all — collide with the originals, which stay in
+  // the document inside the display:none app shell at capture time. Blink
+  // refuses to paint SVG resource references whose target sits under a
+  // display:none ancestor, which is exactly how Mermaid's arrowheads vanish
+  // from Windows PDFs while the plain edge paths still print. Renaming the
+  // clone's ids (and its internal url(#…)/href/aria/style references) makes
+  // it self-contained; see ../id-scope.ts.
+  scopeSubtreeIds(printDiv, `print-clone-${nextPrintScopeId++}-`);
   printDiv.style.width = `${layout.layoutWidthPx}px`;
   printDiv.style.zoom = String(layout.zoom);
   document.body.appendChild(printDiv);
@@ -370,6 +391,16 @@ export async function exportPdf(
 
     // Wait for the just-applied print rules (max-width, padding, etc.) to
     // take effect and for the layout to settle before the capture fires.
+    await waitForLayout();
+
+    // Fit wide display math to the printable width. Runs after beginPrint()
+    // on purpose: the theme's #viewer-content rules only apply to the clone
+    // once the id swaps, and a theme's font size changes KaTeX's em-based
+    // formula widths — measuring earlier would fit to the wrong metrics.
+    scaleWideMathForPrint(handle.printDiv);
+
+    // The fit changes formula font sizes (and therefore block heights), so
+    // let the layout settle again before the capture.
     await waitForLayout();
 
     if (isMacOS && savePath) {

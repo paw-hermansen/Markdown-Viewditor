@@ -6,12 +6,16 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
 vi.mock("$lib/stores/file.svelte", () => ({
   fileState: { currentFile: null },
 }));
+vi.mock("../math-fit", () => ({
+  scaleWideMathForPrint: vi.fn(() => [1]),
+}));
 
 import {
   buildPrintContainer,
   computeViewerLayoutWidth,
   exportPdf,
 } from "../exporters/pdf";
+import { scaleWideMathForPrint } from "../math-fit";
 
 const layout = { layoutWidthPx: 832, zoom: 0.86 };
 
@@ -34,6 +38,40 @@ describe("buildPrintContainer", () => {
     expect(div.style.width).toBe("832px");
     expect(div.style.zoom).toBe("0.86");
     handle.cleanup();
+  });
+
+  it("scopes the clone's ids so url() references never resolve outside it", () => {
+    // The live viewer keeps its own copy of the same markup (that is what
+    // handlePrint clones) and is display:none at capture time. If the clone's
+    // marker references resolved into that hidden copy, Blink would paint no
+    // arrowheads in the PDF (Windows bug this guards against).
+    const live = document.createElement("div");
+    live.id = "viewer-content";
+    live.innerHTML =
+      '<svg id="mmd-1"><defs><marker id="mmd-1-arrow"><path d="M0 0"/></marker></defs>' +
+      '<path marker-end="url(#mmd-1-arrow)"></path></svg>';
+    document.body.appendChild(live);
+
+    const handle = buildPrintContainer(live.innerHTML, layout, live);
+    const clone = handle.printDiv;
+
+    const cloneIds = [...clone.querySelectorAll("[id]")].map((el) =>
+      el.getAttribute("id"),
+    );
+    expect(cloneIds.length).toBeGreaterThan(0);
+    for (const id of cloneIds) {
+      // No id in the clone may collide with the (hidden) live viewer.
+      expect(live.querySelector(`[id="${id}"]`)).toBeNull();
+    }
+
+    // The marker reference must resolve to a marker inside the clone itself.
+    const path = clone.querySelector("path[marker-end]")!;
+    const ref = path.getAttribute("marker-end")!.match(/url\(#([^)]+)\)/)![1];
+    expect(clone.querySelector(`[id="${ref}"]`)).not.toBeNull();
+    expect(live.querySelector(`[id="${ref}"]`)).toBeNull();
+
+    handle.cleanup();
+    expect(live.querySelector("#mmd-1")).not.toBeNull();
   });
 
   it("does not add html/body exporting classes until beginPrint() is called", () => {
@@ -202,8 +240,10 @@ describe("exportPdf print lifecycle", () => {
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
     const exportPromise = exportPdf("<p>math</p>", "document");
 
-    // Let the build phase (font loading + layout rAFs) complete.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Let the build phase (font loading + layout rAFs) complete. The print
+    // call happens after printAndWaitForCompletion attaches its listeners,
+    // so polling on it is the exact "dialog is open" signal.
+    await vi.waitFor(() => expect(printSpy).toHaveBeenCalled());
     expect(document.querySelector(".print-content")).not.toBeNull();
     expect(document.body.classList.contains("exporting")).toBe(true);
 
@@ -254,5 +294,34 @@ describe("exportPdf print lifecycle", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("fits wide display math on the clone after print mode starts", async () => {
+    const fitMock = vi.mocked(scaleWideMathForPrint);
+    fitMock.mockClear();
+    let exportingAtFitTime: boolean | null = null;
+    fitMock.mockImplementation((root) => {
+      expect(root.classList.contains("print-content")).toBe(true);
+      exportingAtFitTime = document.body.classList.contains("exporting");
+      return [1];
+    });
+
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
+      queueMicrotask(() => window.dispatchEvent(new Event("afterprint")));
+    });
+
+    await exportPdf(
+      '<p class="katex-block"><span class="katex-display">x</span></p>',
+      "document",
+    );
+
+    expect(fitMock).toHaveBeenCalledTimes(1);
+    // The fit must run after beginPrint(): the theme's metrics only apply to
+    // the clone once the #viewer-content id swaps, and they change KaTeX's
+    // em-based formula widths.
+    expect(exportingAtFitTime).toBe(true);
+
+    printSpy.mockRestore();
+    fitMock.mockImplementation(() => [1]);
   });
 });

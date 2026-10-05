@@ -540,7 +540,7 @@ This section tests ODT export with various content types and rasterization optio
 |------|--------|----------|
 | 14.1 | Inspect viewer toolbar. | Dropdown has "Export as PDF"; no separate Print button. |
 | 14.2 | Click "Export as PDF". | Native save dialog with `.pdf`, PDF filter. |
-| 14.3 | Save and open in Preview. | Vector PDF, selectable text, one long page, A4-wide with 10mm margins. |
+| 14.3 | Save and open in Preview. | Vector PDF, selectable text, one long page exactly A4-wide (210mm) with 10mm margins. |
 | 14.4 | Trigger PDF export. | "Exporting…" overlay visible during build phase. |
 | 14.5 | Export successfully. | Toast: "PDF saved" with path. |
 | 14.6 | Trigger a failure (e.g. save to a read-only location like `/System/test.pdf`). | Toast: "Create PDF failed" with detail. |

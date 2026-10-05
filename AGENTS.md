@@ -273,26 +273,6 @@ The print clone reproduces the Viewer exactly, then scales to paper:
 - The clone is laid out at the viewer's maximum content width (default
   800px column + 2×16px gutters = 832px; `computeViewerLayoutWidth()` reads
   the live viewer's computed `max-width` and container padding so custom
-  themes that change them still match). CSS `zoom` on the clone then maps
-  that width onto the paper. Because layout (fonts, widths, line breaking)
-  happens identically to the viewer and zoom only rescales, **line wrapping
-  in the PDF matches the viewer word-for-word**. Never scale via
-  `transform: scale()` (doesn't affect layout/pagination) and never
-  re-declare content styles for print (that's why app.css holds only shell,
-  geometry, and color-mode rules).
-- One deliberate deviation from viewer-identical layout: display math wider
-  than the column (the Viewer scrolls it via `.katex-block`'s horizontal
-  scrollbar) is scaled down to the printable width at export time, because
-  print media clips overflow instead of scrolling it. `scaleWideMathForPrint()`
-  in `src/lib/export/math-fit.ts` measures each `.katex-display > .katex`
-  ink extent (via `measureMathVisualBounds`, zoom-safe: both sides of the
-  ratio come from `getBoundingClientRect`) and sets KaTeX's em-based
-  `--katex-font-scale` on the formula, merged multiplicatively with any
-  `fontsize` directive value. It runs in `exportPdf()` _after_ `beginPrint()`
-  - layout settle (theme `#viewer-content` metrics change KaTeX widths) and
-    before the capture. Inline math is never scaled. The only CSS it needs is
-    `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
-    in app.css.
   themes that change them still match). `exportPdf()` then maps that width
   onto the paper, platform-split:
   - Linux/Windows print through the print dialog with CSS `zoom` on the
@@ -301,9 +281,9 @@ The print clone reproduces the Viewer exactly, then scales to paper:
     print engine paginate the clone across A4 pages (never scale the print
     path with a bare `transform: scale()`: it doesn't affect
     layout/pagination).
-  - macOS captures the web view's content bounds with
-    `createPDFWithConfiguration` (1 CSS px = 1 PDF pt) as one long page, so
-    the clone is scaled by a paint-time `transform: scale()` inside a sized
+  - macOS captures one page sized to an explicit rect with
+    `createPDFWithConfiguration` (1 CSS px = 1 PDF pt), so the clone is
+    scaled by a paint-time `transform: scale()` inside a sized
     `.print-scaler` wrapper (which clips the un-scaled layout overflow;
     `syncScaleHeight()` sizes it to the scaled height after `beginPrint()`),
     mapping 832px onto the A4 printable width **in points** (538.6pt) so
@@ -318,6 +298,19 @@ The print clone reproduces the Viewer exactly, then scales to paper:
     the PDF matches the viewer word-for-word**. Never re-declare content
     styles for print (that's why app.css holds only shell, geometry, and
     color-mode rules).
+- One deliberate deviation from viewer-identical layout: display math wider
+  than the column (the Viewer scrolls it via `.katex-block`'s horizontal
+  scrollbar) is scaled down to the printable width at export time, because
+  print media clips overflow instead of scrolling it. `scaleWideMathForPrint()`
+  in `src/lib/export/math-fit.ts` measures each `.katex-display > .katex`
+  ink extent (via `measureMathVisualBounds`, zoom-safe: both sides of the
+  ratio come from `getBoundingClientRect`) and sets KaTeX's em-based
+  `--katex-font-scale` on the formula, merged multiplicatively with any
+  `fontsize` directive value. It runs in `exportPdf()` after `beginPrint()`
+  plus a layout settle (theme `#viewer-content` metrics change KaTeX widths)
+  and before the capture. Inline math is never scaled. The only CSS it needs
+  is `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
+  in app.css.
 - Mermaid diagrams in the macOS clone are swapped for their foreignObject-
   free text-label variant before the capture (`prepareMermaidForPrint` →
   `renderMermaidSvgForPrint`: `htmlLabels: false` + `textPlacement: "tspan"`,
@@ -329,13 +322,14 @@ The print clone reproduces the Viewer exactly, then scales to paper:
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
-  The macOS capture cannot honor `@page` size, so `beginPrint()` constrains
-  the document to the A4 width (210mm in points) with 10mm margins instead;
-  with content-bounds capture that yields A4-width pages at the same
-  physical scale as the Linux/Windows output (if a WebKit build captures the
-  web view bounds instead, the column keeps its correct scale but sits on a
-  window-wide page). The capture produces one long page (WKWebView can't
-  tile a nil rect); that's accepted.
+  The macOS capture cannot honor `@page` size — `createPDF` has no paper
+  size and no pagination, and the rect passed to it _is_ the page.
+  `exportPdf()` therefore passes the A4 width (210mm in points) as the rect
+  width and the full document height as its height, while `beginPrint()`
+  constrains the document to that width with 10mm margins: the result is one
+  A4-wide page at the same physical scale as the Linux/Windows output, with
+  the content column centered at 10mm margins. One long page is accepted —
+  true A4 tiling would need Rust-side slicing of the capture.
 - Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
   inline `background` on `html`/`body` (page content area everywhere; whole
   captured area on macOS, whose capture has no physical margins) and an injected

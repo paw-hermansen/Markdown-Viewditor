@@ -443,7 +443,6 @@ describe("exportPdf print lifecycle", () => {
     fitMock.mockImplementation(() => [1]);
   });
 
-
   it("does not swap Mermaid diagrams on the print-dialog path", async () => {
     vi.mocked(prepareMermaidForPrint).mockClear();
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
@@ -471,6 +470,7 @@ describe("exportPdf macOS capture lifecycle", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.resetModules();
   });
@@ -478,7 +478,7 @@ describe("exportPdf macOS capture lifecycle", () => {
   async function importAsMacOS() {
     vi.stubGlobal("navigator", {
       userAgent:
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
     });
     return await import("../exporters/pdf");
   }
@@ -488,8 +488,13 @@ describe("exportPdf macOS capture lifecycle", () => {
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { invoke } = await import("@tauri-apps/api/core");
     const { prepareMermaidForPrint: prepareMock } =
-        await import("$lib/extensions/mermaid/renderer");
+      await import("$lib/extensions/mermaid/renderer");
     vi.mocked(save).mockResolvedValue("/tmp/Document.pdf");
+    // jsdom has no layout: stub the document height so the capture-rect
+    // height assertion is meaningful.
+    vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+      1234.2,
+    );
 
     let scalerAtCapture = false;
     let bodyWidthAtCapture = "";
@@ -499,19 +504,22 @@ describe("exportPdf macOS capture lifecycle", () => {
         scalerAtCapture = document.querySelector(".print-scaler") !== null;
         bodyWidthAtCapture = document.body.style.width;
         cloneTransformAtCapture =
-            (document.querySelector(".print-content") as HTMLElement | null)
-                ?.style.transform ?? "";
+          (document.querySelector(".print-content") as HTMLElement | null)
+            ?.style.transform ?? "";
       }
       return undefined;
     });
 
     const viewerHtml =
-        '<p>math</p><div class="mermaid-block" data-mermaid-id="0"></div>';
+      '<p>math</p><div class="mermaid-block" data-mermaid-id="0"></div>';
     const result = await exportPdfMac(viewerHtml, "Document");
 
     expect(result.savedPath).toBe("/tmp/Document.pdf");
+    // The capture rect IS the page: A4 width in points, full document height.
     expect(vi.mocked(invoke)).toHaveBeenCalledWith("create_pdf", {
       savePath: "/tmp/Document.pdf",
+      width: A4_WIDTH_PT,
+      height: 1235,
     });
 
     // Diagrams were swapped for the print variant before the capture.
@@ -523,7 +531,7 @@ describe("exportPdf macOS capture lifecycle", () => {
     // The capture ran with transform scaling inside the A4-sized page.
     expect(scalerAtCapture).toBe(true);
     expect(cloneTransformAtCapture).toBe(
-        `scale(${PRINT_CONTENT_WIDTH_PT / 832})`,
+      `scale(${PRINT_CONTENT_WIDTH_PT / 832})`,
     );
     expect(bodyWidthAtCapture).toBe(`${A4_WIDTH_PT}px`);
 
@@ -546,7 +554,7 @@ describe("exportPdf macOS capture lifecycle", () => {
     vi.mocked(invoke).mockImplementation(async (cmd: string) => {
       if (cmd === "create_pdf") {
         scalerWidthAtCapture = (
-            document.querySelector(".print-scaler") as HTMLElement
+          document.querySelector(".print-scaler") as HTMLElement
         ).style.width;
       }
       return undefined;
@@ -558,8 +566,8 @@ describe("exportPdf macOS capture lifecycle", () => {
     // points — the same physical content width as the Linux/Windows A4
     // print output.
     expect(parseFloat(scalerWidthAtCapture)).toBeCloseTo(
-        PRINT_CONTENT_WIDTH_PT,
-        3,
+      PRINT_CONTENT_WIDTH_PT,
+      3,
     );
   });
 

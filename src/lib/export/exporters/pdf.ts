@@ -18,8 +18,9 @@ import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
  * user picks "Save as PDF" in the browser dialog) and on macOS calls
  * `invoke('create_pdf', …)`, which runs WKWebView's
  * `createPDFWithConfiguration` — an async capture of the laid-out page that
- * produces vector output. The macOS capture paginates the full document as
- * one long page (WKWebView can't tile a nil rect); that's accepted.
+ * produces vector output. The macOS capture has no paper size and no
+ * pagination: one page per capture rect (see `PrintLayout` and the A4
+ * geometry notes below).
  *
  * Fidelity contract (see also the export section in app.css): the print
  * container carries the `.viewer-content` class — and in theme mode the
@@ -37,12 +38,13 @@ import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
  *   - Linux/Windows print through the print dialog, which needs
  *     layout-affecting scaling to paginate the clone across A4 pages →
  *     CSS `zoom`.
- *   - macOS captures the web view's content bounds (1 CSS px = 1 PDF pt)
- *     as one long page → a paint-time `transform: scale()` inside a sized
- *     wrapper, which leaves the SVG geometry untouched. The scale targets
- *     the A4 printable width in points, so the PDF's physical scale matches
- *     the Linux/Windows A4 output. Diagrams are additionally swapped for
- *     their foreignObject-free text-label variant (`prepareMermaidForPrint`)
+ *   - macOS captures one page sized to the capture rect we pass to
+ *     `createPDFWithConfiguration` (1 CSS px = 1 PDF pt) → a paint-time
+ *     `transform: scale()` inside a sized wrapper, which leaves the SVG
+ *     geometry untouched. The scale targets the A4 printable width in
+ *     points, so the PDF's physical scale matches the Linux/Windows A4
+ *     output. Diagrams are additionally swapped for their
+ *     foreignObject-free text-label variant (`prepareMermaidForPrint`)
  *     before the capture.
  *
  * One deliberate deviation from viewer-identical layout: display math that
@@ -77,10 +79,10 @@ export interface PrintContainerHandle {
   beginPrint: () => void;
   /**
    * Size the transform-mode scaler wrapper to the scaled clone (see
-   * `PrintLayout.scaleMode`), so the capture's content bounds neither clip
-   * the bottom of the document nor extend past the scaled height. Call
-   * after the print layout has settled (post-`beginPrint()`); no-op in
-   * zoom mode.
+   * `PrintLayout.scaleMode`), so the capture rect (whose height is measured
+   * from the document) neither clips the bottom of the document nor extends
+   * past the scaled height. Call after the print layout has settled
+   * (post-`beginPrint()`); no-op in zoom mode.
    */
   syncScaleHeight: () => void;
   /** Restore the document to its pre-export state. Idempotent. */
@@ -108,10 +110,11 @@ export interface PrintLayout {
 /* ===== Page geometry =====
    On Linux/Windows the paper target is A4 with 10mm margins: the @page rule
    in app.css makes A4 the preselected default in the print dialog and sizes
-   the printable area in CSS px (96 dpi). On macOS the capture page is the
-   web view's content bounds (not A4 — WKWebView can't honor @page size) and
-   createPDF maps 1 CSS px to 1 PDF point (72 dpi), so the same 190mm
-   printable width is expressed in points instead — which gives the macOS
+   the printable area in CSS px (96 dpi). On macOS createPDF has no paper
+   size and no pagination — WKWebView can't honor @page size, and the capture
+   rect passed to it *is* the page — and it maps 1 CSS px to 1 PDF point
+   (72 dpi). The rect is therefore given the A4 width in points, with the
+   same 190mm printable width expressed in points — which gives the macOS
    PDF the same physical content width (and the same zoom-100% appearance in
    a PDF viewer) as the Linux/Windows output. Both compute a scale so the
    laid-out 832px maps onto the target width, preserving the viewer's
@@ -230,7 +233,8 @@ let nextPrintScopeId = 0;
  * `.print-scaler` div and scaled with a paint-time transform instead of
  * CSS `zoom`, because WebKit's zoom handling mis-scales inline SVG (see
  * PrintLayout). The wrapper clips the clone's un-scaled layout overflow so
- * the capture's content bounds stay at the scaled size.
+ * the document height (which the capture rect's height is measured from)
+ * stays at the scaled size.
  */
 export function buildPrintContainer(
   viewerHtml: string,
@@ -313,13 +317,14 @@ export function buildPrintContainer(
       document.documentElement.classList.add("exporting", "theme-export");
       document.body.classList.add("exporting", "theme-export");
       if (useTransform && scalerDiv) {
-        // Size the capture page like an A4 sheet: createPDF captures the
-        // web page's content bounds, so constraining the document to the
-        // A4 width (with 10mm vertical margins around the clone, which the
-        // .print-scaler auto margins center horizontally) yields A4-width
-        // pages with 10mm margins. Applied only now so the live app UI
-        // keeps its full-width layout during the build phase. The root
-        // background still paints the full captured area.
+        // Position the content for the A4 capture rect: exportPdf passes the
+        // A4 width to create_pdf as the capture rect, so constrain the
+        // document to that width (with 10mm vertical margins around the
+        // clone, which the .print-scaler auto margins center horizontally)
+        // — the content column lands centered at 10mm margins inside the
+        // rect. Applied only now so the live app UI keeps its full-width
+        // layout during the build phase. The root background still paints
+        // the whole captured page.
         document.documentElement.style.width = `${A4_WIDTH_PT}px`;
         document.body.style.width = `${A4_WIDTH_PT}px`;
         document.body.style.margin = "0 auto";
@@ -525,7 +530,18 @@ export async function exportPdf(
       // The capture paginates the full document from its top, so make sure
       // the live view isn't scrolled.
       window.scrollTo(0, 0);
-      await invoke("create_pdf", { savePath });
+      // createPDF has no paper size and no pagination — the rect passed to
+      // it *is* the page. Give it the A4 sheet width (the document is
+      // constrained to it by beginPrint()) and the full document height, so
+      // the result is exactly one A4-wide page with the content column
+      // centered at 10mm margins — the same physical scale as the
+      // Linux/Windows A4 output.
+      const captureHeight = Math.ceil(document.documentElement.scrollHeight);
+      await invoke("create_pdf", {
+        savePath,
+        width: A4_WIDTH_PT,
+        height: captureHeight,
+      });
       return { savedPath: savePath, warnings: [] };
     }
     if (!isMacOS) {

@@ -6,6 +6,7 @@ mod platform {
 
     use block2::RcBlock;
     use objc2::rc::Retained;
+    use objc2::MainThreadMarker;
     use objc2_foundation::NSData;
     use objc2_web_kit::{WKPDFConfiguration, WKWebView};
     use tauri::Manager;
@@ -50,8 +51,11 @@ mod platform {
                     // built from the configuration's own (null) rect so the
                     // CGRect type stays inferred — objc2-web-kit's CGRect
                     // comes from objc2-core-foundation, which we don't depend
-                    // on directly.
-                    let config = WKPDFConfiguration::new();
+                    // on directly. WKPDFConfiguration is main-thread-only;
+                    // with_webview runs this closure on the main thread.
+                    let mtm = MainThreadMarker::new()
+                        .expect("create_pdf must run on the main thread");
+                    let config = WKPDFConfiguration::new(mtm);
                     let mut rect = config.rect();
                     rect.origin.x = 0.0;
                     rect.origin.y = 0.0;
@@ -65,7 +69,10 @@ mod platform {
                     // runs.
                     let config_keepalive = config.clone();
                     let block = RcBlock::new(move |data: *mut NSData, _err: *mut objc2_foundation::NSError| {
-                        drop(config_keepalive);
+                        // Referenced, not moved, so the closure stays `Fn`:
+                        // the capture lives as long as the block and releases
+                        // the configuration after the capture completes.
+                        let _ = &config_keepalive;
                         if data.is_null() {
                             let _ = tx.send(Err("createPDF returned nil data".to_string()));
                             return;

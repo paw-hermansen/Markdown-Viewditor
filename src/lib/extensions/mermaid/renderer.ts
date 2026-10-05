@@ -8,6 +8,7 @@ import { getDirectiveState } from "../directives";
 import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
+import { MERMAID_FONT_SIZE } from "./styles";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 type MermaidModule = typeof import("mermaid");
@@ -114,6 +115,17 @@ const TEXT_LABEL_CONFIG: MermaidConfig = {
   c4: { textPlacement: "tspan" } as NonNullable<MermaidConfig["c4"]>,
 };
 
+/**
+ * Initialize (or re-initialize) Mermaid for a render variant.
+ *
+ * Every config pins `themeVariables.fontSize` to {@link MERMAID_FONT_SIZE},
+ * matching the static `font-size` MERMAID_STYLES puts on `<foreignObject>`
+ * label roots. Mermaid derives its diagram root rule from that value while
+ * the stylesheet rule is what label measurement sees before the injected
+ * stylesheet resolves; keeping both on one constant is what stops labels from
+ * being clipped (see the rule comment in styles.ts). Mermaid 12 ignores the
+ * top-level `fontSize` config key for this, so `themeVariables` is the lever.
+ */
 async function ensureInitialized(
   mod: MermaidModule,
   theme: AppThemeInfo,
@@ -132,6 +144,7 @@ async function ensureInitialized(
           fontFamily: EXPORT_FONT_FAMILY,
           htmlLabels: false,
           suppressErrorRendering: true,
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
         }
       : {
           startOnLoad: false,
@@ -139,7 +152,10 @@ async function ensureInitialized(
           securityLevel: "strict",
           fontFamily: "inherit",
           suppressErrorRendering: true,
-          ...getViewerThemeOverrides(theme.type),
+          themeVariables: {
+            fontSize: MERMAID_FONT_SIZE,
+            ...getViewerThemeOverrides(theme.type).themeVariables,
+          },
           // Print adds the label-shape overrides on top of the viewer config:
           // same theme, same inherited font, no <foreignObject>.
           ...(variant === "print" ? TEXT_LABEL_CONFIG : null),

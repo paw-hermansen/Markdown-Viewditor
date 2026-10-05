@@ -252,6 +252,40 @@ Both passes now share `rewriteIdSelectors()` in
 local copy — and keep the "no orphaned id selectors" invariants in
 `__tests__/mermaid.test.ts` and `export/__tests__/id-scope.test.ts` green.
 
+### Mermaid Label Font Size (16px contract)
+
+Mermaid bakes each HTML label's `<foreignObject>` clip box from a
+`getBoundingClientRect()` on the label root `<div>` (see `addHtmlSpan` in its
+`createText` chunk), while the diagram's root rule (`#mmd-N{font-size:16px}`)
+is injected separately. On WebKitGTK that measurement can win the style-resolution
+race _across the `foreignObject` boundary_: the div computes the page's
+`html, body { font-size: 14px }` (app.css) and paint later uses the root rule's
+16px, so every label clips at exactly 14/16 = 87.5% (`start` → `star`,
+`+String name` → `+String nam`). Whether the race hits depends on timing, which
+is why it reproduces consistently on one machine and never on another.
+
+Both sides of the fix live in `src/lib/extensions/mermaid/` and read one
+constant, `MERMAID_FONT_SIZE` (in `styles.ts`) — keep them equal:
+
+- `MERMAID_STYLES` specifies `font-size` **on the label roots**, not just on an
+  ancestor: `.mermaid-block svg foreignObject > div` for placed diagrams and
+  `body > div[id^="dmmd-"] svg foreignObject > div` for Mermaid's pre-render
+  temp container (render id `mmd-N` mirrors as `div#dmmd-N`) — that temp
+  container is where measurement happens. A specified value beats inheritance,
+  so measurement and paint agree even when the injected stylesheet hasn't
+  resolved yet. The rule only helps if `injectMermaidStyles()` has run, which
+  `renderMarkdown()` guarantees: `loadExtensionsForContent()` precedes
+  `preRenderExtensionsForContent()`.
+- `renderer.ts` pins the same value as `themeVariables.fontSize` in **every**
+  `ensureInitialized()` config (viewer, print, export), so Mermaid's root rule
+  can never drift from the stylesheet. Mermaid 12 ignores the top-level
+  `config.fontSize` key here — `themeVariables.fontSize` is the lever.
+
+`__tests__/mermaid.test.ts` and `__tests__/styles.test.ts` assert the pin and
+the config↔CSS consistency. PDF/print is unaffected either way: those variants
+use `<text>` labels (`htmlLabels: false`), so there is no `foreignObject` to
+clip.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only

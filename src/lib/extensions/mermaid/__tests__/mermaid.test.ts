@@ -10,6 +10,7 @@ import {
 import { directivePlugin } from "../../directives";
 import { extensionFencePlugin } from "../../fence-plugin";
 import { registerExtension, resetExtensions } from "../../registry";
+import { MERMAID_FONT_SIZE, MERMAID_STYLES } from "../styles";
 
 const RAW_SVG =
   '<svg width="100%" height="auto" style="max-width: 640px;" viewBox="0 0 640 320"><g /></svg>';
@@ -263,12 +264,12 @@ describe("mermaid extension", () => {
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
         expect.objectContaining({
           theme: "default",
-          themeVariables: { mainBkg: "#D8DEE9" },
+          themeVariables: { mainBkg: "#D8DEE9", fontSize: MERMAID_FONT_SIZE },
         }),
       );
     });
 
-    it("does not pass themeVariables when no --mermaid-main-bkg is set", async () => {
+    it("passes only the pinned label font size when no --mermaid-main-bkg is set", async () => {
       setAppTheme("light", "github-light");
 
       await preRenderMermaidBlocks(
@@ -278,11 +279,13 @@ describe("mermaid extension", () => {
       );
 
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
-        expect.not.objectContaining({ themeVariables: expect.anything() }),
+        expect.objectContaining({
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
+        }),
       );
     });
 
-    it("does not pass themeVariables for dark themes", async () => {
+    it("keeps the pinned label font size for dark themes", async () => {
       setAppTheme("dark", "github-dark", "#D8DEE9");
 
       await preRenderMermaidBlocks(
@@ -292,8 +295,33 @@ describe("mermaid extension", () => {
       );
 
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
-        expect.not.objectContaining({ themeVariables: expect.anything() }),
+        expect.objectContaining({
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
+        }),
       );
+    });
+
+    it("pins the same label font size in the config and the stylesheet", async () => {
+      setAppTheme("light");
+
+      await preRenderMermaidBlocks(
+        [fenceToken("graph LR\n    A-->B\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      // The stylesheet specifies the size on the <foreignObject> label roots,
+      // which is what label measurement sees before Mermaid's injected
+      // diagram stylesheet resolves. If the config's root rule and this rule
+      // ever disagree, labels are measured at one size and painted at another
+      // and get clipped — so both sides read one constant.
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
+        }),
+      );
+      expect(MERMAID_FONT_SIZE).toBe("16px");
+      expect(MERMAID_STYLES).toContain(`font-size: ${MERMAID_FONT_SIZE};`);
     });
 
     it("gives Nord Light its own SVG cache separate from other light themes", async () => {
@@ -711,6 +739,7 @@ describe("mermaid extension", () => {
           theme: "default",
           htmlLabels: false,
           fontFamily: "'trebuchet ms', verdana, arial, sans-serif",
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
         }),
       );
       expect(mermaidMock.render).toHaveBeenCalledWith(

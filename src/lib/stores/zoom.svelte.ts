@@ -15,12 +15,19 @@ import { settingsState, updateSetting } from "./settings.svelte";
  * persisted in `settings.json` alongside the theme and last-opened file.
  */
 
-/** Zoom ladder (VS Code-like steps), 50% – 300%. */
-export const ZOOM_STEPS = [
-  0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3,
-];
+/**
+ * Zoom ladder (VS Code-like steps), 70% – 300%.
+ *
+ * The 70% floor is a WebKit constraint, not taste: the engine floors
+ * effective font sizes at 10px, so below ~72% UI text stops shrinking, and
+ * below ~85% KaTeX script-size text (11.9px) clamps to 10px and renders
+ * nearly as large as the formula's base text. 70% keeps a useful overview
+ * range with only mild sub/superscript oversizing as the known artifact
+ * (see AGENTS.md "Math (KaTeX) Integration").
+ */
+export const ZOOM_STEPS = [0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
-export const MIN_ZOOM = 0.5;
+export const MIN_ZOOM = 0.7;
 export const MAX_ZOOM = 3;
 
 /** Current zoom level (1 = 100%). */
@@ -89,11 +96,21 @@ export async function resetZoom(): Promise<void> {
   await setZoom(1);
 }
 
-/** Re-apply the saved zoom level on startup (after `loadSettings()`). */
+/**
+ * Re-apply the saved zoom level on startup (after `loadSettings()`). Saved
+ * values below the current MIN_ZOOM (e.g. 50% from before the 70% floor)
+ * are clamped and persisted so the setting matches what is applied.
+ */
 export async function applySavedZoom(): Promise<void> {
-  await applyZoomLevel(
-    Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, settingsState.zoomLevel)),
+  const clamped = Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, settingsState.zoomLevel),
   );
+  if (clamped !== settingsState.zoomLevel) {
+    settingsState.zoomLevel = clamped;
+    updateSetting("zoomLevel", clamped);
+  }
+  await applyZoomLevel(clamped);
 }
 
 // ===== Export guard =========================================================

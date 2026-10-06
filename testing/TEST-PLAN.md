@@ -608,7 +608,7 @@ This section tests ODT export with various content types and rasterization optio
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 15.14 | At 50% and 60% zoom, look at the status bar. | Text is vertically centered and fully visible — no clipped lower halves, at any zoom step in between. |
+| 15.14 | At 75% and 70% zoom (the minimum), look at the status bar. | Text is vertically centered and fully visible — no clipped lower halves, at any zoom step in between. |
 | 15.15 | At 300% zoom, look at the status bar. | No text wraps ("UTF-8" stays on one line); the decorative "Markdown" / "UTF-8" labels drop out if space runs out, but the level button and zoom control stay visible and clickable. |
 | 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown. | Each menu fits on screen and scrolls when needed; every entry is reachable, and the "Show export confirmation" footer checkbox stays visible while the list scrolls. |
 | 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup fits on screen and scrolls when needed; all four level options and every feature toggle are reachable. |
@@ -620,8 +620,8 @@ This section tests ODT export with various content types and rasterization optio
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 15.19 | At 85%, 75% and 60% zoom, look at "Matrices" and "Cases". | The parentheses, the brace and the `=` sign stay on the same line as the matrix entries / cases rows — nothing sits a line lower (was broken below 90% on Linux/macOS before the `.vlist-s` anchor fix). |
-| 15.20 | At 50% zoom, re-check 15.19, and compare with the same formulas in an exported HTML opened in Safari (Cmd+− below 90%). | Still aligned in the app (residual sub-pixel jitter only). The Safari check tells whether the engine still misplaces KaTeX baselines upstream of the app. |
+| 15.19 | At 85%, 80% and 70% zoom, look at "Matrices" and "Cases". | The parentheses, the brace and the `=` sign stay on the same line as the matrix entries / cases rows — nothing sits a line lower (was broken below 90% on Linux/macOS before the `.vlist-s` anchor fix). |
+| 15.20 | At 70% zoom (the minimum), re-check 15.19, and compare with the same formulas in an exported HTML opened in Safari (Cmd+− below 90%). | Still aligned in the app — sub/superscripts may look slightly large at 70–80% (known engine font-size floor; see AGENTS.md) but nothing may be misaligned. The Safari check tells whether the engine still misplaces KaTeX baselines upstream of the app. |
 
 ---
 

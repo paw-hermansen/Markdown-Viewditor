@@ -219,14 +219,18 @@ would otherwise consume the backslash and hide the delimiter.
   `\left(...\right)` delimiters, `\text{}`) drops ~one KaTeX font-size below
   the vlist-positioned content (matrix/cases rows). Measured on WebKitGTK at
   85% zoom: ~16px drift; Windows/Blink unaffected. 2px survives the zoom
-  multiplication (1px at the 50% floor) and is geometry-identical to stock
+  multiplication (1.4px at the 70% zoom floor) and is geometry-identical to stock
   KaTeX at 100% — keep it when upgrading KaTeX (its CSS comment explains why
   the cell exists at all). Regression: `__tests__/styles.test.ts`.
-  Related WebKit quirk: at zoom <= ~0.7 the engine floors effective font
-  sizes around 10px (`minimum-font-size` is 0, so this is inside WebKit's
-  style resolution), which makes text stop shrinking and over-scales
-  KaTeX's em-based geometry at 50% zoom. Cosmetic; separate from the
-  alignment bug above.
+  Related WebKit quirk — the zoom floor: the engine floors effective font
+  sizes at exactly 10px, so sizes stop scaling at different zoom levels
+  (UI text 14px below 72%, KaTeX base 16.9px below 59%, KaTeX script-size
+  11.9px already below 85%, where sub/superscripts clamp to 10px and render
+  nearly as large as the formula's base text). This is why the zoom ladder
+  stops at 70% (`MIN_ZOOM` in zoom.svelte.ts): 60% and 50% render scripts at
+  base size and (at 50%) break formula geometry outright (2–8px drift plus
+  whole-formula over-scaling). Known artifact at 70–80%: mildly oversized
+  sub/superscripts in script-heavy math.
 - `enableMathBlockInHtml` / `enableMathInlineInHtml` stay **disabled**: they
   splice math tokens into html_block content with `map: null`, which strips
   `data-line` anchors and breaks scroll-sync.
@@ -316,7 +320,7 @@ fences. If you touch this, the monotonicity test in
 
 ### App Zoom
 
-`src/lib/stores/zoom.svelte.ts` owns app-wide zoom (50%–300%), applied as the
+`src/lib/stores/zoom.svelte.ts` owns app-wide zoom (70%–300%), applied as the
 webview's native **page** zoom (`getCurrentWebview().setZoom()` → WebKitGTK
 `set_zoom_level`, WKWebView `setPageZoom`, WebView2 `SetZoomFactor`). Never
 implement this with CSS `zoom`: WebKit mis-scales inline SVG under it (the

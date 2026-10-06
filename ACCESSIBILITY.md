@@ -188,7 +188,7 @@ Per WCAG2ICT, the following criteria do not apply to non-web documents and non-w
 | 1.4.1 Use of Color       | A     | **PARTIAL**    | Active states use color + ARIA attributes. Non-color visual indicator could be improved.                                                             |
 | 1.4.2 Audio Control      | A     | **N/A**        | No auto-playing audio.                                                                                                                               |
 | 1.4.3 Contrast (Minimum) | AA    | **PASS**       | All text meets 4.5:1 contrast ratio. See contrast table below.                                                                                       |
-| 1.4.4 Resize Text        | AA    | **PASS**       | Browser zoom supported via Tauri webview; in-app zoom (`Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+wheel, status bar) scales the whole UI 50%–300%. |
+| 1.4.4 Resize Text        | AA    | **PASS**       | Browser zoom supported via Tauri webview; in-app zoom (`Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+wheel, status bar) scales the whole UI 70%–300%. |
 | 1.4.5 Images of Text     | AA    | **N/A**        | No images of text used.                                                                                                                              |
 | 1.4.10 Reflow            | AA    | **PARTIAL**    | Desktop app with responsive design but no 320px reflow.                                                                                              |
 | 1.4.11 Non-text Contrast | AA    | **PASS**       | Focus indicators and UI controls have sufficient contrast.                                                                                           |

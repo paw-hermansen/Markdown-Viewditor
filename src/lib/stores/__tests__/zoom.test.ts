@@ -81,8 +81,9 @@ describe("zoom store", () => {
     it("clamps at the ladder ends", () => {
       expect(nextZoomStep(3, 1)).toBe(3);
       expect(nextZoomStep(10, 1)).toBe(3);
-      expect(nextZoomStep(0.5, -1)).toBe(0.5);
-      expect(nextZoomStep(0.1, -1)).toBe(0.5);
+      expect(nextZoomStep(0.7, -1)).toBe(0.7);
+      expect(nextZoomStep(0.5, -1)).toBe(0.7);
+      expect(nextZoomStep(0.1, -1)).toBe(0.7);
     });
   });
 
@@ -98,7 +99,7 @@ describe("zoom store", () => {
       await setZoom(10);
       expect(settingsState.zoomLevel).toBe(3);
       await setZoom(0);
-      expect(settingsState.zoomLevel).toBe(0.5);
+      expect(settingsState.zoomLevel).toBe(0.7);
     });
 
     it("does not throw when the webview rejects", async () => {
@@ -138,6 +139,13 @@ describe("zoom store", () => {
       await applySavedZoom();
       expect(mockSetZoom).toHaveBeenCalledWith(1.25);
       expect(settingsState.zoomLevel).toBe(1.25);
+    });
+
+    it("clamps legacy levels below the minimum and persists the fix", async () => {
+      settingsState.zoomLevel = 0.5;
+      await applySavedZoom();
+      expect(mockSetZoom).toHaveBeenCalledWith(0.7);
+      expect(settingsState.zoomLevel).toBe(0.7);
     });
   });
 

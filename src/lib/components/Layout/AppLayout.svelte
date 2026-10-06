@@ -359,7 +359,8 @@
 
   /* Slim visual line (2px) with a wider transparent hit area (8px), so the
      handle looks light and stays easy to grab at every zoom level — under
-     webview page zoom a bare thin bar would shrink to ~2px at 50% zoom. */
+     webview page zoom a bare thin bar would shrink below 3px at the 70%
+     zoom floor. */
   .resize-handle {
     width: 8px;
     cursor: col-resize;

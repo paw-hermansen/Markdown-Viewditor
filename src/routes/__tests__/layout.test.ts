@@ -6,12 +6,9 @@ import Layout from "../+layout.svelte";
 
 const snippet = (content = "") => (() => content) as unknown as Snippet;
 
-const { mockLoadSettings } = vi.hoisted(() => ({
+const { mockLoadSettings, mockSettingsState, mockSetZoom } = vi.hoisted(() => ({
   mockLoadSettings: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("$lib/stores/settings.svelte", () => ({
-  settingsState: {
+  mockSettingsState: {
     viewerTheme: "github-dark",
     viewMode: "split",
     splitRatio: 0.5,
@@ -20,9 +17,19 @@ vi.mock("$lib/stores/settings.svelte", () => ({
     editorLineNumbers: true,
     editorWordWrap: false,
     lastOpenedFile: null,
-    recentFiles: [],
+    recentFiles: [] as string[],
+    zoomLevel: 1,
   },
+  mockSetZoom: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("$lib/stores/settings.svelte", () => ({
+  settingsState: mockSettingsState,
   loadSettings: mockLoadSettings,
+}));
+
+vi.mock("@tauri-apps/api/webview", () => ({
+  getCurrentWebview: () => ({ setZoom: mockSetZoom }),
 }));
 
 vi.mock("$lib/utils/themes", () => ({
@@ -50,6 +57,15 @@ describe("+layout.svelte", () => {
     await waitFor(() => {
       expect(mockLoadSettings).toHaveBeenCalled();
     });
+  });
+
+  it("applies the saved zoom level on mount", async () => {
+    mockSettingsState.zoomLevel = 1.25;
+    render(Layout, { props: { children: snippet("content") } });
+    await waitFor(() => {
+      expect(mockSetZoom).toHaveBeenCalledWith(1.25);
+    });
+    mockSettingsState.zoomLevel = 1;
   });
 
   it("renders without errors", () => {

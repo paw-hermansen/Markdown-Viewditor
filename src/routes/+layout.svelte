@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { loadSettings, settingsState } from '$lib/stores/settings.svelte';
+  import { applySavedZoom } from '$lib/stores/zoom.svelte';
   import { loadUserThemes } from '$lib/utils/user-themes';
   import { applyTheme } from '$lib/utils/themes';
   import { setTheme } from '$lib/stores/viewer.svelte';
@@ -14,6 +15,7 @@
     await loadUserThemes();
     setTheme(settingsState.viewerTheme);
     await applyTheme(settingsState.viewerTheme);
+    await applySavedZoom();
     ready = true;
 
     document.addEventListener('contextmenu', (e) => e.preventDefault());

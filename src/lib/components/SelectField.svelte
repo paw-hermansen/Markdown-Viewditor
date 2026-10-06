@@ -286,7 +286,8 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 4px;
-    max-height: 200px;
+    /* Viewport-relative so the list scrolls within the screen at high zoom. */
+    max-height: min(200px, 30vh);
     overflow-y: auto;
     box-shadow: var(--shadow-md);
   }

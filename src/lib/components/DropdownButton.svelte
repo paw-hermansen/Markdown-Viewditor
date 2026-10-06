@@ -310,7 +310,9 @@
     padding: 4px;
     min-width: 240px;
     max-width: 320px;
-    max-height: 400px;
+    /* Never taller than the space below the toolbar (opens downward), so the
+       menu scrolls instead of running off-screen at high zoom. */
+    max-height: min(400px, calc(100vh - 96px));
     overflow-y: auto;
     z-index: 100;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -333,10 +335,16 @@
     letter-spacing: 0.5px;
   }
 
+  /* Sticky so the footer (e.g. "Show export confirmation") stays reachable
+     while the menu scrolls; bleeds over the .dropdown padding to mask
+     scrolled items. */
   .dropdown-footer {
-    padding: 8px 12px;
+    position: sticky;
+    bottom: -4px;
+    margin: 0 -4px -4px;
+    padding: 12px 16px;
     border-top: 1px solid var(--border);
-    margin-top: 4px;
+    background: var(--bg-secondary);
     font-size: 12px;
     color: var(--text-secondary);
   }

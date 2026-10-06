@@ -572,6 +572,50 @@ This section tests ODT export with various content types and rasterization optio
 
 ---
 
+## S15: Zoom
+
+*File: `MathChemMermaid-All.md` — open in split view.*
+
+### 15a. Zoom Controls
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.1 | Press `Ctrl++` (or `Ctrl+=`) three times. | Everything scales up in steps — editor text, viewer text, toolbars, status bar; the zoom indicator in the status bar shows the new level (e.g. 125%). |
+| 15.2 | Press `Ctrl+-` down to 70%. | Everything scales down; the editor↔viewer split handle stays easy to grab and drag (panes resize as usual). |
+| 15.3 | Press `Ctrl+0`. | Back to exactly 100%. |
+| 15.4 | Hold `Ctrl` and scroll the mouse wheel (pinch on a macOS trackpad). | Zoom steps in/out like the keyboard; plain two-finger scrolling still only scrolls. |
+| 15.5 | Use the status bar zoom control (`−`, `+`, Reset). | Same steps as the shortcuts; the indicator always matches the actual zoom. |
+| 15.6 | Set zoom to ~150%, close the app, reopen. | Zoom level is restored (like the theme and current file). |
+
+### 15b. Zoom with Math & Mermaid
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.7 | At 200%, look at "Block Dollar", "Matrices", and an inline formula. | Formulas scale proportionally with the surrounding text — no clipping, no mis-sized glyphs; inline math stays aligned on its line; the `fontsize=2` block is still 2× relative to base. |
+| 15.8 | At 200%, look at the flowchart and the sequence diagram. | Diagrams scale uniformly with the content — labels, node boxes, and arrow heads stay proportional; no giant, clipped, or truncated labels; no dead space inside node boxes. |
+| 15.9 | At 200%, scroll the "Very Wide Block" math and the `fitToWidth=false` diagram. | Both still scroll horizontally inside their blocks; the rest of the layout is unbroken. |
+| 15.10 | At 70%, re-check 15.7–15.8. | Same proportions at small size; Mermaid label text is neither clipped nor scaled by hand — it grows/shrinks with the rest. |
+
+### 15c. Zoom and Exports
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.11 | At 100% zoom, export PDF of `MathChemMermaid-All.md` and keep it. Set zoom to 200%, export again (macOS: Export as PDF; Linux/Windows: `Ctrl+P` / Export as PDF (Print…)). | The two PDFs are visually identical when compared at 100% in a PDF viewer: same physical content size and margins, the wide math formula scaled to the page content width in both, Mermaid labels the same size as in the viewer at 100% (as in 14.19–14.21). |
+| 15.12 | At 200% zoom, export HTML and ODT. | Output is identical to exports made at 100% (open and compare); on-screen zoom does not leak into the files. |
+| 15.13 | After each export completes. | The app is back at the zoom level set before the export — the export's temporary 100% does not persist. |
+
+### 15d. Chrome & Menus at Extreme Zoom
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.14 | At 50% and 60% zoom, look at the status bar. | Text is vertically centered and fully visible — no clipped lower halves, at any zoom step in between. |
+| 15.15 | At 300% zoom, look at the status bar. | No text wraps ("UTF-8" stays on one line); the decorative "Markdown" / "UTF-8" labels drop out if space runs out, but the level button and zoom control stay visible and clickable. |
+| 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown. | Each menu fits on screen and scrolls when needed; every entry is reachable, and the "Show export confirmation" footer checkbox stays visible while the list scrolls. |
+| 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup fits on screen and scrolls when needed; all four level options and every feature toggle are reachable. |
+| 15.18 | At 300% zoom, edit a file and press `Ctrl+N` (unsaved-changes dialog). | The dialog fits or scrolls within the screen; Cancel / Discard / Save First are all reachable. |
+
+---
+
 # Part 2 — Feature Reference
 
 Each row lists a feature or sub-feature and the test story where it is
@@ -847,6 +891,21 @@ within each story gives the precise check.
 | Window | Context menu suppression | **S1** (1.5) |
 | Window | CLI file open | **S1** (1.6) |
 | Window | Restore last file | **S1** (1.7) |
+| Zoom | Keyboard shortcuts (`Ctrl++`, `Ctrl+-`, `Ctrl+0`) | **S15** (15.1–15.3) |
+| Zoom | Mouse wheel / trackpad pinch | **S15** (15.4) |
+| Zoom | Status bar control | **S15** (15.5) |
+| Zoom | Persistence | **S15** (15.6) |
+| Zoom | Split handle usable at low zoom | **S15** (15.2) |
+| Zoom | Math scales proportionally | **S15** (15.7) |
+| Zoom | Mermaid diagrams scale cleanly | **S15** (15.8, 15.10) |
+| Zoom | Wide math / diagram still scrolls | **S15** (15.9) |
+| Zoom | Status bar legibility at extreme zoom | **S15** (15.14–15.15) |
+| Zoom | Menus scroll at high zoom (Export as…, theme) | **S15** (15.16) |
+| Zoom | Compatibility popup scrolls at high zoom | **S15** (15.17) |
+| Zoom | Dialogs usable at high zoom | **S15** (15.18) |
+| Zoom | PDF export unaffected | **S15** (15.11) |
+| Zoom | HTML/ODT export unaffected | **S15** (15.12) |
+| Zoom | Zoom restored after export | **S15** (15.13) |
 | Edge cases | Very large file | **S13** (13.9) |
 | Edge cases | Rapid typing | **S13** (13.10) |
 | Edge cases | Mixed content stress test (`MathChemMermaid-All.md`) | **S13** (13.11) |

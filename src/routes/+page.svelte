@@ -39,6 +39,13 @@
     updateViewMode,
     updateSetting,
   } from "$lib/stores/settings.svelte";
+  import {
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    withNominalZoom,
+    handleZoomWheel,
+  } from "$lib/stores/zoom.svelte";
   import { viewerState } from "$lib/stores/viewer.svelte";
   import {
     confirmSaveDiscardCancel,
@@ -390,7 +397,11 @@
         clone.querySelector(".frontmatter-card")?.remove();
         htmlForPdf = clone.innerHTML;
       }
-      const result = await exportPdf(htmlForPdf, fileName, viewerContent);
+      // Exports always run at zoom 1.0 (physical print scale must not follow
+      // the on-screen zoom) — see withNominalZoom and the AGENTS.md contract.
+      const result = await withNominalZoom(() =>
+        exportPdf(htmlForPdf, fileName, viewerContent),
+      );
       if (result.savedPath) {
         toast.info("PDF saved", result.savedPath);
       }
@@ -488,14 +499,18 @@
 
     startExporting();
     try {
-      const result = await runExporter(id, {
-        markdown: editorState.content,
-        html,
-        frontmatter,
-        fileName,
-        tokens,
-        options: resolvedOptions,
-      });
+      // Runs at zoom 1.0 like the PDF path (measurement-based exporters, e.g.
+      // ODT rasterization, must not see the on-screen zoom).
+      const result = await withNominalZoom(() =>
+        runExporter(id, {
+          markdown: editorState.content,
+          html,
+          frontmatter,
+          fileName,
+          tokens,
+          options: resolvedOptions,
+        }),
+      );
       if (result.warnings.length > 0) {
         showWarningDialog(result.warnings, result.savedPath ?? "");
       } else if (result.savedPath) {
@@ -632,6 +647,29 @@
       return;
     }
 
+    // Zoom: match the *produced character* (e.key), not the physical key, so
+    // every keyboard layout works — `+` is Shift+= on US, a dedicated key on
+    // German QWERTZ, `=` is Shift+0 there. `+`/`=` and `-`/`_` cover the
+    // shifted variants; numpad keys report the same characters (Numpad0 is
+    // matched by code for the NumLock-off case where it reports "Insert").
+    if (isMod && (e.key === "=" || e.key === "+")) {
+      e.preventDefault();
+      void zoomIn();
+      return;
+    }
+
+    if (isMod && (e.key === "-" || e.key === "_")) {
+      e.preventDefault();
+      void zoomOut();
+      return;
+    }
+
+    if (isMod && (e.key === "0" || code === "Numpad0")) {
+      e.preventDefault();
+      void resetZoom();
+      return;
+    }
+
     if (e.shiftKey && e.altKey && code === "KeyF") {
       e.preventDefault();
       handleFormatDocument();
@@ -662,6 +700,10 @@
   });
 
   onMount(async () => {
+    // Ctrl/Cmd+wheel (and macOS trackpad pinch) zoom. The listener must be
+    // non-passive so handleZoomWheel can preventDefault the page gesture.
+    window.addEventListener("wheel", handleZoomWheel, { passive: false });
+
     // Register the built-in exporters (HTML, PDF) so the toolbar dropdown
     // and command palette can list them. Idempotent.
     void registerBuiltinExporters();
@@ -785,6 +827,7 @@
     unlistenCloseRequested?.();
     unlistenFocusChanged?.();
     unlistenOpenFile?.();
+    window.removeEventListener("wheel", handleZoomWheel);
     if (scrollSync) {
       scrollSync.destroy();
     }

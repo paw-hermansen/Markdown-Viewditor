@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "core:path:default",
+    "core:webview:allow-set-webview-zoom",
     "dialog:default",
     "fs:default",
     "clipboard-manager:default",

@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
   htmlIncludeFrontmatter: true,
   pdfIncludeFrontmatter: true,
   odtIncludeFrontmatter: true,
+  zoomLevel: 1,
 };
 
 export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });

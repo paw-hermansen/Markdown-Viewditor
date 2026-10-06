@@ -95,7 +95,8 @@
     padding: 6px 12px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
-    height: 40px;
+    /* min-height so odd zoom rounding can never clip the row (see StatusBar). */
+    min-height: 40px;
   }
 
   .toolbar-right {

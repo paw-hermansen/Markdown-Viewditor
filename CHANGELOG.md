@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+- feat: app-wide zoom (50%–300%) via `Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+mouse wheel (and macOS trackpad pinch), and a status bar control. The zoom level persists across sessions like the theme and current file; exports and prints always run at 100% zoom, so PDF/ODT/HTML output and the wide-math page fit are unchanged.
+
 ## [1.5.0] - 2026-09-12
 
 - CI Snapcraft - Removed workflow_dispatch tag input to match MSIX (#112) (15801a3)

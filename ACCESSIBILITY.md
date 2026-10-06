@@ -109,7 +109,7 @@ If you use assistive technology (screen reader, magnifier, voice control, switch
 | ------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.4.1 Use of Color  | Partial    | Active states in ViewToggle and DropdownButton rely primarily on color change. Mitigated by ARIA attributes (`aria-checked`, `aria-selected`) for screen readers. |
 | 1.4.10 Reflow       | Partial    | Desktop application does not reflow at 320px CSS width. Acceptable for desktop context where window resizing is available.                                        |
-| 1.4.12 Text Spacing | Not Tested | No explicit testing with user-overridden text spacing. Application uses relative units and supports browser zoom.                                                 |
+| 1.4.12 Text Spacing | Not Tested | No explicit testing with user-overridden text spacing. Application uses relative units and supports browser zoom and in-app zoom.                                 |
 
 ---
 
@@ -183,16 +183,16 @@ Per WCAG2ICT, the following criteria do not apply to non-web documents and non-w
 
 #### 1.4 Distinguishable
 
-| Criterion                | Level | Status         | Evidence                                                                                 |
-| ------------------------ | ----- | -------------- | ---------------------------------------------------------------------------------------- |
-| 1.4.1 Use of Color       | A     | **PARTIAL**    | Active states use color + ARIA attributes. Non-color visual indicator could be improved. |
-| 1.4.2 Audio Control      | A     | **N/A**        | No auto-playing audio.                                                                   |
-| 1.4.3 Contrast (Minimum) | AA    | **PASS**       | All text meets 4.5:1 contrast ratio. See contrast table below.                           |
-| 1.4.4 Resize Text        | AA    | **PASS**       | Browser zoom supported via Tauri webview.                                                |
-| 1.4.5 Images of Text     | AA    | **N/A**        | No images of text used.                                                                  |
-| 1.4.10 Reflow            | AA    | **PARTIAL**    | Desktop app with responsive design but no 320px reflow.                                  |
-| 1.4.11 Non-text Contrast | AA    | **PASS**       | Focus indicators and UI controls have sufficient contrast.                               |
-| 1.4.12 Text Spacing      | AA    | **NOT TESTED** | Uses relative units; no explicit testing performed.                                      |
+| Criterion                | Level | Status         | Evidence                                                                                                                                             |
+| ------------------------ | ----- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.4.1 Use of Color       | A     | **PARTIAL**    | Active states use color + ARIA attributes. Non-color visual indicator could be improved.                                                             |
+| 1.4.2 Audio Control      | A     | **N/A**        | No auto-playing audio.                                                                                                                               |
+| 1.4.3 Contrast (Minimum) | AA    | **PASS**       | All text meets 4.5:1 contrast ratio. See contrast table below.                                                                                       |
+| 1.4.4 Resize Text        | AA    | **PASS**       | Browser zoom supported via Tauri webview; in-app zoom (`Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+wheel, status bar) scales the whole UI 50%–300%. |
+| 1.4.5 Images of Text     | AA    | **N/A**        | No images of text used.                                                                                                                              |
+| 1.4.10 Reflow            | AA    | **PARTIAL**    | Desktop app with responsive design but no 320px reflow.                                                                                              |
+| 1.4.11 Non-text Contrast | AA    | **PASS**       | Focus indicators and UI controls have sufficient contrast.                                                                                           |
+| 1.4.12 Text Spacing      | AA    | **NOT TESTED** | Uses relative units; no explicit testing performed.                                                                                                  |
 
 **Contrast Ratios (Dark Theme):**
 

@@ -298,6 +298,35 @@ order and covers `$$…$$`, `\[…\]`, bare `\begin{}`, and ` ```math `
 fences. If you touch this, the monotonicity test in
 `__tests__/markdown-math.test.ts` must stay green.
 
+### App Zoom
+
+`src/lib/stores/zoom.svelte.ts` owns app-wide zoom (50%–300%), applied as the
+webview's native **page** zoom (`getCurrentWebview().setZoom()` → WebKitGTK
+`set_zoom_level`, WKWebView `setPageZoom`, WebView2 `SetZoomFactor`). Never
+implement this with CSS `zoom`: WebKit mis-scales inline SVG under it (the
+reason the macOS PDF path refuses it — see below), while page zoom scales
+Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
+`settings.json` and is re-applied by `applySavedZoom()` right after
+`loadSettings()` in `+layout.svelte`.
+
+- Shortcuts (`handleGlobalKeydown` in `+page.svelte`) match **`e.key`** (the
+  produced character: `=`/`+`, `-`/`_`, `0`), not `e.code` — symbols live on
+  different physical keys per keyboard layout (German `+`, French `=`,
+  AZERTY shifted digits). Ctrl/Cmd+wheel and macOS pinch go through
+  `handleZoomWheel` (registered `{ passive: false }`).
+- `core:webview:allow-set-webview-zoom` must stay in
+  `src-tauri/capabilities/default.json` — it is NOT part of `core:default`.
+- All measurement code (`measureMathVisualBounds`, `computeViewerLayoutWidth`,
+  the editor's `scaleX`) is page-zoom-invariant: page zoom shrinks the CSS-px
+  viewport but computed styles and rects in CSS px do not change. Keep it that
+  way — prefer ratios of `getBoundingClientRect` over raw px assumptions.
+- UI chrome must stay zoom-proof: no fixed `height` on bars/buttons (use
+  `min-height` — a hard px box plus device-pixel baseline rounding clips text
+  at fractional zoom), `white-space: nowrap` on single-line status text, and
+  viewport-relative clamps (`max-height: min(<px>, calc(100vh - <offset>))`)
+  on dropdowns/popovers so they scroll within the screen at high zoom instead
+  of overflowing. See the StatusBar/`DropdownButton` styles.
+
 ### Export Pipeline
 
 `src/lib/export/` hosts an extensible exporter registry:
@@ -327,6 +356,14 @@ fences. If you touch this, the monotonicity test in
 ### Print/PDF Fidelity Contract
 
 The print clone reproduces the Viewer exactly, then scales to paper:
+
+- Exports and prints always run at **zoom 1.0**, regardless of the on-screen
+  app zoom: `withNominalZoom()` (in `stores/zoom.svelte.ts`) wraps the
+  `exportPdf()` / `runExporter()` calls in `+page.svelte` (re-entrant, restores
+  the level afterwards). The macOS capture rect is in points and
+  `scaleWideMathForPrint()` measures the laid-out clone, so a live zoom would
+  break the physical calibration and the wide-math page fit. Any new export
+  entry point must go through the same guard.
 
 - The clone is laid out at the viewer's maximum content width (default
   800px column + 2×16px gutters = 832px; `computeViewerLayoutWidth()` reads

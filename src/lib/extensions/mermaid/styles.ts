@@ -1,5 +1,15 @@
 let injected = false;
 
+/**
+ * The font size every Mermaid HTML label (the root `<div>` inside its
+ * `<foreignObject>`) must render at. Shared by the stylesheet below and by
+ * `themeVariables.fontSize` in renderer.ts — the two sides MUST stay equal,
+ * because Mermaid bakes each label's clip box from a measurement taken while
+ * the diagram's injected stylesheet may not be resolved yet. See the rule
+ * comment in MERMAID_STYLES for the failure mode this prevents.
+ */
+export const MERMAID_FONT_SIZE = "16px";
+
 export const MERMAID_STYLES = `
       .mermaid-block {
         box-sizing: border-box;
@@ -42,6 +52,22 @@ export const MERMAID_STYLES = `
         display: block;
         max-width: 100%;
         height: auto;
+      }
+      /* Label size contract: Mermaid sizes each HTML label's <foreignObject>
+         clip box from a getBoundingClientRect() on the label root div, taken
+         while the diagram's injected stylesheet is not guaranteed to be
+         resolved across the foreignObject boundary (WebKitGTK). Measurement
+         can then fall back to the page's 14px body font while paint uses the
+         diagram root rule's 16px, clipping labels at exactly 14/16 = 87.5%
+         ("start" -> "star"). A font-size specified on the label root beats
+         inheritance in both states, so measure and paint always agree. It
+         must stay equal to MERMAID_FONT_SIZE, which renderer.ts also pins as
+         themeVariables.fontSize for the diagram root rule. The second host is
+         Mermaid's pre-render temp container (render id "mmd-N" mirrors as
+         "div#dmmd-N"), which is where the measurement happens. */
+      .mermaid-block svg foreignObject > div,
+      body > div[id^="dmmd-"] svg foreignObject > div {
+        font-size: ${MERMAID_FONT_SIZE};
       }
       /* Inner wrapper so the SVG is not a direct flex item. WebKitGTK does not
          reliably resolve width: max-content on SVG flex items, causing the

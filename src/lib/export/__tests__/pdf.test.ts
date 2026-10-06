@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
@@ -9,6 +9,9 @@ vi.mock("$lib/stores/file.svelte", () => ({
 vi.mock("../math-fit", () => ({
   scaleWideMathForPrint: vi.fn(() => [1]),
 }));
+vi.mock("$lib/extensions/mermaid/renderer", () => ({
+  prepareMermaidForPrint: vi.fn(async () => {}),
+}));
 
 import {
   buildPrintContainer,
@@ -16,8 +19,22 @@ import {
   exportPdf,
 } from "../exporters/pdf";
 import { scaleWideMathForPrint } from "../math-fit";
+import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
 
-const layout = { layoutWidthPx: 832, zoom: 0.86 };
+const layout = { layoutWidthPx: 832, scale: 0.86, scaleMode: "zoom" as const };
+
+/** A4 sheet width in PDF points (210mm at 72dpi). */
+const A4_WIDTH_PT = (210 / 25.4) * 72;
+/** 10mm page margin in PDF points. */
+const PAGE_MARGIN_PT = (10 / 25.4) * 72;
+/** A4 printable width in PDF points (190mm at 72dpi). */
+const PRINT_CONTENT_WIDTH_PT = ((210 - 2 * 10) / 25.4) * 72;
+
+const transformLayout = {
+  layoutWidthPx: 832,
+  scale: PRINT_CONTENT_WIDTH_PT / 832,
+  scaleMode: "transform" as const,
+};
 
 describe("buildPrintContainer", () => {
   beforeEach(() => {
@@ -179,6 +196,107 @@ describe("buildPrintContainer", () => {
   });
 });
 
+describe("buildPrintContainer transform scaling (macOS capture)", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    document.documentElement.className = "";
+    document.body.className = "";
+    document.documentElement.removeAttribute("style");
+    document.body.removeAttribute("style");
+    document.getElementById("print-page-background")?.remove();
+  });
+
+  it("scales the clone with a transform inside a sized .print-scaler wrapper", () => {
+    const handle = buildPrintContainer("<p>hi</p>", transformLayout);
+    const div = handle.printDiv;
+    const scaler = document.querySelector(".print-scaler") as HTMLDivElement;
+    expect(scaler).not.toBeNull();
+    expect(div.parentElement).toBe(scaler);
+    expect(div.style.zoom).toBe("");
+    expect(div.style.transform).toBe(`scale(${transformLayout.scale})`);
+    expect(div.style.transformOrigin).toBe("top left");
+    expect(scaler.style.width).toBe(`${832 * transformLayout.scale}px`);
+    expect(scaler.style.overflow).toBe("hidden");
+    handle.cleanup();
+    expect(document.querySelector(".print-scaler")).toBeNull();
+    expect(document.querySelector(".print-content")).toBeNull();
+  });
+
+  it("sizes the capture page to A4 with 10mm margins at beginPrint only", () => {
+    const handle = buildPrintContainer("<p>hi</p>", transformLayout);
+    // Build phase: the live app UI must keep its full-width layout.
+    expect(document.body.style.width).toBe("");
+    expect(document.documentElement.style.width).toBe("");
+
+    handle.beginPrint();
+
+    expect(document.documentElement.style.width).toBe(`${A4_WIDTH_PT}px`);
+    expect(document.body.style.width).toBe(`${A4_WIDTH_PT}px`);
+    expect(document.body.style.marginLeft).toBe("auto");
+    expect(document.body.style.paddingTop).toBe(`${PAGE_MARGIN_PT}px`);
+
+    handle.cleanup();
+    expect(document.documentElement.style.width).toBe("");
+    expect(document.body.style.width).toBe("");
+    expect(document.body.style.marginLeft).toBe("");
+    expect(document.body.style.paddingTop).toBe("");
+  });
+
+  it("does not constrain the page or add a scaler in zoom mode", () => {
+    const handle = buildPrintContainer("<p>hi</p>", layout);
+    handle.beginPrint();
+    expect(document.body.style.width).toBe("");
+    expect(document.querySelector(".print-scaler")).toBeNull();
+    handle.cleanup();
+  });
+
+  it("syncScaleHeight sizes the wrapper to the scaled (transform-aware) height", () => {
+    const handle = buildPrintContainer("<p>hi</p>", transformLayout);
+    const scaler = document.querySelector(".print-scaler") as HTMLDivElement;
+    vi.spyOn(handle.printDiv, "getBoundingClientRect").mockReturnValue({
+      width: 538.58,
+      height: 1024.4,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    handle.syncScaleHeight();
+
+    expect(scaler.style.height).toBe("1025px");
+    handle.cleanup();
+  });
+
+  it("syncScaleHeight is a no-op in zoom mode and on empty layouts", () => {
+    const zoomHandle = buildPrintContainer("<p>hi</p>", layout);
+    expect(() => zoomHandle.syncScaleHeight()).not.toThrow();
+    zoomHandle.cleanup();
+
+    const handle = buildPrintContainer("<p>hi</p>", transformLayout);
+    const scaler = document.querySelector(".print-scaler") as HTMLDivElement;
+    vi.spyOn(handle.printDiv, "getBoundingClientRect").mockReturnValue({
+      width: 0,
+      height: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    handle.syncScaleHeight();
+
+    expect(scaler.style.height).toBe("");
+    handle.cleanup();
+  });
+});
+
 describe("computeViewerLayoutWidth", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -323,5 +441,147 @@ describe("exportPdf print lifecycle", () => {
 
     printSpy.mockRestore();
     fitMock.mockImplementation(() => [1]);
+  });
+
+  it("does not swap Mermaid diagrams on the print-dialog path", async () => {
+    vi.mocked(prepareMermaidForPrint).mockClear();
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
+      queueMicrotask(() => window.dispatchEvent(new Event("afterprint")));
+    });
+
+    await exportPdf("<p>math</p>", "document");
+
+    expect(prepareMermaidForPrint).not.toHaveBeenCalled();
+    printSpy.mockRestore();
+  });
+});
+
+describe("exportPdf macOS capture lifecycle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = "";
+    document.documentElement.className = "";
+    document.body.className = "";
+    document.documentElement.removeAttribute("style");
+    document.body.removeAttribute("style");
+    document.getElementById("print-page-background")?.remove();
+    // Fresh module graph so pdf.ts re-reads navigator.userAgent on import.
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  async function importAsMacOS() {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+    });
+    return await import("../exporters/pdf");
+  }
+
+  it("scales with transform, swaps diagrams, and captures via create_pdf", async () => {
+    const { exportPdf: exportPdfMac } = await importAsMacOS();
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    const { prepareMermaidForPrint: prepareMock } =
+      await import("$lib/extensions/mermaid/renderer");
+    vi.mocked(save).mockResolvedValue("/tmp/Document.pdf");
+    // jsdom has no layout: stub the document height so the capture-rect
+    // height assertion is meaningful.
+    vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+      1234.2,
+    );
+
+    let scalerAtCapture = false;
+    let bodyWidthAtCapture = "";
+    let cloneTransformAtCapture = "";
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "create_pdf") {
+        scalerAtCapture = document.querySelector(".print-scaler") !== null;
+        bodyWidthAtCapture = document.body.style.width;
+        cloneTransformAtCapture =
+          (document.querySelector(".print-content") as HTMLElement | null)
+            ?.style.transform ?? "";
+      }
+      return undefined;
+    });
+
+    const viewerHtml =
+      '<p>math</p><div class="mermaid-block" data-mermaid-id="0"></div>';
+    const result = await exportPdfMac(viewerHtml, "Document");
+
+    expect(result.savedPath).toBe("/tmp/Document.pdf");
+    // The capture rect IS the page: A4 width in points, full document height.
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith("create_pdf", {
+      savePath: "/tmp/Document.pdf",
+      width: A4_WIDTH_PT,
+      height: 1235,
+    });
+
+    // Diagrams were swapped for the print variant before the capture.
+    expect(prepareMock).toHaveBeenCalledTimes(1);
+    const preparedRoot = vi.mocked(prepareMock).mock.calls[0][0];
+    expect(preparedRoot.classList.contains("print-content")).toBe(true);
+    expect(preparedRoot.querySelector(".mermaid-block")).not.toBeNull();
+
+    // The capture ran with transform scaling inside the A4-sized page.
+    expect(scalerAtCapture).toBe(true);
+    expect(cloneTransformAtCapture).toBe(
+      `scale(${PRINT_CONTENT_WIDTH_PT / 832})`,
+    );
+    expect(bodyWidthAtCapture).toBe(`${A4_WIDTH_PT}px`);
+
+    // Cleanup restored the document.
+    expect(document.querySelector(".print-content")).toBeNull();
+    expect(document.querySelector(".print-scaler")).toBeNull();
+    expect(document.body.style.width).toBe("");
+    expect(document.body.style.paddingTop).toBe("");
+    expect(document.body.classList.contains("exporting")).toBe(false);
+  });
+
+  it("keeps the A4 printable width as the scale target", async () => {
+    const { exportPdf: exportPdfMac } = await importAsMacOS();
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/Document.pdf");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    let scalerWidthAtCapture = "";
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "create_pdf") {
+        scalerWidthAtCapture = (
+          document.querySelector(".print-scaler") as HTMLElement
+        ).style.width;
+      }
+      return undefined;
+    });
+
+    await exportPdfMac("<p>math</p>", "Document");
+
+    // The 832px layout column maps onto the 190mm printable width in PDF
+    // points — the same physical content width as the Linux/Windows A4
+    // print output.
+    expect(parseFloat(scalerWidthAtCapture)).toBeCloseTo(
+      PRINT_CONTENT_WIDTH_PT,
+      3,
+    );
+  });
+
+  it("cancels cleanly when the save dialog is dismissed", async () => {
+    const { exportPdf: exportPdfMac } = await importAsMacOS();
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue(null);
+
+    const result = await exportPdfMac("<p>math</p>", "Document");
+
+    expect(result).toEqual({ warnings: [] });
+    expect(vi.mocked(invoke)).not.toHaveBeenCalled();
+    expect(document.querySelector(".print-content")).toBeNull();
+    expect(document.querySelector(".print-scaler")).toBeNull();
   });
 });

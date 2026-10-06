@@ -8,6 +8,8 @@ import { getDirectiveState } from "../directives";
 import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
+import { MERMAID_FONT_SIZE } from "./styles";
+import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
@@ -19,9 +21,12 @@ interface AppThemeInfo {
  * Which Mermaid config / cache family a render belongs to. The viewer
  * inherits the page font and uses HTML labels; export must stand alone
  * in LibreOffice, usvg, and SVG-as-image, which drop `foreignObject`
- * and cannot resolve `font-family: inherit`.
+ * and cannot resolve `font-family: inherit`; print (the PDF print clone
+ * on macOS) keeps the viewer's theme and inherited font but drops HTML
+ * labels, because WebKit's CSS `zoom` handling mis-scales
+ * `<foreignObject>` content (see prepareMermaidForPrint).
  */
-type RenderVariant = "viewer" | "export";
+type RenderVariant = "viewer" | "print" | "export";
 
 let mermaidModule: MermaidModule | null = null;
 let initialized = false;
@@ -44,6 +49,11 @@ const EXPORT_FONT_FAMILY = "'trebuchet ms', verdana, arial, sans-serif";
 // Cache only the raw SVG. Host layout options are applied when the wrapper is
 // rendered, so changing alignment or sizing never duplicates Mermaid work.
 const svgCache = new Map<string, string>();
+
+// Diagram sources keyed by wrapper id (emitted as `data-mermaid-id`), so the
+// PDF print clone can re-render a block in the print variant without needing
+// the raw markdown again. Populated by renderMermaid, cleared with the cache.
+const mermaidSources = new Map<number, string>();
 
 function getAppTheme(): AppThemeInfo {
   // Read from DOM to avoid circular dependency with viewer store.
@@ -86,6 +96,36 @@ async function ensureLoaded(): Promise<MermaidModule> {
   return mermaidModule;
 }
 
+/**
+ * Mermaid knobs that purge `<foreignObject>` HTML labels from every diagram
+ * family, leaving only `<text>/<tspan>` label shapes. `htmlLabels: false`
+ * covers flowcharts and friends; the sequence/journey/timeline/c4 family
+ * picks its label renderer via `textPlacement` instead ("fo" builds a
+ * `<switch><foreignObject>…` label), so those sections need their own
+ * override. Only journey and timeline declare the knob in mermaid's types
+ * (the runtime reads it for all four), hence the casts.
+ */
+const TEXT_LABEL_CONFIG: MermaidConfig = {
+  htmlLabels: false,
+  journey: { textPlacement: "tspan" },
+  timeline: { textPlacement: "tspan" },
+  sequence: { textPlacement: "tspan" } as NonNullable<
+    MermaidConfig["sequence"]
+  >,
+  c4: { textPlacement: "tspan" } as NonNullable<MermaidConfig["c4"]>,
+};
+
+/**
+ * Initialize (or re-initialize) Mermaid for a render variant.
+ *
+ * Every config pins `themeVariables.fontSize` to {@link MERMAID_FONT_SIZE},
+ * matching the static `font-size` MERMAID_STYLES puts on `<foreignObject>`
+ * label roots. Mermaid derives its diagram root rule from that value while
+ * the stylesheet rule is what label measurement sees before the injected
+ * stylesheet resolves; keeping both on one constant is what stops labels from
+ * being clipped (see the rule comment in styles.ts). Mermaid 12 ignores the
+ * top-level `fontSize` config key for this, so `themeVariables` is the lever.
+ */
 async function ensureInitialized(
   mod: MermaidModule,
   theme: AppThemeInfo,
@@ -104,6 +144,7 @@ async function ensureInitialized(
           fontFamily: EXPORT_FONT_FAMILY,
           htmlLabels: false,
           suppressErrorRendering: true,
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
         }
       : {
           startOnLoad: false,
@@ -111,7 +152,13 @@ async function ensureInitialized(
           securityLevel: "strict",
           fontFamily: "inherit",
           suppressErrorRendering: true,
-          ...getViewerThemeOverrides(theme.type),
+          themeVariables: {
+            fontSize: MERMAID_FONT_SIZE,
+            ...getViewerThemeOverrides(theme.type).themeVariables,
+          },
+          // Print adds the label-shape overrides on top of the viewer config:
+          // same theme, same inherited font, no <foreignObject>.
+          ...(variant === "print" ? TEXT_LABEL_CONFIG : null),
         };
   await mod.default.initialize(config);
   initialized = true;
@@ -221,7 +268,12 @@ export function renderMermaid(
 ): string {
   const key = cacheKey(content, getAppTheme());
   const cached = svgCache.get(key);
-  const attributes = wrapperAttributes(options);
+  // Tag the wrapper with a stable id and remember its diagram source so the
+  // PDF print clone can re-render the block in the print variant later
+  // (prepareMermaidForPrint). The id doubles as the SVG id namespace below.
+  const wrapperId = nextWrapperId++;
+  mermaidSources.set(wrapperId, content);
+  const attributes = wrapperAttributes(options, wrapperId);
 
   if (cached === ERROR || cached === undefined) {
     const escaped = escapeHtml(content);
@@ -230,7 +282,7 @@ export function renderMermaid(
 
   const fitToWidth = options.fitToWidth !== false;
   const svg = fitToWidth ? cached : normalizeSvgForNaturalSize(cached);
-  const namespacedSvg = namespaceSvgIds(svg, `mmd-svg-${nextWrapperId++}`);
+  const namespacedSvg = namespaceSvgIds(svg, `mmd-svg-${wrapperId}`);
   const body = fitToWidth
     ? namespacedSvg
     : `<div class="mermaid-scroll-content">${namespacedSvg}</div>`;
@@ -240,6 +292,7 @@ export function renderMermaid(
 
 export function clearMermaidCache(): void {
   svgCache.clear();
+  mermaidSources.clear();
   initialized = false;
   lastInitKey = "";
   nextRenderId = 0;
@@ -302,6 +355,96 @@ export async function renderMermaidSvgForExport(
 }
 
 /**
+ * Render a Mermaid diagram for the PDF print clone (macOS capture path).
+ *
+ * Same pipeline as {@link renderMermaidSvgForExport} (per-call id
+ * namespacing, explicit width/height), but the render variant keeps the
+ * viewer's theme and `font-family: inherit` — the clone is a live HTML
+ * document, so `inherit` resolves against the viewer styles exactly like
+ * the on-screen diagram — and fonts are deliberately NOT materialized.
+ *
+ * The point of this variant is the label shape: `htmlLabels: false` plus
+ * `textPlacement: "tspan"` (see TEXT_LABEL_CONFIG) produce pure
+ * `<text>/<tspan>` labels with no `<foreignObject>`. WebKit's CSS `zoom`
+ * handling mis-scales SVG (font-size in `<foreignObject>` gets the zoom
+ * factor applied twice — webkit.org/show_bug.cgi?id=279041 — and SVG
+ * geometry/markers distort under zoom on older WebKit), so the print clone
+ * swaps these foreignObject-free SVGs in before the capture.
+ *
+ * @throws If Mermaid fails to load or render the source.
+ */
+export async function renderMermaidSvgForPrint(
+  content: string,
+): Promise<string> {
+  const appTheme = getAppTheme();
+  const key = cacheKey(content, appTheme, "print");
+  let raw = svgCache.get(key);
+  if (raw === ERROR) raw = undefined;
+
+  if (!raw) {
+    const mod = await ensureLoaded();
+    await ensureInitialized(mod, appTheme, "print");
+    try {
+      const { svg } = await mod.default.render(
+        `mmd-print-${nextRenderId++}`,
+        content,
+      );
+      raw = svg;
+      svgCache.set(key, raw);
+    } catch (err) {
+      removeMermaidTempElements();
+      svgCache.set(key, ERROR);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+  }
+
+  return normalizeSvgForNaturalSize(
+    namespaceSvgIds(raw, `mmd-print-${nextWrapperId++}`),
+  );
+}
+
+/**
+ * Swap every Mermaid diagram inside `root` for its foreignObject-free print
+ * variant (see {@link renderMermaidSvgForPrint}). Used by the PDF exporter on
+ * macOS before the WKWebView capture.
+ *
+ * Walks `.mermaid-block` wrappers tagged by `renderMermaid` with
+ * `data-mermaid-id`, re-renders each diagram source in the print variant,
+ * and replaces the wrapper's inner SVG — preserving the wrapper markup
+ * (data-align / --mermaid-max-width / data-line) and the
+ * `.mermaid-scroll-content` inner wrapper on `fitToWidth=false` blocks so
+ * the print styles keep applying unchanged. Error blocks are left as-is,
+ * and a block whose source is unknown (e.g. after a reload) keeps its
+ * current SVG — the capture then behaves like today's viewer output.
+ *
+ * Rendering is sequential and cached, so a document with N diagrams costs
+ * at most one Mermaid render per distinct source.
+ */
+export async function prepareMermaidForPrint(root: HTMLElement): Promise<void> {
+  const blocks = root.querySelectorAll<HTMLElement>(
+    ".mermaid-block[data-mermaid-id]",
+  );
+  for (const block of blocks) {
+    if (block.classList.contains("mermaid-error-block")) continue;
+    const source = mermaidSources.get(Number(block.dataset.mermaidId));
+    if (source === undefined) continue;
+
+    let svg: string;
+    try {
+      svg = await renderMermaidSvgForPrint(source);
+    } catch {
+      // Keep the viewer SVG rather than failing the whole export.
+      continue;
+    }
+
+    block.innerHTML =
+      block.dataset.fitToWidth === "false"
+        ? `<div class="mermaid-scroll-content">${svg}</div>`
+        : svg;
+  }
+}
+
+/**
  * Make text survive standalone SVG consumers. Mermaid emits `font-family`
  * only in CSS class/descendant rules (and used `inherit` for the viewer);
  * LibreOffice's svgio and usvg don't reliably apply those to `<text>`.
@@ -359,7 +502,10 @@ function resolveFenceOptions(
   return mergeOptions(schema, directiveOptions, fenceOptions);
 }
 
-function wrapperAttributes(options: Record<string, unknown>): string {
+function wrapperAttributes(
+  options: Record<string, unknown>,
+  wrapperId: number,
+): string {
   const align =
     options.align === "left" ||
     options.align === "right" ||
@@ -370,7 +516,7 @@ function wrapperAttributes(options: Record<string, unknown>): string {
   const maxWidth = Number.isFinite(maxWidthValue) ? maxWidthValue : 800;
   const fitToWidth = options.fitToWidth !== false;
   const fitAttribute = fitToWidth ? "" : ' data-fit-to-width="false"';
-  return ` data-align="${align}"${fitAttribute} style="--mermaid-max-width: ${maxWidth}px"`;
+  return ` data-mermaid-id="${wrapperId}" data-align="${align}"${fitAttribute} style="--mermaid-max-width: ${maxWidth}px"`;
 }
 
 function namespaceSvgIds(svg: string, namespace: string): string {
@@ -427,14 +573,10 @@ function namespaceSvgIds(svg: string, namespace: string): string {
       );
 
       if (/^<style\b/i.test(fragment)) {
-        for (const [id, namespaced] of idMap) {
-          const selector = new RegExp(
-            `#${escapeRegExp(id)}(?=[\\s.#:[>+~,]|$)`,
-            "g",
-          );
-          result = result.replace(selector, `#${namespaced}`);
-        }
-        return result;
+        // Shared contract: must also match ids sitting directly against a
+        // declaration block (Mermaid's compact `#mmd-0{font-size:16px;…}` root
+        // rule). See $lib/utils/css-id-rewrite.
+        return rewriteIdSelectors(result, idMap);
       }
 
       result = result.replace(
@@ -468,10 +610,6 @@ function namespaceSvgIds(svg: string, namespace: string): string {
       );
     },
   );
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeSvgForNaturalSize(svg: string): string {

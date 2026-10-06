@@ -89,6 +89,27 @@ describe("scopeSubtreeIds", () => {
     expect(css).not.toMatch(/#arrow\b/);
   });
 
+  it("rewrites compact style selectors that butt against a declaration block", () => {
+    // Mermaid serializes its <style> CSS compactly, so id selectors are
+    // followed directly by `{`. The root rule carries the diagram's
+    // font-family/font-size/fill — if it is orphaned here, the print clone
+    // renders labels at the engine's inherited font size (which WebKitGTK
+    // mis-scales under the clone's CSS zoom: small label text in Linux PDFs).
+    const root = mount(
+      '<svg id="root"><style>#root{font-family:inherit;font-size:16px;fill:#333;}' +
+        '#root .label{color:#333;}</style><rect id="node"/></svg>',
+    );
+    scopeSubtreeIds(root, "p1-");
+    const css = root.querySelector("style")!.textContent!;
+    expect(css).toContain(
+      "#p1-root{font-family:inherit;font-size:16px;fill:#333;}",
+    );
+    expect(css).toContain("#p1-root .label{color:#333;}");
+    // Invariant: no pre-rename id selector may survive in the style block.
+    expect(css).not.toMatch(/#root(?![\w-])/);
+    expect(css).not.toMatch(/#node(?![\w-])/);
+  });
+
   it("leaves references to ids outside the subtree untouched", () => {
     mount('<div id="outside"></div>');
     const root = mount(

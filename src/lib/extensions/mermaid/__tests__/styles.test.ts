@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MERMAID_STYLES } from "../styles";
+import { MERMAID_FONT_SIZE, MERMAID_STYLES } from "../styles";
 
 function ruleFor(selector: string): string {
   const start = MERMAID_STYLES.indexOf(selector);
@@ -77,6 +77,18 @@ describe("Mermaid host-layout styles", () => {
     expect(ruleFor(".mermaid-block {")).toContain("overflow: visible;");
     expect(MERMAID_STYLES).not.toContain("max-height:");
     expect(MERMAID_STYLES).not.toContain(".print-content .mermaid-block svg");
+  });
+
+  it("specifies the label font size on the foreignObject label roots", () => {
+    const labels = ruleFor(".mermaid-block svg foreignObject > div");
+
+    // Placed diagrams and Mermaid's pre-render temp container (where the
+    // label clip box is measured) both need a *specified* size: an inherited
+    // one can fall back to the page's 14px while the diagram root rule says
+    // 16px, and Mermaid clips the label at whatever it measured.
+    expect(labels).toContain('body > div[id^="dmmd-"] svg foreignObject > div');
+    expect(labels).toContain(`font-size: ${MERMAID_FONT_SIZE};`);
+    expect(MERMAID_FONT_SIZE).toBe("16px");
   });
 
   it("clamps over-wide natural-size diagrams to the column in print", () => {

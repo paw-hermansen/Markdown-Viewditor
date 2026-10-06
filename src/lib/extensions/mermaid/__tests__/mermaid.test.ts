@@ -10,6 +10,7 @@ import {
 import { directivePlugin } from "../../directives";
 import { extensionFencePlugin } from "../../fence-plugin";
 import { registerExtension, resetExtensions } from "../../registry";
+import { MERMAID_FONT_SIZE, MERMAID_STYLES } from "../styles";
 
 const RAW_SVG =
   '<svg width="100%" height="auto" style="max-width: 640px;" viewBox="0 0 640 320"><g /></svg>';
@@ -263,12 +264,12 @@ describe("mermaid extension", () => {
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
         expect.objectContaining({
           theme: "default",
-          themeVariables: { mainBkg: "#D8DEE9" },
+          themeVariables: { mainBkg: "#D8DEE9", fontSize: MERMAID_FONT_SIZE },
         }),
       );
     });
 
-    it("does not pass themeVariables when no --mermaid-main-bkg is set", async () => {
+    it("passes only the pinned label font size when no --mermaid-main-bkg is set", async () => {
       setAppTheme("light", "github-light");
 
       await preRenderMermaidBlocks(
@@ -278,11 +279,13 @@ describe("mermaid extension", () => {
       );
 
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
-        expect.not.objectContaining({ themeVariables: expect.anything() }),
+        expect.objectContaining({
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
+        }),
       );
     });
 
-    it("does not pass themeVariables for dark themes", async () => {
+    it("keeps the pinned label font size for dark themes", async () => {
       setAppTheme("dark", "github-dark", "#D8DEE9");
 
       await preRenderMermaidBlocks(
@@ -292,8 +295,33 @@ describe("mermaid extension", () => {
       );
 
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
-        expect.not.objectContaining({ themeVariables: expect.anything() }),
+        expect.objectContaining({
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
+        }),
       );
+    });
+
+    it("pins the same label font size in the config and the stylesheet", async () => {
+      setAppTheme("light");
+
+      await preRenderMermaidBlocks(
+        [fenceToken("graph LR\n    A-->B\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      // The stylesheet specifies the size on the <foreignObject> label roots,
+      // which is what label measurement sees before Mermaid's injected
+      // diagram stylesheet resolves. If the config's root rule and this rule
+      // ever disagree, labels are measured at one size and painted at another
+      // and get clipped — so both sides read one constant.
+      expect(mermaidMock.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
+        }),
+      );
+      expect(MERMAID_FONT_SIZE).toBe("16px");
+      expect(MERMAID_STYLES).toContain(`font-size: ${MERMAID_FONT_SIZE};`);
     });
 
     it("gives Nord Light its own SVG cache separate from other light themes", async () => {
@@ -620,6 +648,40 @@ describe("mermaid extension", () => {
       expect(second).not.toContain("mmd-svg-0-");
     });
 
+    it("rewrites compact style selectors that butt against a declaration block", async () => {
+      setAppTheme("light");
+      const source = "graph LR\n    A-->B\n";
+      // Mermaid serializes its <style> CSS compactly, so id selectors are
+      // followed directly by `{`. The root rule carries the diagram's
+      // font-family/font-size/fill and must follow the renamed id — if it is
+      // orphaned, labels render at whatever the engine inherits into
+      // <foreignObject> instead of the size the layout was measured at.
+      const compactSvg = [
+        '<svg id="diagram" viewBox="0 0 10 10">',
+        "<style>#diagram{font-family:inherit;font-size:16px;fill:#333;}" +
+          "#diagram .label{color:#333;}</style>",
+        '<rect id="node" />',
+        "</svg>",
+      ].join("");
+      mermaidMock.render.mockResolvedValue({ svg: compactSvg });
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source)],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      const out = renderMermaid(source, {});
+
+      expect(out).toContain(
+        "#mmd-svg-0-diagram{font-family:inherit;font-size:16px;fill:#333;}",
+      );
+      expect(out).toContain("#mmd-svg-0-diagram .label{color:#333;}");
+      // Invariant: no pre-rename id selector may survive in the style block.
+      expect(out).not.toMatch(/#diagram(?![\w-])/);
+      expect(out).not.toMatch(/#node(?![\w-])/);
+    });
+
     it("normalizes responsive SVG dimensions only for natural-size wrappers", async () => {
       setAppTheme("light");
       const source = "graph LR\n    A-->B\n";
@@ -677,6 +739,7 @@ describe("mermaid extension", () => {
           theme: "default",
           htmlLabels: false,
           fontFamily: "'trebuchet ms', verdana, arial, sans-serif",
+          themeVariables: { fontSize: MERMAID_FONT_SIZE },
         }),
       );
       expect(mermaidMock.render).toHaveBeenCalledWith(

@@ -540,10 +540,11 @@ This section tests ODT export with various content types and rasterization optio
 |------|--------|----------|
 | 14.1 | Inspect viewer toolbar. | Dropdown has "Export as PDF"; no separate Print button. |
 | 14.2 | Click "Export as PDF". | Native save dialog with `.pdf`, PDF filter. |
-| 14.3 | Save and open in Preview. | Vector PDF, selectable text, one long page, edge-to-edge. |
+| 14.3 | Save and open in Preview. | Vector PDF, selectable text, one long page exactly A4-wide (210mm) with 10mm margins. |
 | 14.4 | Trigger PDF export. | "Exporting…" overlay visible during build phase. |
 | 14.5 | Export successfully. | Toast: "PDF saved" with path. |
 | 14.6 | Trigger a failure (e.g. save to a read-only location like `/System/test.pdf`). | Toast: "Create PDF failed" with detail. |
+| 14.18 | Compare with the Linux/Windows PDF of the same file (e.g. `MathChemMermaid-All.md`), both at 100% zoom. | Same physical content size and margins — no viewer zoom needed to match. |
 
 ### Linux & Windows
 
@@ -556,6 +557,7 @@ This section tests ODT export with various content types and rasterization optio
 | 14.11 | Pick a real printer, print. | Document prints with correct styling. |
 | 14.12 | Trigger a failure (e.g. select a printer that is offline or disconnected, then print). | Toast: "Print failed" with detail. |
 | 14.13 | Trigger PDF export. | Overlay may flash; print dialog confirms export started. |
+| 14.21 | Export `MathChemMermaid-All.md` from Linux; inspect the Mermaid diagrams. | Node label text is the same size as in the Viewer (same line count, e.g. 3/4 lines, and no dead space below the label inside the boxes). |
 
 ### Common (all platforms)
 
@@ -565,6 +567,8 @@ This section tests ODT export with various content types and rasterization optio
 | 14.15 | Export `MathChemMermaid-All.md`. | Math and chemistry render correctly. |
 | 14.16 | Export with dark theme. | Page background matches viewer (not white). |
 | 14.17 | Cancel save / print dialog. | No file written. |
+| 14.19 | Export `MathChemMermaid-All.md`; inspect the Mermaid diagrams. | Arrow heads on every edge, sequence diagram shows its actor boxes, labels the same size as in the Viewer (no giant, clipped, or truncated text). |
+| 14.20 | Inspect the wide `fitToWidth=false` diagram. | Scaled to the page content width; every word of every node label visible. |
 
 ---
 
@@ -689,6 +693,10 @@ within each story gives the precise check.
 | Export PDF | macOS — save dialog | **S14** (14.2) |
 | Export PDF | macOS — vector PDF | **S14** (14.3) |
 | Export PDF | macOS — success/error toast | **S14** (14.5–14.6) |
+| Export PDF | macOS — A4 page scale matches other platforms | **S14** (14.18) |
+| Export PDF | Mermaid diagrams intact (arrows, boxes, labels) | **S14** (14.19) |
+| Export PDF | Mermaid label size matches viewer (Linux) | **S14** (14.21) |
+| Export PDF | Mermaid wide diagram scaled to page | **S14** (14.20) |
 | Export PDF | Linux/Win — print dialog | **S14** (14.8) |
 | Export PDF | Linux/Win — save as PDF | **S14** (14.9) |
 | Export PDF | Linux/Win — background margins | **S14** (14.10) |

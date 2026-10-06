@@ -228,6 +228,64 @@ platforms. It is called from `ensureLoaded()` in the mermaid `renderer.ts`
 before `import("mermaid")`. Upstream: mermaid-js/mermaid#6666 — remove the
 shim if Mermaid ever ships its own fallback.
 
+### Mermaid SVG Id Scoping
+
+`namespaceSvgIds()` in the mermaid `renderer.ts` renames every id of a
+rendered diagram (`mmd-0` → `mmd-svg-{wrapper}-mmd-0`) so several copies can
+coexist, and rewrites the diagram's own `<style>` references to follow.
+Mermaid serializes that CSS **compactly** (`#mmd-0{font-size:16px;…}`), so the
+selector match must accept an id directly followed by `{` — the root rule
+carries the label `font-family`/`font-size`/`fill`, and an orphaned rule makes
+labels render at whatever the engine inherits into `<foreignObject>`
+(WebKitGTK multiplies implicitly inherited font sizes by the device scale
+factor, so 90% desktop text scaling turned 16px labels into 12.6px and node
+boxes kept dead space for lines that were never drawn).
+
+The PDF/print clone runs a **second** id-scoping pass over the same markup
+(`export/id-scope.ts` → `scopeSubtreeIds()`); it must accept the identical
+selector forms or it re-orphans what the first pass fixed — that is how small
+Mermaid label text ended up in Linux PDFs even after the renderer fix: the
+clone's labels fell back to implicit inheritance again, which WebKitGTK also
+mis-scales under the clone's CSS `zoom` (the zoom factor gets applied twice).
+Both passes now share `rewriteIdSelectors()` in
+`src/lib/utils/css-id-rewrite.ts` — extend the contract there, never in a
+local copy — and keep the "no orphaned id selectors" invariants in
+`__tests__/mermaid.test.ts` and `export/__tests__/id-scope.test.ts` green.
+
+### Mermaid Label Font Size (16px contract)
+
+Mermaid bakes each HTML label's `<foreignObject>` clip box from a
+`getBoundingClientRect()` on the label root `<div>` (see `addHtmlSpan` in its
+`createText` chunk), while the diagram's root rule (`#mmd-N{font-size:16px}`)
+is injected separately. On WebKitGTK that measurement can win the style-resolution
+race _across the `foreignObject` boundary_: the div computes the page's
+`html, body { font-size: 14px }` (app.css) and paint later uses the root rule's
+16px, so every label clips at exactly 14/16 = 87.5% (`start` → `star`,
+`+String name` → `+String nam`). Whether the race hits depends on timing, which
+is why it reproduces consistently on one machine and never on another.
+
+Both sides of the fix live in `src/lib/extensions/mermaid/` and read one
+constant, `MERMAID_FONT_SIZE` (in `styles.ts`) — keep them equal:
+
+- `MERMAID_STYLES` specifies `font-size` **on the label roots**, not just on an
+  ancestor: `.mermaid-block svg foreignObject > div` for placed diagrams and
+  `body > div[id^="dmmd-"] svg foreignObject > div` for Mermaid's pre-render
+  temp container (render id `mmd-N` mirrors as `div#dmmd-N`) — that temp
+  container is where measurement happens. A specified value beats inheritance,
+  so measurement and paint agree even when the injected stylesheet hasn't
+  resolved yet. The rule only helps if `injectMermaidStyles()` has run, which
+  `renderMarkdown()` guarantees: `loadExtensionsForContent()` precedes
+  `preRenderExtensionsForContent()`.
+- `renderer.ts` pins the same value as `themeVariables.fontSize` in **every**
+  `ensureInitialized()` config (viewer, print, export), so Mermaid's root rule
+  can never drift from the stylesheet. Mermaid 12 ignores the top-level
+  `config.fontSize` key here — `themeVariables.fontSize` is the lever.
+
+`__tests__/mermaid.test.ts` and `__tests__/styles.test.ts` assert the pin and
+the config↔CSS consistency. PDF/print is unaffected either way: those variants
+use `<text>` labels (`htmlLabels: false`), so there is no `foreignObject` to
+clip.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only
@@ -273,13 +331,31 @@ The print clone reproduces the Viewer exactly, then scales to paper:
 - The clone is laid out at the viewer's maximum content width (default
   800px column + 2×16px gutters = 832px; `computeViewerLayoutWidth()` reads
   the live viewer's computed `max-width` and container padding so custom
-  themes that change them still match). CSS `zoom` on the clone then maps
-  that width onto the paper. Because layout (fonts, widths, line breaking)
-  happens identically to the viewer and zoom only rescales, **line wrapping
-  in the PDF matches the viewer word-for-word**. Never scale via
-  `transform: scale()` (doesn't affect layout/pagination) and never
-  re-declare content styles for print (that's why app.css holds only shell,
-  geometry, and color-mode rules).
+  themes that change them still match). `exportPdf()` then maps that width
+  onto the paper, platform-split:
+  - Linux/Windows print through the print dialog with CSS `zoom` on the
+    clone, mapping 832px onto the A4 printable width (718 CSS px at 96dpi).
+    Zoom is required here — it is layout-affecting, which is what lets the
+    print engine paginate the clone across A4 pages (never scale the print
+    path with a bare `transform: scale()`: it doesn't affect
+    layout/pagination).
+  - macOS captures one page sized to an explicit rect with
+    `createPDFWithConfiguration` (1 CSS px = 1 PDF pt), so the clone is
+    scaled by a paint-time `transform: scale()` inside a sized
+    `.print-scaler` wrapper (which clips the un-scaled layout overflow;
+    `syncScaleHeight()` sizes it to the scaled height after `beginPrint()`),
+    mapping 832px onto the A4 printable width **in points** (538.6pt) so
+    the PDF's physical scale matches the Linux/Windows output. CSS `zoom`
+    must NOT be used on this path: WebKit's zoom handling mis-scales inline
+    SVG (font-size inside `<foreignObject>` is multiplied by the zoom factor
+    twice — webkit.org/show_bug.cgi?id=279041 — and SVG geometry/markers
+    distort under zoom on older WebKit), which produced giant diagram labels
+    and missing arrow heads/boxes in the PDF.
+    Because layout (fonts, widths, line breaking) happens identically to the
+    viewer on both paths and only the paint is rescaled, **line wrapping in
+    the PDF matches the viewer word-for-word**. Never re-declare content
+    styles for print (that's why app.css holds only shell, geometry, and
+    color-mode rules).
 - One deliberate deviation from viewer-identical layout: display math wider
   than the column (the Viewer scrolls it via `.katex-block`'s horizontal
   scrollbar) is scaled down to the printable width at export time, because
@@ -288,21 +364,33 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   ink extent (via `measureMathVisualBounds`, zoom-safe: both sides of the
   ratio come from `getBoundingClientRect`) and sets KaTeX's em-based
   `--katex-font-scale` on the formula, merged multiplicatively with any
-  `fontsize` directive value. It runs in `exportPdf()` _after_ `beginPrint()`
-  - layout settle (theme `#viewer-content` metrics change KaTeX widths) and
-    before the capture. Inline math is never scaled. The only CSS it needs is
-    `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
-    in app.css.
+  `fontsize` directive value. It runs in `exportPdf()` after `beginPrint()`
+  plus a layout settle (theme `#viewer-content` metrics change KaTeX widths)
+  and before the capture. Inline math is never scaled. The only CSS it needs
+  is `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
+  in app.css.
+- Mermaid diagrams in the macOS clone are swapped for their foreignObject-
+  free text-label variant before the capture (`prepareMermaidForPrint` →
+  `renderMermaidSvgForPrint`: `htmlLabels: false` + `textPlacement: "tspan"`,
+  same theme and `font-family: inherit` as the viewer) — belt and braces
+  next to the transform scaling, since old WebKit mis-scales
+  `<foreignObject>` even under transforms. The wrapper markup (`data-align`,
+  `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is preserved.
+  Linux/Windows keep the viewer SVGs unchanged.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
-  The macOS `createPDF` capture paginates at the webview's page bounds, so
-  its page size is the viewport, not A4 — the layout is scaled to fill the
-  webview width so content fills the PDF edge-to-edge. The capture produces
-  one long page (WKWebView can't tile a nil rect); that's accepted.
+  The macOS capture cannot honor `@page` size — `createPDF` has no paper
+  size and no pagination, and the rect passed to it _is_ the page.
+  `exportPdf()` therefore passes the A4 width (210mm in points) as the rect
+  width and the full document height as its height, while `beginPrint()`
+  constrains the document to that width with 10mm margins: the result is one
+  A4-wide page at the same physical scale as the Linux/Windows output, with
+  the content column centered at 10mm margins. One long page is accepted —
+  true A4 tiling would need Rust-side slicing of the capture.
 - Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
   inline `background` on `html`/`body` (page content area everywhere; whole
-  captured page on macOS, which has no physical margins) and an injected
+  captured area on macOS, whose capture has no physical margins) and an injected
   `@page { background: … }` rule (Chromium extends it over the margins too;
   WebKit can't paint the physical margin ring — engine limitation, same on
   Linux and macOS). `print-color-adjust: exact` on

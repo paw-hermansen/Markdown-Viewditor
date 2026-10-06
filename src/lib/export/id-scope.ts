@@ -27,10 +27,16 @@
  * - `href` / `xlink:href="#id"` (`<use>`, footnote backrefs, KaTeX refs).
  * - IDREF attributes: `for` and the `aria-*` id-reference attributes.
  * - Inside `<style>` elements in the subtree: `url(#…)` and bare `#id`
- *   selectors. This one is load-bearing for Mermaid: its diagram CSS is keyed
- *   on `#<svgRootId> .marker { … }`, so a renamed root id whose stylesheet
- *   selectors do not follow would leave the diagram unstyled.
+ *   selectors (including compact `#id{…}` rules — Mermaid's root rule carries
+ *   the label `font-family`/`font-size`/`fill`). This one is load-bearing for
+ *   Mermaid: its diagram CSS is keyed on `#<svgRootId> .marker { … }` and
+ *   `#<svgRootId>{font-size:16px;…}`, so a renamed root id whose stylesheet
+ *   selectors do not follow would leave the diagram unstyled and its labels
+ *   at the engine's inherited font size. The selector contract is shared with
+ *   the Mermaid renderer's own id scoping (see $lib/utils/css-id-rewrite).
  */
+
+import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 /** Attributes whose whitespace-separated tokens are element references. */
 const IDREF_ATTRIBUTES = new Set([
@@ -47,10 +53,6 @@ const IDREF_ATTRIBUTES = new Set([
 
 /** `url(#id)`, with optional quotes/whitespace around the fragment. */
 const URL_REFERENCE_PATTERN = /url\(\s*(["']?)\s*#([^)"'\s]+)\s*\1\s*\)/gi;
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 /**
  * Rename every `id` under `root` with `prefix` and rewrite the subtree's own
@@ -111,12 +113,14 @@ export function scopeSubtreeIds(
   for (const styleEl of root.querySelectorAll("style")) {
     const text = styleEl.textContent ?? "";
     let next = rewriteUrlRefs(text);
-    for (const [id, namespaced] of idMap) {
-      next = next.replace(
-        new RegExp(`#${escapeRegExp(id)}(?=[\\s.#:[>+~,]|$)`, "g"),
-        `#${namespaced}`,
-      );
-    }
+    // Shared contract: must also match ids sitting directly against a
+    // declaration block (Mermaid's compact `#mmd-0{font-size:16px;…}` root
+    // rule). Missing it re-orphans the rule the Mermaid renderer's own id
+    // scoping just saved — labels then render at an engine-inherited font
+    // size that WebKitGTK additionally mis-scales under the print clone's
+    // CSS `zoom` (small label text in Linux PDFs). See
+    // $lib/utils/css-id-rewrite.
+    next = rewriteIdSelectors(next, idMap);
     if (next !== text) styleEl.textContent = next;
   }
 

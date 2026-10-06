@@ -327,6 +327,8 @@ The outer host width is the smaller of `maxWidth` and the available content widt
 
 Print and PDF export have no scrolling: every diagram wider than the page content width is scaled down to fit it (even with `fitToWidth=false`), while diagrams that already fit the page — at natural size or already fit-scaled — print as they are. Diagrams are never split across pages.
 
+In the macOS PDF, diagram labels are drawn as SVG text rather than HTML labels (identical sizing, slightly different label typography), and the PDF is captured at A4 width as one long page — its scale matches the Windows/Linux PDF at 100% zoom in a PDF viewer.
+
 ### Scaling
 
 ````

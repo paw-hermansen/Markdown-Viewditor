@@ -631,6 +631,10 @@ This section tests ODT export with various content types and rasterization optio
 |------|--------|----------|
 | 15.21 | At 150%, 200% and 300% zoom, look at the sequence diagram. | Every message label ("Hello Bob", …) stays closer to its own arrow than to the previous message's line (before the `dy` fix the label sat closer to the line *above* at 200%), and stays evenly placed between the lines as at 100%. |
 | 15.22 | At 200% zoom, also check the actor boxes ("Alice", "Bob") and a flowchart (6.36). | Actor labels stay centred in their boxes; flowchart node labels, arrows and boxes stay proportional. |
+| 15.23 | At 200% and 300% zoom, look at the "Gantt Chart", "Timeline" and "C4 Diagram" sections of `MathChemMermaid-All.md`. | Date/step/actor labels stay attached to their bars and marks — same em-offset regression class as 15.21. |
+| 15.24 | At 200% and 300% zoom, look at the "Journey Diagram" and "Mindmap" sections. | Labels stay centred inside their shapes and boxes. Note: diagrams with fit-to-width stay the same physical size at high zoom (Mermaid's `useMaxWidth`) while surrounding text grows — by design. |
+| 15.25 | At 200% and 300% zoom, look at the "Xychart (Bar Chart)" section. | The y-axis tick labels and the axis title stay visible and attached to their ticks (before the `translate` fix they collapsed to the top of the chart and vanished at 300%). |
+| 15.26 | At 200% and 300% zoom, glance at the remaining "Mermaid — Diagram Types" sections (Class, State, ER, Pie, Quadrant, Sankey, Git Graph, Block). | All labels stay legible and attached to their shapes — nothing vanishes, drifts, or scales differently from its diagram. |
 
 ---
 
@@ -919,6 +923,10 @@ within each story gives the precise check.
 | Zoom | Wide math / diagram still scrolls | **S15** (15.9) |
 | Zoom | Math baseline alignment at low zoom | **S15** (15.19–15.20) |
 | Zoom | Mermaid labels stay attached to their line | **S15** (15.21–15.22) |
+| Zoom | Mermaid em-offset families (gantt/timeline/c4) | **S15** (15.23) |
+| Zoom | Mermaid HTML-label families (journey/mindmap) | **S15** (15.24) |
+| Zoom | Mermaid translate-positioned labels (xychart) | **S15** (15.25) |
+| Zoom | Mermaid remaining diagram types | **S15** (15.26) |
 | Zoom | Status bar legibility at extreme zoom | **S15** (15.14–15.15) |
 | Zoom | Menus scroll at high zoom (Export as…, theme) | **S15** (15.16) |
 | Zoom | Compatibility popup scrolls at high zoom | **S15** (15.17) |

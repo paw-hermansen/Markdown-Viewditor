@@ -313,9 +313,30 @@ while the diagram geometry scales normally — labels slide up toward the
 neighbouring line as zoom grows (at 200% a sequence label sat closer to the
 previous message's line than to its own). `text-offsets.ts` rewrites every
 em-based `dy`/`dx` to absolute user units at cache-fill time
-(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants). The rewrite
-is zoom-proof and a no-op in effect on Blink and at 100% zoom — keep it when
-touching the render pipeline. Regression: `__tests__/text-offsets.test.ts`.
+(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants). The same
+pass folds translate-based text placement (`transform="translate(X, Y)
+rotate(0)"` with x/y at 0 — xychart's axis labels) into plain `x`/`y`
+attributes: under WebKit page zoom those labels collapse toward the top of
+the chart and vanish (measured -278 user units at 300%; dominant-baseline is
+not the culprit). Both rewrites are zoom-proof and no-ops in effect on Blink
+and at 100% zoom — keep them when touching the render pipeline. Regression:
+`__tests__/text-offsets.test.ts`.
+
+Zoom-sweep inventory (WebKitGTK): the em-`dy` families are sequence
+(incl. notes/loops/activations), gantt, timeline, c4, sankey and gitgraph —
+all covered by that one pass — plus xychart's translate-positioned labels.
+The `<foreignObject>` HTML-label families
+(flowchart, class, state, journey, mindmap, block) measure uniform at
+100–300% zoom on modern WebKit (label div boxes track their fo boxes
+exactly). erDiagram/pie/quadrant are clean. Two facts worth keeping:
+diagram geometry is render-zoom-independent (re-rendering a diagram at any
+zoom produces identical geometry — the cache is safe), and the `<switch>`
+fallback `<text>` duplicates after each `<foreignObject>` are never painted,
+so ignore their rects in measurements. Old WebKit (macOS 12) remains the
+place to eyeball foreignObject labels and SVG markers under zoom
+(webkit.org/show_bug.cgi?id=279041). Diagrams with Mermaid's `useMaxWidth`
+(default) shrink to fit the container, so at high zoom they stay the same
+physical size while the rest of the UI grows — by design, not a bug.
 
 ### Scroll-Sync Anchor Contract for Math
 

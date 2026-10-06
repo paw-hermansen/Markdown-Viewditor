@@ -87,4 +87,46 @@ describe("normalizeSvgTextOffsets", () => {
     );
     expect(attr(out, "a", "dy")).toBe("30.000");
   });
+
+  it("folds translate placement into x/y attributes", () => {
+    const out = normalize(
+      `<text id="a" x="0" y="0" transform="translate(350, 21.67) rotate(0)">100</text>`,
+    );
+    expect(attr(out, "a", "x")).toBe("350");
+    expect(attr(out, "a", "y")).toBe("21.67");
+    expect(attr(out, "a", "transform")).toBeNull();
+  });
+
+  it("folds plain translate and absent x/y too", () => {
+    const out = normalize(
+      `<text id="a" transform="translate(10, 20)">Q1</text>`,
+    );
+    expect(attr(out, "a", "x")).toBe("10");
+    expect(attr(out, "a", "y")).toBe("20");
+    expect(attr(out, "a", "transform")).toBeNull();
+  });
+
+  it("keeps non-zero rotation, re-anchored on the translate point", () => {
+    const out = normalize(
+      `<text id="a" x="0" y="0" transform="translate(100, 50) rotate(-45)">x</text>`,
+    );
+    expect(attr(out, "a", "x")).toBe("100");
+    expect(attr(out, "a", "y")).toBe("50");
+    expect(attr(out, "a", "transform")).toBe("rotate(-45, 100, 50)");
+  });
+
+  it("does not fold when the element already positions via x/y", () => {
+    const out = normalize(
+      `<text id="a" x="5" y="5" transform="translate(100, 50) rotate(0)">x</text>`,
+    );
+    expect(attr(out, "a", "x")).toBe("5");
+    expect(attr(out, "a", "transform")).toBe("translate(100, 50) rotate(0)");
+  });
+
+  it("folding is idempotent", () => {
+    const once = normalize(
+      `<text id="a" x="0" y="0" transform="translate(350, 21.67) rotate(0)">100</text>`,
+    );
+    expect(normalizeSvgTextOffsets(once)).toBe(once);
+  });
 });

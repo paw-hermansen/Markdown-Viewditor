@@ -23,16 +23,29 @@
  * 100 and the rewrite equals what em already meant — the on-screen diagram
  * is unchanged.
  *
+ * Second rewrite in the same pass: translate-based text placement
+ * (`transform="translate(X, Y) rotate(0)"` with x/y at 0, xychart's axis
+ * labels) drifts catastrophically under WebKit page zoom — at 300% the
+ * labels collapse toward the top of the chart and disappear (measured
+ * -278 user units). Folding the translate into plain x/y attributes (and
+ * keeping a non-zero rotation as `rotate(theta, X, Y)` about the anchor)
+ * is geometrically identical and zoom-proof (residual < 9 at 300%).
+ *
  * The conversion is a one-time rewrite to zoom-independent numbers, so it
  * can run at cache-fill time regardless of the zoom level in effect.
  */
 
 const OFFSET_ATTRS = ["dy", "dx"] as const;
 
+/** `translate(X, Y)` optionally followed by `rotate(theta)`. */
+const TRANSLATE_ROTATE =
+  /^translate\(\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*\)(?:\s+rotate\(\s*(-?[\d.]+)\s*\))?$/;
+
 /**
- * Rewrite every em-based `dy`/`dx` on `<text>`/`<tspan>` in `svg` to
- * absolute user units. Returns `svg` unchanged when there is no DOM (node)
- * or nothing to rewrite.
+ * Rewrite fragile SVG text positioning to zoom-proof forms: em-based
+ * `dy`/`dx` on `<text>`/`<tspan>` become absolute user units, and
+ * translate-based placement folds into `x`/`y`. Returns `svg` unchanged
+ * when there is no DOM (node) or nothing to rewrite.
  */
 export function normalizeSvgTextOffsets(svg: string): string {
   // Test environments may expose a minimal `document` mock without
@@ -82,6 +95,27 @@ export function normalizeSvgTextOffsets(svg: string): string {
         if (!Number.isFinite(em) || !Number.isFinite(fs) || fs <= 0) continue;
         el.setAttribute(attr, (em * fs * factor).toFixed(3));
         changed = true;
+      }
+
+      // Fold translate-based placement into x/y (see module doc). Only when
+      // the element's own x/y are 0/absent, so the fold is position-neutral.
+      const transform = el.getAttribute("transform");
+      if (transform) {
+        const m = TRANSLATE_ROTATE.exec(transform.trim());
+        const x = el.getAttribute("x") ?? "0";
+        const y = el.getAttribute("y") ?? "0";
+        if (m && x === "0" && y === "0") {
+          const [, tx, ty, rot] = m;
+          el.setAttribute("x", tx);
+          el.setAttribute("y", ty);
+          if (rot && parseFloat(rot) !== 0) {
+            // Rotation stays, but about the anchor point.
+            el.setAttribute("transform", `rotate(${rot}, ${tx}, ${ty})`);
+          } else {
+            el.removeAttribute("transform");
+          }
+          changed = true;
+        }
       }
     }
 

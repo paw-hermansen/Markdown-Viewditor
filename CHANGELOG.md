@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - feat: app-wide zoom (70%–300%) via `Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+mouse wheel (and macOS trackpad pinch), and a status bar control. The zoom level persists across sessions like the theme and current file; exports and prints always run at 100% zoom, so PDF/ODT/HTML output and the wide-math page fit are unchanged. The 70% minimum is an engine constraint: WebKit floors effective font sizes at 10px, so smaller zoom stops shrinking text and distorts formula sub/superscripts.
 - fix: KaTeX formulas no longer lose vertical alignment below 100% zoom on Linux/macOS (WebKit). Relations (`=`), delimiters and `\text{}` dropped about a line below matrix/cases rows because WebKit's page zoom collapses KaTeX's 1px `vlist-s` baseline anchor; the anchor is now pinned to 2px.
 - fix: Mermaid sequence diagram message labels no longer drift up toward the previous message's line at zoom above 100% on Linux/macOS. WebKit resolves Mermaid's em-based `dy` text offsets against the zoom-divided font size; offsets are now rewritten to absolute units.
+- fix: `xychart-beta` axis labels no longer collapse and vanish at high zoom on Linux/macOS. WebKit mis-resolves translate-based SVG text placement under page zoom; the placement is now folded into `x`/`y` attributes.
 
 ## [1.5.0] - 2026-09-12
 

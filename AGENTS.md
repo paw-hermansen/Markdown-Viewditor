@@ -306,6 +306,17 @@ the config↔CSS consistency. PDF/print is unaffected either way: those variants
 use `<text>` labels (`htmlLabels: false`), so there is no `foreignObject` to
 clip.
 
+A sibling quirk in the same zoom area: Mermaid positions label text with
+em-based `dy`/`dx` offsets (sequence message labels use `dy="1em"`), and
+WebKit page zoom resolves em against the _zoom-divided_ computed font size
+while the diagram geometry scales normally — labels slide up toward the
+neighbouring line as zoom grows (at 200% a sequence label sat closer to the
+previous message's line than to its own). `text-offsets.ts` rewrites every
+em-based `dy`/`dx` to absolute user units at cache-fill time
+(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants). The rewrite
+is zoom-proof and a no-op in effect on Blink and at 100% zoom — keep it when
+touching the render pipeline. Regression: `__tests__/text-offsets.test.ts`.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only

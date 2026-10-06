@@ -623,6 +623,15 @@ This section tests ODT export with various content types and rasterization optio
 | 15.19 | At 85%, 80% and 70% zoom, look at "Matrices" and "Cases". | The parentheses, the brace and the `=` sign stay on the same line as the matrix entries / cases rows — nothing sits a line lower (was broken below 90% on Linux/macOS before the `.vlist-s` anchor fix). |
 | 15.20 | At 70% zoom (the minimum), re-check 15.19, and compare with the same formulas in an exported HTML opened in Safari (Cmd+− below 90%). | Still aligned in the app — sub/superscripts may look slightly large at 70–80% (known engine font-size floor; see AGENTS.md) but nothing may be misaligned. The Safari check tells whether the engine still misplaces KaTeX baselines upstream of the app. |
 
+### 15f. Mermaid Label Attachment at High Zoom
+
+*File: `MathChemMermaid-All.md` — the sequence diagram (6.37) is the regression case: message labels vs their arrow lines.*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.21 | At 150%, 200% and 300% zoom, look at the sequence diagram. | Every message label ("Hello Bob", …) stays closer to its own arrow than to the previous message's line (before the `dy` fix the label sat closer to the line *above* at 200%), and stays evenly placed between the lines as at 100%. |
+| 15.22 | At 200% zoom, also check the actor boxes ("Alice", "Bob") and a flowchart (6.36). | Actor labels stay centred in their boxes; flowchart node labels, arrows and boxes stay proportional. |
+
 ---
 
 # Part 2 — Feature Reference
@@ -909,6 +918,7 @@ within each story gives the precise check.
 | Zoom | Mermaid diagrams scale cleanly | **S15** (15.8, 15.10) |
 | Zoom | Wide math / diagram still scrolls | **S15** (15.9) |
 | Zoom | Math baseline alignment at low zoom | **S15** (15.19–15.20) |
+| Zoom | Mermaid labels stay attached to their line | **S15** (15.21–15.22) |
 | Zoom | Status bar legibility at extreme zoom | **S15** (15.14–15.15) |
 | Zoom | Menus scroll at high zoom (Export as…, theme) | **S15** (15.16) |
 | Zoom | Compatibility popup scrolls at high zoom | **S15** (15.17) |

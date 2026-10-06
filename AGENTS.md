@@ -211,6 +211,22 @@ would otherwise consume the backslash and hide the delimiter.
 - A bounded LRU memo cache (`katex-cache.ts`) wraps `katex.renderToString`
   so whole-document re-renders (150 ms debounce) cost ~0 for unchanged
   formulas.
+- **`.vlist-s` anchor is pinned to 2px** (`extensions/katex/styles.ts`,
+  `!important`), overriding KaTeX's stock `font-size: 1px`. KaTeX anchors
+  every vlist table's baseline on that cell; under WebKit page zoom any
+  factor < 1 makes the 1px font sub-pixel and its metrics collapse, so the
+  table re-anchors and all plain-baseline formula content (relations `=`,
+  `\left(...\right)` delimiters, `\text{}`) drops ~one KaTeX font-size below
+  the vlist-positioned content (matrix/cases rows). Measured on WebKitGTK at
+  85% zoom: ~16px drift; Windows/Blink unaffected. 2px survives the zoom
+  multiplication (1px at the 50% floor) and is geometry-identical to stock
+  KaTeX at 100% — keep it when upgrading KaTeX (its CSS comment explains why
+  the cell exists at all). Regression: `__tests__/styles.test.ts`.
+  Related WebKit quirk: at zoom <= ~0.7 the engine floors effective font
+  sizes around 10px (`minimum-font-size` is 0, so this is inside WebKit's
+  style resolution), which makes text stop shrinking and over-scales
+  KaTeX's em-based geometry at 50% zoom. Cosmetic; separate from the
+  alignment bug above.
 - `enableMathBlockInHtml` / `enableMathInlineInHtml` stay **disabled**: they
   splice math tokens into html_block content with `map: null`, which strips
   `data-line` anchors and breaks scroll-sync.

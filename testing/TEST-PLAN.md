@@ -614,6 +614,15 @@ This section tests ODT export with various content types and rasterization optio
 | 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup fits on screen and scrolls when needed; all four level options and every feature toggle are reachable. |
 | 15.18 | At 300% zoom, edit a file and press `Ctrl+N` (unsaved-changes dialog). | The dialog fits or scrolls within the screen; Cancel / Discard / Save First are all reachable. |
 
+### 15e. Math Baseline Alignment at Low Zoom
+
+*File: `MathChemMermaid-All.md` — the "Matrices" (6.3) and "Cases" (6.4) formulas are the regression cases: relations/delimiters vs vlist-positioned rows.*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.19 | At 85%, 75% and 60% zoom, look at "Matrices" and "Cases". | The parentheses, the brace and the `=` sign stay on the same line as the matrix entries / cases rows — nothing sits a line lower (was broken below 90% on Linux/macOS before the `.vlist-s` anchor fix). |
+| 15.20 | At 50% zoom, re-check 15.19, and compare with the same formulas in an exported HTML opened in Safari (Cmd+− below 90%). | Still aligned in the app (residual sub-pixel jitter only). The Safari check tells whether the engine still misplaces KaTeX baselines upstream of the app. |
+
 ---
 
 # Part 2 — Feature Reference
@@ -899,6 +908,7 @@ within each story gives the precise check.
 | Zoom | Math scales proportionally | **S15** (15.7) |
 | Zoom | Mermaid diagrams scale cleanly | **S15** (15.8, 15.10) |
 | Zoom | Wide math / diagram still scrolls | **S15** (15.9) |
+| Zoom | Math baseline alignment at low zoom | **S15** (15.19–15.20) |
 | Zoom | Status bar legibility at extreme zoom | **S15** (15.14–15.15) |
 | Zoom | Menus scroll at high zoom (Export as…, theme) | **S15** (15.16) |
 | Zoom | Compatibility popup scrolls at high zoom | **S15** (15.17) |

@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { computePopupPlacement } from '$lib/utils/popup-placement';
 
   interface Choice {
     value: string;
@@ -26,6 +27,7 @@
   let open = $state(false);
   let rootEl: HTMLDivElement | undefined = $state(undefined);
   let triggerEl: HTMLButtonElement | undefined = $state(undefined);
+  let popupEl: HTMLDivElement | undefined = $state(undefined);
   let activeIndex = $state(0);
   let popupStyle = $state('');
 
@@ -43,14 +45,36 @@
 
   function placePopup() {
     const rect = triggerEl?.getBoundingClientRect();
-    if (!rect) return;
+    const popup = popupEl;
+    if (!rect || !popup) return;
     const gap = 4;
-    const estimatedHeight = Math.min(choices.length * 28 + 8, 208);
+    const naturalHeight = popup.scrollHeight;
     const spaceBelow = window.innerHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
-    const flip = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
-    const top = flip ? Math.max(gap, rect.top - gap - estimatedHeight) : rect.bottom + gap;
-    popupStyle = `left:${rect.left}px;top:${top}px;min-width:${Math.max(rect.width, 120)}px;`;
+    const flip = spaceBelow < naturalHeight && spaceAbove > spaceBelow;
+    const placement = computePopupPlacement({
+      trigger: rect,
+      // Fixed-position popup: only the viewport clips it.
+      clip: { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight },
+      popup: {
+        width: Math.max(popup.getBoundingClientRect().width, rect.width, 120),
+        height: naturalHeight,
+      },
+      align: 'left',
+      openDirection: flip ? 'up' : 'down',
+      gap,
+    });
+    const top = flip ? rect.top - gap - placement.maxHeight : rect.bottom + gap;
+    const parts = [
+      `left:${placement.left}px`,
+      `top:${top}px`,
+      `min-width:${Math.max(rect.width, 120)}px`,
+      `max-height:${placement.maxHeight}px`,
+    ];
+    if (placement.maxWidth !== undefined) {
+      parts.push(`max-width:${placement.maxWidth}px`);
+    }
+    popupStyle = parts.join(';');
   }
 
   function openMenu() {
@@ -188,6 +212,7 @@
 
   {#if open}
     <div
+      bind:this={popupEl}
       class="popup"
       style={popupStyle}
       role="listbox"

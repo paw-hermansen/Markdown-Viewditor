@@ -397,9 +397,12 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
 - UI chrome must stay zoom-proof: no fixed `height` on bars/buttons (use
   `min-height` — a hard px box plus device-pixel baseline rounding clips text
   at fractional zoom), `white-space: nowrap` on single-line status text, and
-  viewport-relative clamps (`max-height: min(<px>, calc(100vh - <offset>))`)
-  on dropdowns/popovers so they scroll within the screen at high zoom instead
-  of overflowing. See the StatusBar/`DropdownButton` styles.
+  measured popup placement — `popup-placement.ts` clamps dropdowns/popovers
+  into their _clipping ancestor_ (`.content { overflow: hidden }`, not the
+  window) so entries scroll into reach instead of being cut at the status
+  bar line or the pane edge at high zoom. Never place popups with fixed
+  offsets or bare `right: 0` edge alignment; measure the trigger and clip
+  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`).
 
 ### Export Pipeline
 

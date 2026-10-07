@@ -4,6 +4,7 @@
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { zoomIn, zoomOut, resetZoom, zoomLabel } from '$lib/stores/zoom.svelte';
   import { modLabel } from '$lib/utils/keyboard';
+  import { computePopupPlacement, findClipRect } from '$lib/utils/popup-placement';
   import {
     listFeatureToggles,
     presetFor,
@@ -39,6 +40,49 @@
   let showLevel = $state(false);
   let showViolations = $state(false);
   let showZoom = $state(false);
+
+  let levelPopRef: HTMLDivElement | undefined = $state(undefined);
+  let violationsPopRef: HTMLDivElement | undefined = $state(undefined);
+  let zoomPopRef: HTMLDivElement | undefined = $state(undefined);
+
+  /**
+   * Keep an open popover inside the box it is clipped by (the viewport here,
+   * but measured, not guessed — see popup-placement.ts). Opens upward from
+   * the status bar, so the cap is the space above the trigger.
+   */
+  function placePopover(pop: HTMLElement | undefined) {
+    const wrapper = pop?.parentElement;
+    const trigger = wrapper?.querySelector('button') as HTMLElement | null;
+    if (!pop || !wrapper || !trigger) return;
+    const placement = computePopupPlacement({
+      trigger: trigger.getBoundingClientRect(),
+      clip: findClipRect(pop),
+      popup: { width: pop.getBoundingClientRect().width, height: pop.scrollHeight },
+      align: 'right',
+      openDirection: 'up',
+    });
+    pop.style.left = `${placement.left - wrapper.getBoundingClientRect().left}px`;
+    pop.style.right = 'auto';
+    pop.style.maxHeight = `${placement.maxHeight}px`;
+    if (placement.maxWidth !== undefined) pop.style.maxWidth = `${placement.maxWidth}px`;
+  }
+
+  function placePopovers() {
+    placePopover(levelPopRef);
+    placePopover(violationsPopRef);
+    placePopover(zoomPopRef);
+  }
+
+  $effect(() => {
+    if (!showLevel && !showViolations && !showZoom) return;
+    // Measure after the popover is in the DOM (one settle frame).
+    const raf = requestAnimationFrame(placePopovers);
+    window.addEventListener('resize', placePopovers);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', placePopovers);
+    };
+  });
 
   let violations = $derived(levelState.violations);
 
@@ -131,7 +175,7 @@
         {levelLabel} <span class="caret">&#x25BE;</span>
       </button>
       {#if showLevel}
-        <div class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onkeydown={handlePopoverKeydown}>
+        <div bind:this={levelPopRef} class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onkeydown={handlePopoverKeydown}>
           <div class="level-options">
             {#each LEVELS as lvl}
               <button
@@ -173,7 +217,7 @@
         &#x26A0; {violations.length}
       </button>
       {#if showViolations && violations.length > 0}
-        <div class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
+        <div bind:this={violationsPopRef} class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
           {#each violations as v}
             <div class="violation-row">
               <div class="violation-msg">{violationMessageFor(v)}</div>
@@ -205,7 +249,7 @@
         {zoomLabel()} <span class="caret">&#x25BE;</span>
       </button>
       {#if showZoom}
-        <div class="popover zoom-popover" role="dialog" aria-label="Zoom" tabindex="0" onkeydown={handlePopoverKeydown}>
+        <div bind:this={zoomPopRef} class="popover zoom-popover" role="dialog" aria-label="Zoom" tabindex="0" onkeydown={handlePopoverKeydown}>
           <div class="zoom-row">
             <button
               class="zoom-step-btn"

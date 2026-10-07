@@ -610,8 +610,8 @@ This section tests ODT export with various content types and rasterization optio
 |------|--------|----------|
 | 15.14 | At 75% and 70% zoom (the minimum), look at the status bar. | Text is vertically centered and fully visible — no clipped lower halves, at any zoom step in between. |
 | 15.15 | At 300% zoom, look at the status bar. | No text wraps ("UTF-8" stays on one line); the decorative "Markdown" / "UTF-8" labels drop out if space runs out, but the level button and zoom control stay visible and clickable. |
-| 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown. | Each menu fits on screen and scrolls when needed; every entry is reachable, and the "Show export confirmation" footer checkbox stays visible while the list scrolls. |
-| 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup fits on screen and scrolls when needed; all four level options and every feature toggle are reachable. |
+| 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown (both in split view). | Each menu is fully inside the window — nothing cut at the left edge, and the lowest entries visible above the status bar (scrolling instead of hiding); every entry is reachable, and the "Show export confirmation" footer checkbox stays visible while the list scrolls. |
+| 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup sits fully above the status bar and scrolls when needed; all four level options and every feature toggle are reachable. |
 | 15.18 | At 300% zoom, edit a file and press `Ctrl+N` (unsaved-changes dialog). | The dialog fits or scrolls within the screen; Cancel / Discard / Save First are all reachable. |
 
 ### 15e. Math Baseline Alignment at Low Zoom

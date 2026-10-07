@@ -43,9 +43,25 @@ export interface PopupPlacementInput {
 }
 
 /**
+ * Natural border-box height of a popup: `scrollHeight` is content + padding,
+ * but under `box-sizing: border-box` a `max-height` also includes the border.
+ * Setting `max-height: scrollHeight` makes the box ~2px too small and a
+ * scrollbar appears (and overlays the controls) even though the content
+ * fits — measure the border box instead. Rounded up: WebKit rounds font and
+ * border metrics (borders measure 1.11px for a 1px border at some zooms), so
+ * exact-fit heights can still overflow by a fraction of a pixel.
+ */
+export function naturalBoxHeight(el: HTMLElement): number {
+  const style = getComputedStyle(el);
+  const borders =
+    parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+  return Math.ceil(el.scrollHeight + (Number.isFinite(borders) ? borders : 0));
+}
+
+/**
  * Pure placement math: keep `popup` inside `clip`, aligned to `trigger`.
- * `popup.height` should be the full content height (e.g. `scrollHeight`),
- * not a CSS-clamped height.
+ * `popup.height` should be the natural *border-box* height (see
+ * {@link naturalBoxHeight}), not a CSS-clamped height.
  */
 export function computePopupPlacement(
   input: PopupPlacementInput,

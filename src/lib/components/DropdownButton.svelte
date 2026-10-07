@@ -8,7 +8,7 @@
 
 <script lang="ts" generics="T extends string">
   import type { Snippet } from 'svelte';
-  import { computePopupPlacement, findClipRect } from '$lib/utils/popup-placement';
+  import { computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
 
   interface Props {
     choices: Choice<T>[];
@@ -111,7 +111,7 @@
       clip: findClipRect(dropdown),
       popup: {
         width: dropdown.getBoundingClientRect().width,
-        height: Math.min(dropdown.scrollHeight, 400),
+        height: Math.min(naturalBoxHeight(dropdown), 400),
       },
       align,
     });
@@ -361,6 +361,8 @@
        menu scrolls instead of running off-screen at high zoom. */
     max-height: min(400px, calc(100vh - 96px));
     overflow-y: auto;
+    /* Reserve the scrollbar's strip so scrolling never covers the items. */
+    scrollbar-gutter: stable;
     z-index: 100;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }

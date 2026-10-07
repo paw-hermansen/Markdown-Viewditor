@@ -402,7 +402,15 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   window) so entries scroll into reach instead of being cut at the status
   bar line or the pane edge at high zoom. Never place popups with fixed
   offsets or bare `right: 0` edge alignment; measure the trigger and clip
-  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`).
+  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`). Measure
+  the popup's natural height with `naturalBoxHeight()` (scrollHeight +
+  borders, rounded up — WebKit rounds border metrics to fractions of a
+  pixel): under `box-sizing: border-box`, `max-height: scrollHeight` is ~2px
+  short and draws a spurious scrollbar — and on Linux those overlay the
+  controls. Fixed-content popovers (the zoom popup) disable scrolling
+  entirely instead: `placePopover(..., capHeight = false)` plus
+  `overflow-y: visible`. `scrollbar-gutter: stable` is kept for other
+  engines, but it reserves nothing on WebKitGTK's overlay scrollbars.
 - Zoom changes keep the visible line anchored: `setZoom` runs registered
   `ZoomScrollAnchor`s around `applyZoomLevel` — the editor and viewer capture
   the line at the viewport middle before the change and restore it after two

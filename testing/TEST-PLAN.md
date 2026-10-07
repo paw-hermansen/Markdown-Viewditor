@@ -584,7 +584,7 @@ This section tests ODT export with various content types and rasterization optio
 | 15.2 | Press `Ctrl+-` down to 70%. | Everything scales down; the editor↔viewer split handle stays easy to grab and drag (panes resize as usual). |
 | 15.3 | Press `Ctrl+0`. | Back to exactly 100%. |
 | 15.4 | Hold `Ctrl` and scroll the mouse wheel (pinch on a macOS trackpad). | Zoom steps in/out like the keyboard; plain two-finger scrolling still only scrolls. |
-| 15.5 | Use the status bar zoom control (`−`, `+`, Reset). | Same steps as the shortcuts; the indicator always matches the actual zoom. |
+| 15.5 | Use the status bar zoom control (`−`, `+`, Reset). | Same steps as the shortcuts; the indicator always matches the actual zoom. The zoom popup never scrolls (fixed content) at any zoom level — its `−` / `+` buttons are always fully clickable, with no scrollbar over them. |
 | 15.6 | Set zoom to ~150%, close the app, reopen. | Zoom level is restored (like the theme and current file). |
 
 ### 15b. Zoom with Math & Mermaid
@@ -610,8 +610,8 @@ This section tests ODT export with various content types and rasterization optio
 |------|--------|----------|
 | 15.14 | At 75% and 70% zoom (the minimum), look at the status bar. | Text is vertically centered and fully visible — no clipped lower halves, at any zoom step in between. |
 | 15.15 | At 300% zoom, look at the status bar. | No text wraps ("UTF-8" stays on one line); the decorative "Markdown" / "UTF-8" labels drop out if space runs out, but the level button and zoom control stay visible and clickable. |
-| 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown (both in split view). | Each menu is fully inside the window — nothing cut at the left edge, and the lowest entries visible above the status bar (scrolling instead of hiding); every entry is reachable, and the "Show export confirmation" footer checkbox stays visible while the list scrolls. |
-| 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup sits fully above the status bar and scrolls when needed; all four level options and every feature toggle are reachable. |
+| 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown (both in split view). | Each menu is fully inside the window — nothing cut at the left edge, and the lowest entries visible above the status bar (scrolling instead of hiding); every entry is reachable, the "Show export confirmation" footer checkbox stays visible while the list scrolls, and when scrolling is needed the scrollbar never covers the items. |
+| 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup sits fully above the status bar and scrolls when needed; all four level options and every feature toggle are reachable, and the scrollbar never covers them. |
 | 15.18 | At 300% zoom, edit a file and press `Ctrl+N` (unsaved-changes dialog). | The dialog fits or scrolls within the screen; Cancel / Discard / Save First are all reachable. |
 
 ### 15e. Math Baseline Alignment at Low Zoom

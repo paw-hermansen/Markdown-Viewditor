@@ -1,10 +1,44 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { computePopupPlacement, type PopupRect } from "../popup-placement";
+import {
+  computePopupPlacement,
+  naturalBoxHeight,
+  type PopupRect,
+} from "../popup-placement";
 
 // A typical app clip box: the main content area ends at the status bar,
 // i.e. well before the window bottom — the case that hid menu entries.
 const CLIP: PopupRect = { left: 0, right: 800, top: 0, bottom: 572 };
 const TRIGGER: PopupRect = { left: 300, right: 380, top: 96, bottom: 136 };
+
+describe("naturalBoxHeight", () => {
+  function box(css: string, scrollHeight: number): HTMLElement {
+    const el = document.createElement("div");
+    el.setAttribute("style", css);
+    // jsdom has no layout; stand in for the content extent.
+    Object.defineProperty(el, "scrollHeight", { value: scrollHeight });
+    return el;
+  }
+
+  it("adds the vertical borders that border-box max-height includes", () => {
+    const el = box("border-top-width: 2px; border-bottom-width: 3px", 100);
+    expect(naturalBoxHeight(el)).toBe(105);
+  });
+
+  it("returns the scroll height for a borderless box", () => {
+    expect(naturalBoxHeight(box("", 100))).toBe(100);
+  });
+
+  it("rounds up so fractional border metrics cannot overflow", () => {
+    // WebKitGTK rounds border metrics: a 1px border measures 1.11px at some
+    // zoom levels — exact-fit heights then overflow by a fraction of a pixel.
+    const el = box(
+      "border-top-width: 1.111119px; border-bottom-width: 1.111119px",
+      76,
+    );
+    expect(naturalBoxHeight(el)).toBe(79);
+  });
+});
 
 describe("computePopupPlacement", () => {
   it("keeps a menu that fits at its aligned position", () => {

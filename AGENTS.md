@@ -338,6 +338,28 @@ place to eyeball foreignObject labels and SVG markers under zoom
 (default) shrink to fit the container, so at high zoom they stay the same
 physical size while the rest of the UI grows — by design, not a bug.
 
+### Upgrading KaTeX / Mermaid
+
+The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
+its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
+label offsets plus translate-based text placement (the `text-offsets.ts`
+rewrites). The `upgrade-contract.test.ts` suites in both extensions render
+_REAL_ library output and fail when those internals change shape. Read the
+failure message: "lost its target / no longer emits" means either upstream
+changed the mechanism (extend the fix) or dropped it (the compensation may be
+obsolete) — re-measure with the zoom-sweep harness before touching either.
+
+Upgrade checklist:
+
+1. `npm install katex@<ver>` / `npm install mermaid@<ver>` (the `^0.16` /
+   `^12` ranges keep majors out — KaTeX 0.18 renames CSS classes outright).
+2. KaTeX: run `scripts/update-katex-css.sh` to regenerate the woff2
+   stylesheet the pin targets.
+3. `npx vitest run` — the upgrade-contract suites are the tripwires.
+4. On Linux: `python3 testing/tools/zoom-sweep/mermaid-zoom-sweep.py`.
+5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
+   plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only

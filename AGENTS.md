@@ -403,6 +403,14 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   bar line or the pane edge at high zoom. Never place popups with fixed
   offsets or bare `right: 0` edge alignment; measure the trigger and clip
   boxes after render (`DropdownButton`, `StatusBar`, `SelectField`).
+- Zoom changes keep the visible line anchored: `setZoom` runs registered
+  `ZoomScrollAnchor`s around `applyZoomLevel` — the editor and viewer capture
+  the line at the viewport middle before the change and restore it after two
+  settle frames (CodeMirror must re-measure re-wrapped line heights first;
+  `utils/zoom-scroll-anchor.ts`). WebKit preserves `scrollTop` across zoom,
+  but the content above the anchor re-flows (line wrapping, diagram
+  fit-to-width), so an unanchored view jumps. `+page.svelte` registers the
+  composite anchor and pauses scroll-sync for the capture/restore window.
 
 ### Export Pipeline
 

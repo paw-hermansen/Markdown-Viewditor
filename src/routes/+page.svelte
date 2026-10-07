@@ -45,7 +45,12 @@
     resetZoom,
     withNominalZoom,
     handleZoomWheel,
+    registerZoomScrollAnchor,
   } from "$lib/stores/zoom.svelte";
+  import {
+    createEditorScrollAnchor,
+    createViewerScrollAnchor,
+  } from "$lib/utils/zoom-scroll-anchor";
   import { viewerState } from "$lib/stores/viewer.svelte";
   import {
     confirmSaveDiscardCancel,
@@ -93,6 +98,7 @@
   let unlistenCloseRequested: (() => void) | undefined;
   let unlistenFocusChanged: (() => void) | undefined;
   let unlistenOpenFile: (() => void) | undefined;
+  let unregisterZoomAnchor: (() => void) | undefined;
   let isCheckingExternalChanges = false;
   let isSaving = false;
 
@@ -704,6 +710,33 @@
     // non-passive so handleZoomWheel can preventDefault the page gesture.
     window.addEventListener("wheel", handleZoomWheel, { passive: false });
 
+    // Keep the visible line anchored across zoom changes (the content above
+    // it re-flows: line wrapping, diagram fit). Scroll-sync is paused for the
+    // whole capture/restore window so it cannot re-map one pane from the
+    // other mid-restore.
+    const editorAnchor = createEditorScrollAnchor(() =>
+      editorComponent?.getEditorView(),
+    );
+    const viewerAnchor = createViewerScrollAnchor(() => viewerElement);
+    unregisterZoomAnchor = registerZoomScrollAnchor({
+      capture() {
+        scrollSync?.pause();
+        editorAnchor.capture();
+        viewerAnchor.capture();
+      },
+      restore() {
+        try {
+          editorAnchor.restore();
+          viewerAnchor.restore();
+        } finally {
+          // After the editor anchor's deferred (post-re-measure) restore.
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => scrollSync?.resume()),
+          );
+        }
+      },
+    });
+
     // Register the built-in exporters (HTML, PDF) so the toolbar dropdown
     // and command palette can list them. Idempotent.
     void registerBuiltinExporters();
@@ -827,6 +860,7 @@
     unlistenCloseRequested?.();
     unlistenFocusChanged?.();
     unlistenOpenFile?.();
+    unregisterZoomAnchor?.();
     window.removeEventListener("wheel", handleZoomWheel);
     if (scrollSync) {
       scrollSync.destroy();

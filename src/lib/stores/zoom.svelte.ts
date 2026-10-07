@@ -1,4 +1,5 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import type { ZoomScrollAnchor } from "$lib/utils/zoom-scroll-anchor";
 import { settingsState, updateSetting } from "./settings.svelte";
 
 /**
@@ -76,12 +77,58 @@ async function applyZoomLevel(level: number): Promise<void> {
  * Set the zoom level (clamped to [MIN_ZOOM, MAX_ZOOM]), apply it to the
  * webview, and persist it. Used by the stepping shortcuts; accepts any
  * value so programmatic callers are not forced onto the ladder.
+ *
+ * WebKit preserves `scrollTop` across zoom changes, but the content above
+ * the anchor re-flows (line wrapping, diagram fit), so the view jumps
+ * unless anchored: registered scroll anchors capture the visible line at
+ * the vertical middle before the change and restore it after reflow lands.
  */
 export async function setZoom(level: number): Promise<void> {
   const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, level));
+  for (const anchor of scrollAnchors) {
+    try {
+      anchor.capture();
+    } catch (error) {
+      console.warn("Failed to capture scroll anchor:", error);
+    }
+  }
   settingsState.zoomLevel = clamped;
   updateSetting("zoomLevel", clamped);
   await applyZoomLevel(clamped);
+  await settleFrames();
+  for (const anchor of scrollAnchors) {
+    try {
+      anchor.restore();
+    } catch (error) {
+      console.warn("Failed to restore scroll anchor:", error);
+    }
+  }
+}
+
+let scrollAnchors: ZoomScrollAnchor[] = [];
+
+/**
+ * Register a capture/restore pair that keeps the visible content anchored
+ * across zoom changes (see `utils/zoom-scroll-anchor.ts`). Returns an
+ * unregister function.
+ */
+export function registerZoomScrollAnchor(anchor: ZoomScrollAnchor): () => void {
+  scrollAnchors.push(anchor);
+  return () => {
+    scrollAnchors = scrollAnchors.filter((a) => a !== anchor);
+  };
+}
+
+/** Two frames so reflow (and CodeMirror re-measure) land after the zoom. */
+function settleFrames(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame !== "function") {
+      // Node test environments have no rAF.
+      setTimeout(resolve, 0);
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
 }
 
 export async function zoomIn(): Promise<void> {

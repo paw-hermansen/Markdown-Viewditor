@@ -636,6 +636,13 @@ This section tests ODT export with various content types and rasterization optio
 | 15.25 | At 200% and 300% zoom, look at the "Xychart (Bar Chart)" section. | The y-axis tick labels and the axis title stay visible and attached to their ticks (before the `translate` fix they collapsed to the top of the chart and vanished at 300%). |
 | 15.26 | At 200% and 300% zoom, glance at the remaining "Mermaid — Diagram Types" sections (Class, State, ER, Pie, Quadrant, Sankey, Git Graph, Block). | All labels stay legible and attached to their shapes — nothing vanishes, drifts, or scales differently from its diagram. |
 
+### 15g. Scroll Anchoring
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.27 | In split view, scroll the editor so one line sits at the vertical middle (e.g. around line 326 of `MathChemMermaid-All.md`); press `Ctrl++` step by step to 300%. | The same rendered line stays at the vertical middle at every step (the viewer keeps showing the matching content) — no visible jumping between steps. |
+| 15.28 | Press `Ctrl+-` step by step to 70%, then `Ctrl+0`. Repeat once in editor-only mode and once in viewer-only mode. | Still anchored at every step, in all view modes. |
+
 ---
 
 # Part 2 — Feature Reference
@@ -927,6 +934,7 @@ within each story gives the precise check.
 | Zoom | Mermaid HTML-label families (journey/mindmap) | **S15** (15.24) |
 | Zoom | Mermaid translate-positioned labels (xychart) | **S15** (15.25) |
 | Zoom | Mermaid remaining diagram types | **S15** (15.26) |
+| Zoom | Scroll anchor preserved while zooming | **S15** (15.27–15.28) |
 | Zoom | Status bar legibility at extreme zoom | **S15** (15.14–15.15) |
 | Zoom | Menus scroll at high zoom (Export as…, theme) | **S15** (15.16) |
 | Zoom | Compatibility popup scrolls at high zoom | **S15** (15.17) |

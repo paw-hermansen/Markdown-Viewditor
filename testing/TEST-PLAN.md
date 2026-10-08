@@ -237,7 +237,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 7.2 | Click the level button, click "Basic". | Level changes to "Basic". No warnings for pure CommonMark content. |
 | 7.3 | With "Basic" level, look at `Rendering-All.md` in editor. | Gutter warnings appear on lines using tables, strikethrough, highlight, task lists, autolinks, footnotes, raw HTML, math, frontmatter, and mermaid. Warning badge shows count in status bar. |
 | 7.4 | Hover over a yellow gutter marker. | Tooltip shows the violation message (e.g. "Tables is above the 'basic' level (requires: github)"). |
-| 7.5 | Click the warning badge. | Popover shows violation details. |
+| 7.5 | Click the warning badge. | Popover shows violation details, ordered by required preset (GitHub features first, then Advanced-only) and alphabetically within each group. The level popover's toggle checklist uses the same order. |
 | 7.6 | Switch to "GitHub". | Warnings clear for tables, strikethrough, task lists, autolinks, footnotes, raw HTML, math (dollar), and mermaid. Warnings remain for highlight, frontmatter, chemistry, and LaTeX math. |
 | 7.7 | Open `MathChemMermaid-All.md` with "GitHub" level. | Warnings on `\(...\)`, `\[...\]`, `\begin{}`, ` ```math `, `\ce{}`, and mermaid fence lines. |
 | 7.8 | Switch to "Advanced". | All warnings clear. No badge. |

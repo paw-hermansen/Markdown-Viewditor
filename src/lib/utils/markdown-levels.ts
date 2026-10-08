@@ -105,6 +105,29 @@ export function requiredPreset(
   return null;
 }
 
+/**
+ * Display order for the status-bar feature lists (toggle checklist and
+ * violation rows): grouped by the smallest preset that enables the toggle
+ * (github -> advanced -> custom-only), alphabetical by label within each
+ * group. Cosmetic only — the registry order still drives `presetFor()` output
+ * and the stored `enabledFeatures` array.
+ */
+export function compareFeatureToggles(
+  a: FeatureToggle,
+  b: FeatureToggle,
+): number {
+  const rank = (t: FeatureToggle): number => {
+    const req = requiredPreset(t);
+    return req === "github" ? 0 : req === "advanced" ? 1 : 2;
+  };
+  const group = rank(a) - rank(b);
+  if (group !== 0) return group;
+  return a.label.localeCompare(b.label, undefined, {
+    sensitivity: "base",
+    numeric: true,
+  });
+}
+
 /** Human-readable warning for a used-but-disabled feature. */
 export function violationMessage(
   v: UsedFeature,

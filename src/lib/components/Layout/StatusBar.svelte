@@ -7,6 +7,7 @@
   import { computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
   import {
     listFeatureToggles,
+    compareFeatureToggles,
     presetFor,
     presetForEnabled,
     violationMessage,
@@ -25,7 +26,9 @@
     custom: 'Custom'
   };
 
-  let toggles = $derived(listFeatureToggles());
+  // Display order (required-preset group, then alphabetical) for both the
+  // checklist and the violation rows — see compareFeatureToggles().
+  let toggles = $derived(listFeatureToggles().sort(compareFeatureToggles));
   let totalToggles = $derived(toggles.length);
 
   // Display label for the level: "Custom (n/9)" when in custom mode.
@@ -88,7 +91,7 @@
     };
   });
 
-  let violations = $derived(levelState.violations);
+  let violations = $derived([...levelState.violations].sort(compareFeatureToggles));
 
   function selectLevel(level: MarkdownLevel) {
     if (level === 'custom') {

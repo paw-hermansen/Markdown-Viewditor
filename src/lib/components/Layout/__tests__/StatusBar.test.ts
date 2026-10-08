@@ -141,6 +141,21 @@ vi.mock("$lib/utils/markdown-levels", () => ({
     return "custom";
   },
   violationMessage: (v: { label: string }) => `${v.label} (warning)`,
+  // Mirrors the real comparator (required-preset group, then label).
+  compareFeatureToggles: (
+    a: { label: string; presets: { github?: boolean; advanced: boolean } },
+    b: { label: string; presets: { github?: boolean; advanced: boolean } },
+  ) => {
+    const rank = (t: { presets: { github?: boolean; advanced: boolean } }) =>
+      t.presets.github ? 0 : t.presets.advanced ? 1 : 2;
+    const group = rank(a) - rank(b);
+    return group !== 0
+      ? group
+      : a.label.localeCompare(b.label, undefined, {
+          sensitivity: "base",
+          numeric: true,
+        });
+  },
 }));
 
 describe("StatusBar", () => {
@@ -202,9 +217,9 @@ describe("StatusBar", () => {
     await fireEvent.click(levelBtn);
     const checkboxes = screen.getAllByRole("checkbox");
     expect(checkboxes.length).toBe(7);
-    // Uncheck the first toggle ("tables"); the enabledFeatures array should
-    // drop "tables" and the level should flip to "custom".
-    await fireEvent.click(checkboxes[0]);
+    // Uncheck the "Tables" toggle; the enabledFeatures array should drop
+    // "tables" (kept in registry order) and the level should flip to "custom".
+    await fireEvent.click(screen.getByRole("checkbox", { name: "Tables" }));
     expect(updateSetting).toHaveBeenCalledWith("enabledFeatures", [
       "strikethrough",
       "task-lists",
@@ -214,6 +229,27 @@ describe("StatusBar", () => {
       "frontmatter",
     ]);
     expect(updateSetting).toHaveBeenCalledWith("markdownLevel", "custom");
+  });
+
+  it("sorts the checklist by required preset group, then label", async () => {
+    render(StatusBar);
+    await fireEvent.click(
+      screen.getByLabelText("Markdown compatibility level"),
+    );
+    const labels = screen
+      .getAllByRole("checkbox")
+      .map((cb) => (cb.closest("label") as HTMLElement).title);
+    expect(labels).toEqual([
+      // github preset group, alphabetical
+      "Bare-URL autolinks",
+      "Footnotes `[^x]`",
+      "Raw HTML",
+      "Strikethrough `~~x~~`",
+      "Tables",
+      "Task lists `- [ ]`",
+      // advanced-only group, alphabetical
+      "YAML frontmatter",
+    ]);
   });
 
   it("hides the violation badge when there are no violations", () => {
@@ -240,6 +276,50 @@ describe("StatusBar", () => {
     await fireEvent.click(badge);
     expect(screen.getByText("Raw HTML (warning)")).toBeInTheDocument();
     expect(screen.getByText(/line: 3/)).toBeInTheDocument();
+  });
+
+  it("sorts violation rows by required preset group, then label", async () => {
+    mockLevelState.violations = [
+      {
+        id: "frontmatter",
+        label: "YAML frontmatter",
+        presets: { advanced: true },
+        lines: [1],
+      },
+      {
+        id: "tables",
+        label: "Tables",
+        presets: { github: true, advanced: true },
+        lines: [4],
+      },
+      {
+        id: "highlight",
+        label: "Highlight ==x==",
+        presets: { advanced: true },
+        lines: [9],
+      },
+      {
+        id: "raw-html",
+        label: "Raw HTML",
+        presets: { github: true, advanced: true },
+        lines: [2],
+      },
+    ];
+    const { container } = render(StatusBar);
+    await fireEvent.click(
+      screen.getByLabelText("4 markdown feature violations"),
+    );
+    const msgs = Array.from(container.querySelectorAll(".violation-msg")).map(
+      (el) => el.textContent,
+    );
+    expect(msgs).toEqual([
+      // github preset group, alphabetical
+      "Raw HTML (warning)",
+      "Tables (warning)",
+      // advanced-only group, alphabetical
+      "Highlight ==x== (warning)",
+      "YAML frontmatter (warning)",
+    ]);
   });
 
   it("has no accessibility violations", async () => {

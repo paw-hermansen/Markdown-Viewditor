@@ -434,6 +434,61 @@ probe miss deterministically at zoom != 100%. The symptom is the whole app on
 the generic dark/light palette while only the viewer's text box shows the
 theme.
 
+### Theme changes and Mermaid cache keys
+
+Mermaid SVGs are cached per `[appTheme.type, appTheme.themeId, variant,
+content]`. The app theme for one render is **snapshotted once** in
+`preRenderMermaidBlocks` onto the markdown-it env (`mermaidAppTheme`);
+`renderFence` must look the cache up with that snapshot
+(`themeSnapshotFromEnv(env)`) and never re-read `getAppTheme()` — a theme
+change mid-render then makes the fence lookup miss the keys the pass filled,
+and every diagram renders as a "Mermaid rendering failed" block (or hits a
+stale theme's cached SVGs and keeps the old colors).
+
+Theme commits must be **atomic**: `viewerState.theme` is what triggers the
+render `$effect`, so it may only change together with the theme CSS injection
+and the `data-theme*` attribute updates (i.e. via `setTheme` in
+`stores/viewer.svelte.ts`). Never write `viewerState.theme` directly — the
+old `ThemeSelector` had `bind:value={viewerState.theme}`, so DropdownButton
+wrote the state the moment a theme was clicked, the re-render raced the
+attribute update, and diagrams broke exactly as above. Regression tests:
+`mermaid.test.ts` ("cache keys in sync …mid-render") and
+`ThemeSelector.test.ts` ("does not commit viewerState.theme until the theme
+is applied").
+
+### Render busy overlay
+
+`Viewer.svelte` shows a ghosted "Rendering…" overlay (the same pill/spinner as
+the file-open "Loading…" overlay) for **major renders only**: the first render
+of a document, a theme change (every Mermaid diagram misses the theme-keyed
+cache and re-renders) and `forceRender()`/Reload. Routine typing re-renders
+never show it — an overlay flickering on every debounced keystroke render is
+worse than the wait. Major renders also skip the 150 ms debounce (discrete
+actions, not typing) and raise the overlay synchronously via `requestRender(…,
+major)` when they start; it is dropped once the new DOM is on screen
+(`clearBusy()` after `tick()`). Quick renders never paint it (the early render
+phases are synchronous), so there is no flash threshold to maintain. The
+overlay is `pointer-events: none` (`.rendering-overlay`) so the editor and
+scrolling stay usable. File open keeps its blocking "Loading…" overlay; export
+keeps `ExportOverlay`. Note the spinner can only animate where the render
+yields (the Mermaid pre-render loop); parse/render/`{@html}` are synchronous
+and freeze it briefly.
+
+**Zoom never shows it and must not**: zoom is the webview's native page zoom —
+it re-renders nothing (the Mermaid/KaTeX caches are zoom-independent); the
+delay on heavy documents is engine relayout/repaint, which blocks the same
+thread an overlay would animate on.
+
+Mermaid's pre-render pass renders diagrams strictly sequentially on purpose:
+a concurrent worker pool was measured at ~0 wall-clock gain (12 diagrams:
+~2.1 s at concurrency 4 vs ~2.0 s at 1 in the jsdom harness) because
+`mermaid.render` is synchronous CPU on the one JS thread — JS-level
+concurrency has no async gaps to overlap. Don't re-introduce a pool for
+speed; the lever for faster theme changes is avoiding re-renders (e.g.
+patching Mermaid SVGs in place), not parallelizing them. Error cleanup is
+scoped to the failing render's temp nodes
+(`removeMermaidTempElements(renderId)`).
+
 ### Export Pipeline
 
 `src/lib/export/` hosts an extensible exporter registry:

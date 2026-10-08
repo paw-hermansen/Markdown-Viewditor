@@ -234,7 +234,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | Step | Action | Expected |
 |------|--------|----------|
 | 7.1 | Open `Rendering-All.md`, check the status bar. | Level button shows "Advanced". |
-| 7.2 | Click the level button, click "Basic". | Level changes to "Basic". No warnings for pure CommonMark content. |
+| 7.2 | Click the level button, click "Basic". | Level changes to "Basic". No warnings for pure CommonMark content. With the popover open, switching Basic/GitHub/Advanced does not move the popover horizontally — it stays glued to the level button. |
 | 7.3 | With "Basic" level, look at `Rendering-All.md` in editor. | Gutter warnings appear on lines using tables, strikethrough, highlight, task lists, autolinks, footnotes, raw HTML, math, frontmatter, and mermaid. Warning badge shows count in status bar. |
 | 7.4 | Hover over a yellow gutter marker. | Tooltip shows the violation message (e.g. "Tables is above the 'basic' level (requires: github)"). |
 | 7.5 | Click the warning badge. | Popover shows violation details, ordered by required preset (GitHub features first, then Advanced-only) and alphabetically within each group. The level popover's toggle checklist uses the same order. |

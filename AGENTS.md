@@ -402,7 +402,12 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   window) so entries scroll into reach instead of being cut at the status
   bar line or the pane edge at high zoom. Never place popups with fixed
   offsets or bare `right: 0` edge alignment; measure the trigger and clip
-  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`). Measure
+  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`). Apply
+  the measured position with `anchorPopup()`, anchored on the _alignment_
+  side (a right-aligned popup gets a `right` offset from its wrapper's edge):
+  a `left` offset bakes the trigger's current width into a constant, so a
+  trigger that relabels (the status-bar level button: "Advanced" → "Basic")
+  slides the popup off its edge by exactly the width delta. Measure
   the popup's natural height with `naturalBoxHeight()` (scrollHeight +
   borders, rounded up — WebKit rounds border metrics to fractions of a
   pixel): under `box-sizing: border-box`, `max-height: scrollHeight` is ~2px

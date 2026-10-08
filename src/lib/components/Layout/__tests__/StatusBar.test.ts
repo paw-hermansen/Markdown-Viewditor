@@ -326,4 +326,37 @@ describe("StatusBar", () => {
     const { container } = render(StatusBar);
     await checkA11y(container);
   });
+
+  it("glues the open popover to the trigger's right edge (no slide on relabel)", async () => {
+    render(StatusBar);
+    const levelBtn = screen.getByLabelText("Markdown compatibility level");
+    // jsdom has no layout: stand in for the right-packed status bar row.
+    // The trigger's right edge sits at x=400; the popover is 220 wide.
+    const rect = (left: number, right: number) =>
+      ({
+        left,
+        right,
+        width: right - left,
+        top: 740,
+        bottom: 780,
+        x: left,
+        y: 740,
+        height: 40,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    levelBtn.getBoundingClientRect = () => rect(320, 400);
+    await fireEvent.click(levelBtn);
+    const pop = document.querySelector(".level-popover") as HTMLElement;
+    pop.parentElement!.getBoundingClientRect = () => rect(320, 400);
+    pop.getBoundingClientRect = () => rect(180, 400);
+    // Placement runs on a frame after the popover opens; wait for it.
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
+    // Right-based anchoring is what keeps the popover glued when the button
+    // relabels ("Advanced" -> "Basic") and its width changes — a left offset
+    // would carry the old width and slide the popover off the button.
+    expect(pop.style.left).toBe("auto");
+    expect(pop.style.right).toBe("0px");
+  });
 });

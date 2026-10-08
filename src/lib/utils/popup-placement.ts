@@ -58,6 +58,40 @@ export function naturalBoxHeight(el: HTMLElement): number {
   return Math.ceil(el.scrollHeight + (Number.isFinite(borders) ? borders : 0));
 }
 
+export interface PopupAnchor {
+  /** CSS `left` value for the popup inside its positioned ancestor. */
+  left: string;
+  /** CSS `right` value for the popup inside its positioned ancestor. */
+  right: string;
+}
+
+/**
+ * Inline offsets that glue a placed popup to its trigger's aligned edge
+ * inside `wrapper` (the popup's positioned ancestor).
+ *
+ * Anchor on the same side as `align`. A right-aligned popup must be offset
+ * as a `right` distance from the wrapper's right edge: a `left` offset bakes
+ * the trigger's current width into a constant, so a trigger whose label
+ * changes width (status bar level button: "Advanced" -> "Basic") slides the
+ * popup off the trigger's right edge by exactly the width delta. The
+ * measured {@link PopupPlacement} still decides the position (clip clamping
+ * included); this only decides which edge it is remembered by.
+ */
+export function anchorPopup(
+  wrapper: PopupRect,
+  placement: PopupPlacement,
+  popupWidth: number,
+  align: "left" | "right" = "right",
+): PopupAnchor {
+  if (align === "right") {
+    return {
+      left: "auto",
+      right: `${wrapper.right - (placement.left + popupWidth)}px`,
+    };
+  }
+  return { left: `${placement.left - wrapper.left}px`, right: "auto" };
+}
+
 /**
  * Pure placement math: keep `popup` inside `clip`, aligned to `trigger`.
  * `popup.height` should be the natural *border-box* height (see

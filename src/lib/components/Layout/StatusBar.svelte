@@ -4,7 +4,7 @@
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { zoomIn, zoomOut, resetZoom, zoomLabel } from '$lib/stores/zoom.svelte';
   import { modLabel } from '$lib/utils/keyboard';
-  import { computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
+  import { anchorPopup, computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
   import {
     listFeatureToggles,
     compareFeatureToggles,
@@ -66,8 +66,17 @@
       align: 'right',
       openDirection: 'up',
     });
-    pop.style.left = `${placement.left - wrapper.getBoundingClientRect().left}px`;
-    pop.style.right = 'auto';
+    // Anchor on the right edge (the aligned edge): the trigger's label
+    // changes width when the preset switches ("Advanced" -> "Basic"), and a
+    // left offset would slide the popover off the button by the delta.
+    const anchor = anchorPopup(
+      wrapper.getBoundingClientRect(),
+      placement,
+      pop.getBoundingClientRect().width,
+      'right',
+    );
+    pop.style.left = anchor.left;
+    pop.style.right = anchor.right;
     if (capHeight) {
       pop.style.maxHeight = `${placement.maxHeight}px`;
     }

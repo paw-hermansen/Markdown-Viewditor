@@ -8,7 +8,7 @@
 
 <script lang="ts" generics="T extends string">
   import type { Snippet } from 'svelte';
-  import { computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
+  import { anchorPopup, computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
 
   interface Props {
     choices: Choice<T>[];
@@ -115,10 +115,15 @@
       },
       align,
     });
-    const rootLeft = rootRef.getBoundingClientRect().left;
+    const anchor = anchorPopup(
+      rootRef.getBoundingClientRect(),
+      placement,
+      dropdown.getBoundingClientRect().width,
+      align,
+    );
     const parts = [
-      `left:${placement.left - rootLeft}px`,
-      'right:auto',
+      `left:${anchor.left}`,
+      `right:${anchor.right}`,
       `max-height:${placement.maxHeight}px`,
     ];
     if (placement.maxWidth !== undefined) {

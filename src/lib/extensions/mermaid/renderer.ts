@@ -14,7 +14,7 @@ import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
-interface AppThemeInfo {
+export interface AppThemeInfo {
   type: AppTheme;
   themeId: string;
 }
@@ -189,13 +189,31 @@ function getViewerThemeOverrides(theme: AppTheme): {
   return { themeVariables: { mainBkg } };
 }
 
+/**
+ * Cache-key field on the markdown-it env holding the app theme snapshot for
+ * the current render. Taken once in {@link preRenderMermaidBlocks} and shared
+ * by the pre-render pass and the fence renderer, so their cache keys can
+ * never disagree. Without it, a theme change mid-render made the fence
+ * lookup miss (every diagram became a "Mermaid rendering failed" block) or
+ * hit a stale theme's cache (diagrams kept the old colors).
+ */
+const THEME_SNAPSHOT_ENV_KEY = "mermaidAppTheme";
+
+export function themeSnapshotFromEnv(
+  env: Record<string, unknown> | undefined,
+): AppThemeInfo | undefined {
+  return env?.[THEME_SNAPSHOT_ENV_KEY] as AppThemeInfo | undefined;
+}
+
 export function preRenderMermaidBlocks(
   tokens: readonly MermaidFenceToken[],
   env: Record<string, unknown>,
   schema: FenceOptionSchema,
 ): Promise<void> {
+  const appTheme = getAppTheme();
+  env[THEME_SNAPSHOT_ENV_KEY] = appTheme;
   const queuedPass = preRenderQueue.then(() =>
-    preRenderMermaidBlocksPass(tokens, env, schema),
+    preRenderMermaidBlocksPass(tokens, env, schema, appTheme),
   );
   preRenderQueue = queuedPass.catch(() => undefined);
   return queuedPass;
@@ -205,14 +223,17 @@ async function preRenderMermaidBlocksPass(
   tokens: readonly MermaidFenceToken[],
   env: Record<string, unknown>,
   schema: FenceOptionSchema,
+  appTheme: AppThemeInfo,
 ): Promise<void> {
-  const appTheme = getAppTheme();
   const mermaidTokens = tokens.filter(isMermaidFence);
   if (mermaidTokens.length === 0) return;
 
   let mod: MermaidModule | null = null;
   let loadFailed = false;
 
+  // Render strictly one diagram after another. (A concurrent worker pool was
+  // measured at ~0 wall-clock gain — `mermaid.render` is synchronous CPU on
+  // the one JS thread, so JS-level concurrency has no async gaps to overlap.)
   for (let idx = 0; idx < tokens.length; idx++) {
     const token = tokens[idx];
     if (!isMermaidFence(token)) continue;
@@ -230,18 +251,19 @@ async function preRenderMermaidBlocksPass(
       continue;
     }
 
+    const renderId = `mmd-${nextRenderId++}`;
     try {
       if (!mod) mod = await ensureLoaded();
       await ensureInitialized(mod, appTheme, "viewer");
-      const { svg } = await mod.default.render(
-        `mmd-${nextRenderId++}`,
-        diagramContent,
-      );
+      const { svg } = await mod.default.render(renderId, diagramContent);
       // Cache the zoom-proof form: em-based dy/dx offsets drift under WebKit
       // page zoom (see text-offsets.ts).
       svgCache.set(key, normalizeSvgTextOffsets(svg));
     } catch (err) {
-      removeMermaidTempElements();
+      // Scope cleanup to this render's temp nodes (mirrored as
+      // div#d<renderId> / iframe#i<renderId>): precise, and never sweeps
+      // containers that did not belong to the failed render.
+      removeMermaidTempElements(renderId);
       if (!mod) {
         loadFailed = true;
         console.error("[mermaid] Load error:", err);
@@ -253,13 +275,22 @@ async function preRenderMermaidBlocksPass(
   }
 }
 
-function removeMermaidTempElements(): void {
-  if (
-    typeof document === "undefined" ||
-    typeof document.querySelectorAll !== "function"
-  ) {
+/**
+ * Remove Mermaid's temporary render containers. Mermaid mirrors the render
+ * id (`mmd-5`) as `div#dmmd-5` / `iframe#immd-5`. Pass a render id to clean
+ * up after a single failed render — only that render's containers are
+ * touched. Without an id, sweep everything left behind (used by the
+ * export/print paths).
+ */
+function removeMermaidTempElements(renderId?: string): void {
+  if (typeof document === "undefined") return;
+  if (renderId !== undefined) {
+    if (typeof document.getElementById !== "function") return;
+    document.getElementById(`d${renderId}`)?.remove();
+    document.getElementById(`i${renderId}`)?.remove();
     return;
   }
+  if (typeof document.querySelectorAll !== "function") return;
   document
     .querySelectorAll('body > div[id^="dmmd-"], body > iframe[id^="immd-"]')
     .forEach((node) => node.remove());
@@ -268,8 +299,9 @@ function removeMermaidTempElements(): void {
 export function renderMermaid(
   content: string,
   options: Record<string, unknown>,
+  appTheme?: AppThemeInfo,
 ): string {
-  const key = cacheKey(content, getAppTheme());
+  const key = cacheKey(content, appTheme ?? getAppTheme());
   const cached = svgCache.get(key);
   // Tag the wrapper with a stable id and remember its diagram source so the
   // PDF print clone can re-render the block in the print variant later

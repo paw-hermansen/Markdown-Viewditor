@@ -72,11 +72,15 @@ export interface MarkdownExtension {
    * @param language - The language identifier (e.g. "smiles")
    * @param options - Parsed and validated fence attributes from {key=val},
    *                  or an empty object if none provided
+   * @param env - The markdown-it render env shared with preRenderBlocks, so
+   *              renderers can read per-render snapshots taken there (e.g.
+   *              Mermaid's app-theme cache key)
    */
   renderFence?(
     content: string,
     language: string,
     options: Record<string, unknown>,
+    env?: Record<string, unknown>,
   ): string | null;
 
   /**

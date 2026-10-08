@@ -252,6 +252,31 @@ describe("mermaid extension", () => {
       );
     });
 
+    it("keeps pre-render and fence cache keys in sync when the theme changes mid-render", async () => {
+      setAppTheme("dark", "github-dark");
+      registerExtension(mermaidExtension);
+      const md = new MarkdownIt({ html: true })
+        .use(directivePlugin)
+        .use(extensionFencePlugin);
+      const env: Record<string, unknown> = {};
+      const source = "graph LR\n    A-->B\n";
+      const tokens = md.parse("```mermaid\n" + source + "```\n", env);
+
+      await mermaidExtension.preRenderBlocks!("", { tokens, env });
+
+      // The theme flips after the pre-render pass but before the fence
+      // renderer runs. The fence lookup must use the pass's theme snapshot —
+      // reading the DOM again here used to miss the cache and render every
+      // diagram as a "Mermaid rendering failed" error block (or pick up a
+      // stale theme's cached SVGs).
+      setAppTheme("light", "github-light");
+      const html = md.renderer.render(tokens, md.options, env);
+
+      expect(html).toContain("<svg");
+      expect(html).not.toContain("mermaid-error-block");
+      expect(mermaidMock.render).toHaveBeenCalledTimes(1);
+    });
+
     it("passes themeVariables.mainBkg when viewer defines --mermaid-main-bkg", async () => {
       setAppTheme("light", "nord-light", "#D8DEE9");
 
@@ -557,13 +582,20 @@ describe("mermaid extension", () => {
       );
     });
 
-    it("sweeps leftover Mermaid temp nodes after a failed render", async () => {
+    it("removes a failed render's leftover temp nodes without sweeping siblings", async () => {
       const leftoverDiv = { remove: vi.fn() };
       const leftoverIframe = { remove: vi.fn() };
-      const querySelectorAll = vi.fn(() => [leftoverDiv, leftoverIframe]);
+      const querySelectorAll = vi.fn(() => [{ remove: vi.fn() }]);
+      const getElementById = vi.fn((id: string) => {
+        // Mermaid mirrors the render id (`mmd-0` after clearMermaidCache) as
+        // `div#dmmd-0` / `iframe#immd-0`.
+        if (id === "dmmd-0") return leftoverDiv;
+        if (id === "immd-0") return leftoverIframe;
+        return null;
+      });
       vi.stubGlobal("document", {
         documentElement: { getAttribute: () => "light" },
-        getElementById: () => null,
+        getElementById,
         querySelectorAll,
       });
       mermaidMock.render.mockRejectedValueOnce(new Error("render failed"));
@@ -574,11 +606,13 @@ describe("mermaid extension", () => {
         MERMAID_OPTIONS_SCHEMA,
       );
 
-      expect(querySelectorAll).toHaveBeenCalledWith(
-        'body > div[id^="dmmd-"], body > iframe[id^="immd-"]',
-      );
+      expect(getElementById).toHaveBeenCalledWith("dmmd-0");
+      expect(getElementById).toHaveBeenCalledWith("immd-0");
       expect(leftoverDiv.remove).toHaveBeenCalled();
       expect(leftoverIframe.remove).toHaveBeenCalled();
+      // Cleanup is scoped to the failing render's own temp containers
+      // (never a blanket sweep of every leftover).
+      expect(querySelectorAll).not.toHaveBeenCalled();
     });
 
     it("isolates Mermaid initialization failures to the failed diagram", async () => {

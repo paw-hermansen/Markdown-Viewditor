@@ -10,6 +10,7 @@ const {
   mockRenderMarkdown,
   mockOpenUrl,
   mockOpenPath,
+  mockSyncViewerBackground,
 } = vi.hoisted(() => ({
   mockViewerState: { theme: "github-dark", scrollTop: 0 },
   mockFileState: { currentFile: "/home/user/test.md" },
@@ -19,6 +20,7 @@ const {
   }),
   mockOpenUrl: vi.fn().mockResolvedValue(undefined),
   mockOpenPath: vi.fn().mockResolvedValue(undefined),
+  mockSyncViewerBackground: vi.fn(),
 }));
 
 vi.mock("$lib/stores/viewer.svelte", () => ({
@@ -31,6 +33,7 @@ vi.mock("$lib/stores/file.svelte", () => ({
 
 vi.mock("$lib/utils/markdown", () => ({
   renderMarkdown: mockRenderMarkdown,
+  syncViewerBackground: mockSyncViewerBackground,
 }));
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
@@ -104,6 +107,15 @@ describe("Viewer", () => {
     render(Viewer, { props: { content: "# Test", onViewerReady } });
     await waitFor(() => {
       expect(onViewerReady).toHaveBeenCalledWith(expect.any(HTMLDivElement));
+    });
+  });
+
+  it("derives the app background (--viewer-bg) once mounted", async () => {
+    // The theme background copy must happen here, not from a startup rAF:
+    // see syncViewerBackground in utils/markdown.ts.
+    render(Viewer, { props: { content: "# Hello" } });
+    await waitFor(() => {
+      expect(mockSyncViewerBackground).toHaveBeenCalled();
     });
   });
 

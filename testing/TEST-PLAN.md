@@ -481,6 +481,7 @@ This section tests ODT export with various content types and rasterization optio
 | 11.5 | Select "Printer Friendly / Neutral". | Light theme with neutral syntax highlighting. |
 | 11.6 | Place a `.css` file in the themes directory, restart. | Custom theme appears in dropdown. Select it — viewer and code use custom CSS. |
 | 11.7 | Select a theme, close, reopen. | Same theme active. |
+| 11.8 | Select a theme, set zoom to 70% (repeat with 125%), close, reopen. | The theme background applies to editor and viewer just like at 100% — not a generic dark/light background everywhere except the viewer's text area (startup regression: the `--viewer-bg` derivation raced the first render). |
 
 ---
 
@@ -910,6 +911,7 @@ within each story gives the precise check.
 | Themes | Printer Friendly | **S11** (11.5) |
 | Themes | Custom theme | **S11** (11.6) |
 | Themes | Persistence | **S11** (11.7) |
+| Themes | Background at startup with zoom | **S11** (11.8) |
 | View toggle | Editor / Split / Viewer | **S2** (2.8) |
 | View toggle | Active state highlight | **S2** (2.8) |
 | View toggle | Persistence | **S2** (2.14) |

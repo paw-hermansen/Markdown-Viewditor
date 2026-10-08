@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { renderMarkdown } from '$lib/utils/markdown';
+  import { renderMarkdown, syncViewerBackground } from '$lib/utils/markdown';
   import { resolveLink } from '$lib/utils/path';
   import { viewerState } from '$lib/stores/viewer.svelte';
   import { fileState } from '$lib/stores/file.svelte';
@@ -126,6 +126,18 @@
     }, hasRenderedOnce ? 150 : 0);
 
     return request.cancel;
+  });
+
+  // Derive --viewer-bg from the theme's #viewer-content background. Runs
+  // here — not from a startup rAF in setTheme — because at startup the
+  // element does not exist yet when that rAF is scheduled, and a frame
+  // flushed early (e.g. by the persisted zoom applying at launch) makes it
+  // miss, leaving the app on the generic palette. See syncViewerBackground.
+  $effect(() => {
+    const el = viewerContentElement;
+    void viewerState.theme;
+    if (!el) return;
+    syncViewerBackground();
   });
 
   $effect(() => {

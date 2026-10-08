@@ -420,6 +420,20 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   fit-to-width), so an unanchored view jumps. `+page.svelte` registers the
   composite anchor and pauses scroll-sync for the capture/restore window.
 
+### Theme background (`--viewer-bg`)
+
+Theme CSS scopes its colors to `#viewer-content`, and the app-wide background
+(editor, viewer container, chrome) comes from `--viewer-bg`, which is derived
+at runtime: `syncViewerBackground()` (`utils/markdown.ts`) copies the computed
+`#viewer-content` background onto `<html>`. It runs from the Viewer's
+mount/theme effect (`Viewer.svelte`) and from `setTheme()` after the theme CSS
+is injected. Never derive it from a bare startup rAF: `#viewer-content` does
+not exist until the app renders (`+layout` waits for `ready`), and a frame
+flushed before that — e.g. the persisted zoom applying at launch — makes the
+probe miss deterministically at zoom != 100%. The symptom is the whole app on
+the generic dark/light palette while only the viewer's text box shows the
+theme.
+
 ### Export Pipeline
 
 `src/lib/export/` hosts an extensible exporter registry:

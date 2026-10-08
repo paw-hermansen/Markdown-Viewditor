@@ -443,6 +443,10 @@ layout as in the Viewer (e.g. `maxWidth=300` → at most 300/800 of the page
 width). `fitToWidth=false` keeps the diagram at its natural size, but is
 still clamped to the page width since ODF has no scroll container.
 
+## Custom Themes
+
+Diagram labels are measured before a [custom theme's](CustomThemes.md) styles apply and painted afterwards, so theme rules that change text metrics (font family, line height, font sizes) can cut off label text. See [Mermaid Diagrams: Cut-Off Text](CustomThemes.md#mermaid-diagrams-cut-off-text) for the details and a safe reset pattern.
+
 ## Mermaid Reference
 
 Mermaid supports dozens of diagram types including flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, mind maps, and more.

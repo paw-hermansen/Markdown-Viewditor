@@ -44,6 +44,46 @@ Images are rendered with square corners by default. To round them, set `border-r
 
 Use `border-radius: 50%` for circular avatars. This also applies to HTML/PDF exports, which share the viewer styles.
 
+## Mermaid Diagrams: Cut-Off Text
+
+Mermaid diagrams render their labels as HTML and **measure each label once** to draw the box around it — in a temporary container outside `#viewer-content`, where your theme does **not** apply. The finished diagram is displayed inside `#viewer-content`, where your theme **does** apply. The app pins the label font size across both steps, but it cannot pin your font family or line height.
+
+If a rule changes how text measures, the painted label is bigger than the reserved box and characters get cut off (typically the right edge of flowchart node labels). **Colors are safe; text metrics are not.**
+
+| Rule                                                                                                                                 | Why it clips labels                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `font-family` on `#viewer-content`                                                                                                   | Labels are measured with the app's default sans font and painted with yours; a wider font (e.g. a serif) clips the right edge. |
+| `line-height` on `p`                                                                                                                 | Every label wraps its text in a `<p>`, so `#viewer-content p { line-height: 1.8 }` makes labels taller than measured.          |
+| `font-size`, `font-weight`, `font-style`, `letter-spacing`, `word-spacing` on `p`, `strong`, `em`, `code`, `a`, `span`, `sub`, `sup` | Labels may contain these elements (bold, italics, links in label text).                                                        |
+| `padding`, `border` on inline elements (`code`, `img`, …)                                                                            | Adds size the measurement did not see.                                                                                         |
+
+Affected diagram types are those with HTML labels: flowchart, class, state, sequence, journey, mindmap and block. HTML and PDF exports reuse the viewer styles, so the same rules carry over. Mermaid's node fill color can be customized safely with `--mermaid-main-bkg` on `#viewer-content` (light themes only).
+
+### Keeping Text Metrics Out of Diagrams
+
+Either scope text-metric properties to elements that never appear in diagram labels — `h1`–`h6`, `li`, `blockquote`, `td`, `th`, `dt`, `dd`, `summary` — instead of `#viewer-content` itself or `p` / `strong` / `em` / `code` / `a` / inline elements:
+
+```css
+#viewer-content h1,
+#viewer-content li,
+#viewer-content blockquote {
+  font-family: Georgia, serif;
+}
+```
+
+…or, if your design needs a document-wide font, reset the metrics inside diagrams so labels still measure like the app default (`var(--font-sans)`, the font the app measures with):
+
+```css
+#viewer-content .mermaid-block {
+  font-family: var(--font-sans);
+}
+#viewer-content .mermaid-block p {
+  line-height: 1.5;
+}
+```
+
+Apply the same reset to any other text-metric rule your theme sets on label elements. This keeps ordinary font and line-height theming safe; rules that deliberately target diagram internals (e.g. `#viewer-content svg text`, `.mermaid-block svg foreignObject > div`) can still break diagram layout — there is no way to fully prevent that.
+
 ## Highlight.js Token Reference
 
 The following `.hljs-*` classes are emitted by the app's registered languages (JavaScript, TypeScript, Python, CSS, XML, HTML, JSON, Bash, Markdown, SQL):

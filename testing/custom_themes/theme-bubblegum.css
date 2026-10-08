@@ -312,3 +312,14 @@ code.hljs {
   padding: 12px;
   margin-bottom: 1em;
 }
+
+/* Mermaid diagram labels are measured in the app's default font (and
+   line-height) before any theme style applies — reset text metrics inside
+   diagrams so the boxes Mermaid baked for the labels still fit.
+   See docs/CustomThemes.md ("Mermaid Diagrams: Cut-Off Text"). */
+#viewer-content .mermaid-block {
+  font-family: var(--font-sans);
+}
+#viewer-content .mermaid-block p {
+  line-height: 1.5;
+}

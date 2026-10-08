@@ -1,19 +1,23 @@
 /**
- * WebKit zoom workaround: rewrite em-based `dy`/`dx` text offsets on SVG
- * `<text>`/`<tspan>` elements to absolute user units.
+ * WebKit zoom workaround: rewrite em-based `dy`/`dx`/`x`/`y` text offsets on
+ * SVG `<text>`/`<tspan>` elements to absolute user units.
  *
  * Mermaid positions label text with em-based offsets (e.g. sequence diagram
- * message labels use `dy="1em"`). Under WebKit page zoom — which is the CSS
- * `zoom` machinery (see AGENTS.md "App Zoom") — an em value resolves against
- * the *zoom-divided* computed font size (the same value
- * `getComputedStyle().fontSize` reports), while the diagram geometry scales
- * normally. The label therefore slides up as zoom grows: at 200% a sequence
- * message label sits closer to the *previous* message's line than to its own
- * (measured: gap to own line 11.4 -> 20.3 CSS px, gap to line above
- * 22.8 -> 13.9). Absolute user-unit offsets skip that resolution and stay
- * put at every zoom level (verified: gaps constant within 0.4px at
+ * message labels use `dy="1em"`, label rows use `y="-0.1em"`). Under WebKit
+ * page zoom — which is the CSS `zoom` machinery (see AGENTS.md "App Zoom") —
+ * an em value resolves against the *zoom-divided* computed font size (the
+ * same value `getComputedStyle().fontSize` reports), while the diagram
+ * geometry scales normally. The label therefore slides up as zoom grows: at
+ * 200% a sequence message label sits closer to the *previous* message's line
+ * than to its own (measured: gap to own line 11.4 -> 20.3 CSS px, gap to
+ * line above 22.8 -> 13.9). Absolute user-unit offsets skip that resolution
+ * and stay put at every zoom level (verified: gaps constant within 0.4px at
  * 100-200%). Blink resolves em correctly and is unaffected — the rewrite is
  * a no-op in effect there.
+ *
+ * Non-browser consumers (usvg/resvg rasterization for ODT PNGs) resolve em
+ * against *their* font resolution, so an unconverted `y="-0.1em"` drifts
+ * there too — every em offset is rewritten, `x`/`y` included.
  *
  * The em -> user-unit factor is the element's font size at zoom 1. A
  * calibration probe (a 100px inline font-size) tells us how the engine
@@ -35,7 +39,7 @@
  * can run at cache-fill time regardless of the zoom level in effect.
  */
 
-const OFFSET_ATTRS = ["dy", "dx"] as const;
+const OFFSET_ATTRS = ["x", "y", "dx", "dy"] as const;
 
 /** `translate(X, Y)` optionally followed by `rotate(theta)`. */
 const TRANSLATE_ROTATE =
@@ -43,7 +47,7 @@ const TRANSLATE_ROTATE =
 
 /**
  * Rewrite fragile SVG text positioning to zoom-proof forms: em-based
- * `dy`/`dx` on `<text>`/`<tspan>` become absolute user units, and
+ * `x`/`y`/`dy`/`dx` on `<text>`/`<tspan>` become absolute user units, and
  * translate-based placement folds into `x`/`y`. Returns `svg` unchanged
  * when there is no DOM (node) or nothing to rewrite.
  */

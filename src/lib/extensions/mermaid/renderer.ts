@@ -10,6 +10,7 @@ import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
 import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
+import { convertForeignObjectLabels } from "./fo-labels";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 type MermaidModule = typeof import("mermaid");
@@ -98,25 +99,6 @@ async function ensureLoaded(): Promise<MermaidModule> {
 }
 
 /**
- * Mermaid knobs that purge `<foreignObject>` HTML labels from every diagram
- * family, leaving only `<text>/<tspan>` label shapes. `htmlLabels: false`
- * covers flowcharts and friends; the sequence/journey/timeline/c4 family
- * picks its label renderer via `textPlacement` instead ("fo" builds a
- * `<switch><foreignObject>…` label), so those sections need their own
- * override. Only journey and timeline declare the knob in mermaid's types
- * (the runtime reads it for all four), hence the casts.
- */
-const TEXT_LABEL_CONFIG: MermaidConfig = {
-  htmlLabels: false,
-  journey: { textPlacement: "tspan" },
-  timeline: { textPlacement: "tspan" },
-  sequence: { textPlacement: "tspan" } as NonNullable<
-    MermaidConfig["sequence"]
-  >,
-  c4: { textPlacement: "tspan" } as NonNullable<MermaidConfig["c4"]>,
-};
-
-/**
  * Initialize (or re-initialize) Mermaid for a render variant.
  *
  * Every config pins `themeVariables.fontSize` to {@link MERMAID_FONT_SIZE},
@@ -126,6 +108,12 @@ const TEXT_LABEL_CONFIG: MermaidConfig = {
  * stylesheet resolves; keeping both on one constant is what stops labels from
  * being clipped (see the rule comment in styles.ts). Mermaid 12 ignores the
  * top-level `fontSize` config key for this, so `themeVariables` is the lever.
+ *
+ * The export and print variants render `htmlLabels: true` — the same label
+ * layout the viewer shows — and `convertForeignObjectLabels` rewrites the
+ * `<foreignObject>` labels into measured SVG text afterwards. That is the
+ * only way to get labels that survive standalone-SVG consumers without
+ * falling back to Mermaid's mispositioned text-label dialect.
  */
 async function ensureInitialized(
   mod: MermaidModule,
@@ -137,13 +125,18 @@ async function ensureInitialized(
   const config: MermaidConfig =
     variant === "export"
       ? {
-          // Standalone-SVG safe: labels become <text>/<tspan> (not
-          // <foreignObject>) and fonts are a concrete stack (not `inherit`).
+          // Standalone-SVG safe: labels are converted from HTML to
+          // <text>/<tspan> (fo-labels.ts) and fonts are a concrete stack
+          // (not `inherit`).
           startOnLoad: false,
           theme: "default",
           securityLevel: "strict",
           fontFamily: EXPORT_FONT_FAMILY,
-          htmlLabels: false,
+          htmlLabels: true,
+          // KaTeX labels must survive the conversion as rendered output:
+          // `forceLegacyMathML` makes Mermaid emit KaTeX HTML (which
+          // html2canvas can capture) instead of bare MathML.
+          ...({ forceLegacyMathML: true } as MermaidConfig),
           suppressErrorRendering: true,
           themeVariables: { fontSize: MERMAID_FONT_SIZE },
         }
@@ -152,14 +145,13 @@ async function ensureInitialized(
           theme: theme.type as MermaidConfig["theme"],
           securityLevel: "strict",
           fontFamily: "inherit",
+          htmlLabels: true,
+          ...({ forceLegacyMathML: true } as MermaidConfig),
           suppressErrorRendering: true,
           themeVariables: {
             fontSize: MERMAID_FONT_SIZE,
             ...getViewerThemeOverrides(theme.type).themeVariables,
           },
-          // Print adds the label-shape overrides on top of the viewer config:
-          // same theme, same inherited font, no <foreignObject>.
-          ...(variant === "print" ? TEXT_LABEL_CONFIG : null),
         };
   await mod.default.initialize(config);
   initialized = true;
@@ -340,8 +332,11 @@ export function clearMermaidCache(): void {
  * Uses an export-specific Mermaid config so the SVG survives consumers
  * that are not a live HTML document (LibreOffice svgio, usvg/resvg, and
  * `Image`-based SVG rasterization):
- *   - `htmlLabels: false` — labels are `<text>/<tspan>`, not
- *     `<foreignObject>` HTML, which those consumers drop outright.
+ *   - `htmlLabels: true` plus `convertForeignObjectLabels` — labels are
+ *     rendered with the viewer's HTML label layout (the reference the user
+ *     sees on screen) and then rewritten into `<text>/<tspan>` measured
+ *     from that layout. Mermaid's own `htmlLabels: false` text dialect is
+ *     deliberately NOT used: it misplaces node labels (see fo-labels.ts).
  *   - concrete `fontFamily` — `font-family: inherit` has no parent in a
  *     standalone SVG and is dropped or mis-resolved.
  *   - `materializeSvgFonts` then copies the font stack onto every
@@ -349,11 +344,12 @@ export function clearMermaidCache(): void {
  *     honors more reliably than Mermaid's class/descendant CSS.
  *
  * Always uses Mermaid's light ("default") theme so exports stay neutral /
- * printer-friendly regardless of the app theme. The raw SVG is cached
- * under an export-variant key so it is never mixed up with the viewer's
- * foreignObject output. IDs are namespaced per call so several diagrams
- * can coexist in one exported document, and the SVG is normalized to
- * explicit width/height so dimension sniffing never sees percentage sizes.
+ * printer-friendly regardless of the app theme. The raw SVG (with labels
+ * already converted) is cached under an export-variant key so it is never
+ * mixed up with the viewer's foreignObject output. IDs are namespaced per
+ * call so several diagrams can coexist in one exported document, and the
+ * SVG is normalized to explicit width/height so dimension sniffing never
+ * sees percentage sizes.
  *
  * @throws If Mermaid fails to load or render the source.
  */
@@ -373,7 +369,7 @@ export async function renderMermaidSvgForExport(
         `mmd-export-${nextRenderId++}`,
         content,
       );
-      raw = normalizeSvgTextOffsets(svg);
+      raw = await convertForeignObjectLabels(normalizeSvgTextOffsets(svg));
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();
@@ -398,13 +394,14 @@ export async function renderMermaidSvgForExport(
  * document, so `inherit` resolves against the viewer styles exactly like
  * the on-screen diagram — and fonts are deliberately NOT materialized.
  *
- * The point of this variant is the label shape: `htmlLabels: false` plus
- * `textPlacement: "tspan"` (see TEXT_LABEL_CONFIG) produce pure
- * `<text>/<tspan>` labels with no `<foreignObject>`. WebKit's CSS `zoom`
- * handling mis-scales SVG (font-size in `<foreignObject>` gets the zoom
- * factor applied twice — webkit.org/show_bug.cgi?id=279041 — and SVG
- * geometry/markers distort under zoom on older WebKit), so the print clone
- * swaps these foreignObject-free SVGs in before the capture.
+ * The point of this variant is the label shape: the viewer's HTML labels
+ * are converted to `<text>/<tspan>` (plus icons/images) by
+ * `convertForeignObjectLabels`, so the output has no `<foreignObject>`.
+ * WebKit's CSS `zoom` handling mis-scales SVG (font-size in
+ * `<foreignObject>` gets the zoom factor applied twice —
+ * webkit.org/show_bug.cgi?id=279041 — and SVG geometry/markers distort
+ * under zoom on older WebKit), so the print clone swaps these
+ * foreignObject-free SVGs in before the capture.
  *
  * @throws If Mermaid fails to load or render the source.
  */
@@ -424,7 +421,7 @@ export async function renderMermaidSvgForPrint(
         `mmd-print-${nextRenderId++}`,
         content,
       );
-      raw = normalizeSvgTextOffsets(svg);
+      raw = await convertForeignObjectLabels(normalizeSvgTextOffsets(svg));
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();

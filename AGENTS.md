@@ -302,9 +302,9 @@ constant, `MERMAID_FONT_SIZE` (in `styles.ts`) — keep them equal:
   `config.fontSize` key here — `themeVariables.fontSize` is the lever.
 
 `__tests__/mermaid.test.ts` and `__tests__/styles.test.ts` assert the pin and
-the config↔CSS consistency. PDF/print is unaffected either way: those variants
-use `<text>` labels (`htmlLabels: false`), so there is no `foreignObject` to
-clip.
+the config↔CSS consistency. The export/print variants measure labels in a
+hidden host and convert them to `<text>` (see "Mermaid Label Export
+Conversion" below), so the pin also governs the measured label metrics.
 
 A sibling quirk in the same zoom area: Mermaid positions label text with
 em-based `dy`/`dx` offsets (sequence message labels use `dy="1em"`), and
@@ -312,8 +312,10 @@ WebKit page zoom resolves em against the _zoom-divided_ computed font size
 while the diagram geometry scales normally — labels slide up toward the
 neighbouring line as zoom grows (at 200% a sequence label sat closer to the
 previous message's line than to its own). `text-offsets.ts` rewrites every
-em-based `dy`/`dx` to absolute user units at cache-fill time
-(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants). The same
+em-based `x`/`y`/`dy`/`dx` to absolute user units at cache-fill time
+(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants) — `x`/`y`
+included because usvg resolves em against _its_ font resolution, which
+drifted converted labels vertically in ODT rasters. The same
 pass folds translate-based text placement (`transform="translate(X, Y)
 rotate(0)"` with x/y at 0 — xychart's axis labels) into plain `x`/`y`
 attributes: under WebKit page zoom those labels collapse toward the top of
@@ -337,6 +339,58 @@ place to eyeball foreignObject labels and SVG markers under zoom
 (webkit.org/show_bug.cgi?id=279041). Diagrams with Mermaid's `useMaxWidth`
 (default) shrink to fit the container, so at high zoom they stay the same
 physical size while the rest of the UI grows — by design, not a bug.
+
+### Mermaid Label Export Conversion (`foreignObject` → SVG text)
+
+Exports and the PDF print clone cannot ship the viewer's labels: the viewer
+renders them as HTML inside `<foreignObject>`, which usvg/resvg (Linux ODT
+PNG rasterization) and LibreOffice svgio (vector ODT) drop outright and
+WebKit mis-scales under CSS scaling. Mermaid's own `htmlLabels: false`
+text-label dialect is NOT a usable substitute — it was the root cause of the
+ODT label bugs:
+
+- state labels hug the left edge (`centerLabel: true` shifts the label group
+  by `-bbox.width/2` of a bbox that `withMinWidth` widened to the node's
+  _minimum_ width, while the text is start-anchored),
+- ER and mindmap-_root_ labels spill right (label group at `translate(0, …)`
+  = the node center with start-anchored text; only _edge_ labels get
+  `text-anchor: middle` from Mermaid),
+- mindmap children lose their vertical centering (the `.mindmap-node-label`
+  CSS with `text-anchor/dominant-baseline: middle` only lands on the HTML
+  label, never on the text one),
+- journey section titles are invisible (the `<switch>` fallback `<text>` has
+  `class="journey-section section-type-0"`, whose CSS fill _is_ the section
+  box color — usvg paints the fallback branch, so text and box are both
+  `#ECECFF`).
+
+So the export/print variants render `htmlLabels: true` (the viewer's own
+label layout — the visual reference) and `convertForeignObjectLabels`
+(`src/lib/extensions/mermaid/fo-labels.ts`) rewrites every label into
+standalone SVG **measured from that layout**:
+
+- one `<text>` per rendered line, `text-anchor="middle"` at the measured
+  line center, alphabetic baseline at the measured baseline (ratio from a
+  hidden probe line — never `dominant-baseline`, which LibreOffice may
+  ignore). Self-centering in every renderer even when usvg resolves a
+  different fallback font than WebKit.
+- per-run `<tspan>`s carry computed font-weight/style/family/decoration and
+  fill, so bold/italic/code spans survive; everything is written as inline
+  `style` so Mermaid's class CSS can never restyle the text.
+- inline `<svg>` icons (`fa:fa-*`) are cloned in place with `currentColor`
+  materialized; KaTeX label output (the export config sets
+  `forceLegacyMathML`, so Mermaid emits KaTeX _HTML_, not bare MathML) is
+  captured via `captureElementToPng` (math-render.ts) and embedded as
+  `<image>`; failure degrades the formula to plain text.
+- all geometry is client-px ratios through the `foreignObject` box, so app
+  zoom and SVG display scaling cancel (same argument as `math-fit.ts`).
+
+Without DOM layout (jsdom, DOM-less) each label degrades to a plain
+`<text>` at the foreignObject box center — still centered, still visible.
+The measurable path and the degradation path are covered in
+`__tests__/fo-labels.test.ts` + `__tests__/fo-labels-integration.test.ts`
+(real Mermaid, one diagram per broken family). Keep the conversion when
+touching the export pipeline; if a Mermaid upgrade changes how labels are
+emitted, the integration suite is the tripwire.
 
 ### Upgrading KaTeX / Mermaid
 
@@ -575,12 +629,14 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   in app.css.
 - Mermaid diagrams in the macOS clone are swapped for their foreignObject-
   free text-label variant before the capture (`prepareMermaidForPrint` →
-  `renderMermaidSvgForPrint`: `htmlLabels: false` + `textPlacement: "tspan"`,
-  same theme and `font-family: inherit` as the viewer) — belt and braces
-  next to the transform scaling, since old WebKit mis-scales
-  `<foreignObject>` even under transforms. The wrapper markup (`data-align`,
-  `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is preserved.
-  Linux/Windows keep the viewer SVGs unchanged.
+  `renderMermaidSvgForPrint`, same theme and `font-family: inherit` as the
+  viewer): the viewer's HTML labels are converted to measured `<text>` by
+  `convertForeignObjectLabels` — see "Mermaid Label Export Conversion" —
+  instead of Mermaid's `htmlLabels: false` dialect, which misplaces node
+  labels. Belt and braces next to the transform scaling, since old WebKit
+  mis-scales `<foreignObject>` even under transforms. The wrapper markup
+  (`data-align`, `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is
+  preserved. Linux/Windows keep the viewer SVGs unchanged.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).

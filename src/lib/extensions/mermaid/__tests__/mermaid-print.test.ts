@@ -89,7 +89,7 @@ describe("mermaid print variant (PDF clone)", () => {
   });
 
   describe("renderMermaidSvgForPrint", () => {
-    it("uses text labels with the viewer theme and inherited font", async () => {
+    it("uses converted labels with the viewer theme and inherited font", async () => {
       setAppTheme("dark");
 
       await renderMermaidSvgForPrint("graph LR\n    A-->B");
@@ -98,11 +98,10 @@ describe("mermaid print variant (PDF clone)", () => {
         expect.objectContaining({
           theme: "dark",
           fontFamily: "inherit",
-          htmlLabels: false,
-          journey: { textPlacement: "tspan" },
-          timeline: { textPlacement: "tspan" },
-          sequence: { textPlacement: "tspan" },
-          c4: { textPlacement: "tspan" },
+          // Labels render with the viewer's HTML layout and are rewritten
+          // to measured <text> (convertForeignObjectLabels) so the captured
+          // clone has no <foreignObject>.
+          htmlLabels: true,
         }),
       );
       expect(mermaidMock.render).toHaveBeenCalledWith(

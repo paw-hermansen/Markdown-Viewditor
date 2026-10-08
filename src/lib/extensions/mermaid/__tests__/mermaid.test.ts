@@ -763,7 +763,7 @@ describe("mermaid extension", () => {
       expect(svg).toContain('id="mmd-exp-0-box"');
     });
 
-    it("forces neutral theme, SVG text labels, and a concrete font stack", async () => {
+    it("forces neutral theme, HTML labels (converted after render), and a concrete font stack", async () => {
       setAppTheme("dark");
 
       await renderMermaidSvgForExport("graph LR\n    A-->B");
@@ -771,7 +771,10 @@ describe("mermaid extension", () => {
       expect(mermaidMock.initialize).toHaveBeenCalledWith(
         expect.objectContaining({
           theme: "default",
-          htmlLabels: false,
+          // Labels render with the viewer's HTML layout and are rewritten
+          // to measured <text> by convertForeignObjectLabels afterwards —
+          // Mermaid's htmlLabels:false text dialect misplaces node labels.
+          htmlLabels: true,
           fontFamily: "'trebuchet ms', verdana, arial, sans-serif",
           themeVariables: { fontSize: MERMAID_FONT_SIZE },
         }),
@@ -855,7 +858,7 @@ describe("mermaid extension", () => {
       );
 
       const configs = mermaidMock.initialize.mock.calls.map((c) => c[0]);
-      expect(configs[0]).toMatchObject({ htmlLabels: false });
+      expect(configs[0]).toMatchObject({ htmlLabels: true });
       expect(configs[1]).toMatchObject({ fontFamily: "inherit" });
     });
 

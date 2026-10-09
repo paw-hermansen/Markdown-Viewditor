@@ -11,6 +11,7 @@ import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
 import { withZoomNormalizedLabelMeasurement } from "./fo-measure";
 import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
+import { clampNegativeStrokeWidths } from "./svg-css";
 import { convertForeignObjectLabels } from "./fo-labels";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 import { currentZoom } from "$lib/stores/zoom.svelte";
@@ -257,9 +258,13 @@ async function preRenderMermaidBlocksPass(
         () => mermaid.default.render(renderId, diagramContent),
         currentZoom(),
       );
-      // Cache the zoom-proof form: em-based dy/dx offsets drift under WebKit
-      // page zoom (see text-offsets.ts).
-      svgCache.set(key, normalizeSvgTextOffsets(svg));
+      // Cache the engine-proof form: em-based dy/dx offsets drift under
+      // WebKit page zoom (see text-offsets.ts), and negative stroke-widths
+      // (Mermaid's edge-depth ramp) vanish on older WebKit (svg-css.ts).
+      svgCache.set(
+        key,
+        clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+      );
     } catch (err) {
       // Scope cleanup to this render's temp nodes (mirrored as
       // div#d<renderId> / iframe#i<renderId>): precise, and never sweeps
@@ -378,7 +383,9 @@ export async function renderMermaidSvgForExport(
         () => mod.default.render(`mmd-export-${nextRenderId++}`, content),
         currentZoom(),
       );
-      raw = await convertForeignObjectLabels(normalizeSvgTextOffsets(svg));
+      raw = await convertForeignObjectLabels(
+        clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+      );
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();
@@ -430,7 +437,9 @@ export async function renderMermaidSvgForPrint(
         () => mod.default.render(`mmd-print-${nextRenderId++}`, content),
         currentZoom(),
       );
-      raw = await convertForeignObjectLabels(normalizeSvgTextOffsets(svg));
+      raw = await convertForeignObjectLabels(
+        clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+      );
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();

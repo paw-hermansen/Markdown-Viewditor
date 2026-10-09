@@ -52,3 +52,34 @@ export function installSvgLayoutShim(): void {
     };
   }
 }
+
+/**
+ * 2D context stub so cytoscape (the mindmap layout engine) can measure text
+ * under jsdom, which has no canvas. Crude constant widths, like the layout
+ * shim above — geometry only, never used outside tests.
+ */
+export function installCanvasStub(): void {
+  const proto = (
+    globalThis as unknown as {
+      HTMLCanvasElement?: { prototype: Record<string, unknown> };
+    }
+  ).HTMLCanvasElement?.prototype;
+  if (!proto) return;
+  const ctx = new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        if (prop === "measureText") {
+          return (s: string) => ({ width: String(s).length * 8 });
+        }
+        if (prop === "canvas") return { width: 300, height: 150 };
+        if (prop === "getImageData") {
+          return () => ({ data: new Uint8ClampedArray(4) });
+        }
+        return () => undefined;
+      },
+    },
+  );
+  // Always override: jsdom's getContext exists but throws "not implemented".
+  proto.getContext = () => ctx;
+}

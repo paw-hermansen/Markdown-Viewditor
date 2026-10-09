@@ -224,6 +224,7 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 6.41 | Look at "Mermaid — HTML Comment Directives". | The diagram below the `<!-- mermaid: align=right maxWidth=300 -->` directive is right aligne at 300px. After the reset directive, the next diagram uses defaults. |
 | 6.42 | Look at "Mermaid — Theme Override via YAML". | The diagram uses the "forest" theme (different from the app's dark/light theme). |
 | 6.43 | Switch the app theme between dark and light. | Mermaid diagrams re-render with the matching Mermaid theme (dark → "dark", light → "default"). |
+| 6.44 | Look at "Mermaid — Diagram Types → Mindmap" (4-space indent). | All four connector lines are visible — including the two second-level ones ("Origins" → "Long history" and "Research" → "On effectiveness"); none may be missing (regression: negative `stroke-width`, invisible on macOS/Monterey WebKit). |
 
 ---
 

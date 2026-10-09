@@ -443,12 +443,42 @@ The measurable path and the degradation path are covered in
 touching the export pipeline; if a Mermaid upgrade changes how labels are
 emitted, the integration suite is the tripwire.
 
+### Mermaid Edge Stroke Width (negative `edge-depth-N` ramp)
+
+Mermaid sizes mindmap/timeline/kanban edges from a per-depth ramp
+(`.edge-depth-N { stroke-width: … }`, `17 - 3 * i` for the default look)
+that goes **negative** from `edge-depth-5` on (`-1`, `-4`, …; only mindmap's
+`neo` look floors at 2). Mindmap's `N` is `node.level + 1`, and the parser
+passes the indent token's _character length_ as the level — so the class
+jumps with the indentation step: a two-level mindmap indented with 4 spaces
+emits `edge-depth-5` = `stroke-width: -1` on its second-level edges. The
+symptom is missing connectors (two of four mindmap lines gone on
+macOS/Monterey while Linux/Windows draw all four), and it hits any mindmap
+3+ levels deep even at 2-space indentation.
+
+A negative stroke width is invalid CSS, and Mermaid round-trips its theme
+CSS through the CSSOM (`new CSSStyleSheet()` → `cssRules[].cssText`), so
+each engine's parser settles the declaration's fate before we see the SVG:
+engines that drop it fall back to `#id .edge { stroke-width: 3 }` and the
+connector draws (Blink, current WebKitGTK), while Monterey's older WebKit
+keeps it and paints the stroke with a non-positive width — nothing (also
+missing from PDFs made there).
+
+`clampNegativeStrokeWidths()` (`svg-css.ts`) rewrites every negative
+`stroke-width` (CSS declarations and presentation attributes alike) to
+`2px` — the smallest width the ramp itself uses — at cache-fill time and in
+the export/print render paths, next to `normalizeSvgTextOffsets` in
+`renderer.ts`. Regression: `__tests__/svg-css.test.ts`, TEST-PLAN 6.44;
+the upgrade-contract suite pins that Mermaid still emits the negative
+values (if that stops, the pass may be removable).
+
 ### Upgrading KaTeX / Mermaid
 
 The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
 its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
 label offsets plus translate-based text placement (the `text-offsets.ts`
-rewrites). The `upgrade-contract.test.ts` suites in both extensions render
+rewrites) and its negative `edge-depth-N` stroke-width ramp (the `svg-css.ts`
+clamp). The `upgrade-contract.test.ts` suites in both extensions render
 _REAL_ library output and fail when those internals change shape. Read the
 failure message: "lost its target / no longer emits" means either upstream
 changed the mechanism (extend the fix) or dropped it (the compensation may be

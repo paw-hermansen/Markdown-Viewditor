@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * Upgrade contract: renders REAL Mermaid output and pins the label-positioning
- * internals that `text-offsets.ts` compensates for.
+ * internals that `text-offsets.ts` and `fo-measure.ts` compensate for.
  *
  * The other tests here verify the normalizer against synthetic SVG; these
  * verify that the *library* still produces the fragile markup the normalizer
@@ -76,5 +76,42 @@ describe("mermaid upgrade contract (real output)", () => {
       const once = normalizeSvgTextOffsets(svg);
       expect(normalizeSvgTextOffsets(once), name).toBe(once);
     }
+  });
+
+  it("still measures HTML labels with getBoundingClientRect in foreignObject", async () => {
+    // fo-measure.ts normalizes exactly this measurement (older WebKit scales
+    // it by the page zoom). If Mermaid switches to another measurement API,
+    // the wrapper is dead code and the zoom fix must move to the new one.
+    const measured: Element[] = [];
+    const proto = Element.prototype as unknown as {
+      getBoundingClientRect: (this: Element) => DOMRect;
+    };
+    const original = proto.getBoundingClientRect;
+    proto.getBoundingClientRect = function (this: Element): DOMRect {
+      measured.push(this);
+      return original.call(this);
+    };
+    try {
+      const mermaid = (await import("mermaid")).default;
+      await mermaid.render(
+        "contract_fo_measure",
+        "graph TD\n  A[Start] --> B[End]",
+      );
+    } finally {
+      proto.getBoundingClientRect = original;
+    }
+    const inForeignObject = (el: Element): boolean => {
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        if (node.localName?.toLowerCase() === "foreignobject") return true;
+      }
+      return false;
+    };
+    expect(
+      measured.some(inForeignObject),
+      "Mermaid no longer measures <foreignObject> label content with " +
+        "getBoundingClientRect — re-verify whether the fo-measure.ts zoom " +
+        "normalization is still needed (see AGENTS.md, Mermaid Label " +
+        "Measurement)",
+    ).toBe(true);
   });
 });

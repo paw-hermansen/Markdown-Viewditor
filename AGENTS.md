@@ -340,6 +340,57 @@ place to eyeball foreignObject labels and SVG markers under zoom
 (default) shrink to fit the container, so at high zoom they stay the same
 physical size while the rest of the UI grows — by design, not a bug.
 
+### Mermaid Label Measurement (page zoom)
+
+Mermaid sizes every HTML label at render time from `getBoundingClientRect()`
+on the label `<div>` inside its `<foreignObject>` and bakes those numbers into
+the `foreignObject` box, the label's centering translate, and the node box
+geometry. CSSOM-View makes those rects local to the foreignObject and
+page-zoom-invariant — what Blink, Gecko, and modern WebKit return (the "label
+div boxes track their fo boxes" finding above). Older WebKit instead returns
+page-viewport rects whose _sizes_ are scaled by the page zoom factor
+(webkit.org/show_bug.cgi?id=71819 and 261109, dup of 23963 — fixed upstream
+only in Dec 2025, so WKWebView on macOS 12 Monterey and older iOS is
+affected).
+
+The symptom is sticky: a render that runs while the app is zoomed bakes
+oversized boxes with the labels hugging their left/top edge and the text
+looking too small for its box — and since the SVG is cached per content+theme
+(zoom is deliberately not part of rendering), zooming afterwards, **even back
+to 100%**, never heals it. Renders made at 100% zoom are correct on every
+engine, which is what makes this look like a "macOS renders differently" bug.
+
+`fo-measure.ts` fixes this at the source — and must do so _exactly_, because
+Mermaid's label-wrap heuristic is a fragile **exact** equality (`bbox.width
+=== width` in `addHtmlSpan`, upstream mermaid-js/mermaid#7794): any hair-off
+perturbation of the measured width silently disables wrapping, and long
+labels get clipped at the box edge instead of wrapping over lines. Two rules
+are load-bearing:
+
+1. **At 100% zoom the API is never touched.** No engine scales foreignObject
+   rects at zoom 1 (the verified-good baseline on every platform), and a
+   probe factor that drifts from 1 by sub-pixel measurement noise would
+   perturb widths enough to break the wrap equality — that regression
+   happened once; do not reintroduce it.
+2. **Corrections divide by the app's exact zoom factor** (`currentZoom()` —
+   the bug scales by exactly the page zoom; the probe only _classifies_ the
+   engine) and round the result to 1e-6 px to kill IEEE round-trip noise
+   (`200 * 1.1 / 1.1 = 200.00000000000003`), so integral widths come out
+   bit-exact and wrapping keeps working.
+
+`withZoomNormalizedLabelMeasurement()` wraps **every** `mermaid.render()` call
+in `renderer.ts` (viewer pre-render queue and the export/print variants),
+patching `Element.prototype.getBoundingClientRect` for the render's duration
+so rects of foreignObject content inside Mermaid's temp containers
+(`div[id^="dmmd-"]`) are normalized. Everything outside the temp containers is
+a plain pass-through, so a zoomed render produces geometry identical to a 100%
+render. Keep any new Mermaid render entry point inside the wrapper, and never
+measure `<foreignObject>` content with raw `getBoundingClientRect` elsewhere
+in app code without dividing out the same factor (or using rect _ratios_, like
+`fo-labels.ts`/`math-fit.ts` do). Guarded by `__tests__/fo-measure.test.ts`
+and the upgrade-contract suite, which pins that Mermaid still measures labels
+this way. Regression: TEST-PLAN 15.29–15.31 (start the app zoomed).
+
 ### Mermaid Label Export Conversion (`foreignObject` → SVG text)
 
 Exports and the PDF print clone cannot ship the viewer's labels: the viewer
@@ -447,7 +498,10 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
 - All measurement code (`measureMathVisualBounds`, `computeViewerLayoutWidth`,
   the editor's `scaleX`) is page-zoom-invariant: page zoom shrinks the CSS-px
   viewport but computed styles and rects in CSS px do not change. Keep it that
-  way — prefer ratios of `getBoundingClientRect` over raw px assumptions.
+  way — prefer ratios of `getBoundingClientRect` over raw px assumptions. The
+  one exception is Mermaid's own label measurement inside `<foreignObject>`,
+  which older WebKit scales by the page zoom; `fo-measure.ts` normalizes it
+  (see "Mermaid Label Measurement").
 - UI chrome must stay zoom-proof: no fixed `height` on bars/buttons (use
   `min-height` — a hard px box plus device-pixel baseline rounding clips text
   at fractional zoom), `white-space: nowrap` on single-line status text, and

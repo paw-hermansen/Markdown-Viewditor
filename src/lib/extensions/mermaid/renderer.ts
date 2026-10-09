@@ -8,10 +8,12 @@ import { getDirectiveState } from "../directives";
 import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
+import { withZoomNormalizedLabelMeasurement } from "./fo-measure";
 import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
 import { convertForeignObjectLabels } from "./fo-labels";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
+import { currentZoom } from "$lib/stores/zoom.svelte";
 
 type MermaidModule = typeof import("mermaid");
 type AppTheme = "default" | "dark";
@@ -247,7 +249,14 @@ async function preRenderMermaidBlocksPass(
     try {
       if (!mod) mod = await ensureLoaded();
       await ensureInitialized(mod, appTheme, "viewer");
-      const { svg } = await mod.default.render(renderId, diagramContent);
+      const mermaid = mod;
+      // Zoom-normalized measurement: on older WebKit, foreignObject label
+      // rects are scaled by the page zoom and Mermaid bakes them into the
+      // geometry (see fo-measure.ts).
+      const { svg } = await withZoomNormalizedLabelMeasurement(
+        () => mermaid.default.render(renderId, diagramContent),
+        currentZoom(),
+      );
       // Cache the zoom-proof form: em-based dy/dx offsets drift under WebKit
       // page zoom (see text-offsets.ts).
       svgCache.set(key, normalizeSvgTextOffsets(svg));
@@ -365,9 +374,9 @@ export async function renderMermaidSvgForExport(
     const mod = await ensureLoaded();
     await ensureInitialized(mod, exportTheme, "export");
     try {
-      const { svg } = await mod.default.render(
-        `mmd-export-${nextRenderId++}`,
-        content,
+      const { svg } = await withZoomNormalizedLabelMeasurement(
+        () => mod.default.render(`mmd-export-${nextRenderId++}`, content),
+        currentZoom(),
       );
       raw = await convertForeignObjectLabels(normalizeSvgTextOffsets(svg));
       svgCache.set(key, raw);
@@ -417,9 +426,9 @@ export async function renderMermaidSvgForPrint(
     const mod = await ensureLoaded();
     await ensureInitialized(mod, appTheme, "print");
     try {
-      const { svg } = await mod.default.render(
-        `mmd-print-${nextRenderId++}`,
-        content,
+      const { svg } = await withZoomNormalizedLabelMeasurement(
+        () => mod.default.render(`mmd-print-${nextRenderId++}`, content),
+        currentZoom(),
       );
       raw = await convertForeignObjectLabels(normalizeSvgTextOffsets(svg));
       svgCache.set(key, raw);

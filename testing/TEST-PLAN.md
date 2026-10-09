@@ -644,6 +644,17 @@ This section tests ODT export with various content types and rasterization optio
 | 15.27 | In split view, scroll the editor so one line sits at the vertical middle (e.g. around line 326 of `MathChemMermaid-All.md`); press `Ctrl++` step by step to 300%. | The same rendered line stays at the vertical middle at every step (the viewer keeps showing the matching content) — no visible jumping between steps. |
 | 15.28 | Press `Ctrl+-` step by step to 70%, then `Ctrl+0`. Repeat once in editor-only mode and once in viewer-only mode. | Still anchored at every step, in all view modes. |
 
+### 15h. Startup Zoom and Mermaid Geometry
+
+*File: `MathChemMermaid-All.md` — the regression class: a render made while the app is zoomed used to bake oversized label boxes (labels hugging their left/top edge, text looking too small) on older WebKit (**macOS 12 Monterey**), because `getBoundingClientRect()` inside `<foreignObject>` is scaled by the page zoom there — and zooming afterwards never healed the already-rendered diagrams.*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.29 | Set zoom to 150% (15.5), close the app, reopen it so it *starts* zoomed; open `MathChemMermaid-All.md` and look at the flowchart, the class diagram and the state diagram. | Identical to a 100%-start render: labels centered in their boxes (no text hugging the left/top edge), boxes sized to their text (no dead space), label text proportional to its box. |
+| 15.29a | In the same started-zoomed session, look at the `fitToWidth=false` diagram (6.40). | Long node labels wrap over multiple lines inside their boxes, exactly as at 100% startup — never cut off at the box edge (Mermaid wraps at `flowchart.wrappingWidth`; clipped labels mean the wrap heuristic lost its exact width). |
+| 15.30 | While still at 150%, press `Ctrl+0`. | Only the scale changes — the diagrams stay correct; no left-aligned labels or oversized boxes appear. |
+| 15.31 | Repeat 15.29 with the app started at 70%, then at 300%; at 150% startup zoom also export PDF and compare against the 15.11 reference. | Same correct geometry at every startup zoom, and the PDF still matches the 100%-zoom export. |
+
 ---
 
 # Part 2 — Feature Reference
@@ -854,6 +865,7 @@ within each story gives the precise check.
 | Mermaid | HTML comment directives | **S6** (6.41) |
 | Mermaid | Theme override (YAML) | **S6** (6.42) |
 | Mermaid | Dark/light theme mapping | **S6** (6.43) |
+| Mermaid | Label geometry when starting zoomed | **S15** (15.29–15.31) |
 | Print / PDF | macOS — toolbar label | **S14** (14.1) |
 | Print / PDF | Linux/Win — toolbar labels | **S14** (14.7) |
 | Print / PDF | Linux/Win — print dialog | **S14** (14.8) |

@@ -449,6 +449,12 @@ journey
 
 ### Mindmap
 
+Indented with 4 spaces per level on purpose: mindmap levels are indent
+*widths*, so 4-space indentation lands second-level edges on Mermaid's
+`edge-depth-5` class, whose `stroke-width` is negative and invisible on
+older WebKit (see AGENTS.md, "Mermaid Edge Stroke Width"). All four
+connector lines must be visible.
+
 ```mermaid
 mindmap
     root((mindmap))

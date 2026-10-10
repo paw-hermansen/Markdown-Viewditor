@@ -63,8 +63,11 @@ describe("Mermaid host-layout styles", () => {
     expect(naturalScroll).not.toContain("max-height:");
 
     expect(naturalSvg).toContain("max-width: none !important;");
-    expect(naturalSvg).toContain("width: auto !important;");
     expect(naturalSvg).toContain("height: auto !important;");
+    // No `width: auto`: it overrides the explicit width normalizeSvgForNaturalSize
+    // writes and hands sizing to engine-dependent default object sizing
+    // (WebKitGTK renders 10/9 of the natural size then — see styles.ts).
+    expect(naturalSvg).not.toMatch(/(?:^|[;{])\s*width\s*:/);
     expect(naturalSvg).not.toContain("flex-shrink:");
     expect(naturalSvg).not.toContain("min-width:");
   });
@@ -111,8 +114,12 @@ describe("Mermaid host-layout styles", () => {
     expect(printScroll).toContain("max-width: 100%;");
 
     expect(printSvg).toContain("max-width: 100% !important;");
-    expect(printSvg).toContain("width: auto !important;");
+    // `height: auto` keeps the aspect ratio while max-width clamps; the
+    // width comes from the explicit natural-size attributes — no `width:
+    // auto`, which would hand sizing to engine-dependent default object
+    // sizing (see the natural-mode rule).
     expect(printSvg).toContain("height: auto !important;");
+    expect(printSvg).not.toMatch(/(?:^|[;{])\s*width\s*:/);
   });
 
   it("honors data-align for natural-size diagrams in print", () => {

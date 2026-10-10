@@ -121,6 +121,9 @@ describe("ODT Mermaid diagram export", () => {
     expect(xml).not.toContain("Preformatted_20_Text");
     expect(mockRenderMermaidSvgForExport).toHaveBeenCalledWith(
       `${MERMAID_SRC}\n`,
+      // Resolved host options ride along so diagrams that lay out for their
+      // display width (gantt) are built for the same width as the viewer.
+      { align: "center", maxWidth: 800, fitToWidth: true },
     );
     expect(mockRasterizeSvg).not.toHaveBeenCalled();
   });

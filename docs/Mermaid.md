@@ -1,6 +1,6 @@
 # Mermaid Diagrams
 
-Markdown Viewditor renders diagrams via [Mermaid](https://mermaid.js.org). Diagrams work in all view modes and export to HTML and PDF. Mermaid is loaded lazily — it only activates when your document contains a `mermaid` code block.
+Markdown Viewditor renders diagrams via [Mermaid](https://mermaid.ai). Diagrams work in all view modes and export to HTML and PDF. Mermaid is loaded lazily — it only activates when your document contains a `mermaid` code block.
 
 ## Quick Start
 
@@ -154,7 +154,7 @@ pie title Languages
     "Other" : 10
 ```
 
-For the full list of diagram types and their syntax, see the [Mermaid documentation](https://mermaid.js.org/intro/).
+For the full list of diagram types and their syntax, see the [Mermaid documentation](https://mermaid.ai/open-source/intro/).
 
 ## Settings
 
@@ -407,7 +407,7 @@ graph LR
     A[Styled] --> B[Node]
 ```
 
-See [Mermaid configuration](https://mermaid.js.org/config/configuration.html) for all available frontmatter options.
+See [Mermaid configuration](https://mermaid.ai/open-source/config/configuration.html) for all available frontmatter options.
 
 ## Invalid Diagrams
 
@@ -443,8 +443,12 @@ layout as in the Viewer (e.g. `maxWidth=300` → at most 300/800 of the page
 width). `fitToWidth=false` keeps the diagram at its natural size, but is
 still clamped to the page width since ODF has no scroll container.
 
+## Custom Themes
+
+Diagram labels are measured before a [custom theme's](CustomThemes.md) styles apply and painted afterwards, so theme rules that change text metrics (font family, line height, font sizes) can cut off label text. See [Mermaid Diagrams: Cut-Off Text](CustomThemes.md#mermaid-diagrams-cut-off-text) for the details and a safe reset pattern.
+
 ## Mermaid Reference
 
 Mermaid supports dozens of diagram types including flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, mind maps, and more.
 
-**[Mermaid documentation](https://mermaid.js.org/intro/)** — full syntax reference for all diagram types
+**[Mermaid documentation](https://mermaid.ai/open-source/intro/)** — full syntax reference for all diagram types

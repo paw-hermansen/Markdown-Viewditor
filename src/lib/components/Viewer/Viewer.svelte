@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { renderMarkdown } from '$lib/utils/markdown';
+  import { renderMarkdown, syncViewerBackground } from '$lib/utils/markdown';
   import { resolveLink } from '$lib/utils/path';
   import { viewerState } from '$lib/stores/viewer.svelte';
   import { fileState } from '$lib/stores/file.svelte';
@@ -34,6 +34,20 @@
   // dependency on `html`/`frontmatter` (which would cause the effect to
   // re-fire whenever the render completes and schedule a spurious timer).
   let hasRenderedOnce = false;
+  // Non-reactive: the theme of the last completed render, so the render
+  // effect can tell a theme change (a major, cache-missing re-render) from a
+  // routine content change. null = nothing rendered yet.
+  let lastRenderedTheme: string | null = null;
+
+  // Ghosted busy overlay ("Rendering…") shown over the viewer for major
+  // renders only: the first render of a document, theme changes (every
+  // Mermaid diagram misses the theme-keyed cache and re-renders) and
+  // forceRender/Reload. Routine typing re-renders never show it — an overlay
+  // flickering on every debounced keystroke render would be worse than the
+  // wait. Raised synchronously when a major render starts: the early render
+  // phases are synchronous, so a render that finishes quickly never paints
+  // the overlay at all and small documents don't flash it.
+  let renderBusy = $state(false);
 
   interface RenderRequest {
     generation: number;
@@ -47,8 +61,9 @@
   let currentRender: RenderRequest | null = null;
 
   function requestRender(
-    task: (generation: number) => Promise<void>,
+    task: (generation: number, clearBusy: () => void) => Promise<void>,
     delay: number,
+    major = false,
   ): RenderRequest {
     currentRender?.supersede();
 
@@ -59,6 +74,7 @@
     let started = false;
     let settled = false;
     let wasSuperseded = false;
+    let busyShown = false;
 
     const promise = new Promise<void>((resolve) => {
       resolveRender = resolve;
@@ -67,9 +83,20 @@
       resolveSuperseded = resolve;
     });
 
+    // Per-request busy bookkeeping: a request only clears the overlay it
+    // raised itself, so a stale render settling late can never take down a
+    // newer request's overlay.
+    const clearBusy = () => {
+      if (busyShown) {
+        busyShown = false;
+        renderBusy = false;
+      }
+    };
+
     const finish = () => {
       if (!settled) {
         settled = true;
+        clearBusy();
         resolveRender();
       }
     };
@@ -79,6 +106,7 @@
         wasSuperseded = true;
         resolveSuperseded();
       }
+      clearBusy();
       if (!started) {
         if (timeout) {
           clearTimeout(timeout);
@@ -100,7 +128,11 @@
       if (started || wasSuperseded) return;
       started = true;
       timeout = undefined;
-      void task(generation).then(finish, finish);
+      if (major) {
+        busyShown = true;
+        renderBusy = true;
+      }
+      void task(generation, clearBusy).then(finish, finish);
     };
 
     currentRender = request;
@@ -115,17 +147,40 @@
 
   $effect(() => {
     const currentContent = content;
-    void viewerState.theme;
-    const request = requestRender(async (generation) => {
+    const theme = viewerState.theme;
+    // A theme change re-renders every Mermaid diagram (the cache is
+    // theme-keyed) — the expensive case the busy overlay exists for. The
+    // first render of a document counts as major too (lazy extension init).
+    const major = !hasRenderedOnce || theme !== lastRenderedTheme;
+    // Major renders (first render of a document, theme change) start
+    // immediately — they are discrete actions, not typing. Routine content
+    // changes keep the 150 ms debounce.
+    const request = requestRender(async (generation, clearBusy) => {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
       if (generation !== renderGeneration) return;
       html = result.html;
       frontmatter = result.frontmatter;
+      lastRenderedTheme = theme;
       hasRenderedOnce = true;
       await tick();
-    }, hasRenderedOnce ? 150 : 0);
+      // Drop the overlay once the new content is actually on screen; the
+      // request's finish() clears it as a fallback for early returns.
+      clearBusy();
+    }, major ? 0 : 150, major);
 
     return request.cancel;
+  });
+
+  // Derive --viewer-bg from the theme's #viewer-content background. Runs
+  // here — not from a startup rAF in setTheme — because at startup the
+  // element does not exist yet when that rAF is scheduled, and a frame
+  // flushed early (e.g. by the persisted zoom applying at launch) makes it
+  // miss, leaving the app on the generic palette. See syncViewerBackground.
+  $effect(() => {
+    const el = viewerContentElement;
+    void viewerState.theme;
+    if (!el) return;
+    syncViewerBackground();
   });
 
   $effect(() => {
@@ -485,7 +540,7 @@
     const savedScrollTop = viewerElement?.scrollTop ?? viewerState.scrollTop;
     const anchor = captureScrollAnchor();
     const currentContent = content;
-    const request = requestRender(async (generation) => {
+    const request = requestRender(async (generation, clearBusy) => {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
       if (generation !== renderGeneration) return;
 
@@ -497,6 +552,9 @@
       html = bustImageCache(result.html, renderKey);
       frontmatter = result.frontmatter;
       await tick();
+      // Reload is a major render: drop the overlay once the refreshed DOM is
+      // on screen; scroll restore + image settling continue below.
+      clearBusy();
       if (generation !== renderGeneration) return;
 
       // First restore: positions the anchor correctly in the transient layout
@@ -512,7 +570,7 @@
       if (viewerElement && viewerElement.scrollTop === scrollAfterRestore) {
         restoreScrollPosition(anchor, savedScrollTop);
       }
-    }, 0);
+    }, 0, true);
     activeForceRender = request.promise.finally(() => {
       activeForceRender = null;
     });
@@ -551,7 +609,6 @@
               </dl>
             {/if}
           {:else}
-            <div class="frontmatter-title">Frontmatter</div>
             <dl class="skill-meta">
               {#each Object.entries(frontmatter) as [key, value]}
                 <dt>{key}</dt>
@@ -567,11 +624,16 @@
       {/key}
     </div>
   </div>
-  {#if loading}
-    <div class="loading-overlay" role="presentation">
-      <div class="loading-overlay-content" role="alert" aria-live="assertive" aria-label="Loading document">
+  {#if loading || renderBusy}
+    <div class="loading-overlay" class:rendering-overlay={renderBusy && !loading} role="presentation">
+      <div
+        class="loading-overlay-content"
+        role={loading ? "alert" : "status"}
+        aria-live={loading ? "assertive" : "polite"}
+        aria-label={loading ? "Loading document" : "Rendering document"}
+      >
         <div class="loading-spinner" aria-hidden="true"></div>
-        <span class="loading-label">Loading…</span>
+        <span class="loading-label">{loading ? "Loading…" : "Rendering…"}</span>
       </div>
     </div>
   {/if}
@@ -628,6 +690,13 @@
     z-index: 10;
     animation: loading-fade-in 120ms ease-out;
     cursor: default;
+  }
+
+  /* The re-render overlay ghosts the stale content but stays out of the way:
+     the editor, toolbar and viewer scrolling stay usable while a major
+     render runs. */
+  .loading-overlay.rendering-overlay {
+    pointer-events: none;
   }
 
   @keyframes loading-fade-in {

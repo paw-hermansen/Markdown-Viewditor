@@ -44,20 +44,30 @@ function setAppTheme(type: "default" | "dark", themeId?: string): void {
   );
 }
 
-function fenceToken(content: string): {
+function fenceToken(
+  content: string,
+  info = "mermaid",
+): {
   type: "fence";
   info: string;
   content: string;
 } {
-  return { type: "fence", info: "mermaid", content };
+  return { type: "fence", info, content };
 }
 
 async function renderViewerBlock(
   source: string,
   options: Record<string, unknown>,
 ): Promise<HTMLDivElement> {
+  // The pre-render pass resolves host options from the token info string, so
+  // it must see the same values renderMermaid is called with — the cache key
+  // of a container-sized diagram (gantt) carries the render width derived
+  // from them, and a mismatch degrades the block to an error wrapper.
+  const attrs = Object.entries(options)
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join(" ");
   await preRenderMermaidBlocks(
-    [fenceToken(source)],
+    [fenceToken(source, attrs ? `mermaid {${attrs}}` : "mermaid")],
     {},
     MERMAID_OPTIONS_SCHEMA,
   );
@@ -89,7 +99,7 @@ describe("mermaid print variant (PDF clone)", () => {
   });
 
   describe("renderMermaidSvgForPrint", () => {
-    it("uses text labels with the viewer theme and inherited font", async () => {
+    it("uses converted labels with the viewer theme and inherited font", async () => {
       setAppTheme("dark");
 
       await renderMermaidSvgForPrint("graph LR\n    A-->B");
@@ -98,11 +108,10 @@ describe("mermaid print variant (PDF clone)", () => {
         expect.objectContaining({
           theme: "dark",
           fontFamily: "inherit",
-          htmlLabels: false,
-          journey: { textPlacement: "tspan" },
-          timeline: { textPlacement: "tspan" },
-          sequence: { textPlacement: "tspan" },
-          c4: { textPlacement: "tspan" },
+          // Labels render with the viewer's HTML layout and are rewritten
+          // to measured <text> (convertForeignObjectLabels) so the captured
+          // clone has no <foreignObject>.
+          htmlLabels: true,
         }),
       );
       expect(mermaidMock.render).toHaveBeenCalledWith(
@@ -151,6 +160,17 @@ describe("mermaid print variant (PDF clone)", () => {
       expect(renderCallCount("mmd-print-")).toBe(1);
       expect(renderCallCount("mmd-")).toBe(2);
     });
+
+    it("builds gantt for the width its host displays it at", async () => {
+      await renderMermaidSvgForPrint("gantt\n    title Plan\n", {
+        maxWidth: 1200,
+        fitToWidth: false,
+      });
+
+      expect(mermaidMock.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ gantt: { useWidth: 1200 } }),
+      );
+    });
   });
 
   describe("prepareMermaidForPrint", () => {
@@ -183,6 +203,26 @@ describe("mermaid print variant (PDF clone)", () => {
       expect(scroll).not.toBeNull();
       expect(scroll!.querySelector("foreignObject")).toBeNull();
       expect(scroll!.querySelector("text.label")).not.toBeNull();
+    });
+
+    it("re-renders gantt at the width the viewer built it for", async () => {
+      const source = "gantt\n    title Plan\n";
+      const root = await renderViewerBlock(source, {
+        maxWidth: 1200,
+        fitToWidth: false,
+      });
+      expect(root.querySelector(".mermaid-error-block")).toBeNull();
+      mermaidMock.initialize.mockClear();
+
+      await prepareMermaidForPrint(root);
+
+      expect(root.querySelector("text.label")).not.toBeNull();
+      // The stashed host options decide the print render width — without it
+      // the clone's gantt would be rebuilt for the print layout width and
+      // pick up different geometry than the viewer showed.
+      expect(mermaidMock.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ gantt: { useWidth: 1200 } }),
+      );
     });
 
     it("leaves error blocks untouched", async () => {

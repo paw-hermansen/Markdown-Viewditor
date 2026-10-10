@@ -546,6 +546,60 @@ Upgrade checklist:
 5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
    plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.
 
+A sibling quirk in the same zoom area: Mermaid positions label text with
+em-based `dy`/`dx` offsets (sequence message labels use `dy="1em"`), and
+WebKit page zoom resolves em against the _zoom-divided_ computed font size
+while the diagram geometry scales normally — labels slide up toward the
+neighbouring line as zoom grows (at 200% a sequence label sat closer to the
+previous message's line than to its own). `text-offsets.ts` rewrites every
+em-based `dy`/`dx` to absolute user units at cache-fill time
+(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants). The same
+pass folds translate-based text placement (`transform="translate(X, Y)
+rotate(0)"` with x/y at 0 — xychart's axis labels) into plain `x`/`y`
+attributes: under WebKit page zoom those labels collapse toward the top of
+the chart and vanish (measured -278 user units at 300%; dominant-baseline is
+not the culprit). Both rewrites are zoom-proof and no-ops in effect on Blink
+and at 100% zoom — keep them when touching the render pipeline. Regression:
+`__tests__/text-offsets.test.ts`.
+
+Zoom-sweep inventory (WebKitGTK): the em-`dy` families are sequence
+(incl. notes/loops/activations), gantt, timeline, c4, sankey and gitgraph —
+all covered by that one pass — plus xychart's translate-positioned labels.
+The `<foreignObject>` HTML-label families
+(flowchart, class, state, journey, mindmap, block) measure uniform at
+100–300% zoom on modern WebKit (label div boxes track their fo boxes
+exactly). erDiagram/pie/quadrant are clean. Two facts worth keeping:
+diagram geometry is render-zoom-independent (re-rendering a diagram at any
+zoom produces identical geometry — the cache is safe), and the `<switch>`
+fallback `<text>` duplicates after each `<foreignObject>` are never painted,
+so ignore their rects in measurements. Old WebKit (macOS 12) remains the
+place to eyeball foreignObject labels and SVG markers under zoom
+(webkit.org/show_bug.cgi?id=279041). Diagrams with Mermaid's `useMaxWidth`
+(default) shrink to fit the container, so at high zoom they stay the same
+physical size while the rest of the UI grows — by design, not a bug.
+
+### Upgrading KaTeX / Mermaid
+
+The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
+its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
+label offsets plus translate-based text placement (the `text-offsets.ts`
+rewrites). The `upgrade-contract.test.ts` suites in both extensions render
+_REAL_ library output and fail when those internals change shape. Read the
+failure message: "lost its target / no longer emits" means either upstream
+changed the mechanism (extend the fix) or dropped it (the compensation may be
+obsolete) — re-measure with the zoom-sweep harness before touching either.
+
+Upgrade checklist:
+
+1. `npm install katex@<ver>` / `npm install mermaid@<ver>` (the `^0.16` /
+   `^12` ranges keep majors out — KaTeX 0.18 renames CSS classes outright).
+2. KaTeX: run `scripts/update-katex-css.sh` to regenerate the woff2
+   stylesheet the pin targets.
+3. `npx vitest run` — the upgrade-contract suites are the tripwires.
+4. On Linux: `python3 testing/tools/zoom-sweep/mermaid-zoom-sweep.py`.
+5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
+   plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only

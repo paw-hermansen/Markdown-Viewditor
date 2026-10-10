@@ -663,6 +663,79 @@ This section tests ODT export with various content types and rasterization optio
 
 ---
 
+## S15: Zoom
+
+*File: `MathChemMermaid-All.md` — open in split view.*
+
+### 15a. Zoom Controls
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.1 | Press `Ctrl++` (or `Ctrl+=`) three times. | Everything scales up in steps — editor text, viewer text, toolbars, status bar; the zoom indicator in the status bar shows the new level (e.g. 125%). |
+| 15.2 | Press `Ctrl+-` down to 70%. | Everything scales down; the editor↔viewer split handle stays easy to grab and drag (panes resize as usual). |
+| 15.3 | Press `Ctrl+0`. | Back to exactly 100%. |
+| 15.4 | Hold `Ctrl` and scroll the mouse wheel (pinch on a macOS trackpad). | Zoom steps in/out like the keyboard; plain two-finger scrolling still only scrolls. |
+| 15.5 | Use the status bar zoom control (`−`, `+`, Reset). | Same steps as the shortcuts; the indicator always matches the actual zoom. |
+| 15.6 | Set zoom to ~150%, close the app, reopen. | Zoom level is restored (like the theme and current file). |
+
+### 15b. Zoom with Math & Mermaid
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.7 | At 200%, look at "Block Dollar", "Matrices", and an inline formula. | Formulas scale proportionally with the surrounding text — no clipping, no mis-sized glyphs; inline math stays aligned on its line; the `fontsize=2` block is still 2× relative to base. |
+| 15.8 | At 200%, look at the flowchart and the sequence diagram. | Diagrams scale uniformly with the content — labels, node boxes, and arrow heads stay proportional; no giant, clipped, or truncated labels; no dead space inside node boxes. |
+| 15.9 | At 200%, scroll the "Very Wide Block" math and the `fitToWidth=false` diagram. | Both still scroll horizontally inside their blocks; the rest of the layout is unbroken. |
+| 15.10 | At 70%, re-check 15.7–15.8. | Same proportions at small size; Mermaid label text is neither clipped nor scaled by hand — it grows/shrinks with the rest. |
+
+### 15c. Zoom and Exports
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.11 | At 100% zoom, export PDF of `MathChemMermaid-All.md` and keep it. Set zoom to 200%, export again (macOS: Export as PDF; Linux/Windows: `Ctrl+P` / Export as PDF (Print…)). | The two PDFs are visually identical when compared at 100% in a PDF viewer: same physical content size and margins, the wide math formula scaled to the page content width in both, Mermaid labels the same size as in the viewer at 100% (as in 14.19–14.21). |
+| 15.12 | At 200% zoom, export HTML and ODT. | Output is identical to exports made at 100% (open and compare); on-screen zoom does not leak into the files. |
+| 15.13 | After each export completes. | The app is back at the zoom level set before the export — the export's temporary 100% does not persist. |
+
+### 15d. Chrome & Menus at Extreme Zoom
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.14 | At 75% and 70% zoom (the minimum), look at the status bar. | Text is vertically centered and fully visible — no clipped lower halves, at any zoom step in between. |
+| 15.15 | At 300% zoom, look at the status bar. | No text wraps ("UTF-8" stays on one line); the decorative "Markdown" / "UTF-8" labels drop out if space runs out, but the level button and zoom control stay visible and clickable. |
+| 15.16 | At 300% zoom, open the "Export as…" menu and the theme dropdown (both in split view). | Each menu is fully inside the window — nothing cut at the left edge, and the lowest entries visible above the status bar (scrolling instead of hiding); every entry is reachable, and the "Show export confirmation" footer checkbox stays visible while the list scrolls. |
+| 15.17 | At 300% zoom, open the status bar Compatibility popup. | The popup sits fully above the status bar and scrolls when needed; all four level options and every feature toggle are reachable. |
+| 15.18 | At 300% zoom, edit a file and press `Ctrl+N` (unsaved-changes dialog). | The dialog fits or scrolls within the screen; Cancel / Discard / Save First are all reachable. |
+
+### 15e. Math Baseline Alignment at Low Zoom
+
+*File: `MathChemMermaid-All.md` — the "Matrices" (6.3) and "Cases" (6.4) formulas are the regression cases: relations/delimiters vs vlist-positioned rows.*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.19 | At 85%, 80% and 70% zoom, look at "Matrices" and "Cases". | The parentheses, the brace and the `=` sign stay on the same line as the matrix entries / cases rows — nothing sits a line lower (was broken below 90% on Linux/macOS before the `.vlist-s` anchor fix). |
+| 15.20 | At 70% zoom (the minimum), re-check 15.19, and compare with the same formulas in an exported HTML opened in Safari (Cmd+− below 90%). | Still aligned in the app — sub/superscripts may look slightly large at 70–80% (known engine font-size floor; see AGENTS.md) but nothing may be misaligned. The Safari check tells whether the engine still misplaces KaTeX baselines upstream of the app. |
+
+### 15f. Mermaid Label Attachment at High Zoom
+
+*File: `MathChemMermaid-All.md` — the sequence diagram (6.37) is the regression case: message labels vs their arrow lines.*
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.21 | At 150%, 200% and 300% zoom, look at the sequence diagram. | Every message label ("Hello Bob", …) stays closer to its own arrow than to the previous message's line (before the `dy` fix the label sat closer to the line *above* at 200%), and stays evenly placed between the lines as at 100%. |
+| 15.22 | At 200% zoom, also check the actor boxes ("Alice", "Bob") and a flowchart (6.36). | Actor labels stay centred in their boxes; flowchart node labels, arrows and boxes stay proportional. |
+| 15.23 | At 200% and 300% zoom, look at the "Gantt Chart", "Timeline" and "C4 Diagram" sections of `MathChemMermaid-All.md`. | Date/step/actor labels stay attached to their bars and marks — same em-offset regression class as 15.21. |
+| 15.24 | At 200% and 300% zoom, look at the "Journey Diagram" and "Mindmap" sections. | Labels stay centred inside their shapes and boxes. Note: diagrams with fit-to-width stay the same physical size at high zoom (Mermaid's `useMaxWidth`) while surrounding text grows — by design. |
+| 15.25 | At 200% and 300% zoom, look at the "Xychart (Bar Chart)" section. | The y-axis tick labels and the axis title stay visible and attached to their ticks (before the `translate` fix they collapsed to the top of the chart and vanished at 300%). |
+| 15.26 | At 200% and 300% zoom, glance at the remaining "Mermaid — Diagram Types" sections (Class, State, ER, Pie, Quadrant, Sankey, Git Graph, Block). | All labels stay legible and attached to their shapes — nothing vanishes, drifts, or scales differently from its diagram. |
+
+### 15g. Scroll Anchoring
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 15.27 | In split view, scroll the editor so one line sits at the vertical middle (e.g. around line 326 of `MathChemMermaid-All.md`); press `Ctrl++` step by step to 300%. | The same rendered line stays at the vertical middle at every step (the viewer keeps showing the matching content) — no visible jumping between steps. |
+| 15.28 | Press `Ctrl+-` step by step to 70%, then `Ctrl+0`. Repeat once in editor-only mode and once in viewer-only mode. | Still anchored at every step, in all view modes. |
+
+---
+
 # Part 2 — Feature Reference
 
 Each row lists a feature or sub-feature and the test story where it is

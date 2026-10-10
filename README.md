@@ -12,76 +12,17 @@ A feature-rich and simple cross-platform markdown viewer and editor with live pr
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
-- **Zoom** — Scale the whole app (70%–300%) with `Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+mouse wheel, or the status bar control
+- **Zoom** — Scale the app (70%–300%) with `Ctrl +` / `Ctrl -` / `Ctrl 0`, `Ctrl`+mouse wheel, or the status bar control
 - **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
-- **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts and more, rendered with [Mermaid](https://mermaid.js.org)
+- **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts and more, rendered with [Mermaid](https://mermaid.ai)
 - **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
-- **Dark/light Themes** — 8 built-in themes + custom CSS themes (see `F1`/ ⓘ inside the app)
+- **Dark/light Themes** — 8 built-in themes + custom CSS themes
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
 - **HTML** — Use HTML along with the markdown
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
-## AI-Augmented Development
-
-This application was built with the help of [OpenCode](https://opencode.ai),
-an AI-powered coding assistant. Development used different AI models, some free
-and some paid. Also most of the documentation was written by AI.
-
-I'm a Senior Software Developer and I wrote my first software back in the
-1970's. Yes, around the time when smoking was normal, everyone said "10-4", were
-fascinated by Lava Lamps, and listened to Disco music. Phones were anchored to a
-geographic location instead of to a person and nobody had yet invented the Internet.
-I've been building software for a living my entire career until I retired in 2025.
-
-I'm still coding for fun and I couldn't find a Markdown viewer and editor
-that I liked, so I used the summer 2026 to write the Markdown desktop app
-that is perfect for me and at the same time to test if AI coding assistants
-are any good.
-
-It turned out that my AI assistant was surprisingly knowledgeable and understood
-what I meant (most of the time). Sometimes my assistant lacked intelligence
-and experience and therefore it required constant supervision
-and guidance from an experienced software developer - which in my experience is also true
-for many human programmers.
-
-Read more details on [my homepage](https://pawhermansen.dk/2026/09/13/what-is-wrong-with-ai-and-how-to-have-fun-doing-ai-augmented-coding/).
-
-## Download
-
-[Pre-built binaries for Windows, macOS, and Linux](../../releases/latest) are published on the
-Github [Releases page](../../releases/latest). Pick the file matching your platform:
-
-| Platform | File                                                         | Notes                                                                    |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Windows  | `Markdown-Viewditor_*_x64-setup.exe` (NSIS) or `.msi`        | SmartScreen may warn on first launch — click **More info → Run anyway**. |
-| macOS    | `Markdown-Viewditor_*_universal.dmg` (Intel & Apple Silicon) | See [macOS first-launch note](#macos-first-launch-note) below.           |
-| Linux    | `*.deb` (Debian/Ubuntu) or `*.rpm` (Fedora/RHEL)             | Install via your package manager.                                        |
-
-### macOS first-launch note
-
-The macOS build is **not code-signed** (to keep releases free). The first time
-you open it, Gatekeeper will block it. To bypass:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Markdown Viewditor.app"
-```
-
-or right-click the app → **Open** → **Open anyway**.
-
-### Auto-updates
-
-All desktop builds (Windows, macOS, and Linux deb/rpm) can check the GitHub
-Releases feed for updates and install them in place via **Help → About → Check
-for Updates**. Auto-check on startup is off by default — enable it with the
-checkbox in the About dialog.
-
-In-app updates are disabled when running inside Flatpak or the Windows
-Store; use the system updater in those environments.
-
 ## Documentation
-
-Detailed guides for end users:
 
 | Guide                                  | Description                                          |
 | -------------------------------------- | ---------------------------------------------------- |
@@ -90,6 +31,89 @@ Detailed guides for end users:
 | [Math Formulas](docs/Math.md)          | KaTeX math rendering and delimiter syntax            |
 | [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
 | [Mermaid Diagrams](docs/Mermaid.md)    | Diagram types, host options and export behavior      |
+
+
+
+## Install and Auto-Updates
+
+- GitHub [Releases page](../../releases/latest) has install packages for Windows, macOS, and Linux.
+
+(`*.sig` files and `latest.json` on the Releases page are for the built-in [updater](#auto-updates).)
+
+### Windows
+
+| Your PC                                          | File to download                    |
+| ------------------------------------------------ | ----------------------------------- |
+| 64-bit Intel or AMD (almost all PCs) - preferred | `MarkdownViewditor_*_x64-setup.exe` |
+| Classic Windows Installer package                | `MarkdownViewditor_*_x64_en-US.msi` |
+
+
+To install:
+
+1. Open the downloaded `.exe` file (click it in the browser's download list, or double-click it in your Downloads folder).
+2. If Windows shows a blue **"Windows protected your PC"** message, click **More info** and then **Run anyway**. The app is not code-signed, so this warning is expected and harmless - if you trust me.
+3. Follow the steps in the setup program, then start **Markdown Viewditor** from the Start menu.
+
+### macOS
+
+One file works for both kinds of Mac:
+
+| Your Mac                                | File to download                |
+| --------------------------------------- | ------------------------------- |
+| Apple Silicon (M1–M4) and Intel Macs    | `MarkdownViewditor_*_universal.dmg` |
+
+To install:
+
+1. Open the downloaded `.dmg` file.
+2. In the window that opens, drag **Markdown Viewditor** onto the **Applications** folder.
+3. Open the app from the Applications folder (or Launchpad). You can delete the downloaded `.dmg` afterwards.
+
+**First launch:** the app is not code-signed (to keep releases free), so
+macOS refuses to open it the first time. Click **OK** in the message, then
+right-click the app in Finder, choose **Open**, and click **Open** again in
+the next dialog. (If you prefer the Terminal, this one-time command has the
+same effect:)
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Markdown Viewditor.app"
+```
+
+### Linux
+
+Linux installers come in two package formats. First pick the one your Linux
+distribution uses:
+
+- **`.deb`** — Debian, Ubuntu, Linux Mint, Pop!_OS and similar distributions
+- **`.rpm`** — Fedora, Red Hat Enterprise Linux, openSUSE and similar distributions
+
+Then pick the file matching your processor:
+
+| Your processor                              | `.deb` (Debian/Ubuntu…) | `.rpm` (Fedora/RHEL…)      |
+| ------------------------------------------- | ----------------------- | -------------------------- |
+| Intel/AMD 64-bit (most PCs and laptops)     | `MarkdownViewditor_*_amd64.deb`   | `MarkdownViewditor-*.x86_64.rpm`  |
+| ARM 64-bit (e.g. Raspberry Pi 4/5, ARM servers) | `MarkdownViewditor_*_arm64.deb` | `MarkdownViewditor-*.aarch64.rpm` |
+
+Not sure which processor you have? Run `uname -m` in a terminal: `x86_64`
+means Intel/AMD, `aarch64` means ARM.
+
+To install, either:
+
+- **Double-click** the downloaded file — it opens in your distribution's graphical package installer, where you click **Install** and enter your password.
+- **Or** install it from a terminal (run the command in the folder where you downloaded the file):
+  - `.deb`: `sudo apt install ./MarkdownViewditor_*_amd64.deb`
+  - `.rpm`: `sudo dnf install ./MarkdownViewditor-*.x86_64.rpm`
+
+Afterwards, **Markdown Viewditor** appears in your application menu.
+
+### Auto-Updates
+
+All desktop builds (Windows, macOS, and Linux deb/rpm) can check the GitHub
+Releases feed for updates and install them in place via **Help → About → Check
+for Updates**. Auto-check on startup is off by default — enable it with the
+checkbox in the About dialog.
+
+In-app updates are disabled when running inside Linux Snaps or the Windows
+Store.
 
 ## Markdown Compatibility Levels
 
@@ -175,8 +199,8 @@ directives. Diagrams export to HTML and PDF as inline/vector SVG.
 
 ![Github Dark](images/ThemeGithubDark.png)
 ![Atom One Dark](images/ThemeAtomOneDark.png)
-![Github Light](images/ThemeGithubLight.png)
 ![Nord Light](images/ThemeNordLight.png)
+![Github Light](images/ThemeGithubLight.png)
 
 ### Custom Themes
 
@@ -191,7 +215,7 @@ To make a new custom theme available in the app, copy a custom theme `.css` file
 
 Theme type (dark/light) is auto-detected from the CSS content.
 
-The included example custom theme [Custom Theme Bubblegum](testing/custom_themes/theme-bubblegum.css):
+The example custom theme [Custom Theme Bubblegum](testing/custom_themes/theme-bubblegum.css):
 
 ![Custom Theme Bubblegum](images/ThemeCustomBubblegum.png)
 
@@ -228,6 +252,31 @@ Also worth knowing:
   and reaches users through distro WebKitGTK updates.
 
 ---
+
+## AI-Augmented Development
+
+This application was built with the help of [OpenCode](https://opencode.ai),
+an AI-powered coding assistant. Development used different AI models, some free
+and some paid. Also most of the documentation was written by AI.
+
+I'm a Senior Software Developer and I wrote my first software back in the
+1970's. Yes, around the time when smoking was normal, everyone said "10-4", were
+fascinated by Lava Lamps, and listened to Disco music. Phones were anchored to a
+geographic location instead of to a person and nobody had yet invented the Internet.
+I've been building software for a living my entire career until I retired in 2025.
+
+I'm still coding for fun and I couldn't find a Markdown viewer and editor
+that I liked, so I used the summer 2026 to write the Markdown desktop app
+that is perfect for me and at the same time to test if AI coding assistants
+are any good.
+
+It turned out that my AI assistant was surprisingly knowledgeable and understood
+what I meant (most of the time). Sometimes my assistant lacked intelligence
+and experience and therefore it required constant supervision
+and guidance from an experienced software developer - which in my experience is also true
+for many human programmers.
+
+Read more details on [my homepage](https://pawhermansen.dk/2026/09/13/what-is-wrong-with-ai-and-how-to-have-fun-doing-ai-augmented-coding/).
 
 ## Project Quick Start
 

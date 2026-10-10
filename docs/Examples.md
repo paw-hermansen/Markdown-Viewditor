@@ -163,6 +163,10 @@ Inline SVG is supported — both simple shapes and animated elements.
 
 See [Math.md](Math.md) and [Chemistry.md](Chemistry.md) for formula syntax.
 
+## Mermaid Diagrams
+
+See [Mermaid.md](Mermaid.md) for examples and syntax.
+
 ## Compatibility Levels
 
 Not all features work everywhere. The status bar lets you pick a compatibility level — the editor warns about features that exceed it:
@@ -171,7 +175,7 @@ Not all features work everywhere. The status bar lets you pick a compatibility l
 | ------------ | ----------------------------------------------------------------- |
 | **Basic**    | CommonMark core only                                              |
 | **GitHub**   | Tables, strikethrough, task lists, autolinks, footnotes, raw HTML |
-| **Advanced** | All GitHub + YAML frontmatter                                     |
+| **Advanced** | All GitHub + YAML frontmatter + diagrams                          |
 | **Custom**   | Toggle individual features                                        |
 
 Rendering is never restricted — this is a portability indicator, not a hard limit.

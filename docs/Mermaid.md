@@ -1,6 +1,6 @@
 # Mermaid Diagrams
 
-Markdown Viewditor renders diagrams via [Mermaid](https://mermaid.js.org). Diagrams work in all view modes and export to HTML and PDF. Mermaid is loaded lazily — it only activates when your document contains a `mermaid` code block.
+Markdown Viewditor renders diagrams via [Mermaid](https://mermaid.ai). Diagrams work in all view modes and export to HTML and PDF. Mermaid is loaded lazily — it only activates when your document contains a `mermaid` code block.
 
 ## Quick Start
 
@@ -154,7 +154,7 @@ pie title Languages
     "Other" : 10
 ```
 
-For the full list of diagram types and their syntax, see the [Mermaid documentation](https://mermaid.js.org/intro/).
+For the full list of diagram types and their syntax, see the [Mermaid documentation](https://mermaid.ai/open-source/intro/).
 
 ## Settings
 
@@ -407,7 +407,7 @@ graph LR
     A[Styled] --> B[Node]
 ```
 
-See [Mermaid configuration](https://mermaid.js.org/config/configuration.html) for all available frontmatter options.
+See [Mermaid configuration](https://mermaid.ai/open-source/config/configuration.html) for all available frontmatter options.
 
 ## Invalid Diagrams
 
@@ -451,4 +451,4 @@ Diagram labels are measured before a [custom theme's](CustomThemes.md) styles ap
 
 Mermaid supports dozens of diagram types including flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, mind maps, and more.
 
-**[Mermaid documentation](https://mermaid.js.org/intro/)** — full syntax reference for all diagram types
+**[Mermaid documentation](https://mermaid.ai/open-source/intro/)** — full syntax reference for all diagram types

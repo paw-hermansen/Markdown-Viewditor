@@ -553,7 +553,13 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   controls. Fixed-content popovers (the zoom popup) disable scrolling
   entirely instead: `placePopover(..., capHeight = false)` plus
   `overflow-y: visible`. `scrollbar-gutter: stable` is kept for other
-  engines, but it reserves nothing on WebKitGTK's overlay scrollbars.
+  engines, but it reserves nothing on WebKitGTK's overlay scrollbars. The
+  top bar keeps a hard minimum gap between the filename and the
+  Edit/Split/View toggle (`gap: 16px` on `.toolbar` — flex gaps hold even
+  when the row overflows, where `space-between` collapses to zero) and the
+  filename yields first (`max-width: clamp(0px, 30vw - 120px, 200px)`), so
+  long names or high zoom ellipsize the name instead of crowding the
+  buttons.
 - Zoom changes keep the visible line anchored: `setZoom` runs registered
   `ZoomScrollAnchor`s around `applyZoomLevel` — the editor and viewer capture
   the line at the viewport middle before the change and restore it after two

@@ -32,8 +32,6 @@ A feature-rich and simple cross-platform markdown viewer and editor with live pr
 | [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
 | [Mermaid Diagrams](docs/Mermaid.md)    | Diagram types, host options and export behavior      |
 
-
-
 ## Install and Auto-Updates
 
 - GitHub [Releases page](../../releases/latest) has install packages for Windows, macOS, and Linux.
@@ -47,7 +45,6 @@ A feature-rich and simple cross-platform markdown viewer and editor with live pr
 | 64-bit Intel or AMD (almost all PCs) - preferred | `MarkdownViewditor_*_x64-setup.exe` |
 | Classic Windows Installer package                | `MarkdownViewditor_*_x64_en-US.msi` |
 
-
 To install:
 
 1. Open the downloaded `.exe` file (click it in the browser's download list, or double-click it in your Downloads folder).
@@ -58,9 +55,9 @@ To install:
 
 One file works for both kinds of Mac:
 
-| Your Mac                                | File to download                |
-| --------------------------------------- | ------------------------------- |
-| Apple Silicon (M1–M4) and Intel Macs    | `MarkdownViewditor_*_universal.dmg` |
+| Your Mac                             | File to download                    |
+| ------------------------------------ | ----------------------------------- |
+| Apple Silicon (M1–M4) and Intel Macs | `MarkdownViewditor_*_universal.dmg` |
 
 To install:
 
@@ -88,9 +85,9 @@ distribution uses:
 
 Then pick the file matching your processor:
 
-| Your processor                              | `.deb` (Debian/Ubuntu…) | `.rpm` (Fedora/RHEL…)      |
-| ------------------------------------------- | ----------------------- | -------------------------- |
-| Intel/AMD 64-bit (most PCs and laptops)     | `MarkdownViewditor_*_amd64.deb`   | `MarkdownViewditor-*.x86_64.rpm`  |
+| Your processor                                  | `.deb` (Debian/Ubuntu…)         | `.rpm` (Fedora/RHEL…)             |
+| ----------------------------------------------- | ------------------------------- | --------------------------------- |
+| Intel/AMD 64-bit (most PCs and laptops)         | `MarkdownViewditor_*_amd64.deb` | `MarkdownViewditor-*.x86_64.rpm`  |
 | ARM 64-bit (e.g. Raspberry Pi 4/5, ARM servers) | `MarkdownViewditor_*_arm64.deb` | `MarkdownViewditor-*.aarch64.rpm` |
 
 Not sure which processor you have? Run `uname -m` in a terminal: `x86_64`

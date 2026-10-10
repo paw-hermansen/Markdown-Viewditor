@@ -8,6 +8,7 @@
 
 <script lang="ts" generics="T extends string">
   import type { Snippet } from 'svelte';
+  import { computePopupPlacement, findClipRect } from '$lib/utils/popup-placement';
 
   interface Props {
     choices: Choice<T>[];
@@ -41,6 +42,8 @@
 
   let isOpen = $state(false);
   let rootRef: HTMLDivElement | undefined = $state(undefined);
+  let dropdownRef: HTMLDivElement | undefined = $state(undefined);
+  let dropdownStyle = $state('');
 
   let current = $derived(value !== undefined ? choices.find((c) => c.value === value) ?? choices[0] : undefined);
   let label = $derived(fixedLabel ?? (current ? (formatLabel ? formatLabel(current) : current.label) : ''));
@@ -91,6 +94,50 @@
       trigger?.focus();
     }
   }
+
+  /**
+   * Keep the open menu inside the box it is clipped by. The CSS alignment
+   * only knows the trigger's edge: under zoom the clip box (the main content
+   * area, not the window) is much narrower/shorter, so edge-anchored menus
+   * were cut at the left edge and at the status bar line. Measured placement
+   * is exact at any zoom — see popup-placement.ts.
+   */
+  function placeMenu() {
+    const dropdown = dropdownRef;
+    const trigger = rootRef?.querySelector('.main-button') as HTMLElement | null;
+    if (!dropdown || !trigger || !rootRef) return;
+    const placement = computePopupPlacement({
+      trigger: trigger.getBoundingClientRect(),
+      clip: findClipRect(dropdown),
+      popup: {
+        width: dropdown.getBoundingClientRect().width,
+        height: Math.min(dropdown.scrollHeight, 400),
+      },
+      align,
+    });
+    const rootLeft = rootRef.getBoundingClientRect().left;
+    const parts = [
+      `left:${placement.left - rootLeft}px`,
+      'right:auto',
+      `max-height:${placement.maxHeight}px`,
+    ];
+    if (placement.maxWidth !== undefined) {
+      parts.push(`max-width:${placement.maxWidth}px`);
+    }
+    dropdownStyle = parts.join(';');
+  }
+
+  $effect(() => {
+    if (!isOpen) return;
+    // Measure after the menu is in the DOM (one settle frame).
+    const raf = requestAnimationFrame(placeMenu);
+    window.addEventListener('resize', placeMenu);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', placeMenu);
+      dropdownStyle = '';
+    };
+  });
 
   function handleMenuKeydown(e: KeyboardEvent) {
     if (!isOpen) return;
@@ -175,7 +222,7 @@
   {/if}
 
   {#if isOpen}
-    <div class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu" tabindex="0" onkeydown={handleMenuKeydown}>
+    <div bind:this={dropdownRef} style={dropdownStyle} class="dropdown" class:align-left={align === 'left'} class:align-right={align === 'right'} role="menu" tabindex="0" onkeydown={handleMenuKeydown}>
       {#if header}
         <div class="dropdown-header">{header}</div>
       {/if}
@@ -310,7 +357,9 @@
     padding: 4px;
     min-width: 240px;
     max-width: 320px;
-    max-height: 400px;
+    /* Never taller than the space below the toolbar (opens downward), so the
+       menu scrolls instead of running off-screen at high zoom. */
+    max-height: min(400px, calc(100vh - 96px));
     overflow-y: auto;
     z-index: 100;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -333,10 +382,16 @@
     letter-spacing: 0.5px;
   }
 
+  /* Sticky so the footer (e.g. "Show export confirmation") stays reachable
+     while the menu scrolls; bleeds over the .dropdown padding to mask
+     scrolled items. */
   .dropdown-footer {
-    padding: 8px 12px;
+    position: sticky;
+    bottom: -4px;
+    margin: 0 -4px -4px;
+    padding: 12px 16px;
     border-top: 1px solid var(--border);
-    margin-top: 4px;
+    background: var(--bg-secondary);
     font-size: 12px;
     color: var(--text-secondary);
   }

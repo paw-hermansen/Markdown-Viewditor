@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ViewMode } from '$lib/types';
   import { modLabel } from '$lib/utils/keyboard';
+  import { zoomIn, zoomOut, resetZoom } from '$lib/stores/zoom.svelte';
   import { listExporters } from '$lib/export/registry.svelte';
   import { focusTrap } from '$lib/utils/focus-trap';
 
@@ -62,6 +63,9 @@
       const next: ViewMode = viewMode === 'editor' ? 'split' : viewMode === 'split' ? 'viewer' : 'editor';
       onViewModeChange(next);
     }},
+    { id: 'zoom-in', label: 'Zoom In', shortcut: modLabel('Ctrl++'), category: 'View', action: () => void zoomIn() },
+    { id: 'zoom-out', label: 'Zoom Out', shortcut: modLabel('Ctrl+-'), category: 'View', action: () => void zoomOut() },
+    { id: 'zoom-reset', label: 'Reset Zoom', shortcut: modLabel('Ctrl+0'), category: 'View', action: () => void resetZoom() },
     ...(onFormatDocument ? [{ id: 'format-document', label: 'Format Document', shortcut: modLabel('Shift+Alt+F'), category: 'Edit', action: onFormatDocument }] : []),
     ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: modLabel('Ctrl+P'), category: 'File', action: onPrint }] : []),
     { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
@@ -260,7 +264,9 @@
   }
 
   .commands-list {
-    max-height: 320px;
+    /* Never taller than the space below the search box, so the list scrolls
+       within the screen at high zoom. */
+    max-height: min(320px, calc(100vh - 180px));
     overflow-y: auto;
     padding: 4px;
   }

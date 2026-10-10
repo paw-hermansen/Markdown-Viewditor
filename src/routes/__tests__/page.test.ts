@@ -3,6 +3,7 @@ import { render, waitFor, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Page from "../+page.svelte";
 import { hasUnsavedChanges } from "$lib/stores/editor.svelte";
+import { settingsState } from "$lib/stores/settings.svelte";
 
 const {
   mockInvoke,
@@ -21,6 +22,7 @@ const {
   mockConfirmReload,
   mockConfirmOk,
   mockFileState,
+  mockSetZoom,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === "opened_urls") return Promise.resolve([]);
@@ -53,6 +55,7 @@ const {
     isReadOnly: null as boolean | null,
     forceSaveAs: false,
   },
+  mockSetZoom: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }));
@@ -72,6 +75,9 @@ vi.mock("@tauri-apps/api/window", () => ({
     onCloseRequested: vi.fn(() => () => {}),
     onFocusChanged: vi.fn(() => () => {}),
   }),
+}));
+vi.mock("@tauri-apps/api/webview", () => ({
+  getCurrentWebview: () => ({ setZoom: mockSetZoom }),
 }));
 
 vi.mock("$lib/stores/file.svelte", () => ({
@@ -133,6 +139,7 @@ vi.mock("$lib/stores/settings.svelte", () => ({
     splitRatio: 0.5,
     lastOpenedFile: null,
     recentFiles: [],
+    zoomLevel: 1,
   },
   loadSettings: vi.fn().mockResolvedValue(undefined),
   updateViewMode: vi.fn(),
@@ -140,6 +147,7 @@ vi.mock("$lib/stores/settings.svelte", () => ({
   updateRecentFiles: vi.fn(),
   updateLastOpenedFile: vi.fn(),
   updateSplitRatio: vi.fn(),
+  updateSetting: vi.fn(),
   saveSettings: vi.fn(),
 }));
 
@@ -318,6 +326,45 @@ describe("+page.svelte", () => {
 
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("save_window_state");
+    });
+  });
+
+  it("zooms in on Ctrl+= and Ctrl++ (character-based, layout-safe)", async () => {
+    settingsState.zoomLevel = 1;
+    render(Page);
+    await fireEvent.keyDown(window, { key: "=", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockSetZoom).toHaveBeenCalledWith(1.1);
+    });
+
+    await fireEvent.keyDown(window, { key: "+", ctrlKey: true });
+    await waitFor(() => {
+      expect(mockSetZoom).toHaveBeenCalledWith(1.25);
+    });
+  });
+
+  it("zooms out on Ctrl+-", async () => {
+    settingsState.zoomLevel = 1;
+    render(Page);
+    await fireEvent.keyDown(window, { key: "-", ctrlKey: true });
+
+    await waitFor(() => {
+      expect(mockSetZoom).toHaveBeenCalledWith(0.9);
+    });
+  });
+
+  it("resets zoom on Ctrl+0", async () => {
+    settingsState.zoomLevel = 1;
+    render(Page);
+    await fireEvent.keyDown(window, { key: "=", ctrlKey: true });
+    await waitFor(() => {
+      expect(mockSetZoom).toHaveBeenCalledWith(1.1);
+    });
+
+    await fireEvent.keyDown(window, { key: "0", ctrlKey: true });
+    await waitFor(() => {
+      expect(mockSetZoom).toHaveBeenLastCalledWith(1);
     });
   });
 });

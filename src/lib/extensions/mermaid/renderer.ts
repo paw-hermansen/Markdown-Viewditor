@@ -9,6 +9,7 @@ import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
 import { MERMAID_FONT_SIZE } from "./styles";
+import { normalizeSvgTextOffsets } from "./text-offsets";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 
 type MermaidModule = typeof import("mermaid");
@@ -236,7 +237,9 @@ async function preRenderMermaidBlocksPass(
         `mmd-${nextRenderId++}`,
         diagramContent,
       );
-      svgCache.set(key, svg);
+      // Cache the zoom-proof form: em-based dy/dx offsets drift under WebKit
+      // page zoom (see text-offsets.ts).
+      svgCache.set(key, normalizeSvgTextOffsets(svg));
     } catch (err) {
       removeMermaidTempElements();
       if (!mod) {
@@ -338,7 +341,7 @@ export async function renderMermaidSvgForExport(
         `mmd-export-${nextRenderId++}`,
         content,
       );
-      raw = svg;
+      raw = normalizeSvgTextOffsets(svg);
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();
@@ -389,7 +392,7 @@ export async function renderMermaidSvgForPrint(
         `mmd-print-${nextRenderId++}`,
         content,
       );
-      raw = svg;
+      raw = normalizeSvgTextOffsets(svg);
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();

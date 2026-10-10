@@ -2,6 +2,9 @@
   import { editorState } from '$lib/stores/editor.svelte';
   import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
   import { levelState } from '$lib/stores/markdown-levels.svelte';
+  import { zoomIn, zoomOut, resetZoom, zoomLabel } from '$lib/stores/zoom.svelte';
+  import { modLabel } from '$lib/utils/keyboard';
+  import { computePopupPlacement, findClipRect } from '$lib/utils/popup-placement';
   import {
     listFeatureToggles,
     presetFor,
@@ -36,6 +39,50 @@
 
   let showLevel = $state(false);
   let showViolations = $state(false);
+  let showZoom = $state(false);
+
+  let levelPopRef: HTMLDivElement | undefined = $state(undefined);
+  let violationsPopRef: HTMLDivElement | undefined = $state(undefined);
+  let zoomPopRef: HTMLDivElement | undefined = $state(undefined);
+
+  /**
+   * Keep an open popover inside the box it is clipped by (the viewport here,
+   * but measured, not guessed — see popup-placement.ts). Opens upward from
+   * the status bar, so the cap is the space above the trigger.
+   */
+  function placePopover(pop: HTMLElement | undefined) {
+    const wrapper = pop?.parentElement;
+    const trigger = wrapper?.querySelector('button') as HTMLElement | null;
+    if (!pop || !wrapper || !trigger) return;
+    const placement = computePopupPlacement({
+      trigger: trigger.getBoundingClientRect(),
+      clip: findClipRect(pop),
+      popup: { width: pop.getBoundingClientRect().width, height: pop.scrollHeight },
+      align: 'right',
+      openDirection: 'up',
+    });
+    pop.style.left = `${placement.left - wrapper.getBoundingClientRect().left}px`;
+    pop.style.right = 'auto';
+    pop.style.maxHeight = `${placement.maxHeight}px`;
+    if (placement.maxWidth !== undefined) pop.style.maxWidth = `${placement.maxWidth}px`;
+  }
+
+  function placePopovers() {
+    placePopover(levelPopRef);
+    placePopover(violationsPopRef);
+    placePopover(zoomPopRef);
+  }
+
+  $effect(() => {
+    if (!showLevel && !showViolations && !showZoom) return;
+    // Measure after the popover is in the DOM (one settle frame).
+    const raf = requestAnimationFrame(placePopovers);
+    window.addEventListener('resize', placePopovers);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', placePopovers);
+    };
+  });
 
   let violations = $derived(levelState.violations);
 
@@ -69,6 +116,7 @@
     if (e.key === 'Escape') {
       showLevel = false;
       showViolations = false;
+      showZoom = false;
     }
   }
 
@@ -78,6 +126,7 @@
     if (!target.closest('.level-popover-area')) {
       showLevel = false;
       showViolations = false;
+      showZoom = false;
     }
   }
 
@@ -85,12 +134,21 @@
     e.stopPropagation();
     showLevel = !showLevel;
     showViolations = false;
+    showZoom = false;
+  }
+
+  function onZoomButtonClick(e: MouseEvent) {
+    e.stopPropagation();
+    showZoom = !showZoom;
+    showLevel = false;
+    showViolations = false;
   }
 
   function onViolationBadgeClick(e: MouseEvent) {
     e.stopPropagation();
     showViolations = !showViolations;
     showLevel = false;
+    showZoom = false;
   }
 </script>
 
@@ -117,7 +175,7 @@
         {levelLabel} <span class="caret">&#x25BE;</span>
       </button>
       {#if showLevel}
-        <div class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onkeydown={handlePopoverKeydown}>
+        <div bind:this={levelPopRef} class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onkeydown={handlePopoverKeydown}>
           <div class="level-options">
             {#each LEVELS as lvl}
               <button
@@ -159,7 +217,7 @@
         &#x26A0; {violations.length}
       </button>
       {#if showViolations && violations.length > 0}
-        <div class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
+        <div bind:this={violationsPopRef} class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
           {#each violations as v}
             <div class="violation-row">
               <div class="violation-msg">{violationMessageFor(v)}</div>
@@ -171,14 +229,59 @@
         </div>
       {/if}
     </div>
-    <span class="separator">|</span>
-    <span>Markdown</span>
-    <span class="separator">|</span>
-    <span>UTF-8</span>
+    <!-- Decorative labels: hidden at narrow CSS viewports (incl. high zoom)
+         so the interactive controls above/below stay reachable. -->
+    <span class="statusbar-deco">
+      <span class="separator">|</span>
+      <span>Markdown</span>
+      <span class="separator">|</span>
+      <span>UTF-8</span>
+      <span class="separator">|</span>
+    </span>
+    <div class="level-popover-area">
+      <button
+        class="level-btn"
+        onclick={onZoomButtonClick}
+        title={modLabel('Zoom level (Ctrl++ / Ctrl+- / Ctrl+0)')}
+        aria-label="Zoom level"
+        aria-expanded={showZoom}
+      >
+        {zoomLabel()} <span class="caret">&#x25BE;</span>
+      </button>
+      {#if showZoom}
+        <div bind:this={zoomPopRef} class="popover zoom-popover" role="dialog" aria-label="Zoom" tabindex="0" onkeydown={handlePopoverKeydown}>
+          <div class="zoom-row">
+            <button
+              class="zoom-step-btn"
+              onclick={(e) => { e.stopPropagation(); void zoomOut(); }}
+              title={modLabel('Zoom out (Ctrl+-)')}
+              aria-label="Zoom out"
+            >&#x2212;</button>
+            <span class="zoom-value">{zoomLabel()}</span>
+            <button
+              class="zoom-step-btn"
+              onclick={(e) => { e.stopPropagation(); void zoomIn(); }}
+              title={modLabel('Zoom in (Ctrl++)')}
+              aria-label="Zoom in"
+            >+</button>
+          </div>
+          <button
+            class="zoom-reset-btn"
+            onclick={(e) => { e.stopPropagation(); void resetZoom(); }}
+            title={modLabel('Reset zoom (Ctrl+0)')}
+          >Reset (100%)</button>
+        </div>
+      {/if}
+    </div>
   </div>
 </footer>
 
 <style>
+  /* min-height (not height) + nowrap. A hard 28px box left only ~1px of slack
+     around the 1.5 line box; at fractional zoom the engine rounds text
+     baselines to device pixels and the text was pushed out of the bar (which
+     is flush with the window edge) — clipped at 50–60% zoom. Wrapping
+     ("UTF-8" at 300% zoom) would overflow a fixed height the same way. */
   .statusbar {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -187,8 +290,10 @@
     background: var(--bg-secondary);
     border-top: 1px solid var(--border);
     font-size: 12px;
+    line-height: 1.3;
     color: var(--text-muted);
-    height: 28px;
+    min-height: 28px;
+    white-space: nowrap;
     user-select: none;
   }
 
@@ -202,6 +307,12 @@
 
   .statusbar-right {
     justify-content: flex-end;
+  }
+
+  /* Keep controls at full size instead of squeezing them into wrapped or
+     clipped text when the CSS viewport is narrow (high zoom). */
+  .statusbar-right > * {
+    flex-shrink: 0;
   }
 
   .separator {
@@ -225,7 +336,7 @@
     padding: 1px 6px;
     border-radius: 4px;
     font: inherit;
-    height: 20px;
+    min-height: 20px;
   }
 
   .level-btn:hover {
@@ -246,7 +357,7 @@
     padding: 1px 6px;
     border-radius: 4px;
     font: inherit;
-    height: 20px;
+    min-height: 20px;
     min-width: 48px;
     text-align: center;
   }
@@ -271,6 +382,11 @@
     padding: 8px;
     z-index: 100;
     min-width: 220px;
+    /* Never taller than the space above the status bar (opens upward), so the
+       popup scrolls instead of running off-screen at high zoom. */
+    max-height: min(60vh, calc(100vh - 44px));
+    overflow-y: auto;
+    white-space: normal;
     font-size: 12px;
     color: var(--text-primary);
   }
@@ -352,8 +468,68 @@
     margin-top: 2px;
   }
 
-  @media (max-width: 640px) {
-    .statusbar-right {
+  .zoom-popover {
+    min-width: 160px;
+  }
+
+  .zoom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .zoom-step-btn {
+    min-width: 28px;
+    min-height: 28px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .zoom-step-btn:hover {
+    background: var(--bg-hover);
+  }
+
+  .zoom-value {
+    min-width: 48px;
+    text-align: center;
+  }
+
+  .zoom-reset-btn {
+    width: 100%;
+    margin-top: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 4px 6px;
+    font: inherit;
+  }
+
+  .zoom-reset-btn:hover {
+    background: var(--bg-hover);
+  }
+
+  /* Decorative labels participate in the flex row (display: contents) and are
+     the first thing dropped when space runs out. */
+  .statusbar-deco {
+    display: contents;
+  }
+
+  /* Page zoom shrinks the CSS viewport, so high zoom looks like a narrow
+     window here. Hide the decorative labels but keep the level, violations
+     and zoom controls — the zoom control is the way back out. (The old rule
+     hid the whole right cluster below 640px, including the zoom control.) */
+  @media (max-width: 900px) {
+    .statusbar-deco {
       display: none;
     }
   }

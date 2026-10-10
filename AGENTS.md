@@ -211,6 +211,26 @@ would otherwise consume the backslash and hide the delimiter.
 - A bounded LRU memo cache (`katex-cache.ts`) wraps `katex.renderToString`
   so whole-document re-renders (150 ms debounce) cost ~0 for unchanged
   formulas.
+- **`.vlist-s` anchor is pinned to 2px** (`extensions/katex/styles.ts`,
+  `!important`), overriding KaTeX's stock `font-size: 1px`. KaTeX anchors
+  every vlist table's baseline on that cell; under WebKit page zoom any
+  factor < 1 makes the 1px font sub-pixel and its metrics collapse, so the
+  table re-anchors and all plain-baseline formula content (relations `=`,
+  `\left(...\right)` delimiters, `\text{}`) drops ~one KaTeX font-size below
+  the vlist-positioned content (matrix/cases rows). Measured on WebKitGTK at
+  85% zoom: ~16px drift; Windows/Blink unaffected. 2px survives the zoom
+  multiplication (1.4px at the 70% zoom floor) and is geometry-identical to stock
+  KaTeX at 100% — keep it when upgrading KaTeX (its CSS comment explains why
+  the cell exists at all). Regression: `__tests__/styles.test.ts`.
+  Related WebKit quirk — the zoom floor: the engine floors effective font
+  sizes at exactly 10px, so sizes stop scaling at different zoom levels
+  (UI text 14px below 72%, KaTeX base 16.9px below 59%, KaTeX script-size
+  11.9px already below 85%, where sub/superscripts clamp to 10px and render
+  nearly as large as the formula's base text). This is why the zoom ladder
+  stops at 70% (`MIN_ZOOM` in zoom.svelte.ts): 60% and 50% render scripts at
+  base size and (at 50%) break formula geometry outright (2–8px drift plus
+  whole-formula over-scaling). Known artifact at 70–80%: mildly oversized
+  sub/superscripts in script-heavy math.
 - `enableMathBlockInHtml` / `enableMathInlineInHtml` stay **disabled**: they
   splice math tokens into html_block content with `map: null`, which strips
   `data-line` anchors and breaks scroll-sync.
@@ -286,6 +306,60 @@ the config↔CSS consistency. PDF/print is unaffected either way: those variants
 use `<text>` labels (`htmlLabels: false`), so there is no `foreignObject` to
 clip.
 
+A sibling quirk in the same zoom area: Mermaid positions label text with
+em-based `dy`/`dx` offsets (sequence message labels use `dy="1em"`), and
+WebKit page zoom resolves em against the _zoom-divided_ computed font size
+while the diagram geometry scales normally — labels slide up toward the
+neighbouring line as zoom grows (at 200% a sequence label sat closer to the
+previous message's line than to its own). `text-offsets.ts` rewrites every
+em-based `dy`/`dx` to absolute user units at cache-fill time
+(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants). The same
+pass folds translate-based text placement (`transform="translate(X, Y)
+rotate(0)"` with x/y at 0 — xychart's axis labels) into plain `x`/`y`
+attributes: under WebKit page zoom those labels collapse toward the top of
+the chart and vanish (measured -278 user units at 300%; dominant-baseline is
+not the culprit). Both rewrites are zoom-proof and no-ops in effect on Blink
+and at 100% zoom — keep them when touching the render pipeline. Regression:
+`__tests__/text-offsets.test.ts`.
+
+Zoom-sweep inventory (WebKitGTK): the em-`dy` families are sequence
+(incl. notes/loops/activations), gantt, timeline, c4, sankey and gitgraph —
+all covered by that one pass — plus xychart's translate-positioned labels.
+The `<foreignObject>` HTML-label families
+(flowchart, class, state, journey, mindmap, block) measure uniform at
+100–300% zoom on modern WebKit (label div boxes track their fo boxes
+exactly). erDiagram/pie/quadrant are clean. Two facts worth keeping:
+diagram geometry is render-zoom-independent (re-rendering a diagram at any
+zoom produces identical geometry — the cache is safe), and the `<switch>`
+fallback `<text>` duplicates after each `<foreignObject>` are never painted,
+so ignore their rects in measurements. Old WebKit (macOS 12) remains the
+place to eyeball foreignObject labels and SVG markers under zoom
+(webkit.org/show_bug.cgi?id=279041). Diagrams with Mermaid's `useMaxWidth`
+(default) shrink to fit the container, so at high zoom they stay the same
+physical size while the rest of the UI grows — by design, not a bug.
+
+### Upgrading KaTeX / Mermaid
+
+The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
+its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
+label offsets plus translate-based text placement (the `text-offsets.ts`
+rewrites). The `upgrade-contract.test.ts` suites in both extensions render
+_REAL_ library output and fail when those internals change shape. Read the
+failure message: "lost its target / no longer emits" means either upstream
+changed the mechanism (extend the fix) or dropped it (the compensation may be
+obsolete) — re-measure with the zoom-sweep harness before touching either.
+
+Upgrade checklist:
+
+1. `npm install katex@<ver>` / `npm install mermaid@<ver>` (the `^0.16` /
+   `^12` ranges keep majors out — KaTeX 0.18 renames CSS classes outright).
+2. KaTeX: run `scripts/update-katex-css.sh` to regenerate the woff2
+   stylesheet the pin targets.
+3. `npx vitest run` — the upgrade-contract suites are the tripwires.
+4. On Linux: `python3 testing/tools/zoom-sweep/mermaid-zoom-sweep.py`.
+5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
+   plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.
+
 ### Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only
@@ -297,6 +371,46 @@ into the first opening tag of the returned HTML (idempotent — skips if
 order and covers `$$…$$`, `\[…\]`, bare `\begin{}`, and ` ```math `
 fences. If you touch this, the monotonicity test in
 `__tests__/markdown-math.test.ts` must stay green.
+
+### App Zoom
+
+`src/lib/stores/zoom.svelte.ts` owns app-wide zoom (70%–300%), applied as the
+webview's native **page** zoom (`getCurrentWebview().setZoom()` → WebKitGTK
+`set_zoom_level`, WKWebView `setPageZoom`, WebView2 `SetZoomFactor`). Never
+implement this with CSS `zoom`: WebKit mis-scales inline SVG under it (the
+reason the macOS PDF path refuses it — see below), while page zoom scales
+Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
+`settings.json` and is re-applied by `applySavedZoom()` right after
+`loadSettings()` in `+layout.svelte`.
+
+- Shortcuts (`handleGlobalKeydown` in `+page.svelte`) match **`e.key`** (the
+  produced character: `=`/`+`, `-`/`_`, `0`), not `e.code` — symbols live on
+  different physical keys per keyboard layout (German `+`, French `=`,
+  AZERTY shifted digits). Ctrl/Cmd+wheel and macOS pinch go through
+  `handleZoomWheel` (registered `{ passive: false }`).
+- `core:webview:allow-set-webview-zoom` must stay in
+  `src-tauri/capabilities/default.json` — it is NOT part of `core:default`.
+- All measurement code (`measureMathVisualBounds`, `computeViewerLayoutWidth`,
+  the editor's `scaleX`) is page-zoom-invariant: page zoom shrinks the CSS-px
+  viewport but computed styles and rects in CSS px do not change. Keep it that
+  way — prefer ratios of `getBoundingClientRect` over raw px assumptions.
+- UI chrome must stay zoom-proof: no fixed `height` on bars/buttons (use
+  `min-height` — a hard px box plus device-pixel baseline rounding clips text
+  at fractional zoom), `white-space: nowrap` on single-line status text, and
+  measured popup placement — `popup-placement.ts` clamps dropdowns/popovers
+  into their _clipping ancestor_ (`.content { overflow: hidden }`, not the
+  window) so entries scroll into reach instead of being cut at the status
+  bar line or the pane edge at high zoom. Never place popups with fixed
+  offsets or bare `right: 0` edge alignment; measure the trigger and clip
+  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`).
+- Zoom changes keep the visible line anchored: `setZoom` runs registered
+  `ZoomScrollAnchor`s around `applyZoomLevel` — the editor and viewer capture
+  the line at the viewport middle before the change and restore it after two
+  settle frames (CodeMirror must re-measure re-wrapped line heights first;
+  `utils/zoom-scroll-anchor.ts`). WebKit preserves `scrollTop` across zoom,
+  but the content above the anchor re-flows (line wrapping, diagram
+  fit-to-width), so an unanchored view jumps. `+page.svelte` registers the
+  composite anchor and pauses scroll-sync for the capture/restore window.
 
 ### Export Pipeline
 
@@ -327,6 +441,14 @@ fences. If you touch this, the monotonicity test in
 ### Print/PDF Fidelity Contract
 
 The print clone reproduces the Viewer exactly, then scales to paper:
+
+- Exports and prints always run at **zoom 1.0**, regardless of the on-screen
+  app zoom: `withNominalZoom()` (in `stores/zoom.svelte.ts`) wraps the
+  `exportPdf()` / `runExporter()` calls in `+page.svelte` (re-entrant, restores
+  the level afterwards). The macOS capture rect is in points and
+  `scaleWideMathForPrint()` measures the laid-out clone, so a live zoom would
+  break the physical calibration and the wide-math page fit. Any new export
+  entry point must go through the same guard.
 
 - The clone is laid out at the viewer's maximum content width (default
   800px column + 2×16px gutters = 832px; `computeViewerLayoutWidth()` reads

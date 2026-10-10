@@ -399,3 +399,143 @@ config:
 graph TD
     F[Forest Theme] --> G[Applied]
 ```
+
+## Mermaid — Diagram Types
+
+One diagram per Mermaid family. This is the zoom regression set (see S15 in
+the manual test plan): each family exercises a different label-placement
+mechanism (em-based `dy` offsets, `<foreignObject>` HTML labels,
+translate-positioned text), which is where zoom bugs have historically
+hided.
+
+### Gantt Chart
+
+```mermaid
+gantt
+    title Plan
+    section A
+    Task one :a1, 2024-01-01, 30d
+    Task two :a2, after a1, 20d
+```
+
+### Timeline
+
+```mermaid
+timeline
+    title Our history
+    2020 : Founded
+    2022 : Launched product
+```
+
+### C4 Diagram
+
+```mermaid
+C4Context
+    title Our system
+    Person(user, "User")
+    System(sys, "Our System")
+    Rel(user, sys, "Uses")
+```
+
+### Journey Diagram
+
+```mermaid
+journey
+    title My day
+    section Work
+        Write code: 5: Me
+        Review: 3: Me, Team
+```
+
+### Mindmap
+
+```mermaid
+mindmap
+    root((mindmap))
+        Origins
+            Long history
+        Research
+            On effectiveness
+```
+
+### Xychart (Bar Chart)
+
+```mermaid
+xychart-beta
+    title "Sales"
+    x-axis [Q1, Q2, Q3]
+    y-axis "Revenue" 0 --> 100
+    bar [20, 55, 80]
+```
+
+### Class Diagram
+
+```mermaid
+classDiagram
+    class Animal {
+        +String name
+        +makeSound()
+    }
+    Animal <|-- Dog
+```
+
+### State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Busy: work
+    Busy --> [*]: done
+```
+
+### ER Diagram
+
+```mermaid
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+```
+
+### Pie Chart
+
+```mermaid
+pie title Pets
+    "Dogs": 10
+    "Cats": 5
+```
+
+### Quadrant Chart
+
+```mermaid
+quadrantChart
+    title Reach
+    x-axis Low --> High
+    y-axis Bad --> Good
+    "A": [0.3, 0.6]
+    "B": [0.7, 0.2]
+```
+
+### Sankey Chart
+
+```mermaid
+sankey-beta
+    A,B,20
+    A,C,30
+    B,D,15
+```
+
+### Git Graph
+
+```mermaid
+gitGraph
+    commit
+    branch dev
+    commit
+```
+
+### Block Diagram
+
+```mermaid
+block-beta
+    columns 2
+    a b
+```

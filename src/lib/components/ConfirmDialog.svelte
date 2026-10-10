@@ -76,6 +76,10 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     max-width: 420px;
     width: 90vw;
+    /* Stay inside the screen at high zoom — the action buttons must always
+       be reachable. */
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     padding: 20px;
     animation: slide-up 120ms ease-out;
   }

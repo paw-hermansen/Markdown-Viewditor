@@ -231,7 +231,8 @@
     padding: 8px 16px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
-    height: 48px;
+    /* min-height so odd zoom rounding can never clip the row (see StatusBar). */
+    min-height: 48px;
     user-select: none;
   }
 
@@ -281,8 +282,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
@@ -356,14 +357,27 @@
     display: none;
   }
 
+  /* Slim visual line (2px) with a wider transparent hit area (8px), so the
+     handle looks light and stays easy to grab at every zoom level — under
+     webview page zoom a bare thin bar would shrink below 3px at the 70%
+     zoom floor. */
   .resize-handle {
-    width: 4px;
+    width: 8px;
     cursor: col-resize;
-    background: var(--border);
-    transition: background 150ms ease-in-out;
+    background: transparent;
+    position: relative;
     flex-shrink: 0;
     border: none;
     outline: none;
+    padding: 0;
+  }
+
+  .resize-handle::before {
+    content: "";
+    position: absolute;
+    inset: 0 3px;
+    background: var(--border);
+    transition: background 150ms ease-in-out;
   }
 
   .resize-handle:focus-visible {
@@ -371,12 +385,12 @@
     outline-offset: 2px;
   }
 
-  .resize-handle:hover,
-  .resize-handle.dragging {
+  .resize-handle:hover::before,
+  .resize-handle.dragging::before {
     background: var(--accent);
   }
 
-  .resize-handle.near-edge {
+  .resize-handle.near-edge::before {
     background: var(--accent-snap);
     opacity: 0.9;
   }

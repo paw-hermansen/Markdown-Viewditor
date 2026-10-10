@@ -20,6 +20,7 @@ const { mockSettingsState, mockUpdateSplitRatio } = vi.hoisted(() => ({
     recentFiles: [],
     markdownLevel: "advanced" as const,
     enabledFeatures: [] as string[],
+    zoomLevel: 1,
   },
   mockUpdateSplitRatio: vi.fn(),
 }));

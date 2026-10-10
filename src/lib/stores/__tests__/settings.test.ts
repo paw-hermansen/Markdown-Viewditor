@@ -41,6 +41,7 @@ describe("settings store", () => {
     settingsState.markdownLevel = "advanced";
     settingsState.enabledFeatures = presetFor("advanced");
     settingsState.exportConfirmDismissed = false;
+    settingsState.zoomLevel = 1;
   });
 
   describe("updateViewMode", () => {
@@ -144,6 +145,11 @@ describe("settings store", () => {
       updateSetting("enabledFeatures", ["tables"]);
       expect(settingsState.enabledFeatures).toEqual(["tables"]);
     });
+
+    it("should update zoomLevel", () => {
+      updateSetting("zoomLevel", 1.25);
+      expect(settingsState.zoomLevel).toBe(1.25);
+    });
   });
 
   describe("markdown level defaults", () => {
@@ -176,6 +182,7 @@ describe("settings store", () => {
         viewMode: "editor",
         editorFontSize: 16,
         viewerTheme: "monokai",
+        zoomLevel: 1.25,
       });
 
       await loadSettings();
@@ -183,6 +190,7 @@ describe("settings store", () => {
       expect(settingsState.viewMode).toBe("editor");
       expect(settingsState.editorFontSize).toBe(16);
       expect(settingsState.viewerTheme).toBe("monokai");
+      expect(settingsState.zoomLevel).toBe(1.25);
     });
 
     it("should keep defaults when no saved settings", async () => {
@@ -192,6 +200,7 @@ describe("settings store", () => {
 
       expect(settingsState.viewMode).toBe("split");
       expect(settingsState.editorFontSize).toBe(14);
+      expect(settingsState.zoomLevel).toBe(1);
     });
 
     it("should handle store load error gracefully", async () => {

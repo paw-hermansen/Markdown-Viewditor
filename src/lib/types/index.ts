@@ -39,6 +39,8 @@ export interface Settings {
   pdfIncludeFrontmatter: boolean;
   /** Include frontmatter/skill card in ODT exports. */
   odtIncludeFrontmatter: boolean;
+  /** App-wide zoom level (1 = 100%), applied via the webview's page zoom. */
+  zoomLevel: number;
 }
 
 export interface EditorState {

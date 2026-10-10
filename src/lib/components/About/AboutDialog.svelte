@@ -301,6 +301,10 @@
               </thead>
               <tbody>
                 <tr><td>Cycle View Mode</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">V</kbd></td></tr>
+                <tr><td>Zoom In</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">+</kbd> (or <kbd class="shortcut-key">=</kbd>)</td></tr>
+                <tr><td>Zoom Out</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">-</kbd></td></tr>
+                <tr><td>Reset Zoom</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">0</kbd></td></tr>
+                <tr><td>Zoom with Mouse Wheel</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + scroll (pinch on a macOS trackpad)</td></tr>
               </tbody>
             </table>
           </section>
@@ -640,7 +644,7 @@
     border-radius: 6px;
     padding: 16px;
     overflow-y: auto;
-    max-height: 400px;
+    max-height: min(400px, 50vh);
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 1.6;

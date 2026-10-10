@@ -72,7 +72,7 @@
     align-items: center;
     justify-content: center;
     min-width: 32px;
-    height: 32px;
+    min-height: 32px;
     padding: 0 4px;
     border: none;
     background: transparent;

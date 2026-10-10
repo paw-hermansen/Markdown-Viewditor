@@ -472,14 +472,65 @@ the export/print render paths, next to `normalizeSvgTextOffsets` in
 the upgrade-contract suite pins that Mermaid still emits the negative
 values (if that stops, the pass may be removable).
 
+### Mermaid Gantt Width (`gantt.useWidth`)
+
+Mermaid's gantt renderer is the only family whose coordinate system is NOT
+derived from content bounds: it spans the timeline across the render
+container (`w = elem.parentElement.offsetWidth` in its renderer) and draws
+its 11px fonts in that space. This app renders every diagram in Mermaid's
+body-level temp container (`mermaid.render()` → `body > div#dmmd-N`), so
+gantt charts were built for the full **window** width and `.mermaid-block`
+(`min(maxWidth, 800px column)`) then shrank them — text and all — by
+`hostWidth / windowWidth` (11px labels rendered at ~4px on a 1920px window;
+the same tiny text lands in PDFs/ODT).
+
+`diagramRenderWidth(options)` (mermaid `renderer.ts`) computes the width the
+host box displays the diagram at and pins it as `gantt.useWidth` in every
+`ensureInitialized` config:
+
+- `fitToWidth: true` (default) → `min(maxWidth, viewer column)` — the chart
+  renders 1:1 at its display width, text stays 11px.
+- `fitToWidth: false` → `maxWidth` — a gantt has no intrinsic width, so its
+  "natural size" is the requested width and the host scrolls when that
+  exceeds the column. Mirrors `computeMermaidFrameDims` in `exporters/odt.ts`.
+
+The width is part of the SVG cache key for gantt **only**
+(`isContainerSizedDiagram` mirrors Mermaid's `detectType` preprocessing —
+frontmatter and `%%{init: …}%%` stripped, then `^\s*gantt`); every other
+family keeps the width-independent key so host-option changes still never
+duplicate Mermaid work. Pre-render pass and fence renderer must resolve the
+same width or the fence lookup degrades to an error block (same failure mode
+as the theme snapshot). The width is always the _maximum_ column width
+(`#viewer-content`'s computed `max-width`, never its live width), so exports
+never depend on window size; `renderMermaidSvgForExport` takes the resolved
+host options for this, and the print clone re-renders with the options
+stashed next to the source in `mermaidSources`.
+
+Upgrade pins in `__tests__/upgrade-contract.test.ts`: Mermaid still honors
+`gantt.useWidth` (viewBox width follows it), and `isContainerSizedDiagram`
+still agrees with `mermaid.detectType`. Regression: TEST-PLAN 6.45–6.46,
+10.42, 14.22.
+
+Related sizing contract for `fitToWidth=false` (all diagram families): the
+natural size comes from the explicit `width`/`height` attributes
+`normalizeSvgForNaturalSize()` writes from the viewBox, and the styles must
+**not** set `width: auto` on the SVG. `width: auto` discards that size and
+resolves through the engine's default object sizing, which is
+engine-dependent: WebKitGTK then renders the diagram at exactly 10/9 of its
+natural size (measured: 360×64 → 400×71, container-independent;
+`__tests__/styles.test.ts` pins the absence). `height: auto` alone is exact
+and keeps the aspect ratio when the print clamp (`max-width: 100%`) shrinks
+an over-wide diagram.
+
 ### Upgrading KaTeX / Mermaid
 
 The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
 its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
 label offsets plus translate-based text placement (the `text-offsets.ts`
-rewrites) and its negative `edge-depth-N` stroke-width ramp (the `svg-css.ts`
-clamp). The `upgrade-contract.test.ts` suites in both extensions render
-_REAL_ library output and fail when those internals change shape. Read the
+rewrites), its negative `edge-depth-N` stroke-width ramp (the `svg-css.ts`
+clamp) and the `gantt.useWidth` config knob (the Gantt width pin). The
+`upgrade-contract.test.ts` suites in both extensions render _REAL_ library
+output and fail when those internals change shape. Read the
 failure message: "lost its target / no longer emits" means either upstream
 changed the mechanism (extend the fix) or dropped it (the compensation may be
 obsolete) — re-measure with the zoom-sweep harness before touching either.

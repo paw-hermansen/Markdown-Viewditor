@@ -225,6 +225,8 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 6.42 | Look at "Mermaid — Theme Override via YAML". | The diagram uses the "forest" theme (different from the app's dark/light theme). |
 | 6.43 | Switch the app theme between dark and light. | Mermaid diagrams re-render with the matching Mermaid theme (dark → "dark", light → "default"). |
 | 6.44 | Look at "Mermaid — Diagram Types → Mindmap" (4-space indent). | All four connector lines are visible — including the two second-level ones ("Origins" → "Long history" and "Research" → "On effectiveness"); none may be missing (regression: negative `stroke-width`, invisible on macOS/Monterey WebKit). |
+| 6.45 | Look at "Mermaid — Diagram Types → Gantt Chart" at 100% zoom on a wide window (≥1600px). | The chart fills the diagram column (800px) at natural height with readable ~11px task/axis text (regression: gantt used to be built for the *window* width and shrunk with it — barely readable text and a squashed chart on wide windows). |
+| 6.46 | Edit that fence to `mermaid {fitToWidth=false maxWidth=1600}`. | The chart renders at 1600px with the same readable text inside a horizontally scrollable box (no vertical scrollbar). Set `maxWidth=800` back with `fitToWidth=false`: identical to 6.45, no scrollbar. |
 
 ---
 
@@ -437,6 +439,7 @@ This section tests ODT export with various content types and rasterization optio
 | 10.39 | Mermaid — rasterize OFF. | Diagram embedded as SVG. |
 | 10.40 | Mermaid — rasterize ON ("SVG images & Mermaid diagrams"). | Diagram replaced with PNG. |
 | 10.41 | Invalid mermaid fence. | Source kept as preformatted code block. |
+| 10.42 | Inspect the Gantt chart in the exported ODT (rasterize OFF and ON). | Its label text is the same relative size as the other diagram families' (regression: gantt text used to be built for the window width and came out tiny in the page column); the chart spans the full text column like in the Viewer. |
 
 #### Frontmatter & Metadata
 
@@ -571,6 +574,7 @@ This section tests ODT export with various content types and rasterization optio
 | 14.17 | Cancel save / print dialog. | No file written. |
 | 14.19 | Export `MathChemMermaid-All.md`; inspect the Mermaid diagrams. | Arrow heads on every edge, sequence diagram shows its actor boxes, labels the same size as in the Viewer (no giant, clipped, or truncated text). |
 | 14.20 | Inspect the wide `fitToWidth=false` diagram. | Scaled to the page content width; every word of every node label visible. |
+| 14.22 | Inspect the Gantt chart in the exported PDF. | Its task/axis text is the same relative size as the other diagrams' labels (regression: gantt used to be built for the window width and shrunk to the column — tiny text in the PDF too), and the chart fills the content column like in the Viewer. |
 
 ---
 

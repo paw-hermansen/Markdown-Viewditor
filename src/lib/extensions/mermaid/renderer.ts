@@ -43,6 +43,20 @@ let preRenderQueue: Promise<void> = Promise.resolve();
 const ERROR = "ERROR";
 
 /**
+ * `MERMAID_OPTIONS_SCHEMA.maxWidth`'s default / fallback. Keep in sync with
+ * the schema (schema.ts) — it is what an unresolvable `maxWidth` degrades to.
+ */
+const DEFAULT_MAX_WIDTH_PX = 800;
+
+/**
+ * Fallback for {@link viewerColumnWidth}. Keep in sync with
+ * `.viewer-content`'s max-width in `src/lib/styles/markdown.css`,
+ * `DEFAULT_VIEWER_MAX_WIDTH_PX` in `exporters/pdf.ts` and
+ * `VIEWER_CONTENT_WIDTH_PX` in `exporters/odt.ts`.
+ */
+const VIEWER_COLUMN_FALLBACK_PX = 800;
+
+/**
  * Concrete font stack for exported SVGs. Mermaid's own default stack,
  * kept unquoted-with-single-quotes so the same string works both in CSS
  * and as a `font-family="…"` presentation attribute. The trailing
@@ -51,14 +65,21 @@ const ERROR = "ERROR";
  */
 const EXPORT_FONT_FAMILY = "'trebuchet ms', verdana, arial, sans-serif";
 
-// Cache only the raw SVG. Host layout options are applied when the wrapper is
-// rendered, so changing alignment or sizing never duplicates Mermaid work.
+// Cache only the raw SVG. Alignment is applied when the wrapper is rendered,
+// so changing it never duplicates Mermaid work. The *render width* is part of
+// the cache key for container-sized diagrams (gantt lays its geometry out for
+// exactly that width — see diagramRenderWidth), so a sizing change re-renders
+// those and only those.
 const svgCache = new Map<string, string>();
 
-// Diagram sources keyed by wrapper id (emitted as `data-mermaid-id`), so the
-// PDF print clone can re-render a block in the print variant without needing
-// the raw markdown again. Populated by renderMermaid, cleared with the cache.
-const mermaidSources = new Map<number, string>();
+// Diagram sources and their resolved host options, keyed by wrapper id
+// (emitted as `data-mermaid-id`), so the PDF print clone can re-render a
+// block in the print variant at the same width without needing the raw
+// markdown again. Populated by renderMermaid, cleared with the cache.
+const mermaidSources = new Map<
+  number,
+  { source: string; options: Record<string, unknown> }
+>();
 
 function getAppTheme(): AppThemeInfo {
   // Read from DOM to avoid circular dependency with viewer store.
@@ -75,19 +96,110 @@ function getAppTheme(): AppThemeInfo {
 }
 
 /**
- * Build the cache key from the diagram source, app theme, and render
- * variant. The variant is part of the key because viewer and export
- * SVGs have different label structure (foreignObject vs `<text>`) and
- * must never be reused across pipelines. Mermaid's own frontmatter
+ * The width the viewer's content column resolves to — the `100%` that caps a
+ * `.mermaid-block` host (`.mermaid-block { width: min(var(--mermaid-max-width),
+ * 100%) }`). Read from the live element so custom themes that change
+ * `#viewer-content`'s max-width still get diagrams built for the right width;
+ * falls back to the built-in default when the element or value is missing.
+ *
+ * Uses the *maximum* column width (the computed `max-width`), never the
+ * current element width: a narrow window scales every diagram down
+ * responsively, but exports and prints must not depend on window size.
+ */
+function viewerColumnWidth(): number {
+  if (typeof document === "undefined") return VIEWER_COLUMN_FALLBACK_PX;
+  const viewerEl = document.getElementById("viewer-content");
+  if (!viewerEl) return VIEWER_COLUMN_FALLBACK_PX;
+  const maxWidth = parseFloat(getComputedStyle(viewerEl).maxWidth);
+  return Number.isFinite(maxWidth) ? maxWidth : VIEWER_COLUMN_FALLBACK_PX;
+}
+
+/**
+ * The width a diagram's host box displays at — and therefore the width
+ * Mermaid must lay the diagram out for (`gantt.useWidth`).
+ *
+ * Mermaid's gantt renderer is the only diagram family whose coordinate system
+ * is NOT derived from content bounds: it spans the timeline across the render
+ * container (`w = elem.parentElement.offsetWidth` in its renderer) and draws
+ * its 11px fonts in that space. Rendering into Mermaid's body-level temp
+ * container therefore built every gantt for the full window width, and the
+ * `.mermaid-block` host then shrank it — text and all — by
+ * `hostWidth / windowWidth` (an 11px label rendered at ~4px on a 1920px
+ * window). Pinning `gantt.useWidth` to the display width makes gantt render
+ * 1:1 like every other family. Other families ignore the value.
+ *
+ * With `fitToWidth: false` ("natural size, scrollable") the natural size of a
+ * gantt is the requested `maxWidth` — the diagram has no intrinsic width — so
+ * it is built for that and the host scrolls when it exceeds the column. This
+ * mirrors `computeMermaidFrameDims` in `exporters/odt.ts`, which models the
+ * same host sizing for ODT frames.
+ *
+ * @param options - Resolved host options (`maxWidth`, `fitToWidth`), i.e.
+ * defaults already merged in by the schema merge.
+ */
+export function diagramRenderWidth(options: Record<string, unknown>): number {
+  const maxWidthValue = Number(options.maxWidth);
+  const maxWidth = Number.isFinite(maxWidthValue)
+    ? maxWidthValue
+    : DEFAULT_MAX_WIDTH_PX;
+  if (options.fitToWidth === false) return maxWidth;
+  return Math.min(maxWidth, viewerColumnWidth());
+}
+
+/**
+ * Preprocessing that mirrors Mermaid's own diagram-type detection
+ * (`src/diagram-api/regexes.ts` in the Mermaid bundle): YAML frontmatter and
+ * `%%{init: …}%%` directives are stripped before the leading keyword is
+ * matched. Kept in sync by the `mermaid.detectType` agreement test in
+ * __tests__/upgrade-contract.test.ts.
+ */
+const FRONT_MATTER_REGEX =
+  /^([^\S\n\r]*)-{3}\s*[\n\r](.*?)[\n\r]\1-{3}\s*[\n\r]+/s;
+const DIRECTIVE_REGEX =
+  /%{2}{\s*(?:(\w+)\s*:|(\w+))\s*(?:(\w+)|((?:(?!}%{2}).|\r?\n)*))?\s*(?:}%{2})?/gi;
+const LEADING_COMMENT_REGEX = /^(?:\s*%%[^\n]*(?:\n|$))*/;
+
+/**
+ * Whether a diagram's geometry is laid out for the width it is rendered at —
+ * i.e. gantt, whose detector is `^\s*gantt` after the preprocessing above.
+ *
+ * Such diagrams must be rebuilt when the render width changes, so the width
+ * belongs in their cache key. Every other family derives its coordinate
+ * system from content bounds and keeps the width-independent key, so host
+ * layout changes still never duplicate Mermaid work.
+ */
+export function isContainerSizedDiagram(content: string): boolean {
+  const body = content
+    .replace(FRONT_MATTER_REGEX, "")
+    .replace(DIRECTIVE_REGEX, "")
+    .replace(LEADING_COMMENT_REGEX, "");
+  return /^\s*gantt/.test(body);
+}
+
+/**
+ * Build the cache key from the diagram source, app theme, render variant, and
+ * render width. The variant is part of the key because viewer and export
+ * SVGs have different label structure (foreignObject vs `<text>`) and must
+ * never be reused across pipelines. The render width is part of it only for
+ * container-sized diagrams (see {@link isContainerSizedDiagram}), which bake
+ * it into their geometry — pre-render pass and fence renderer must agree on
+ * it or the fence lookup turns into an error block. Mermaid's own frontmatter
  * remains in `content`, so Mermaid can apply native config after this
  * extension initializes the site theme.
  */
 function cacheKey(
   content: string,
   appTheme: AppThemeInfo,
+  renderWidth: number,
   variant: RenderVariant = "viewer",
 ): string {
-  return JSON.stringify([appTheme.type, appTheme.themeId, variant, content]);
+  return JSON.stringify([
+    appTheme.type,
+    appTheme.themeId,
+    variant,
+    isContainerSizedDiagram(content) ? renderWidth : null,
+    content,
+  ]);
 }
 
 async function ensureLoaded(): Promise<MermaidModule> {
@@ -112,6 +224,12 @@ async function ensureLoaded(): Promise<MermaidModule> {
  * being clipped (see the rule comment in styles.ts). Mermaid 12 ignores the
  * top-level `fontSize` config key for this, so `themeVariables` is the lever.
  *
+ * Always pins `gantt.useWidth` to the diagram's render width
+ * ({@link diagramRenderWidth}) so gantt charts are laid out for the width
+ * their host displays them at instead of the body-level temp container's
+ * width — the reason gantt text used to shrink with the window. The value is
+ * part of {@link lastInitKey} so a width change re-initializes Mermaid.
+ *
  * The export and print variants render `htmlLabels: true` — the same label
  * layout the viewer shows — and `convertForeignObjectLabels` rewrites the
  * `<foreignObject>` labels into measured SVG text afterwards. That is the
@@ -122,8 +240,9 @@ async function ensureInitialized(
   mod: MermaidModule,
   theme: AppThemeInfo,
   variant: RenderVariant = "viewer",
+  renderWidth: number = VIEWER_COLUMN_FALLBACK_PX,
 ): Promise<void> {
-  const key = `${variant}:${theme.type}:${theme.themeId}`;
+  const key = `${variant}:${theme.type}:${theme.themeId}:${renderWidth}`;
   if (initialized && lastInitKey === key) return;
   const config: MermaidConfig =
     variant === "export"
@@ -142,6 +261,7 @@ async function ensureInitialized(
           ...({ forceLegacyMathML: true } as MermaidConfig),
           suppressErrorRendering: true,
           themeVariables: { fontSize: MERMAID_FONT_SIZE },
+          gantt: { useWidth: renderWidth },
         }
       : {
           startOnLoad: false,
@@ -155,6 +275,7 @@ async function ensureInitialized(
             fontSize: MERMAID_FONT_SIZE,
             ...getViewerThemeOverrides(theme.type).themeVariables,
           },
+          gantt: { useWidth: renderWidth },
         };
   await mod.default.initialize(config);
   initialized = true;
@@ -235,10 +356,13 @@ async function preRenderMermaidBlocksPass(
 
     const diagramContent = token.content ?? "";
     // Resolve host options here so pre-rendering observes the same positional
-    // directive and fence state as the synchronous fence renderer. They do not
-    // participate in the raw SVG cache key.
-    resolveFenceOptions(token, env, idx, schema);
-    const key = cacheKey(diagramContent, appTheme);
+    // directive and fence state as the synchronous fence renderer. Only the
+    // render width derived from them participates in the raw SVG cache key
+    // (and only for container-sized diagrams, which are laid out for exactly
+    // that width); alignment does not.
+    const options = resolveFenceOptions(token, env, idx, schema);
+    const renderWidth = diagramRenderWidth(options);
+    const key = cacheKey(diagramContent, appTheme, renderWidth);
     if (svgCache.has(key)) continue;
 
     if (loadFailed) {
@@ -249,7 +373,7 @@ async function preRenderMermaidBlocksPass(
     const renderId = `mmd-${nextRenderId++}`;
     try {
       if (!mod) mod = await ensureLoaded();
-      await ensureInitialized(mod, appTheme, "viewer");
+      await ensureInitialized(mod, appTheme, "viewer", renderWidth);
       const mermaid = mod;
       // Zoom-normalized measurement: on older WebKit, foreignObject label
       // rects are scaled by the page zoom and Mermaid bakes them into the
@@ -307,13 +431,18 @@ export function renderMermaid(
   options: Record<string, unknown>,
   appTheme?: AppThemeInfo,
 ): string {
-  const key = cacheKey(content, appTheme ?? getAppTheme());
+  const key = cacheKey(
+    content,
+    appTheme ?? getAppTheme(),
+    diagramRenderWidth(options),
+  );
   const cached = svgCache.get(key);
-  // Tag the wrapper with a stable id and remember its diagram source so the
-  // PDF print clone can re-render the block in the print variant later
-  // (prepareMermaidForPrint). The id doubles as the SVG id namespace below.
+  // Tag the wrapper with a stable id and remember its diagram source (plus
+  // the resolved host options, so the print re-render builds it for the same
+  // width) for the PDF print clone (prepareMermaidForPrint). The id doubles
+  // as the SVG id namespace below.
   const wrapperId = nextWrapperId++;
-  mermaidSources.set(wrapperId, content);
+  mermaidSources.set(wrapperId, { source: content, options });
   const attributes = wrapperAttributes(options, wrapperId);
 
   if (cached === ERROR || cached === undefined) {
@@ -365,19 +494,26 @@ export function clearMermaidCache(): void {
  * SVG is normalized to explicit width/height so dimension sniffing never
  * sees percentage sizes.
  *
+ * `options` are the diagram's resolved host options (`maxWidth`,
+ * `fitToWidth`); the diagram is laid out for the width the viewer displays
+ * it at ({@link diagramRenderWidth}) so exports match the screen — this is
+ * what keeps gantt charts from being rebuilt at the window width.
+ *
  * @throws If Mermaid fails to load or render the source.
  */
 export async function renderMermaidSvgForExport(
   content: string,
+  options: Record<string, unknown> = {},
 ): Promise<string> {
   const exportTheme: AppThemeInfo = { type: "default", themeId: "export" };
-  const key = cacheKey(content, exportTheme, "export");
+  const renderWidth = diagramRenderWidth(options);
+  const key = cacheKey(content, exportTheme, renderWidth, "export");
   let raw = svgCache.get(key);
   if (raw === ERROR) raw = undefined;
 
   if (!raw) {
     const mod = await ensureLoaded();
-    await ensureInitialized(mod, exportTheme, "export");
+    await ensureInitialized(mod, exportTheme, "export", renderWidth);
     try {
       const { svg } = await withZoomNormalizedLabelMeasurement(
         () => mod.default.render(`mmd-export-${nextRenderId++}`, content),
@@ -423,15 +559,17 @@ export async function renderMermaidSvgForExport(
  */
 export async function renderMermaidSvgForPrint(
   content: string,
+  options: Record<string, unknown> = {},
 ): Promise<string> {
   const appTheme = getAppTheme();
-  const key = cacheKey(content, appTheme, "print");
+  const renderWidth = diagramRenderWidth(options);
+  const key = cacheKey(content, appTheme, renderWidth, "print");
   let raw = svgCache.get(key);
   if (raw === ERROR) raw = undefined;
 
   if (!raw) {
     const mod = await ensureLoaded();
-    await ensureInitialized(mod, appTheme, "print");
+    await ensureInitialized(mod, appTheme, "print", renderWidth);
     try {
       const { svg } = await withZoomNormalizedLabelMeasurement(
         () => mod.default.render(`mmd-print-${nextRenderId++}`, content),
@@ -459,9 +597,10 @@ export async function renderMermaidSvgForPrint(
  * macOS before the WKWebView capture.
  *
  * Walks `.mermaid-block` wrappers tagged by `renderMermaid` with
- * `data-mermaid-id`, re-renders each diagram source in the print variant,
- * and replaces the wrapper's inner SVG — preserving the wrapper markup
- * (data-align / --mermaid-max-width / data-line) and the
+ * `data-mermaid-id`, re-renders each diagram source in the print variant at
+ * the same width the viewer built it for (the host options are stashed next
+ * to the source), and replaces the wrapper's inner SVG — preserving the
+ * wrapper markup (data-align / --mermaid-max-width / data-line) and the
  * `.mermaid-scroll-content` inner wrapper on `fitToWidth=false` blocks so
  * the print styles keep applying unchanged. Error blocks are left as-is,
  * and a block whose source is unknown (e.g. after a reload) keeps its
@@ -476,12 +615,12 @@ export async function prepareMermaidForPrint(root: HTMLElement): Promise<void> {
   );
   for (const block of blocks) {
     if (block.classList.contains("mermaid-error-block")) continue;
-    const source = mermaidSources.get(Number(block.dataset.mermaidId));
-    if (source === undefined) continue;
+    const record = mermaidSources.get(Number(block.dataset.mermaidId));
+    if (record === undefined) continue;
 
     let svg: string;
     try {
-      svg = await renderMermaidSvgForPrint(source);
+      svg = await renderMermaidSvgForPrint(record.source, record.options);
     } catch {
       // Keep the viewer SVG rather than failing the whole export.
       continue;
@@ -563,7 +702,9 @@ function wrapperAttributes(
       ? options.align
       : "center";
   const maxWidthValue = Number(options.maxWidth);
-  const maxWidth = Number.isFinite(maxWidthValue) ? maxWidthValue : 800;
+  const maxWidth = Number.isFinite(maxWidthValue)
+    ? maxWidthValue
+    : DEFAULT_MAX_WIDTH_PX;
   const fitToWidth = options.fitToWidth !== false;
   const fitAttribute = fitToWidth ? "" : ' data-fit-to-width="false"';
   return ` data-mermaid-id="${wrapperId}" data-align="${align}"${fitAttribute} style="--mermaid-max-width: ${maxWidth}px"`;

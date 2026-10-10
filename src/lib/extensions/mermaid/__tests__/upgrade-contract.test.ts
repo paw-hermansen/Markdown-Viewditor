@@ -15,6 +15,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { installCanvasStub, installSvgLayoutShim } from "./svg-layout-shim";
 import { normalizeSvgTextOffsets } from "../text-offsets";
 import { clampNegativeStrokeWidths } from "../svg-css";
+import { isContainerSizedDiagram } from "../renderer";
 
 const DIAGRAMS = {
   sequence:
@@ -155,5 +156,57 @@ describe("mermaid upgrade contract (real output)", () => {
         "normalization is still needed (see AGENTS.md, Mermaid Label " +
         "Measurement)",
     ).toBe(true);
+  });
+
+  it("gantt still lays its geometry out for gantt.useWidth", async () => {
+    // The app pins gantt.useWidth to the diagram's display width so gantt
+    // text does not shrink with the window (see AGENTS.md, Mermaid Gantt
+    // Width). If Mermaid drops the config knob, that pin is dead code and
+    // the tiny-gantt bug returns.
+    const mermaid = (await import("mermaid")).default;
+    mermaid.initialize({ startOnLoad: false, gantt: { useWidth: 777 } });
+    const { svg } = await mermaid.render(
+      "contract_gantt_use_width",
+      DIAGRAMS.gantt,
+    );
+    expect(
+      svg,
+      "gantt: Mermaid no longer honors gantt.useWidth — re-verify how the " +
+        "app can keep gantt charts at display width (see AGENTS.md, " +
+        "Mermaid Gantt Width)",
+    ).toMatch(/viewBox="0 0 777 /);
+  });
+
+  it("isContainerSizedDiagram agrees with Mermaid's own detectType", async () => {
+    // The cache key only carries the render width for container-sized
+    // diagrams; a misclassification either drops the gantt width fix or
+    // needlessly re-renders. Keep the mirror in renderer.ts aligned with
+    // Mermaid's detection (frontmatter/directives stripped, `^\s*gantt`).
+    const mermaid = (await import("mermaid")).default;
+    const sources = [
+      "gantt\n    title Plan\n",
+      "  gantt\n    title Plan\n",
+      "---\nconfig:\n  gantt:\n    useWidth: 400\n---\ngantt\n    title Plan\n",
+      "---\nconfig:\n  theme: forest\n---\ngantt\n    title Plan\n",
+      "%%{init: {'theme':'forest'}}%%\ngantt\n    title Plan\n",
+      "%% note\n\ngantt\n    title Plan\n",
+      "graph LR\n    A-->B\n",
+      "---\nconfig:\n  theme: forest\n---\ngraph TD\n    F-->G\n",
+      "sequenceDiagram\n    Alice->>Bob: Hi\n",
+      "%% note\n\nsequenceDiagram\n    Alice->>Bob: Hi\n",
+    ];
+    for (const source of sources) {
+      let detected = "unknown";
+      try {
+        detected = mermaid.detectType(source);
+      } catch {
+        // Unknown diagram — the app treats it as content-sized (error block).
+      }
+      expect(
+        isContainerSizedDiagram(source),
+        `isContainerSizedDiagram disagrees with detectType("${detected}") ` +
+          `for ${JSON.stringify(source)}`,
+      ).toBe(detected === "gantt");
+    }
   });
 });

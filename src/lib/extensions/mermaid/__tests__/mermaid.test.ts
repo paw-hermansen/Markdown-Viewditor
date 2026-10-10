@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mermaidExtension, MERMAID_OPTIONS_SCHEMA } from "../index";
 import {
   clearMermaidCache,
+  diagramRenderWidth,
+  isContainerSizedDiagram,
   preRenderMermaidBlocks,
   renderMermaid,
   renderMermaidSvgForExport,
@@ -744,6 +746,149 @@ describe("mermaid extension", () => {
       expect(natural).not.toContain("max-width: 640px");
       expect(responsive).toContain('width="100%"');
       expect(responsive).toContain("max-width: 640px");
+    });
+  });
+
+  describe("render width (container-sized diagrams)", () => {
+    it("classifies gantt sources as container-sized", () => {
+      expect(isContainerSizedDiagram("gantt\n    title Plan\n")).toBe(true);
+      expect(isContainerSizedDiagram("  gantt\n")).toBe(true);
+      // Mermaid's own detection strips frontmatter and init directives before
+      // matching the leading keyword — see the detectType agreement test.
+      expect(
+        isContainerSizedDiagram(
+          "---\nconfig:\n  gantt:\n    useWidth: 400\n---\ngantt\n",
+        ),
+      ).toBe(true);
+      expect(
+        isContainerSizedDiagram("%%{init: {'theme':'forest'}}%%\ngantt\n"),
+      ).toBe(true);
+      expect(isContainerSizedDiagram("%% note\n\ngantt\n")).toBe(true);
+    });
+
+    it("classifies content-sized families as width-independent", () => {
+      expect(isContainerSizedDiagram("graph LR\n    A-->B\n")).toBe(false);
+      expect(
+        isContainerSizedDiagram(
+          "---\nconfig:\n  theme: forest\n---\ngraph TD\n    F-->G\n",
+        ),
+      ).toBe(false);
+      expect(isContainerSizedDiagram("sequenceDiagram\n    A->>B: hi\n")).toBe(
+        false,
+      );
+      expect(isContainerSizedDiagram("flowchart TD\n  gantt\n")).toBe(false);
+    });
+
+    it("fits the diagram to the column by default", () => {
+      // No #viewer-content -> the built-in column fallback (800px).
+      expect(diagramRenderWidth({ maxWidth: 800, fitToWidth: true })).toBe(800);
+      expect(diagramRenderWidth({ maxWidth: 300, fitToWidth: true })).toBe(300);
+      // Wider than the column: built at the column, not scaled down later.
+      expect(diagramRenderWidth({ maxWidth: 1200, fitToWidth: true })).toBe(
+        800,
+      );
+      expect(diagramRenderWidth({})).toBe(800);
+    });
+
+    it("builds natural-size diagrams for the requested maxWidth", () => {
+      expect(diagramRenderWidth({ maxWidth: 1200, fitToWidth: false })).toBe(
+        1200,
+      );
+      expect(diagramRenderWidth({ maxWidth: 400, fitToWidth: false })).toBe(
+        400,
+      );
+    });
+
+    it("measures the column from the live viewer so custom themes win", () => {
+      vi.stubGlobal("document", {
+        getElementById: (id: string) =>
+          id === "viewer-content" ? { id } : null,
+      });
+      vi.stubGlobal("getComputedStyle", () => ({ maxWidth: "1000px" }));
+
+      expect(diagramRenderWidth({ maxWidth: 1200, fitToWidth: true })).toBe(
+        1000,
+      );
+      expect(diagramRenderWidth({ maxWidth: 700, fitToWidth: true })).toBe(700);
+    });
+
+    it("pins gantt.useWidth to the diagram display width", async () => {
+      setAppTheme("light");
+      await preRenderMermaidBlocks(
+        [fenceToken("gantt\n    title Plan\n")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ gantt: { useWidth: 800 } }),
+      );
+    });
+
+    it("pins gantt.useWidth to maxWidth for natural-size diagrams", async () => {
+      setAppTheme("light");
+      await preRenderMermaidBlocks(
+        [
+          fenceToken(
+            "gantt\n    title Plan\n",
+            "mermaid {fitToWidth=false maxWidth=1200}",
+          ),
+        ],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ gantt: { useWidth: 1200 } }),
+      );
+    });
+
+    it("rebuilds container-sized diagrams when the render width changes", async () => {
+      setAppTheme("light");
+      const source = "gantt\n    title Plan\n";
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source, "mermaid {maxWidth=400}")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+      await preRenderMermaidBlocks(
+        [fenceToken(source, "mermaid {maxWidth=800}")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.render).toHaveBeenCalledTimes(2);
+    });
+
+    it("reuses a container-sized render when only alignment changes", async () => {
+      setAppTheme("light");
+      const source = "gantt\n    title Plan\n";
+
+      await preRenderMermaidBlocks(
+        [fenceToken(source, "mermaid {align=left maxWidth=400}")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+      await preRenderMermaidBlocks(
+        [fenceToken(source, "mermaid {align=right maxWidth=400}")],
+        {},
+        MERMAID_OPTIONS_SCHEMA,
+      );
+
+      expect(mermaidMock.render).toHaveBeenCalledOnce();
+    });
+
+    it("keeps pre-render and fence cache keys in sync for gantt", async () => {
+      setAppTheme("light");
+
+      const html = await renderWithExtension(
+        "```mermaid {maxWidth=400}\ngantt\n    title Plan\n```\n",
+      );
+
+      expect(html).not.toContain("mermaid-error-block");
+      expect(html).toContain('class="mermaid-block"');
+      expect(mermaidMock.render).toHaveBeenCalledOnce();
     });
   });
 

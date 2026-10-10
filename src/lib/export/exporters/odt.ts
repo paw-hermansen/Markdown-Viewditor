@@ -2346,7 +2346,14 @@ async function buildDocument(
               mermaidFenceOpts,
             );
             try {
-              const svgXml = await renderMermaidSvgForExport(token.content);
+              // Pass the resolved host options: mermaid diagrams are built
+              // for the width the viewer displays them at (gantt lays its
+              // geometry out for exactly that — see diagramRenderWidth), so
+              // the export matches the screen.
+              const svgXml = await renderMermaidSvgForExport(
+                token.content,
+                mermaidOpts,
+              );
               const dims = sniffSvgDimensions(
                 new TextEncoder().encode(svgXml),
                 label,

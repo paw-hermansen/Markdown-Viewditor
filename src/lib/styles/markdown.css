@@ -201,15 +201,6 @@
   color: var(--text-secondary);
 }
 
-.viewer-content .frontmatter-title {
-  font-size: 0.75em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
 .viewer-content .skill-meta {
   display: grid;
   grid-template-columns: max-content 1fr;

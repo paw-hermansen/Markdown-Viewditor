@@ -206,6 +206,7 @@ describe("Viewer", () => {
     await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
       expect(screen.getByText("test-skill")).toBeInTheDocument();
+      expect(screen.getByText("Skill")).toBeInTheDocument();
     });
   });
 
@@ -217,8 +218,10 @@ describe("Viewer", () => {
     render(Viewer, { props: { content: "---\nlicense: MIT\n---\nContent" } });
     await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
-      expect(screen.getByText("Frontmatter")).toBeInTheDocument();
+      expect(screen.getByText("MIT")).toBeInTheDocument();
     });
+    expect(screen.queryByText("Frontmatter")).not.toBeInTheDocument();
+    expect(screen.queryByText("Skill")).not.toBeInTheDocument();
   });
 
   it("forceRender recreates the DOM even when the HTML is unchanged", async () => {

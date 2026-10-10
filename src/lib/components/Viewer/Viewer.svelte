@@ -609,7 +609,6 @@
               </dl>
             {/if}
           {:else}
-            <div class="frontmatter-title">Frontmatter</div>
             <dl class="skill-meta">
               {#each Object.entries(frontmatter) as [key, value]}
                 <dt>{key}</dt>

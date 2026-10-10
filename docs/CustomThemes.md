@@ -174,15 +174,14 @@ The following HTML elements can be used directly in markdown (with raw HTML enab
 
 When a markdown file has YAML frontmatter, it is rendered as a card above the content. Skill files (with `name` and `description`) get special treatment:
 
-| Class                | Description                           |
-| -------------------- | ------------------------------------- |
-| `.frontmatter-card`  | Card container for all frontmatter    |
-| `.frontmatter-title` | "Frontmatter" label (non-skill files) |
-| `.skill-badge`       | "Skill" badge (skill files only)      |
-| `.skill-name`        | Skill name (skill files only)         |
-| `.skill-description` | Skill description (skill files only)  |
-| `.skill-meta dt`     | Metadata key labels                   |
-| `.skill-meta dd`     | Metadata values                       |
+| Class                | Description                          |
+| -------------------- | ------------------------------------ |
+| `.frontmatter-card`  | Card container for all frontmatter   |
+| `.skill-badge`       | "Skill" badge (skill files only)     |
+| `.skill-name`        | Skill name (skill files only)        |
+| `.skill-description` | Skill description (skill files only) |
+| `.skill-meta dt`     | Metadata key labels                  |
+| `.skill-meta dd`     | Metadata values                      |
 
 ## Additional Styling Selectors
 

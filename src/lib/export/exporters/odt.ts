@@ -2679,11 +2679,6 @@ function generateFrontmatterCardOdf(fm: Frontmatter): string {
     }
   } else {
     // Plain frontmatter.
-    rows.push(
-      `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
-        `<text:p text:style-name="${S.fmHeading}">${esc("FRONTMATTER")}</text:p>` +
-        `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
-    );
     for (const [key, value] of Object.entries(fm)) {
       rows.push(
         `<table:table-row><table:table-cell>` +

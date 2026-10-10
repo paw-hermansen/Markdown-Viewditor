@@ -232,11 +232,6 @@ code.hljs {
 #viewer-content .skill-description {
   color: #ff69b4;
 }
-#viewer-content .frontmatter-title {
-  color: #ffff00;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-}
 #viewer-content .skill-meta dt {
   color: #ff00ff;
   font-weight: 900;

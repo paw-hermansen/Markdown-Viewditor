@@ -17,6 +17,7 @@ import {
   analyzeTokens,
   findViolations,
   requiredPreset,
+  compareFeatureToggles,
   violationMessage,
   presetForEnabled,
   type FeatureDetector,
@@ -108,6 +109,57 @@ describe("markdown-levels registry & presets", () => {
   it("requiredPreset returns advanced for frontmatter", () => {
     const t = listFeatureToggles().find((x) => x.id === "frontmatter")!;
     expect(requiredPreset(t)).toBe("advanced");
+  });
+});
+
+describe("compareFeatureToggles", () => {
+  const t = (
+    id: string,
+    label: string,
+    presets: { github?: boolean; advanced: boolean },
+  ) => ({ id, label, presets });
+
+  it("groups by required preset: github before advanced before custom-only", () => {
+    const list = [
+      t("z-adv", "Zeta", { advanced: true }),
+      t("a-custom", "Alpha", { advanced: false }),
+      t("m-gh", "Mike", { github: true, advanced: true }),
+    ];
+    const sorted = [...list].sort(compareFeatureToggles).map((x) => x.id);
+    expect(sorted).toEqual(["m-gh", "z-adv", "a-custom"]);
+  });
+
+  it("sorts alphabetically within a group, case-insensitive", () => {
+    const list = [
+      t("c", "tables", { github: true, advanced: true }),
+      t("a", "Bare-URL autolinks", { github: true, advanced: true }),
+      t("b", "Raw HTML", { github: true, advanced: true }),
+    ];
+    const sorted = [...list].sort(compareFeatureToggles).map((x) => x.id);
+    expect(sorted).toEqual(["a", "b", "c"]);
+  });
+
+  it("orders the real registry: github group first, each alphabetical by label", () => {
+    const ids = [...listFeatureToggles()]
+      .sort(compareFeatureToggles)
+      .map((x) => x.id);
+    expect(ids).toEqual([
+      // github preset group, alphabetical
+      "autolinks",
+      "footnotes",
+      "math-dollar",
+      "mermaid",
+      "raw-html",
+      "strikethrough",
+      "tables",
+      "task-lists",
+      // advanced-only group, alphabetical
+      "chemical-formulas",
+      "extension-settings",
+      "highlight",
+      "math-latex",
+      "frontmatter",
+    ]);
   });
 });
 

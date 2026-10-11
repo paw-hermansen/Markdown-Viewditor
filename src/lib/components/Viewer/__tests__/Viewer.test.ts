@@ -2,16 +2,16 @@
 import { render, screen, waitFor } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Viewer from "../Viewer.svelte";
+import { viewerState } from "$lib/stores/viewer.svelte";
 import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 const {
-  mockViewerState,
   mockFileState,
   mockRenderMarkdown,
   mockOpenUrl,
   mockOpenPath,
+  mockSyncViewerBackground,
 } = vi.hoisted(() => ({
-  mockViewerState: { theme: "github-dark", scrollTop: 0 },
   mockFileState: { currentFile: "/home/user/test.md" },
   mockRenderMarkdown: vi.fn().mockResolvedValue({
     html: "<h1>Hello World</h1><p>Test content</p>",
@@ -19,11 +19,13 @@ const {
   }),
   mockOpenUrl: vi.fn().mockResolvedValue(undefined),
   mockOpenPath: vi.fn().mockResolvedValue(undefined),
+  mockSyncViewerBackground: vi.fn(),
 }));
 
-vi.mock("$lib/stores/viewer.svelte", () => ({
-  viewerState: mockViewerState,
-}));
+vi.mock(
+  "$lib/stores/viewer.svelte",
+  () => import("./viewer-state-mock.svelte"),
+);
 
 vi.mock("$lib/stores/file.svelte", () => ({
   fileState: mockFileState,
@@ -31,6 +33,7 @@ vi.mock("$lib/stores/file.svelte", () => ({
 
 vi.mock("$lib/utils/markdown", () => ({
   renderMarkdown: mockRenderMarkdown,
+  syncViewerBackground: mockSyncViewerBackground,
 }));
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
@@ -53,6 +56,8 @@ describe("Viewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    viewerState.theme = "github-dark";
+    viewerState.scrollTop = 0;
   });
 
   afterEach(() => {
@@ -104,6 +109,15 @@ describe("Viewer", () => {
     render(Viewer, { props: { content: "# Test", onViewerReady } });
     await waitFor(() => {
       expect(onViewerReady).toHaveBeenCalledWith(expect.any(HTMLDivElement));
+    });
+  });
+
+  it("derives the app background (--viewer-bg) once mounted", async () => {
+    // The theme background copy must happen here, not from a startup rAF:
+    // see syncViewerBackground in utils/markdown.ts.
+    render(Viewer, { props: { content: "# Hello" } });
+    await waitFor(() => {
+      expect(mockSyncViewerBackground).toHaveBeenCalled();
     });
   });
 
@@ -192,6 +206,7 @@ describe("Viewer", () => {
     await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
       expect(screen.getByText("test-skill")).toBeInTheDocument();
+      expect(screen.getByText("Skill")).toBeInTheDocument();
     });
   });
 
@@ -203,8 +218,10 @@ describe("Viewer", () => {
     render(Viewer, { props: { content: "---\nlicense: MIT\n---\nContent" } });
     await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => {
-      expect(screen.getByText("Frontmatter")).toBeInTheDocument();
+      expect(screen.getByText("MIT")).toBeInTheDocument();
     });
+    expect(screen.queryByText("Frontmatter")).not.toBeInTheDocument();
+    expect(screen.queryByText("Skill")).not.toBeInTheDocument();
   });
 
   it("forceRender recreates the DOM even when the HTML is unchanged", async () => {
@@ -355,6 +372,163 @@ describe("Viewer", () => {
     await renderDone;
 
     expect(container.scrollTop).toBe(123);
+  });
+
+  it("never shows the busy overlay for routine content re-renders", async () => {
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRenderMarkdown).toHaveBeenCalledTimes(1);
+
+    let resolveUpdate!: (result: { html: string; frontmatter: null }) => void;
+    mockRenderMarkdown.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveUpdate = resolve;
+        }),
+    );
+    view.rerender({ content: "updated" });
+    // Past the debounce: the render has started and is still pending —
+    // a major render would have raised the overlay at this point.
+    await vi.advanceTimersByTimeAsync(160);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+
+    resolveUpdate({ html: "<p>Updated</p>", frontmatter: null });
+    await view.component.waitForRender();
+    expect(screen.getByText("Updated")).toBeInTheDocument();
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+  });
+
+  it("shows the busy overlay for a theme change immediately while the render is pending", async () => {
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRenderMarkdown).toHaveBeenCalledTimes(1);
+
+    let resolveTheme!: (result: { html: string; frontmatter: null }) => void;
+    mockRenderMarkdown.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveTheme = resolve;
+        }),
+    );
+
+    viewerState.theme = "github-light";
+    // Theme-change renders are major: they start without the debounce and
+    // raise the overlay at once.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRenderMarkdown).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Rendering…")).toBeInTheDocument();
+
+    resolveTheme({ html: "<p>Themed</p>", frontmatter: null });
+    await view.component.waitForRender();
+    expect(screen.getByText("Themed")).toBeInTheDocument();
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+  });
+
+  it("shows the busy overlay for the first render while it is pending", async () => {
+    let resolveInitial!: (result: { html: string; frontmatter: null }) => void;
+    mockRenderMarkdown.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInitial = resolve;
+        }),
+    );
+
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText("Rendering…")).toBeInTheDocument();
+
+    resolveInitial({ html: "<p>First</p>", frontmatter: null });
+    await view.component.waitForRender();
+    expect(screen.getByText("First")).toBeInTheDocument();
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+  });
+
+  it("shows the busy overlay during forceRender and hides it once the DOM updates", async () => {
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    let resolveForce!: (result: { html: string; frontmatter: null }) => void;
+    mockRenderMarkdown.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveForce = resolve;
+        }),
+    );
+    const done = view.component.forceRender();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText("Rendering…")).toBeInTheDocument();
+
+    resolveForce({ html: "<p>Reloaded</p>", frontmatter: null });
+    await done;
+    expect(screen.getByText("Reloaded")).toBeInTheDocument();
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+  });
+
+  it("drops the overlay when a major render is superseded and a stale settle cannot revive it", async () => {
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    let resolveStale!: (result: { html: string; frontmatter: null }) => void;
+    mockRenderMarkdown
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveStale = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({ html: "<p>Current</p>", frontmatter: null });
+
+    // Reload (major) raises the overlay and stays pending …
+    const done = view.component.forceRender();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText("Rendering…")).toBeInTheDocument();
+
+    // … until a routine content render supersedes it. Routine renders never
+    // show the overlay, so it must drop immediately.
+    view.rerender({ content: "current" });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+    expect(screen.getByText("Current")).toBeInTheDocument();
+
+    // The superseded render settling late must not touch the overlay or the DOM.
+    resolveStale({ html: "<p>Stale</p>", frontmatter: null });
+    await vi.advanceTimersByTimeAsync(0);
+    await done;
+    expect(screen.queryByText("Rendering…")).not.toBeInTheDocument();
+    expect(screen.queryByText("Stale")).not.toBeInTheDocument();
+  });
+
+  it("keeps the re-render overlay non-blocking (pointer-events: none class)", async () => {
+    const view = render(Viewer, { props: { content: "initial" } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    let resolveForce!: (result: { html: string; frontmatter: null }) => void;
+    mockRenderMarkdown.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveForce = resolve;
+        }),
+    );
+    const done = view.component.forceRender();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const overlay = document.querySelector(".loading-overlay");
+    expect(overlay).not.toBeNull();
+    expect(overlay!.classList.contains("rendering-overlay")).toBe(true);
+
+    resolveForce({ html: "<p>Done</p>", frontmatter: null });
+    await done;
+  });
+
+  it("keeps the file-open overlay blocking with its 'Loading…' label", async () => {
+    render(Viewer, { props: { content: "initial", loading: true } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    const overlay = document.querySelector(".loading-overlay");
+    expect(overlay).not.toBeNull();
+    expect(overlay!.classList.contains("rendering-overlay")).toBe(false);
   });
 
   it.skip("has no accessibility violations", async () => {

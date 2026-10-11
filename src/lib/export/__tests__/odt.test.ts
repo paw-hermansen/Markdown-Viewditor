@@ -763,6 +763,60 @@ describe("odtExporter", () => {
     expect((xml.match(/<table:table-column\/>/g) || []).length).toBe(2);
   });
 
+  it("table without alignment markers uses base cell styles", async () => {
+    const xml = await getContentXml("| X | Y |\n|---|---|\n| 1 | 2 |");
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Heading">X</text:p>',
+    );
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Contents">1</text:p>',
+    );
+  });
+
+  it("table cells use the column's alignment style", async () => {
+    const xml = await getContentXml(
+      "| L | C | R |\n|:---|:---:|---:|\n| 1 | 2 | 3 |",
+    );
+    // Header row: bold heading variants per column alignment.
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Heading">L</text:p>',
+    );
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Heading_20_Center">C</text:p>',
+    );
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Heading_20_Right">R</text:p>',
+    );
+    // Body row: contents variants per column alignment.
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Contents">1</text:p>',
+    );
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Contents_20_Center">2</text:p>',
+    );
+    expect(xml).toContain(
+      '<text:p text:style-name="Table_20_Contents_20_Right">3</text:p>',
+    );
+  });
+
+  it("alignment cell styles carry fo:text-align", async () => {
+    const styles = await getStylesXml(
+      "| L | C | R |\n|:---|:---:|---:|\n| 1 | 2 | 3 |",
+    );
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Table_20_Contents_20_Center"[\s\S]*?fo:text-align="center"[\s\S]*?<\/style:style>/,
+    );
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Table_20_Contents_20_Right"[\s\S]*?fo:text-align="right"[\s\S]*?<\/style:style>/,
+    );
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Table_20_Heading_20_Center"[\s\S]*?fo:text-align="center"[\s\S]*?fo:font-weight="bold"[\s\S]*?<\/style:style>/,
+    );
+    expect(styles).toMatch(
+      /<style:style[^>]*style:name="Table_20_Heading_20_Right"[\s\S]*?fo:text-align="right"[\s\S]*?fo:font-weight="bold"[\s\S]*?<\/style:style>/,
+    );
+  });
+
   it("document with only frontmatter is valid", async () => {
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { invoke } = await import("@tauri-apps/api/core");

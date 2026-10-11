@@ -63,7 +63,7 @@ export function extensionFencePlugin(md: MarkdownIt): void {
           );
         }
 
-        const rendered = ext.renderFence(token.content, lang, mergedOpts);
+        const rendered = ext.renderFence(token.content, lang, mergedOpts, env);
         if (rendered !== null) {
           // Inject data-line into the first tag for scroll-sync.
           if (token.map) {

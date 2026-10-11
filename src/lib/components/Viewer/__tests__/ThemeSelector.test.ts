@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from "@testing-library/svelte";
+import { render, screen, fireEvent, waitFor } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ThemeSelector from "../ThemeSelector.svelte";
 
@@ -78,6 +78,32 @@ describe("ThemeSelector", () => {
     await fireEvent.click(screen.getByText("GitHub Light"));
     expect(mockApplyTheme).toHaveBeenCalledWith("github-light");
     expect(mockSetTheme).toHaveBeenCalledWith("github-light");
+  });
+
+  it("does not commit viewerState.theme until the theme is applied", async () => {
+    let resolveApply!: () => void;
+    mockApplyTheme.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveApply = resolve;
+        }),
+    );
+
+    render(ThemeSelector);
+    await fireEvent.click(screen.getByTitle("Select theme"));
+    await fireEvent.click(screen.getByText("GitHub Light"));
+
+    // Selecting must not write the theme state directly (the old
+    // bind:value did): the state change triggers the re-render and has to
+    // be atomic with the CSS/attribute updates done by setTheme.
+    expect(mockApplyTheme).toHaveBeenCalledWith("github-light");
+    expect(mockViewerState.theme).toBe("github-dark");
+
+    resolveApply();
+    await waitFor(() => {
+      expect(mockSetTheme).toHaveBeenCalledWith("github-light");
+    });
+    expect(mockViewerState.theme).toBe("github-dark");
   });
 
   it("closes dropdown after selecting a theme", async () => {

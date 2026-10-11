@@ -1,18 +1,21 @@
 // @vitest-environment jsdom
 /**
- * Upgrade contract: renders REAL Mermaid output and pins the label-positioning
- * internals that `text-offsets.ts` compensates for.
+ * Upgrade contract: renders REAL Mermaid output and pins the internals that
+ * `text-offsets.ts`, `fo-measure.ts` and `svg-css.ts` compensate for.
  *
- * The other tests here verify the normalizer against synthetic SVG; these
- * verify that the *library* still produces the fragile markup the normalizer
- * was written for. If a Mermaid upgrade fails one of these, re-verify before
- * touching the fix: the failure means either upstream changed the placement
- * mechanism (extend `text-offsets.ts`) or stopped using it (the pass may be
- * obsolete). Use `testing/tools/zoom-sweep/` to re-measure on a real engine.
+ * The other tests here verify the normalizers against synthetic SVG; these
+ * verify that the *library* still produces the fragile markup the
+ * normalizers were written for. If a Mermaid upgrade fails one of these,
+ * re-verify before touching the fix: the failure means either upstream
+ * changed the mechanism (extend the compensating pass) or stopped using it
+ * (the pass may be obsolete). Use `testing/tools/zoom-sweep/` to re-measure
+ * on a real engine.
  */
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { installSvgLayoutShim } from "./svg-layout-shim";
+import { installCanvasStub, installSvgLayoutShim } from "./svg-layout-shim";
 import { normalizeSvgTextOffsets } from "../text-offsets";
+import { clampNegativeStrokeWidths } from "../svg-css";
+import { isContainerSizedDiagram } from "../renderer";
 
 const DIAGRAMS = {
   sequence:
@@ -23,16 +26,30 @@ const DIAGRAMS = {
     "timeline\n    title History\n    2020 : Founded\n    2022 : Launched",
   xychart:
     'xychart-beta\n    title "Sales"\n    x-axis [Q1, Q2]\n    y-axis "Revenue" 0 --> 100\n    bar [20, 55]',
+  // 4-space indentation on purpose: mindmap levels are indent *widths*, so
+  // this lands second-level edges on `edge-depth-5` — the first ramp step
+  // with a negative stroke-width. (With 2-space indents the same diagram
+  // sits at `edge-depth-3` and the bug stays hidden.)
+  mindmap: [
+    "mindmap",
+    "    root((mindmap))",
+    "        Origins",
+    "            Long history",
+    "        Research",
+    "            On effectiveness",
+  ].join("\n"),
 };
 
 const EM_OFFSET = /d[xy]="[^"]*em"/;
 const TRANSLATE_PLACE = /transform="translate\([^"]*\)\s*rotate\(0\)"/;
+const NEGATIVE_STROKE_WIDTH = /stroke-width:\s*-[\d.]/;
 
 const rendered: Record<string, string> = {};
 
 beforeAll(async () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   installSvgLayoutShim();
+  installCanvasStub();
   const mermaid = (await import("mermaid")).default;
   mermaid.initialize({ startOnLoad: false });
   for (const [name, code] of Object.entries(DIAGRAMS)) {
@@ -75,6 +92,121 @@ describe("mermaid upgrade contract (real output)", () => {
     for (const [name, svg] of Object.entries(rendered)) {
       const once = normalizeSvgTextOffsets(svg);
       expect(normalizeSvgTextOffsets(once), name).toBe(once);
+    }
+  });
+
+  it("deep mindmap edges still carry a negative stroke-width", () => {
+    expect(
+      NEGATIVE_STROKE_WIDTH.test(rendered.mindmap),
+      "mindmap: Mermaid no longer emits negative stroke-width values — " +
+        "re-verify whether clampNegativeStrokeWidths in svg-css.ts is still " +
+        "needed (see AGENTS.md, Mermaid Edge Stroke Width)",
+    ).toBe(true);
+  });
+
+  it("clampNegativeStrokeWidths removes every negative stroke width", () => {
+    for (const [name, svg] of Object.entries(rendered)) {
+      const out = clampNegativeStrokeWidths(svg);
+      expect(
+        NEGATIVE_STROKE_WIDTH.test(out),
+        `${name}: negatives survived`,
+      ).toBe(false);
+      expect(clampNegativeStrokeWidths(out), `${name}: not idempotent`).toBe(
+        out,
+      );
+    }
+    // The deep mindmap edges are clamped to the visible floor, not dropped.
+    expect(clampNegativeStrokeWidths(rendered.mindmap)).toMatch(
+      /stroke-width:\s*2px/,
+    );
+  });
+
+  it("still measures HTML labels with getBoundingClientRect in foreignObject", async () => {
+    // fo-measure.ts normalizes exactly this measurement (older WebKit scales
+    // it by the page zoom). If Mermaid switches to another measurement API,
+    // the wrapper is dead code and the zoom fix must move to the new one.
+    const measured: Element[] = [];
+    const proto = Element.prototype as unknown as {
+      getBoundingClientRect: (this: Element) => DOMRect;
+    };
+    const original = proto.getBoundingClientRect;
+    proto.getBoundingClientRect = function (this: Element): DOMRect {
+      measured.push(this);
+      return original.call(this);
+    };
+    try {
+      const mermaid = (await import("mermaid")).default;
+      await mermaid.render(
+        "contract_fo_measure",
+        "graph TD\n  A[Start] --> B[End]",
+      );
+    } finally {
+      proto.getBoundingClientRect = original;
+    }
+    const inForeignObject = (el: Element): boolean => {
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        if (node.localName?.toLowerCase() === "foreignobject") return true;
+      }
+      return false;
+    };
+    expect(
+      measured.some(inForeignObject),
+      "Mermaid no longer measures <foreignObject> label content with " +
+        "getBoundingClientRect — re-verify whether the fo-measure.ts zoom " +
+        "normalization is still needed (see AGENTS.md, Mermaid Label " +
+        "Measurement)",
+    ).toBe(true);
+  });
+
+  it("gantt still lays its geometry out for gantt.useWidth", async () => {
+    // The app pins gantt.useWidth to the diagram's display width so gantt
+    // text does not shrink with the window (see AGENTS.md, Mermaid Gantt
+    // Width). If Mermaid drops the config knob, that pin is dead code and
+    // the tiny-gantt bug returns.
+    const mermaid = (await import("mermaid")).default;
+    mermaid.initialize({ startOnLoad: false, gantt: { useWidth: 777 } });
+    const { svg } = await mermaid.render(
+      "contract_gantt_use_width",
+      DIAGRAMS.gantt,
+    );
+    expect(
+      svg,
+      "gantt: Mermaid no longer honors gantt.useWidth — re-verify how the " +
+        "app can keep gantt charts at display width (see AGENTS.md, " +
+        "Mermaid Gantt Width)",
+    ).toMatch(/viewBox="0 0 777 /);
+  });
+
+  it("isContainerSizedDiagram agrees with Mermaid's own detectType", async () => {
+    // The cache key only carries the render width for container-sized
+    // diagrams; a misclassification either drops the gantt width fix or
+    // needlessly re-renders. Keep the mirror in renderer.ts aligned with
+    // Mermaid's detection (frontmatter/directives stripped, `^\s*gantt`).
+    const mermaid = (await import("mermaid")).default;
+    const sources = [
+      "gantt\n    title Plan\n",
+      "  gantt\n    title Plan\n",
+      "---\nconfig:\n  gantt:\n    useWidth: 400\n---\ngantt\n    title Plan\n",
+      "---\nconfig:\n  theme: forest\n---\ngantt\n    title Plan\n",
+      "%%{init: {'theme':'forest'}}%%\ngantt\n    title Plan\n",
+      "%% note\n\ngantt\n    title Plan\n",
+      "graph LR\n    A-->B\n",
+      "---\nconfig:\n  theme: forest\n---\ngraph TD\n    F-->G\n",
+      "sequenceDiagram\n    Alice->>Bob: Hi\n",
+      "%% note\n\nsequenceDiagram\n    Alice->>Bob: Hi\n",
+    ];
+    for (const source of sources) {
+      let detected = "unknown";
+      try {
+        detected = mermaid.detectType(source);
+      } catch {
+        // Unknown diagram — the app treats it as content-sized (error block).
+      }
+      expect(
+        isContainerSizedDiagram(source),
+        `isContainerSizedDiagram disagrees with detectType("${detected}") ` +
+          `for ${JSON.stringify(source)}`,
+      ).toBe(detected === "gantt");
     }
   });
 });

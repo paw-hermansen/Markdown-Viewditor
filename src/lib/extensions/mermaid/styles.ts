@@ -78,9 +78,16 @@ export const MERMAID_STYLES = `
         max-width: none;
         vertical-align: top;
       }
+      /* Natural size comes from the explicit width/height attributes that
+         normalizeSvgForNaturalSize() writes from the viewBox. No
+         "width: auto" here: it discards that explicit size and hands the
+         result to the engine's default object sizing, which is
+         engine-dependent — WebKitGTK renders such an SVG at exactly 10/9 of
+         its natural size (measured: 360x64 laid out at 400x71, container-
+         independent). "height: auto" alone is exact and keeps the aspect
+         ratio if anything ever clamps the width. */
       .mermaid-block[data-fit-to-width="false"] svg {
         max-width: none !important;
-        width: auto !important;
         height: auto !important;
       }
       .mermaid-error {
@@ -124,7 +131,6 @@ export const MERMAID_STYLES = `
       }
       .print-content .mermaid-block[data-fit-to-width="false"] svg {
         max-width: 100% !important;
-        width: auto !important;
         height: auto !important;
       }
       /* Keep diagrams from being split across pages. */

@@ -11,15 +11,37 @@
     description: t.type,
   }));
 
+  // Local mirror for the dropdown instead of binding viewerState.theme
+  // directly. The binding let DropdownButton write the theme state the moment
+  // a theme was clicked — before applyTheme() had injected the theme CSS and
+  // before setTheme() updated the data-theme* attributes — so the render
+  // effect fired against the OLD attributes and Mermaid's cache keys
+  // disagreed with the render: diagrams turned into "Mermaid rendering
+  // failed" blocks or kept their old colors. Committing only through
+  // setTheme() keeps the state change (and the re-render it triggers) atomic
+  // with the CSS and attribute updates.
+  let selected = $state(viewerState.theme);
+
+  // Follow theme changes made elsewhere (e.g. settings import at startup).
+  $effect(() => {
+    selected = viewerState.theme;
+  });
+
   async function handleSelect(themeId: string) {
-    await applyTheme(themeId);
-    setTheme(themeId);
+    try {
+      await applyTheme(themeId);
+      setTheme(themeId);
+    } catch (err) {
+      // The theme state never changed; revert the dropdown to it.
+      selected = viewerState.theme;
+      console.error("[theme] failed to apply theme:", err);
+    }
   }
 </script>
 
 <DropdownButton
   {choices}
-  bind:value={viewerState.theme}
+  bind:value={selected}
   onSelect={handleSelect}
   title="Select theme"
   header="Theme"

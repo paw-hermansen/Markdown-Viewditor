@@ -341,6 +341,40 @@ mod tests {
     }
 
     #[test]
+    fn text_anchor_middle_centers_glyphs() {
+        // Pin the raster contract the Mermaid label conversion
+        // (`src/lib/extensions/mermaid/fo-labels.ts`) relies on: converted
+        // labels are placed with `text-anchor="middle"` at the measured line
+        // center so they self-center even when usvg resolves a different
+        // fallback font than the browser that measured them. If usvg ever
+        // stops honoring the attribute, exported ODT labels drift exactly
+        // like the old `htmlLabels: false` dialect did.
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60">
+            <rect width="200" height="60" fill="white"/>
+            <text x="100" y="42" font-family="sans-serif" font-size="28" fill="black" text-anchor="middle">mmmmm</text>
+        </svg>"##;
+        let pixmap = rasterize_to_pixels(svg, 200, 60, 1);
+        // Ink centroid of the glyphs must land near x = 100 (the anchor).
+        let mut sum_x = 0u64;
+        let mut count = 0u64;
+        for y in 0..pixmap.height() {
+            for x in 0..pixmap.width() {
+                let p = pixmap.pixel(x, y).unwrap();
+                if p.red() < 128 && p.alpha() > 128 {
+                    sum_x += x as u64;
+                    count += 1;
+                }
+            }
+        }
+        assert!(count > 20, "expected dark glyph pixels, found {count}");
+        let centroid = sum_x as f64 / count as f64;
+        assert!(
+            (centroid - 100.0).abs() < 8.0,
+            "text-anchor=\"middle\" must center glyphs on x=100, ink centroid at {centroid:.1}"
+        );
+    }
+
+    #[test]
     fn renders_text_when_font_family_is_unusable() {
         // `font-family: inherit` has no parent in a standalone SVG; usvg
         // drops the attribute and falls back to `Options::font_family`.

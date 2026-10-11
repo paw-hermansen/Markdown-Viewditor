@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { computePopupPlacement } from '$lib/utils/popup-placement';
+  import { computePopupPlacement, naturalBoxHeight } from '$lib/utils/popup-placement';
 
   interface Choice {
     value: string;
@@ -48,7 +48,7 @@
     const popup = popupEl;
     if (!rect || !popup) return;
     const gap = 4;
-    const naturalHeight = popup.scrollHeight;
+    const naturalHeight = naturalBoxHeight(popup);
     const spaceBelow = window.innerHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
     const flip = spaceBelow < naturalHeight && spaceAbove > spaceBelow;
@@ -314,6 +314,8 @@
     /* Viewport-relative so the list scrolls within the screen at high zoom. */
     max-height: min(200px, 30vh);
     overflow-y: auto;
+    /* Reserve the scrollbar's strip so scrolling never covers the options. */
+    scrollbar-gutter: stable;
     box-shadow: var(--shadow-md);
   }
 

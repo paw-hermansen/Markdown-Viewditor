@@ -228,6 +228,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* Minimum distance between the filename and the Edit/Split/View toggle.
+       Flex gaps are invariant spacing between items — they hold even when
+       the row overflows — so the two can never touch; space-between alone
+       collapses to zero as soon as space runs out. */
+    gap: 16px;
     padding: 8px 16px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
@@ -256,7 +261,18 @@
   .file-name {
     font-size: 13px;
     color: var(--text-secondary);
+    /* Fallback cap where the clamp() below is unsupported. */
     max-width: 200px;
+    /* Fluid yield: the filename is the first thing to give way when the
+       window is narrow (long names, or high app zoom — page zoom shrinks
+       the CSS viewport exactly like a narrower window, see ViewToggle's
+       media query and the StatusBar deco labels). The slope tracks the
+       width left over after the fixed toolbar chrome (buttons, view
+       toggle, About, padding, gaps), so the row keeps fitting and the
+       16px toolbar gap stays the real distance to the toggle; at >= 1067px
+       wide the clamp resolves to the 200px design cap. The full path
+       stays reachable via the hover tooltip at any width. */
+    max-width: clamp(0px, 30vw - 120px, 200px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

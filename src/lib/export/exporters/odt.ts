@@ -293,6 +293,20 @@ const S = {
   listTask: "TaskList",
   cell: "Table_20_Contents",
   cellHead: "Table_20_Heading",
+  // Alignment variants for GFM pipe-table column alignment (`:--`, `:-:`,
+  // `--:`). Left/absent maps to the base styles — left is the ODF default.
+  cellAligned: (align: string): string =>
+    align === "center"
+      ? "Table_20_Contents_20_Center"
+      : align === "right"
+        ? "Table_20_Contents_20_Right"
+        : "Table_20_Contents",
+  cellHeadAligned: (align: string): string =>
+    align === "center"
+      ? "Table_20_Heading_20_Center"
+      : align === "right"
+        ? "Table_20_Heading_20_Right"
+        : "Table_20_Heading",
   mathDisplay: "Math_20_Display",
   diagramDisplay: (align: string): string =>
     align === "left"
@@ -992,6 +1006,18 @@ ${Array.from({ length: 9 }, (_, i) => {
       <style:paragraph-properties fo:margin-top="0" fo:margin-bottom="0.05in"/>
       <style:text-properties fo:font-weight="bold"/>
     </style:style>
+${(["center", "right"] as const)
+  .map(
+    (align) => `
+    <style:style style:name="${S.cellAligned(align)}" style:family="paragraph">
+      <style:paragraph-properties fo:text-align="${align}" fo:margin-top="0" fo:margin-bottom="0.05in"/>
+    </style:style>
+    <style:style style:name="${S.cellHeadAligned(align)}" style:family="paragraph">
+      <style:paragraph-properties fo:text-align="${align}" fo:margin-top="0" fo:margin-bottom="0.05in"/>
+      <style:text-properties fo:font-weight="bold"/>
+    </style:style>`,
+  )
+  .join("")}
     <style:style style:name="Horizontal_20_Rule" style:family="paragraph" style:class="text">
       <style:paragraph-properties
         fo:margin-top="0.2in" fo:margin-bottom="0.2in"
@@ -2183,7 +2209,7 @@ async function buildDocument(
           }
           const closeIdx = findClosing(tokens, i, "th_close");
           parts.push(
-            `          <table:table-cell><text:p text:style-name="${S.cellHead}">${content}</text:p></table:table-cell>`,
+            `          <table:table-cell><text:p text:style-name="${S.cellHeadAligned(parseTextAlign(tokens[i]))}">${content}</text:p></table:table-cell>`,
           );
           i = closeIdx >= 0 ? closeIdx + 1 : i + 1;
           break;
@@ -2197,7 +2223,7 @@ async function buildDocument(
           }
           const closeIdx = findClosing(tokens, i, "td_close");
           parts.push(
-            `          <table:table-cell><text:p text:style-name="${S.cell}">${content}</text:p></table:table-cell>`,
+            `          <table:table-cell><text:p text:style-name="${S.cellAligned(parseTextAlign(tokens[i]))}">${content}</text:p></table:table-cell>`,
           );
           i = closeIdx >= 0 ? closeIdx + 1 : i + 1;
           break;
@@ -2320,7 +2346,14 @@ async function buildDocument(
               mermaidFenceOpts,
             );
             try {
-              const svgXml = await renderMermaidSvgForExport(token.content);
+              // Pass the resolved host options: mermaid diagrams are built
+              // for the width the viewer displays them at (gantt lays its
+              // geometry out for exactly that — see diagramRenderWidth), so
+              // the export matches the screen.
+              const svgXml = await renderMermaidSvgForExport(
+                token.content,
+                mermaidOpts,
+              );
               const dims = sniffSvgDimensions(
                 new TextEncoder().encode(svgXml),
                 label,
@@ -2550,6 +2583,19 @@ async function buildDocument(
   };
 }
 
+/**
+ * GFM pipe-table column alignment (`|:--|:-:|--:|`) arrives as
+ * `style="text-align:<x>"` on `th_open`/`td_open` tokens (set by markdown-it's
+ * table block rule). Returns the normalized alignment, defaulting to `left`
+ * when the column has no alignment marker.
+ */
+function parseTextAlign(token: Token | undefined): "left" | "center" | "right" {
+  const style = token?.attrGet("style") ?? "";
+  const m = /text-align:\s*(left|center|right)/i.exec(style);
+  const value = m?.[1].toLowerCase();
+  return value === "center" || value === "right" ? value : "left";
+}
+
 function countTableColumns(tokens: Token[]): number {
   for (const token of tokens) {
     if (token.type === "tr_open") {
@@ -2633,11 +2679,6 @@ function generateFrontmatterCardOdf(fm: Frontmatter): string {
     }
   } else {
     // Plain frontmatter.
-    rows.push(
-      `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
-        `<text:p text:style-name="${S.fmHeading}">${esc("FRONTMATTER")}</text:p>` +
-        `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
-    );
     for (const [key, value] of Object.entries(fm)) {
       rows.push(
         `<table:table-row><table:table-cell>` +

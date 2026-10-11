@@ -4,9 +4,10 @@
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { zoomIn, zoomOut, resetZoom, zoomLabel } from '$lib/stores/zoom.svelte';
   import { modLabel } from '$lib/utils/keyboard';
-  import { computePopupPlacement, findClipRect } from '$lib/utils/popup-placement';
+  import { anchorPopup, computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
   import {
     listFeatureToggles,
+    compareFeatureToggles,
     presetFor,
     presetForEnabled,
     violationMessage,
@@ -25,7 +26,9 @@
     custom: 'Custom'
   };
 
-  let toggles = $derived(listFeatureToggles());
+  // Display order (required-preset group, then alphabetical) for both the
+  // checklist and the violation rows — see compareFeatureToggles().
+  let toggles = $derived(listFeatureToggles().sort(compareFeatureToggles));
   let totalToggles = $derived(toggles.length);
 
   // Display label for the level: "Custom (n/9)" when in custom mode.
@@ -48,29 +51,42 @@
   /**
    * Keep an open popover inside the box it is clipped by (the viewport here,
    * but measured, not guessed — see popup-placement.ts). Opens upward from
-   * the status bar, so the cap is the space above the trigger.
+   * the status bar, so the cap is the space above the trigger. `capHeight`
+   * is false for fixed-content popovers that must never scroll (the zoom
+   * popup: a scrollbar there overlays its +/- buttons on Linux).
    */
-  function placePopover(pop: HTMLElement | undefined) {
+  function placePopover(pop: HTMLElement | undefined, capHeight = true) {
     const wrapper = pop?.parentElement;
     const trigger = wrapper?.querySelector('button') as HTMLElement | null;
     if (!pop || !wrapper || !trigger) return;
     const placement = computePopupPlacement({
       trigger: trigger.getBoundingClientRect(),
       clip: findClipRect(pop),
-      popup: { width: pop.getBoundingClientRect().width, height: pop.scrollHeight },
+      popup: { width: pop.getBoundingClientRect().width, height: naturalBoxHeight(pop) },
       align: 'right',
       openDirection: 'up',
     });
-    pop.style.left = `${placement.left - wrapper.getBoundingClientRect().left}px`;
-    pop.style.right = 'auto';
-    pop.style.maxHeight = `${placement.maxHeight}px`;
+    // Anchor on the right edge (the aligned edge): the trigger's label
+    // changes width when the preset switches ("Advanced" -> "Basic"), and a
+    // left offset would slide the popover off the button by the delta.
+    const anchor = anchorPopup(
+      wrapper.getBoundingClientRect(),
+      placement,
+      pop.getBoundingClientRect().width,
+      'right',
+    );
+    pop.style.left = anchor.left;
+    pop.style.right = anchor.right;
+    if (capHeight) {
+      pop.style.maxHeight = `${placement.maxHeight}px`;
+    }
     if (placement.maxWidth !== undefined) pop.style.maxWidth = `${placement.maxWidth}px`;
   }
 
   function placePopovers() {
     placePopover(levelPopRef);
     placePopover(violationsPopRef);
-    placePopover(zoomPopRef);
+    placePopover(zoomPopRef, false);
   }
 
   $effect(() => {
@@ -84,7 +100,7 @@
     };
   });
 
-  let violations = $derived(levelState.violations);
+  let violations = $derived([...levelState.violations].sort(compareFeatureToggles));
 
   function selectLevel(level: MarkdownLevel) {
     if (level === 'custom') {
@@ -386,6 +402,8 @@
        popup scrolls instead of running off-screen at high zoom. */
     max-height: min(60vh, calc(100vh - 44px));
     overflow-y: auto;
+    /* Reserve the scrollbar's strip so scrolling never covers the controls. */
+    scrollbar-gutter: stable;
     white-space: normal;
     font-size: 12px;
     color: var(--text-primary);
@@ -470,6 +488,12 @@
 
   .zoom-popover {
     min-width: 160px;
+    /* Fixed content (one row + Reset) — never scrolls: it fits above the
+       trigger even at the smallest supported window x 300% zoom, and a
+       scrollbar would overlay the +/- buttons on Linux. */
+    max-height: none;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
   }
 
   .zoom-row {

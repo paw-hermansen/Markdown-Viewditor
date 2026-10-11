@@ -826,6 +826,68 @@ async function canvasToPng(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   throw new Error("renderMathToPng: PNG encoding returned no data");
 }
 
+/** PNG bitmap plus the element's logical CSS-px size (see
+ * `RenderedMathPng.widthPx`: the bitmap may have more pixels — that only
+ * affects sharpness, not display size). */
+export interface CapturedElementPng {
+  png: Uint8Array;
+  widthPx: number;
+  heightPx: number;
+}
+
+/**
+ * Capture an already-laid-out element (e.g. a KaTeX formula inside a
+ * Mermaid label) as a PNG via `html2canvas`, preserving exactly what the
+ * app renders for it. The element stays in place — html2canvas clones the
+ * document to paint, so nothing in the live DOM is disturbed.
+ *
+ * Used by the Mermaid foreignObject→SVG label conversion
+ * (`$lib/extensions/mermaid/fo-labels.ts`) to embed label math as
+ * `<image>` data in export SVGs.
+ *
+ * @param el - The live element to capture.
+ * @param scale - Pixel-scale multiplier (sharpness only; the returned
+ *   `widthPx`/`heightPx` stay in CSS px).
+ * @throws When the DOM or the capture is unavailable — callers degrade to
+ *   plain-text labels.
+ */
+export async function captureElementToPng(
+  el: HTMLElement,
+  scale = 2,
+): Promise<CapturedElementPng> {
+  if (typeof document === "undefined") {
+    throw new Error("captureElementToPng: no DOM available");
+  }
+  if (!Number.isFinite(scale) || scale <= 0) {
+    throw new Error(`captureElementToPng: invalid scale ${scale}`);
+  }
+  const rect = el.getBoundingClientRect();
+  if (
+    !Number.isFinite(rect.width) ||
+    !Number.isFinite(rect.height) ||
+    rect.width <= 0 ||
+    rect.height <= 0
+  ) {
+    throw new Error("captureElementToPng: element has no layout");
+  }
+  // html2canvas 1.4.1 is patched in patches/html2canvas+1.4.1.patch so its
+  // canvas baseline probe includes KaTeX's italic font style and weight.
+  const html2canvas = (await import("html2canvas")).default;
+  // Cast to `any` because the bundled `@types/html2canvas` is from v0.5 and
+  // doesn't know the html2canvas 1.x options (same as renderMathToPng).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const canvas: HTMLCanvasElement = await (html2canvas as any)(el, {
+    backgroundColor: null,
+    scale,
+    logging: false,
+  });
+  return {
+    png: await canvasToPng(canvas),
+    widthPx: rect.width,
+    heightPx: rect.height,
+  };
+}
+
 /**
  * Return whether a canvas contains any pixels different from its sampled
  * background. A null result means pixel access is unavailable and callers

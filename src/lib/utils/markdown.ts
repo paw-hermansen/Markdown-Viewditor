@@ -701,6 +701,25 @@ export async function analyzeContent(content: string): Promise<UsedFeature[]> {
   }
 }
 
+/**
+ * Derive `--viewer-bg` (the app-wide background: viewer container, editor,
+ * chrome) from the active theme's `#viewer-content` background.
+ *
+ * Theme CSS scopes its colors to `#viewer-content`, so the page background
+ * must be copied out of it. Call this when `#viewer-content` exists — from
+ * the Viewer's mount/theme effect — NOT from a bare startup rAF: a frame
+ * flushed before the app renders (e.g. by a zoom change at startup) makes
+ * such a probe miss the element and the whole app falls back to the generic
+ * dark/light palette.
+ */
+export function syncViewerBackground(): void {
+  const el = document.getElementById("viewer-content");
+  const bg = el ? getComputedStyle(el).backgroundColor : "";
+  if (el && bg) {
+    document.documentElement.style.setProperty("--viewer-bg", bg);
+  }
+}
+
 export function setTheme(themeId: string, css: string): void {
   if (currentThemeId === themeId) return;
 
@@ -713,13 +732,9 @@ export function setTheme(themeId: string, css: string): void {
   currentThemeStyle.textContent = css;
   currentThemeId = themeId;
 
-  requestAnimationFrame(() => {
-    const el = document.getElementById("viewer-content");
-    if (el) {
-      const bg = getComputedStyle(el).backgroundColor;
-      document.documentElement.style.setProperty("--viewer-bg", bg);
-    }
-  });
+  // Covers runtime theme switches (the viewer is mounted by then); the
+  // Viewer's own effect is what covers startup.
+  requestAnimationFrame(() => syncViewerBackground());
 }
 
 export function getAvailableLanguages(): string[] {

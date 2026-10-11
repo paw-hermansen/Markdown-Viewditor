@@ -90,7 +90,6 @@ export function generateFrontmatterCardHtml(fm: Frontmatter): string {
 
   // Plain frontmatter (no skill).
   let html = '<div class="frontmatter-card" data-line="1">';
-  html += '<div class="frontmatter-title">Frontmatter</div>';
   html += '<dl class="skill-meta">';
   for (const [key, value] of Object.entries(fm)) {
     html += `<dt>${escapeHtml(key)}</dt>`;

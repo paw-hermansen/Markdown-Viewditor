@@ -1,7 +1,11 @@
 import type { MarkdownExtension } from "../types";
 import { MERMAID_PATTERNS } from "../pre-scan";
 import { mergeOptions } from "../directive-merge";
-import { preRenderMermaidBlocks, renderMermaid } from "./renderer";
+import {
+  preRenderMermaidBlocks,
+  renderMermaid,
+  themeSnapshotFromEnv,
+} from "./renderer";
 import { injectMermaidStyles } from "./styles";
 import { MERMAID_OPTIONS_SCHEMA } from "./schema";
 
@@ -40,8 +44,15 @@ export const mermaidExtension: MarkdownExtension = {
     content: string,
     _language: string,
     options: Record<string, unknown>,
+    env?: Record<string, unknown>,
   ): string | null {
-    return renderMermaid(content, resolveOptions(options));
+    // Use the pre-render pass's theme snapshot (if any) so the cache lookup
+    // matches the keys the pass filled — see THEME_SNAPSHOT_ENV_KEY.
+    return renderMermaid(
+      content,
+      resolveOptions(options),
+      themeSnapshotFromEnv(env),
+    );
   },
 
   featureDetectors() {

@@ -12,6 +12,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
+    "clean:webview-cache": "node scripts/clean-webview-cache.mjs",
     "tauri": "tauri",
     "tauri:windows:build": "tauri-windows-bundle build --runner npm",
     "test": "vitest run",

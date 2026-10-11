@@ -302,9 +302,249 @@ constant, `MERMAID_FONT_SIZE` (in `styles.ts`) — keep them equal:
   `config.fontSize` key here — `themeVariables.fontSize` is the lever.
 
 `__tests__/mermaid.test.ts` and `__tests__/styles.test.ts` assert the pin and
-the config↔CSS consistency. PDF/print is unaffected either way: those variants
-use `<text>` labels (`htmlLabels: false`), so there is no `foreignObject` to
-clip.
+the config↔CSS consistency. The export/print variants measure labels in a
+hidden host and convert them to `<text>` (see "Mermaid Label Export
+Conversion" below), so the pin also governs the measured label metrics.
+
+A sibling quirk in the same zoom area: Mermaid positions label text with
+em-based `dy`/`dx` offsets (sequence message labels use `dy="1em"`), and
+WebKit page zoom resolves em against the _zoom-divided_ computed font size
+while the diagram geometry scales normally — labels slide up toward the
+neighbouring line as zoom grows (at 200% a sequence label sat closer to the
+previous message's line than to its own). `text-offsets.ts` rewrites every
+em-based `x`/`y`/`dy`/`dx` to absolute user units at cache-fill time
+(`normalizeSvgTextOffsets` in `renderer.ts`, all three variants) — `x`/`y`
+included because usvg resolves em against _its_ font resolution, which
+drifted converted labels vertically in ODT rasters. The same
+pass folds translate-based text placement (`transform="translate(X, Y)
+rotate(0)"` with x/y at 0 — xychart's axis labels) into plain `x`/`y`
+attributes: under WebKit page zoom those labels collapse toward the top of
+the chart and vanish (measured -278 user units at 300%; dominant-baseline is
+not the culprit). Both rewrites are zoom-proof and no-ops in effect on Blink
+and at 100% zoom — keep them when touching the render pipeline. Regression:
+`__tests__/text-offsets.test.ts`.
+
+Zoom-sweep inventory (WebKitGTK): the em-`dy` families are sequence
+(incl. notes/loops/activations), gantt, timeline, c4, sankey and gitgraph —
+all covered by that one pass — plus xychart's translate-positioned labels.
+The `<foreignObject>` HTML-label families
+(flowchart, class, state, journey, mindmap, block) measure uniform at
+100–300% zoom on modern WebKit (label div boxes track their fo boxes
+exactly). erDiagram/pie/quadrant are clean. Two facts worth keeping:
+diagram geometry is render-zoom-independent (re-rendering a diagram at any
+zoom produces identical geometry — the cache is safe), and the `<switch>`
+fallback `<text>` duplicates after each `<foreignObject>` are never painted,
+so ignore their rects in measurements. Old WebKit (macOS 12) remains the
+place to eyeball foreignObject labels and SVG markers under zoom
+(webkit.org/show_bug.cgi?id=279041). Diagrams with Mermaid's `useMaxWidth`
+(default) shrink to fit the container, so at high zoom they stay the same
+physical size while the rest of the UI grows — by design, not a bug.
+
+### Mermaid Label Measurement (page zoom)
+
+Mermaid sizes every HTML label at render time from `getBoundingClientRect()`
+on the label `<div>` inside its `<foreignObject>` and bakes those numbers into
+the `foreignObject` box, the label's centering translate, and the node box
+geometry. CSSOM-View makes those rects local to the foreignObject and
+page-zoom-invariant — what Blink, Gecko, and modern WebKit return (the "label
+div boxes track their fo boxes" finding above). Older WebKit instead returns
+page-viewport rects whose _sizes_ are scaled by the page zoom factor
+(webkit.org/show_bug.cgi?id=71819 and 261109, dup of 23963 — fixed upstream
+only in Dec 2025, so WKWebView on macOS 12 Monterey and older iOS is
+affected).
+
+The symptom is sticky: a render that runs while the app is zoomed bakes
+oversized boxes with the labels hugging their left/top edge and the text
+looking too small for its box — and since the SVG is cached per content+theme
+(zoom is deliberately not part of rendering), zooming afterwards, **even back
+to 100%**, never heals it. Renders made at 100% zoom are correct on every
+engine, which is what makes this look like a "macOS renders differently" bug.
+
+`fo-measure.ts` fixes this at the source — and must do so _exactly_, because
+Mermaid's label-wrap heuristic is a fragile **exact** equality (`bbox.width
+=== width` in `addHtmlSpan`, upstream mermaid-js/mermaid#7794): any hair-off
+perturbation of the measured width silently disables wrapping, and long
+labels get clipped at the box edge instead of wrapping over lines. Two rules
+are load-bearing:
+
+1. **At 100% zoom the API is never touched.** No engine scales foreignObject
+   rects at zoom 1 (the verified-good baseline on every platform), and a
+   probe factor that drifts from 1 by sub-pixel measurement noise would
+   perturb widths enough to break the wrap equality — that regression
+   happened once; do not reintroduce it.
+2. **Corrections divide by the app's exact zoom factor** (`currentZoom()` —
+   the bug scales by exactly the page zoom; the probe only _classifies_ the
+   engine) and round the result to 1e-6 px to kill IEEE round-trip noise
+   (`200 * 1.1 / 1.1 = 200.00000000000003`), so integral widths come out
+   bit-exact and wrapping keeps working.
+
+`withZoomNormalizedLabelMeasurement()` wraps **every** `mermaid.render()` call
+in `renderer.ts` (viewer pre-render queue and the export/print variants),
+patching `Element.prototype.getBoundingClientRect` for the render's duration
+so rects of foreignObject content inside Mermaid's temp containers
+(`div[id^="dmmd-"]`) are normalized. Everything outside the temp containers is
+a plain pass-through, so a zoomed render produces geometry identical to a 100%
+render. Keep any new Mermaid render entry point inside the wrapper, and never
+measure `<foreignObject>` content with raw `getBoundingClientRect` elsewhere
+in app code without dividing out the same factor (or using rect _ratios_, like
+`fo-labels.ts`/`math-fit.ts` do). Guarded by `__tests__/fo-measure.test.ts`
+and the upgrade-contract suite, which pins that Mermaid still measures labels
+this way. Regression: TEST-PLAN 15.29–15.31 (start the app zoomed).
+
+### Mermaid Label Export Conversion (`foreignObject` → SVG text)
+
+Exports and the PDF print clone cannot ship the viewer's labels: the viewer
+renders them as HTML inside `<foreignObject>`, which usvg/resvg (Linux ODT
+PNG rasterization) and LibreOffice svgio (vector ODT) drop outright and
+WebKit mis-scales under CSS scaling. Mermaid's own `htmlLabels: false`
+text-label dialect is NOT a usable substitute — it was the root cause of the
+ODT label bugs:
+
+- state labels hug the left edge (`centerLabel: true` shifts the label group
+  by `-bbox.width/2` of a bbox that `withMinWidth` widened to the node's
+  _minimum_ width, while the text is start-anchored),
+- ER and mindmap-_root_ labels spill right (label group at `translate(0, …)`
+  = the node center with start-anchored text; only _edge_ labels get
+  `text-anchor: middle` from Mermaid),
+- mindmap children lose their vertical centering (the `.mindmap-node-label`
+  CSS with `text-anchor/dominant-baseline: middle` only lands on the HTML
+  label, never on the text one),
+- journey section titles are invisible (the `<switch>` fallback `<text>` has
+  `class="journey-section section-type-0"`, whose CSS fill _is_ the section
+  box color — usvg paints the fallback branch, so text and box are both
+  `#ECECFF`).
+
+So the export/print variants render `htmlLabels: true` (the viewer's own
+label layout — the visual reference) and `convertForeignObjectLabels`
+(`src/lib/extensions/mermaid/fo-labels.ts`) rewrites every label into
+standalone SVG **measured from that layout**:
+
+- one `<text>` per rendered line, `text-anchor="middle"` at the measured
+  line center, alphabetic baseline at the measured baseline (ratio from a
+  hidden probe line — never `dominant-baseline`, which LibreOffice may
+  ignore). Self-centering in every renderer even when usvg resolves a
+  different fallback font than WebKit.
+- per-run `<tspan>`s carry computed font-weight/style/family/decoration and
+  fill, so bold/italic/code spans survive; everything is written as inline
+  `style` so Mermaid's class CSS can never restyle the text.
+- inline `<svg>` icons (`fa:fa-*`) are cloned in place with `currentColor`
+  materialized; KaTeX label output (the export config sets
+  `forceLegacyMathML`, so Mermaid emits KaTeX _HTML_, not bare MathML) is
+  captured via `captureElementToPng` (math-render.ts) and embedded as
+  `<image>`; failure degrades the formula to plain text.
+- all geometry is client-px ratios through the `foreignObject` box, so app
+  zoom and SVG display scaling cancel (same argument as `math-fit.ts`).
+
+Without DOM layout (jsdom, DOM-less) each label degrades to a plain
+`<text>` at the foreignObject box center — still centered, still visible.
+The measurable path and the degradation path are covered in
+`__tests__/fo-labels.test.ts` + `__tests__/fo-labels-integration.test.ts`
+(real Mermaid, one diagram per broken family). Keep the conversion when
+touching the export pipeline; if a Mermaid upgrade changes how labels are
+emitted, the integration suite is the tripwire.
+
+### Mermaid Edge Stroke Width (negative `edge-depth-N` ramp)
+
+Mermaid sizes mindmap/timeline/kanban edges from a per-depth ramp
+(`.edge-depth-N { stroke-width: … }`, `17 - 3 * i` for the default look)
+that goes **negative** from `edge-depth-5` on (`-1`, `-4`, …; only mindmap's
+`neo` look floors at 2). Mindmap's `N` is `node.level + 1`, and the parser
+passes the indent token's _character length_ as the level — so the class
+jumps with the indentation step: a two-level mindmap indented with 4 spaces
+emits `edge-depth-5` = `stroke-width: -1` on its second-level edges. The
+symptom is missing connectors (two of four mindmap lines gone on
+macOS/Monterey while Linux/Windows draw all four), and it hits any mindmap
+3+ levels deep even at 2-space indentation.
+
+A negative stroke width is invalid CSS, and Mermaid round-trips its theme
+CSS through the CSSOM (`new CSSStyleSheet()` → `cssRules[].cssText`), so
+each engine's parser settles the declaration's fate before we see the SVG:
+engines that drop it fall back to `#id .edge { stroke-width: 3 }` and the
+connector draws (Blink, current WebKitGTK), while Monterey's older WebKit
+keeps it and paints the stroke with a non-positive width — nothing (also
+missing from PDFs made there).
+
+`clampNegativeStrokeWidths()` (`svg-css.ts`) rewrites every negative
+`stroke-width` (CSS declarations and presentation attributes alike) to
+`2px` — the smallest width the ramp itself uses — at cache-fill time and in
+the export/print render paths, next to `normalizeSvgTextOffsets` in
+`renderer.ts`. Regression: `__tests__/svg-css.test.ts`, TEST-PLAN 6.44;
+the upgrade-contract suite pins that Mermaid still emits the negative
+values (if that stops, the pass may be removable).
+
+### Mermaid Gantt Width (`gantt.useWidth`)
+
+Mermaid's gantt renderer is the only family whose coordinate system is NOT
+derived from content bounds: it spans the timeline across the render
+container (`w = elem.parentElement.offsetWidth` in its renderer) and draws
+its 11px fonts in that space. This app renders every diagram in Mermaid's
+body-level temp container (`mermaid.render()` → `body > div#dmmd-N`), so
+gantt charts were built for the full **window** width and `.mermaid-block`
+(`min(maxWidth, 800px column)`) then shrank them — text and all — by
+`hostWidth / windowWidth` (11px labels rendered at ~4px on a 1920px window;
+the same tiny text lands in PDFs/ODT).
+
+`diagramRenderWidth(options)` (mermaid `renderer.ts`) computes the width the
+host box displays the diagram at and pins it as `gantt.useWidth` in every
+`ensureInitialized` config:
+
+- `fitToWidth: true` (default) → `min(maxWidth, viewer column)` — the chart
+  renders 1:1 at its display width, text stays 11px.
+- `fitToWidth: false` → `maxWidth` — a gantt has no intrinsic width, so its
+  "natural size" is the requested width and the host scrolls when that
+  exceeds the column. Mirrors `computeMermaidFrameDims` in `exporters/odt.ts`.
+
+The width is part of the SVG cache key for gantt **only**
+(`isContainerSizedDiagram` mirrors Mermaid's `detectType` preprocessing —
+frontmatter and `%%{init: …}%%` stripped, then `^\s*gantt`); every other
+family keeps the width-independent key so host-option changes still never
+duplicate Mermaid work. Pre-render pass and fence renderer must resolve the
+same width or the fence lookup degrades to an error block (same failure mode
+as the theme snapshot). The width is always the _maximum_ column width
+(`#viewer-content`'s computed `max-width`, never its live width), so exports
+never depend on window size; `renderMermaidSvgForExport` takes the resolved
+host options for this, and the print clone re-renders with the options
+stashed next to the source in `mermaidSources`.
+
+Upgrade pins in `__tests__/upgrade-contract.test.ts`: Mermaid still honors
+`gantt.useWidth` (viewBox width follows it), and `isContainerSizedDiagram`
+still agrees with `mermaid.detectType`. Regression: TEST-PLAN 6.45–6.46,
+10.42, 14.22.
+
+Related sizing contract for `fitToWidth=false` (all diagram families): the
+natural size comes from the explicit `width`/`height` attributes
+`normalizeSvgForNaturalSize()` writes from the viewBox, and the styles must
+**not** set `width: auto` on the SVG. `width: auto` discards that size and
+resolves through the engine's default object sizing, which is
+engine-dependent: WebKitGTK then renders the diagram at exactly 10/9 of its
+natural size (measured: 360×64 → 400×71, container-independent;
+`__tests__/styles.test.ts` pins the absence). `height: auto` alone is exact
+and keeps the aspect ratio when the print clamp (`max-width: 100%`) shrinks
+an over-wide diagram.
+
+### Upgrading KaTeX / Mermaid
+
+The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
+its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
+label offsets plus translate-based text placement (the `text-offsets.ts`
+rewrites), its negative `edge-depth-N` stroke-width ramp (the `svg-css.ts`
+clamp) and the `gantt.useWidth` config knob (the Gantt width pin). The
+`upgrade-contract.test.ts` suites in both extensions render _REAL_ library
+output and fail when those internals change shape. Read the
+failure message: "lost its target / no longer emits" means either upstream
+changed the mechanism (extend the fix) or dropped it (the compensation may be
+obsolete) — re-measure with the zoom-sweep harness before touching either.
+
+Upgrade checklist:
+
+1. `npm install katex@<ver>` / `npm install mermaid@<ver>` (the `^0.16` /
+   `^12` ranges keep majors out — KaTeX 0.18 renames CSS classes outright).
+2. KaTeX: run `scripts/update-katex-css.sh` to regenerate the woff2
+   stylesheet the pin targets.
+3. `npx vitest run` — the upgrade-contract suites are the tripwires.
+4. On Linux: `python3 testing/tools/zoom-sweep/mermaid-zoom-sweep.py`.
+5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
+   plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.
 
 A sibling quirk in the same zoom area: Mermaid positions label text with
 em-based `dy`/`dx` offsets (sequence message labels use `dy="1em"`), and
@@ -393,7 +633,10 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
 - All measurement code (`measureMathVisualBounds`, `computeViewerLayoutWidth`,
   the editor's `scaleX`) is page-zoom-invariant: page zoom shrinks the CSS-px
   viewport but computed styles and rects in CSS px do not change. Keep it that
-  way — prefer ratios of `getBoundingClientRect` over raw px assumptions.
+  way — prefer ratios of `getBoundingClientRect` over raw px assumptions. The
+  one exception is Mermaid's own label measurement inside `<foreignObject>`,
+  which older WebKit scales by the page zoom; `fo-measure.ts` normalizes it
+  (see "Mermaid Label Measurement").
 - UI chrome must stay zoom-proof: no fixed `height` on bars/buttons (use
   `min-height` — a hard px box plus device-pixel baseline rounding clips text
   at fractional zoom), `white-space: nowrap` on single-line status text, and
@@ -402,7 +645,26 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   window) so entries scroll into reach instead of being cut at the status
   bar line or the pane edge at high zoom. Never place popups with fixed
   offsets or bare `right: 0` edge alignment; measure the trigger and clip
-  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`).
+  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`). Apply
+  the measured position with `anchorPopup()`, anchored on the _alignment_
+  side (a right-aligned popup gets a `right` offset from its wrapper's edge):
+  a `left` offset bakes the trigger's current width into a constant, so a
+  trigger that relabels (the status-bar level button: "Advanced" → "Basic")
+  slides the popup off its edge by exactly the width delta. Measure
+  the popup's natural height with `naturalBoxHeight()` (scrollHeight +
+  borders, rounded up — WebKit rounds border metrics to fractions of a
+  pixel): under `box-sizing: border-box`, `max-height: scrollHeight` is ~2px
+  short and draws a spurious scrollbar — and on Linux those overlay the
+  controls. Fixed-content popovers (the zoom popup) disable scrolling
+  entirely instead: `placePopover(..., capHeight = false)` plus
+  `overflow-y: visible`. `scrollbar-gutter: stable` is kept for other
+  engines, but it reserves nothing on WebKitGTK's overlay scrollbars. The
+  top bar keeps a hard minimum gap between the filename and the
+  Edit/Split/View toggle (`gap: 16px` on `.toolbar` — flex gaps hold even
+  when the row overflows, where `space-between` collapses to zero) and the
+  filename yields first (`max-width: clamp(0px, 30vw - 120px, 200px)`), so
+  long names or high zoom ellipsize the name instead of crowding the
+  buttons.
 - Zoom changes keep the visible line anchored: `setZoom` runs registered
   `ZoomScrollAnchor`s around `applyZoomLevel` — the editor and viewer capture
   the line at the viewport middle before the change and restore it after two
@@ -411,6 +673,75 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   but the content above the anchor re-flows (line wrapping, diagram
   fit-to-width), so an unanchored view jumps. `+page.svelte` registers the
   composite anchor and pauses scroll-sync for the capture/restore window.
+
+### Theme background (`--viewer-bg`)
+
+Theme CSS scopes its colors to `#viewer-content`, and the app-wide background
+(editor, viewer container, chrome) comes from `--viewer-bg`, which is derived
+at runtime: `syncViewerBackground()` (`utils/markdown.ts`) copies the computed
+`#viewer-content` background onto `<html>`. It runs from the Viewer's
+mount/theme effect (`Viewer.svelte`) and from `setTheme()` after the theme CSS
+is injected. Never derive it from a bare startup rAF: `#viewer-content` does
+not exist until the app renders (`+layout` waits for `ready`), and a frame
+flushed before that — e.g. the persisted zoom applying at launch — makes the
+probe miss deterministically at zoom != 100%. The symptom is the whole app on
+the generic dark/light palette while only the viewer's text box shows the
+theme.
+
+### Theme changes and Mermaid cache keys
+
+Mermaid SVGs are cached per `[appTheme.type, appTheme.themeId, variant,
+content]`. The app theme for one render is **snapshotted once** in
+`preRenderMermaidBlocks` onto the markdown-it env (`mermaidAppTheme`);
+`renderFence` must look the cache up with that snapshot
+(`themeSnapshotFromEnv(env)`) and never re-read `getAppTheme()` — a theme
+change mid-render then makes the fence lookup miss the keys the pass filled,
+and every diagram renders as a "Mermaid rendering failed" block (or hits a
+stale theme's cached SVGs and keeps the old colors).
+
+Theme commits must be **atomic**: `viewerState.theme` is what triggers the
+render `$effect`, so it may only change together with the theme CSS injection
+and the `data-theme*` attribute updates (i.e. via `setTheme` in
+`stores/viewer.svelte.ts`). Never write `viewerState.theme` directly — the
+old `ThemeSelector` had `bind:value={viewerState.theme}`, so DropdownButton
+wrote the state the moment a theme was clicked, the re-render raced the
+attribute update, and diagrams broke exactly as above. Regression tests:
+`mermaid.test.ts` ("cache keys in sync …mid-render") and
+`ThemeSelector.test.ts` ("does not commit viewerState.theme until the theme
+is applied").
+
+### Render busy overlay
+
+`Viewer.svelte` shows a ghosted "Rendering…" overlay (the same pill/spinner as
+the file-open "Loading…" overlay) for **major renders only**: the first render
+of a document, a theme change (every Mermaid diagram misses the theme-keyed
+cache and re-renders) and `forceRender()`/Reload. Routine typing re-renders
+never show it — an overlay flickering on every debounced keystroke render is
+worse than the wait. Major renders also skip the 150 ms debounce (discrete
+actions, not typing) and raise the overlay synchronously via `requestRender(…,
+major)` when they start; it is dropped once the new DOM is on screen
+(`clearBusy()` after `tick()`). Quick renders never paint it (the early render
+phases are synchronous), so there is no flash threshold to maintain. The
+overlay is `pointer-events: none` (`.rendering-overlay`) so the editor and
+scrolling stay usable. File open keeps its blocking "Loading…" overlay; export
+keeps `ExportOverlay`. Note the spinner can only animate where the render
+yields (the Mermaid pre-render loop); parse/render/`{@html}` are synchronous
+and freeze it briefly.
+
+**Zoom never shows it and must not**: zoom is the webview's native page zoom —
+it re-renders nothing (the Mermaid/KaTeX caches are zoom-independent); the
+delay on heavy documents is engine relayout/repaint, which blocks the same
+thread an overlay would animate on.
+
+Mermaid's pre-render pass renders diagrams strictly sequentially on purpose:
+a concurrent worker pool was measured at ~0 wall-clock gain (12 diagrams:
+~2.1 s at concurrency 4 vs ~2.0 s at 1 in the jsdom harness) because
+`mermaid.render` is synchronous CPU on the one JS thread — JS-level
+concurrency has no async gaps to overlap. Don't re-introduce a pool for
+speed; the lever for faster theme changes is avoiding re-renders (e.g.
+patching Mermaid SVGs in place), not parallelizing them. Error cleanup is
+scoped to the failing render's temp nodes
+(`removeMermaidTempElements(renderId)`).
 
 ### Export Pipeline
 
@@ -493,12 +824,14 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   in app.css.
 - Mermaid diagrams in the macOS clone are swapped for their foreignObject-
   free text-label variant before the capture (`prepareMermaidForPrint` →
-  `renderMermaidSvgForPrint`: `htmlLabels: false` + `textPlacement: "tspan"`,
-  same theme and `font-family: inherit` as the viewer) — belt and braces
-  next to the transform scaling, since old WebKit mis-scales
-  `<foreignObject>` even under transforms. The wrapper markup (`data-align`,
-  `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is preserved.
-  Linux/Windows keep the viewer SVGs unchanged.
+  `renderMermaidSvgForPrint`, same theme and `font-family: inherit` as the
+  viewer): the viewer's HTML labels are converted to measured `<text>` by
+  `convertForeignObjectLabels` — see "Mermaid Label Export Conversion" —
+  instead of Mermaid's `htmlLabels: false` dialect, which misplaces node
+  labels. Belt and braces next to the transform scaling, since old WebKit
+  mis-scales `<foreignObject>` even under transforms. The wrapper markup
+  (`data-align`, `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is
+  preserved. Linux/Windows keep the viewer SVGs unchanged.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).

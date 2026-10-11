@@ -25,6 +25,18 @@ Key equilibria in aqueous solution:
 
 $$\ce{2H2O <=> H3O+ + OH-} \qquad K_w = 1.0 \times 10^{-14}$$
 
+## State Transitions of Water
+
+```mermaid
+stateDiagram-v2
+    Liquid --> Vapor: Evaporation
+    Vapor --> Liquid: Condensation
+    Liquid --> Ice: Freezing
+    Ice --> Liquid: Melting
+    Ice --> Vapor: Sublimation
+    Vapor --> Ice: Deposition
+```
+
 ## Physical Properties {#properties}
 
 | Property        |  Value | Unit    |

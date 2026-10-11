@@ -1,7 +1,9 @@
-## Title  
+## Title
+
 Investigation of the Reaction Rate for the Reaction Between Sodium Thiosulfate and Hydrochloric Acid
 
-## Theory  
+## Theory
+
 The reaction between sodium thiosulfate and hydrochloric acid can be written as:
 
 \[
@@ -25,19 +27,21 @@ v = k \cdot [\ce{S2O3^{2-}}]
 
 where \(k\) is the rate constant.
 
-## Experimental Procedure (short)  
+## Experimental Procedure (short)
+
 A series of reactions is carried out where the initial concentration of \(\ce{S2O3^{2-}}\) is varied while \([\ce{H3O^{+}}]\) is kept nearly constant.  
 For each mixture, the time \(t\) is measured until the solution becomes cloudy enough from precipitated \(\ce{S(s)}\) that a black cross beneath the beaker is no longer visible.
 
 Example dataset:
 
 | Trial | \([\ce{S2O3^{2-}}]_0\) / \(\mathrm{mol\,L^{-1}}\) | \(t\) / s | \(1/t\) / \(\mathrm{s^{-1}}\) |
-|-------|-----------------------------------------------|---------|-----------------------------|
-| 1     | \(0.10\)                                      | 48      | \(0.0208\)                  |
-| 2     | \(0.050\)                                     | 96      | \(0.0104\)                  |
-| 3     | \(0.025\)                                     | 192     | \(0.00521\)                 |
+| ----- | ------------------------------------------------- | --------- | ----------------------------- |
+| 1     | \(0.10\)                                          | 48        | \(0.0208\)                    |
+| 2     | \(0.050\)                                         | 96        | \(0.0104\)                    |
+| 3     | \(0.025\)                                         | 192       | \(0.00521\)                   |
 
-## Data Processing  
+## Data Processing
+
 If the reaction rate is assumed proportional to \(1/t\), we can write:
 
 \[
@@ -65,6 +69,7 @@ and therefore:
 k' = a
 \]
 
-## Conclusion (short)  
+## Conclusion (short)
+
 The measured data show that \(\frac{1}{t}\) halves when the initial concentration of \(\ce{S2O3^{2-}}\) halves.  
 This is consistent with a first‑order reaction with respect to \(\ce{S2O3^{2-}}\), and the experiment illustrates how chemical reaction equations can be combined with mathematical modelling of reaction rates in a laboratory report.

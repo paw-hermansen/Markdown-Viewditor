@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](<>)
 
-A feature-rich and simple cross-platform markdown viewer and editor with live preview and scroll sync built with Tauri v2 + Svelte 5.
+An advanced extended markdown viewer and editor with live preview and scroll sync for Linux, macOS, and Windows
 
 ![Screendump](images/screendump.png)
 
@@ -215,40 +215,6 @@ Theme type (dark/light) is auto-detected from the CSS content.
 The example custom theme [Custom Theme Bubblegum](testing/custom_themes/theme-bubblegum.css):
 
 ![Custom Theme Bubblegum](images/ThemeCustomBubblegum.png)
-
-## Troubleshooting
-
-### "WebKit encountered an internal error" — the app shows only an error page
-
-This is a known WebKitGTK bug
-([276312](https://bugs.webkit.org/show_bug.cgi?id=276312)), not an app bug: a
-page load fails inside the engine (`WebLoaderStrategy.cpp:
-internallyFailedLoadTimerFired`), and once that happens the webview cache can
-stay in a state where every start fails the same way.
-
-Fix — clear the webview cache and start again:
-
-```bash
-npm run clean:webview-cache
-npm run tauri dev
-```
-
-The script removes only the engine cache (app settings and window state are
-kept). On Linux the cache is
-`~/.local/share/com.github.paw-hermansen.markdown-viewditor/WebKitCache`.
-
-Also worth knowing:
-
-- The same error is reported on Wayland sessions; if clearing the cache does
-  not help, try `GDK_BACKEND=x11 npm run tauri dev` to see whether the
-  compositor is involved (one report shows the error following `Error 71
-(Protocol error) dispatching to Wayland display`).
-- The message can also appear as harmless noise when a window is closed while
-  a page is still loading.
-- The engine fix landed upstream (WebKit commit `310907@main`, April 2026)
-  and reaches users through distro WebKitGTK updates.
-
----
 
 ## AI-Augmented Development
 

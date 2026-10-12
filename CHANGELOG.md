@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.6.0] - 2026-10-12
+
+- Testing follow ups - fixes and small improvements (#143) (45be9c2)
+- App-wide zoom (70%-300%) (#142) (f73c5f5)
+- Added Mermaid Diagrams (#141) (088b723)
+- Fixes for PDF export (#140) (7facdcc)
+- fix: replace color-mix() highlights with --accent-tint for macOS 12/13 WebKit (#139) (0edde50)
+- Mermaid docs + fix for macOS (#138) (a824cc2)
+- fix(export): replace dialog "do not show again" checkbox with a setting hint (#137) (bfe3bdc)
+- Restructured the manual test plan (#136) (81b0de4)
+- Add lazy-loaded Mermaid extension (#132) (ae799a3)
+- Fixes after manual test (#135) (1957202)
+- Test plan imrpovements (#134) (b545300)
+- Re-structured the manual test plan (#133) (8a88a0e)
+- Replace native select in export dialog with themed SelectField (#131) (31b292d)
+- Compatibility levels improvements and fixes (#130) (2a79bd3)
+- feat: add extension-settings compatibility level detector (#129) (50c6609)
+- feat: add loading overlay on Viewer during file load (#128) (2442183)
+- Unify link tooltip with JS-based image tooltip, add viewport-aware width (#127) (88c6c36)
+- Fixed math rasterizing fleqn+leqno and directives inside fenced code (#126) (d0473a9)
+- fix: position leqno tag correctly when combined with fleqn (#125) (e9ab03e)
+- Improved math and chem docs (#124) (fbe8a97)
+- debug: add keydown diagnostic logging to Editor (#123) (0690dc9)
+- Remove non-functional KaTeX settings (#122) (1228a34)
+- Extension infrastructure, HTML comment directives, math attributes, and KaTeX refactoring (#121) (a532d6c)
+- Show full file path as tooltip on filename hover in toolbar (#120) (770349f)
+- Added plans-folder to Agents file (#119) (e691573)
+- Added link to read more on my homepage (#117) (e78285f)
+- Removed unused audio from Snap build (#116) (b4707f5)
+- CI: Snapcraft Build and Release (#115) (9ba4ab5)
+- CI Snapcraft Release fixes (#114) (df78dba)
+
 ## [Unreleased]
 
 - feat: app-wide zoom (70%–300%) via `Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0`, `Ctrl`+mouse wheel (and macOS trackpad pinch), and a status bar control. The zoom level persists across sessions like the theme and current file; exports and prints always run at 100% zoom, so PDF/ODT/HTML output and the wide-math page fit are unchanged. The 70% minimum is an engine constraint: WebKit floors effective font sizes at 10px, so smaller zoom stops shrinking text and distorts formula sub/superscripts.

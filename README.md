@@ -22,16 +22,6 @@ An advanced extended markdown viewer and editor with live preview and scroll syn
 - **YAML Frontmatter** — for example AI agents [SKILL.md](https://agentskills.io) files
 - **Cross-Platform** — Windows, macOS, Linux
 
-## Documentation
-
-| Guide                                  | Description                                          |
-| -------------------------------------- | ---------------------------------------------------- |
-| [Markdown Examples](docs/Examples.md)  | Syntax reference for all supported markdown features |
-| [Custom Themes](docs/CustomThemes.md)  | Creating and installing custom CSS themes            |
-| [Math Formulas](docs/Math.md)          | KaTeX math rendering and delimiter syntax            |
-| [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
-| [Mermaid Diagrams](docs/Mermaid.md)    | Diagram types, host options and export behavior      |
-
 ## Install and Auto-Updates
 
 - GitHub [Releases page](../../releases/latest) has install packages for Windows, macOS, and Linux.
@@ -111,6 +101,16 @@ checkbox in the About dialog.
 
 In-app updates are disabled when running inside Linux Snaps or the Windows
 Store.
+
+## Documentation
+
+| Guide                                  | Description                                          |
+| -------------------------------------- | ---------------------------------------------------- |
+| [Markdown Examples](docs/Examples.md)  | Syntax reference for all supported markdown features |
+| [Custom Themes](docs/CustomThemes.md)  | Creating and installing custom CSS themes            |
+| [Math Formulas](docs/Math.md)          | KaTeX math rendering and delimiter syntax            |
+| [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
+| [Mermaid Diagrams](docs/Mermaid.md)    | Diagram types, host options and export behavior      |
 
 ## Markdown Compatibility Levels
 

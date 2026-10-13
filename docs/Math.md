@@ -1,3 +1,7 @@
+**Note**: The rendered look of this file might not be correct if you view it in
+any other Markdown viewer than `Markdown Viewditor` because it uses extensions to
+Markdown that not all Markdown viewers can render correct and beautiful.
+
 # Math Formulas
 
 Markdown Viewditor renders math via [$\KaTeX$](https://katex.org). Formulas work in all view modes and export to HTML, ODT, and PDF.

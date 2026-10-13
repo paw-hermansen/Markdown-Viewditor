@@ -1,3 +1,7 @@
+**Note**: The rendered look of this file might not be correct if you view it in
+any other Markdown viewer than `Markdown Viewditor` because it uses extensions to
+Markdown that not all Markdown viewers can render correct and beautiful.
+
 ## Title
 
 Investigation of the Reaction Rate for the Reaction Between Sodium Thiosulfate and Hydrochloric Acid

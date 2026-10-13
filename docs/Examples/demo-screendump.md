@@ -4,6 +4,10 @@ author: "Technical Dept."
 date: 2026-08-28
 ---
 
+**Note**: The rendered look of this file might not be correct if you view it in
+any other Markdown viewer than `Markdown Viewditor` because it uses extensions to
+Markdown that not all Markdown viewers can render correct and beautiful.
+
 # Water: Properties & Sustainability {#water}
 
 Water ($\ce{H2O}$) is the most ~~abundant~~ ==essential== compound on

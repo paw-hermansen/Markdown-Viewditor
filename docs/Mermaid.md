@@ -1,3 +1,7 @@
+**Note**: The rendered look of this file might not be correct if you view it in
+any other Markdown viewer than `Markdown Viewditor` because it uses extensions to
+Markdown that not all Markdown viewers can render correct and beautiful.
+
 # Mermaid Diagrams
 
 Markdown Viewditor renders diagrams via [Mermaid](https://mermaid.ai). Diagrams work in all view modes and export to HTML and PDF. Mermaid is loaded lazily — it only activates when your document contains a `mermaid` code block.

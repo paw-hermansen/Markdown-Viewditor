@@ -1,3 +1,7 @@
+**Note**: The rendered look of this file might not be correct if you view it in
+any other Markdown viewer than `Markdown Viewditor` because it uses extensions to
+Markdown that not all Markdown viewers can render correct and beautiful.
+
 # Chemical Formulas and Physical Units
 
 Markdown Viewditor includes [mhchem](https://mhchem.github.io/MathJax-mhchem/) for writing chemical equations and physical units. The `\ce{...}` and `\pu{...}` commands work inside all supported math delimiters (`$...$`, `$$...$$`, `\(...\)`, `\[...\]`, bare `\begin{}`, and ` ```math ` fences).

@@ -381,7 +381,7 @@ export function measureMathVisualBounds(target: HTMLElement): {
 /**
  * Render a LaTeX expression to a PNG bitmap by mounting KaTeX's HTML
  * output in a hidden off-screen container and capturing it via
- * `html2canvas`. Used by the ODT exporter when the user opts to embed
+ * `html2canvas-pro`. Used by the ODT exporter when the user opts to embed
  * formulas as raster images instead of editable MathML.
  *
  * The function depends on a browser DOM (`document`, `document.fonts`,
@@ -451,9 +451,15 @@ export async function renderMathToPng(
   if (!host) {
     throw new Error("renderMathToPng: no DOM available");
   }
-  // html2canvas 1.4.1 is patched in patches/html2canvas+1.4.1.patch so its
-  // canvas baseline probe includes KaTeX's italic font style and weight.
-  const html2canvas = (await import("html2canvas")).default;
+  // html2canvas-pro (maintained fork of html2canvas) measures canvas font
+  // metrics via `measureText().fontBoundingBox*`, which honors KaTeX's
+  // italic font style and weight without patching. It also paints inline
+  // `<svg>` elements at correct coordinates — stock html2canvas 1.4.1
+  // mis-positions absolutely positioned SVGs (upstream #3047), which
+  // dropped KaTeX's tall-brace extenders (e.g. `\begin{cases}`) from
+  // rasterized math. Keep `scale` explicit: pro otherwise defaults it to
+  // `devicePixelRatio`, which would change output bitmap dimensions.
+  const html2canvas = (await import("html2canvas-pro")).default;
 
   // KaTeX HTML output is a <span class="katex">…</span> (inline) or
   // <span class="katex-display">…</span> (display). Wrap it in a div
@@ -651,11 +657,7 @@ export async function renderMathToPng(
       captureRoot.appendChild(target);
       host.appendChild(captureRoot);
 
-      // Cast to `any` because the bundled `@types/html2canvas` is from v0.5
-      // and doesn't know about `scale` / `windowWidth` / `windowHeight`,
-      // which are standard options in html2canvas 1.x.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      canvas = await (html2canvas as any)(captureRoot, {
+      canvas = await html2canvas(captureRoot, {
         backgroundColor: null,
         scale: effectiveScale,
         logging: false,
@@ -837,7 +839,7 @@ export interface CapturedElementPng {
 
 /**
  * Capture an already-laid-out element (e.g. a KaTeX formula inside a
- * Mermaid label) as a PNG via `html2canvas`, preserving exactly what the
+ * Mermaid label) as a PNG via `html2canvas-pro`, preserving exactly what the
  * app renders for it. The element stays in place — html2canvas clones the
  * document to paint, so nothing in the live DOM is disturbed.
  *
@@ -870,13 +872,16 @@ export async function captureElementToPng(
   ) {
     throw new Error("captureElementToPng: element has no layout");
   }
-  // html2canvas 1.4.1 is patched in patches/html2canvas+1.4.1.patch so its
-  // canvas baseline probe includes KaTeX's italic font style and weight.
-  const html2canvas = (await import("html2canvas")).default;
-  // Cast to `any` because the bundled `@types/html2canvas` is from v0.5 and
-  // doesn't know the html2canvas 1.x options (same as renderMathToPng).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const canvas: HTMLCanvasElement = await (html2canvas as any)(el, {
+  // html2canvas-pro (maintained fork of html2canvas) measures canvas font
+  // metrics via `measureText().fontBoundingBox*`, which honors KaTeX's
+  // italic font style and weight without patching. It also paints inline
+  // `<svg>` elements at correct coordinates — stock html2canvas 1.4.1
+  // mis-positions absolutely positioned SVGs (upstream #3047), which
+  // dropped KaTeX's tall-brace extenders (e.g. `\begin{cases}`) from
+  // rasterized math. Keep `scale` explicit: pro otherwise defaults it to
+  // `devicePixelRatio`, which would change output bitmap dimensions.
+  const html2canvas = (await import("html2canvas-pro")).default;
+  const canvas: HTMLCanvasElement = await html2canvas(el, {
     backgroundColor: null,
     scale,
     logging: false,

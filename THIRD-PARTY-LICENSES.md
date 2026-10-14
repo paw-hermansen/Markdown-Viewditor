@@ -843,16 +843,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
 
-## html2canvas
+## html2canvas-pro
 
 **License:** MIT
 
-**Copyright:** Copyright (c) 2012 Niklas von Hertzen
+**Copyright:** Copyright (c) 2024-present yorickshan and html2canvas-pro contributors; Copyright (c) 2012 Niklas von Hertzen (html2canvas, from which this project is forked)
 
-**Website:** https://html2canvas.hertzen.com
+**Website:** https://github.com/yorickshan/html2canvas-pro
 
 **License Text:**
 
+MIT License
+
+Copyright (c) 2024-present yorickshan and html2canvas-pro contributors
 Copyright (c) 2012 Niklas von Hertzen
 
 Permission is hereby granted, free of charge, to any person

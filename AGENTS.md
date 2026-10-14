@@ -768,6 +768,25 @@ scoped to the failing render's temp nodes
   rendering styles — including the frontmatter/skill card — imported by
   `Viewer.svelte` and applied to the print clone, which carries the
   `.viewer-content` class (and the `#viewer-content` id in theme mode).
+- `math-render.ts` rasterizes KaTeX HTML to PNG (ODT "Rasterize as PNG",
+  and KaTeX inside Mermaid labels via `captureElementToPng`) with
+  **html2canvas-pro** (maintained fork of html2canvas; `^`-free pinned
+  version). Two contracts to keep when touching it:
+  - Always pass `scale` explicitly to html2canvas-pro. Pro defaults it to
+    `devicePixelRatio`, which would silently change output bitmap
+    dimensions and break the `effectiveScale` math and canvas-size
+    verification in `renderMathToPng` (guarded by a regression test in
+    `__tests__/math-render.test.ts`).
+  - Stock html2canvas 1.4.1 mis-positions absolutely positioned inline
+    `<svg>` elements (upstream niklasvh/html2canvas#3047 — never fixed
+    there), which dropped KaTeX's tall-brace extenders from rasterized
+    math: a `\begin{cases}` brace exported as PNG had half-line gaps
+    between its top/middle/bottom pieces. html2canvas-pro fixes the
+    painting; it also measures canvas font metrics via
+    `measureText().fontBoundingBox*`, honoring KaTeX's italic style —
+    the reason the old `patches/html2canvas+1.4.1.patch` existed (that
+    patch is gone; don't reintroduce per-library patches here without
+    checking pro first). Regression: TEST-PLAN 10.49.
 
 ### Print/PDF Fidelity Contract
 

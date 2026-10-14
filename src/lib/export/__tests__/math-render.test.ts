@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import {
   renderMathToMathml,
   renderMathToPng,
@@ -18,7 +18,7 @@ import {
 // `toBlob` that never calls its callback, which would hang the test.
 // Other tests in this file don't hit the happy path so the mock is
 // harmless for them.
-vi.mock("html2canvas", () => ({
+vi.mock("html2canvas-pro", () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   default: vi.fn(async (el: HTMLElement, opts?: any) => {
     const canvas = document.createElement("canvas");
@@ -344,6 +344,44 @@ describe("renderMathToPng", () => {
 
       const r3 = await renderMathToPng("x^2", false, 3);
       expect(r3.widthPx).toBe(expectedW);
+    } finally {
+      Element.prototype.getBoundingClientRect = origRect;
+    }
+  });
+
+  it("always passes an explicit scale to html2canvas-pro (never its DPR default)", async () => {
+    // Regression guard for the html2canvas → html2canvas-pro switch: pro
+    // defaults `scale` to `devicePixelRatio` when it is omitted, which
+    // would silently change output bitmap dimensions (and break the
+    // effectiveScale math and the canvas-size verification below). Both
+    // raster entry points must keep passing `scale` explicitly.
+    const FAKE_W = 50;
+    const FAKE_H = 20;
+    const origRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: FAKE_H,
+        right: FAKE_W,
+        width: FAKE_W,
+        height: FAKE_H,
+        toJSON: () => ({}),
+      } as DOMRect;
+    };
+    const mockedHtml2Canvas = vi.mocked(html2canvas);
+    try {
+      // The mock's call history accumulates across tests in this file —
+      // clear it so the assertions below only see this test's calls.
+      mockedHtml2Canvas.mockClear();
+      await renderMathToPng("x^2", false, 2);
+      expect(mockedHtml2Canvas).toHaveBeenCalled();
+      for (const call of mockedHtml2Canvas.mock.calls) {
+        expect(call[1]).toBeDefined();
+        expect(call[1]!.scale).toBe(2);
+      }
     } finally {
       Element.prototype.getBoundingClientRect = origRect;
     }

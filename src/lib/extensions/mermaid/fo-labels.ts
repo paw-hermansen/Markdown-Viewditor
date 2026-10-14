@@ -708,9 +708,9 @@ function measureZoomFactor(): number {
 
 /**
  * Default KaTeX rasterizer: capture the laid-out `.katex` element with
- * html2canvas (the same pipeline `export/math-render.ts` uses for
- * rasterized math). Lazy import keeps html2canvas out of diagrams that
- * have no math labels.
+ * html2canvas-pro (the same pipeline `export/math-render.ts` uses for
+ * rasterized math). Lazy import keeps html2canvas-pro out of diagrams
+ * that have no math labels.
  */
 const defaultRasterizer: HtmlRasterizer = async (el) => {
   const { captureElementToPng } = await import("$lib/export/math-render");

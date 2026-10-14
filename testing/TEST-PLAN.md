@@ -427,7 +427,7 @@ This section tests ODT export with various content types and rasterization optio
 |------|--------|----------|
 | 10.25 | Math — rasterize OFF (default). | Formulas appear as editable ODF Math objects. |
 | 10.26 | Math — rasterize ON (tick "Rasterize as PNG"). | Formulas render as inline PNG frames. |
-| 10.49 | Math — rasterize ON. Export a document containing `f(x) = \begin{cases} … \end{cases}` (3+ rows), `\widehat{AB}`, and `\underbrace{a+b+c}_{n}`, then inspect the PNGs at high zoom. | The cases brace is continuous — no gaps between its top, middle, and bottom pieces (regression: html2canvas 1.4.1 mis-positioned the SVG extenders between the brace glyphs, leaving half-line gaps; fixed by the html2canvas-pro switch). The wide-hat and under-brace strokes are present and in place. |
+| 10.49 | Math — rasterize ON. Export a document containing `f(x) = \begin{cases} … \end{cases}` (3+ rows), `\widehat{AB}`, `\sqrt{z}`, and `\underbrace{a+b+c}_{n}`, then inspect the PNGs at high zoom. | The cases brace is continuous — no gaps between its top, middle, and bottom pieces (regression: html2canvas 1.4.1 mis-positioned the SVG extenders between the brace glyphs, leaving half-line gaps; fixed by the html2canvas-pro switch), **and** its vertical bars sit flush with the stems of the ⎧⎨⎩ hook glyphs — no sideways offset (regression: the SVG extenders were rasterized with `preserveAspectRatio="xMinYMin"`, which squeezed them left of the hooks; fixed by `stabilizeSvgForRaster`). The wide-hat, radical and under-brace strokes are present, correctly shaped (not flattened), and in place. |
 
 #### SVG & Mermaid Options (use `MathChemMermaid-All.md`)
 

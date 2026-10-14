@@ -787,6 +787,17 @@ scoped to the failing render's temp nodes
     the reason the old `patches/html2canvas+1.4.1.patch` existed (that
     patch is gone; don't reintroduce per-library patches here without
     checking pro first). Regression: TEST-PLAN 10.49.
+  - Inline SVGs are rasterized as images at an integer-rounded natural
+    size, so any `preserveAspectRatio` scale/anchor error becomes a
+    positional error: KaTeX's `xMinYMin` (uniform scale, top-left anchor)
+    squeezed the brace extender bars ~⅓ thickness left of the ⎧⎨⎩ hooks.
+    `stabilizeSvgForRaster()` rewrites exact `xMinYMin` → `none` in the
+    html2canvas `onclone` hook (clone only — the viewer DOM is never
+    touched). Its scope is deliberately narrow: KaTeX's clipped SVGs
+    (`\sqrt`, wide accents, 3-piece `\overbrace`) need `… slice` + CSS
+    clipping, and forcing `none` on them flattens the curves — keep the
+    exact-match gate. Regression: `__tests__/math-render.test.ts`
+    ("stabilizeSvgForRaster"), TEST-PLAN 10.49.
 
 ### Print/PDF Fidelity Contract
 

@@ -379,6 +379,43 @@ export function measureMathVisualBounds(target: HTMLElement): {
 }
 
 /**
+ * Neutralize `preserveAspectRatio="xMinYMin"` on KaTeX's inline SVGs before
+ * html2canvas-pro rasterizes them.
+ *
+ * html2canvas-pro captures inline `<svg>` by serializing it to a
+ * `data:image/svg+xml` image; browsers rasterize such images at an
+ * integer-rounded natural size. KaTeX's brace extender bars (`makeInner`
+ * in KaTeX's delimiter.ts) and its small SVG overlays (`staticSvg` in
+ * buildCommon.ts) use `preserveAspectRatio="xMinYMin"` — uniform scale,
+ * anchored top-left. When integer viewport rounding skews the aspect
+ * ratio relative to the viewBox, that anchor squeezes the artwork toward
+ * the left edge, so the brace's vertical bars landed ~⅓ of their
+ * thickness left of the ⎧⎨⎩ hook glyphs (which are canvas text and
+ * unaffected). Rewriting the attribute to `none` makes the drawing fill
+ * the rasterized viewport exactly, so rounding can only change sub-pixel
+ * scale — never position.
+ *
+ * The rewrite is deliberately narrow: KaTeX renders several SVG families
+ * where the box aspect intentionally differs from the viewBox (the
+ * `\sqrt` radical, wide accents, 3-piece `\overbrace`/`\underbrace`
+ * braces) and relies on `… slice` semantics plus CSS clipping wrappers.
+ * Forcing `none` on those flattens their curves. Only the exact
+ * `"xMinYMin"` value is rewritten — and in both of its uses KaTeX derives
+ * the box and the viewBox from the same em dimensions, so `none` and
+ * `xMinYMin` render identically outside rasterization.
+ *
+ * Applied through html2canvas-pro's `onclone` hook, so only the capture
+ * clone is touched; the live DOM (viewer) is never modified.
+ */
+export function stabilizeSvgForRaster(root: Document | Element): void {
+  for (const svg of root.querySelectorAll("svg")) {
+    if (svg.getAttribute("preserveAspectRatio") === "xMinYMin") {
+      svg.setAttribute("preserveAspectRatio", "none");
+    }
+  }
+}
+
+/**
  * Render a LaTeX expression to a PNG bitmap by mounting KaTeX's HTML
  * output in a hidden off-screen container and capturing it via
  * `html2canvas-pro`. Used by the ODT exporter when the user opts to embed
@@ -665,6 +702,7 @@ export async function renderMathToPng(
         height: captureCssH,
         windowWidth: captureCssW + 200,
         windowHeight: captureCssH + 200,
+        onclone: (doc: Document) => stabilizeSvgForRaster(doc),
       });
     } finally {
       // Restore the exact inline style and original position even when
@@ -885,6 +923,7 @@ export async function captureElementToPng(
     backgroundColor: null,
     scale,
     logging: false,
+    onclone: (doc: Document) => stabilizeSvgForRaster(doc),
   });
   return {
     png: await canvasToPng(canvas),

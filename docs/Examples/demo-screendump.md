@@ -89,8 +89,4 @@ def water_density(temp_c: float) -> float:
 2. Install flow sensors with <kbd>Ctrl</kbd>+<kbd>S</kbd> logging shortcut
 3. Publish quarterly sustainability metrics
 
----
-
 [^1]: The anomalous expansion below 4 °C is critical for aquatic ecosystems — ice floats because $\rho_{\text{ice}} < \rho_{\text{water}}$.
-
-_Report generated with Markdown Viewditor — press <kbd>Ctrl</kbd>+<kbd>E</kbd> to toggle views._

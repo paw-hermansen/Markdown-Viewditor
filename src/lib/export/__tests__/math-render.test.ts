@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
+import katex from "katex";
 import {
   renderMathToMathml,
   renderMathToPng,
+  captureElementToPng,
   cropTransparentRows,
   cropTransparentBounds,
   measureMathVisualBounds,
+  stabilizeSvgForRaster,
   MATH_HOST_WIDTH_PX,
 } from "../math-render";
 
@@ -18,7 +21,7 @@ import {
 // `toBlob` that never calls its callback, which would hang the test.
 // Other tests in this file don't hit the happy path so the mock is
 // harmless for them.
-vi.mock("html2canvas", () => ({
+vi.mock("html2canvas-pro", () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   default: vi.fn(async (el: HTMLElement, opts?: any) => {
     const canvas = document.createElement("canvas");
@@ -344,6 +347,96 @@ describe("renderMathToPng", () => {
 
       const r3 = await renderMathToPng("x^2", false, 3);
       expect(r3.widthPx).toBe(expectedW);
+    } finally {
+      Element.prototype.getBoundingClientRect = origRect;
+    }
+  });
+
+  it("always passes an explicit scale to html2canvas-pro (never its DPR default)", async () => {
+    // Regression guard for the html2canvas → html2canvas-pro switch: pro
+    // defaults `scale` to `devicePixelRatio` when it is omitted, which
+    // would silently change output bitmap dimensions (and break the
+    // effectiveScale math and the canvas-size verification below). Both
+    // raster entry points must keep passing `scale` explicitly.
+    const FAKE_W = 50;
+    const FAKE_H = 20;
+    const origRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: FAKE_H,
+        right: FAKE_W,
+        width: FAKE_W,
+        height: FAKE_H,
+        toJSON: () => ({}),
+      } as DOMRect;
+    };
+    const mockedHtml2Canvas = vi.mocked(html2canvas);
+    try {
+      // The mock's call history accumulates across tests in this file —
+      // clear it so the assertions below only see this test's calls.
+      mockedHtml2Canvas.mockClear();
+      await renderMathToPng("x^2", false, 2);
+      expect(mockedHtml2Canvas).toHaveBeenCalled();
+      for (const call of mockedHtml2Canvas.mock.calls) {
+        expect(call[1]).toBeDefined();
+        expect(call[1]!.scale).toBe(2);
+      }
+    } finally {
+      Element.prototype.getBoundingClientRect = origRect;
+    }
+  });
+
+  it("always passes an onclone hook that stabilizes SVGs (both raster paths)", async () => {
+    // Regression guard for the misaligned brace-extender bars: the fix
+    // lives in the html2canvas `onclone` hook, so both capture entry
+    // points must keep passing it (a silent options regression would
+    // re-break rasterized tall braces).
+    const FAKE_W = 50;
+    const FAKE_H = 20;
+    const origRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: FAKE_H,
+        right: FAKE_W,
+        width: FAKE_W,
+        height: FAKE_H,
+        toJSON: () => ({}),
+      } as DOMRect;
+    };
+    const mockedHtml2Canvas = vi.mocked(html2canvas);
+    try {
+      mockedHtml2Canvas.mockClear();
+      await renderMathToPng("x^2", false, 1);
+
+      const el = document.createElement("div");
+      document.body.appendChild(el);
+      await captureElementToPng(el, 2);
+      el.remove();
+
+      expect(mockedHtml2Canvas.mock.calls.length).toBe(2);
+      for (const call of mockedHtml2Canvas.mock.calls) {
+        expect(call[1]).toBeDefined();
+        expect(typeof call[1]!.onclone).toBe("function");
+        // The hook must actually do the rewrite on a cloned doc.
+        const doc = document.implementation.createHTMLDocument("clone");
+        const svg = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "svg",
+        );
+        svg.setAttribute("viewBox", "0 0 888.89 616");
+        svg.setAttribute("preserveAspectRatio", "xMinYMin");
+        doc.body.appendChild(svg);
+        call[1]!.onclone!(doc, el);
+        expect(svg.getAttribute("preserveAspectRatio")).toBe("none");
+      }
     } finally {
       Element.prototype.getBoundingClientRect = origRect;
     }
@@ -1030,6 +1123,107 @@ describe("renderMathToPng", () => {
     } finally {
       HTMLCanvasElement.prototype.getContext = origGetContext;
     }
+  });
+});
+
+describe("stabilizeSvgForRaster", () => {
+  // Regression guard for the misaligned tall-brace extenders in rasterized
+  // math: html2canvas-pro serializes inline SVGs to images that browsers
+  // rasterize at an integer-rounded natural size, and KaTeX's
+  // `preserveAspectRatio="xMinYMin"` (uniform scale, top-left anchor)
+  // then squeezes the artwork left when rounding skews the viewport
+  // aspect. Rewriting exactly `xMinYMin` to `none` pins the artwork to
+  // the box. Everything else must be left alone: KaTeX's clipped SVGs
+  // (sqrt, wide accents, 3-piece braces) depend on `… slice` semantics.
+  function svgWithPar(par: string | null): SVGSVGElement {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 888.89 616");
+    if (par !== null) svg.setAttribute("preserveAspectRatio", par);
+    return svg;
+  }
+
+  function parOf(svg: SVGSVGElement): string | null {
+    return svg.getAttribute("preserveAspectRatio");
+  }
+
+  it("rewrites exact 'xMinYMin' to 'none'", () => {
+    // KaTeX: brace extender bars (delimiter.ts makeInner) and small SVG
+    // overlays (buildCommon.ts staticSvg) — the fixed families.
+    const wrap = document.createElement("div");
+    wrap.appendChild(svgWithPar("xMinYMin"));
+    stabilizeSvgForRaster(wrap);
+    expect(parOf(wrap.querySelector("svg")!)).toBe("none");
+  });
+
+  it("leaves every other preserveAspectRatio untouched", () => {
+    // The `slice` families (sqrt radical, \widehat, \overbrace pieces…)
+    // render correctly only with cover semantics + CSS clipping; the
+    // plain `none` ones are already correct. Rewriting any of these
+    // flattens curves (verified: blind `none` kills sqrt/widehat).
+    for (const par of [
+      "none",
+      "xMinYMin slice",
+      "xMidYMid slice",
+      "xMaxYMin slice",
+      "xMaxYMin",
+      "xMidYMid meet",
+    ]) {
+      const wrap = document.createElement("div");
+      const svg = svgWithPar(par);
+      wrap.appendChild(svg);
+      stabilizeSvgForRaster(wrap);
+      expect(parOf(svg)).toBe(par);
+    }
+  });
+
+  it("leaves SVGs without a preserveAspectRatio attribute untouched", () => {
+    const wrap = document.createElement("div");
+    const svg = svgWithPar(null);
+    wrap.appendChild(svg);
+    stabilizeSvgForRaster(wrap);
+    expect(parOf(svg)).toBeNull();
+  });
+
+  it("is idempotent and recurses through nested markup", () => {
+    const wrap = document.createElement("div");
+    const inner = document.createElement("div");
+    const svg = svgWithPar("xMinYMin");
+    inner.appendChild(svg);
+    wrap.appendChild(inner);
+    stabilizeSvgForRaster(wrap);
+    stabilizeSvgForRaster(wrap);
+    expect(parOf(svg)).toBe("none");
+  });
+
+  it("rewrites the extenders of a real KaTeX cases formula and nothing else", () => {
+    // End-to-end against real KaTeX output: a 3+ row cases brace is built
+    // from `xMinYMin` extender SVGs (the regressed element — a 2-row brace
+    // is one glyph and emits no SVG), while \sqrt and \widehat SVGs use
+    // `… slice` / `none` and must survive unchanged. If a KaTeX upgrade
+    // changes these attribute values, this test flags it — the fix's scope
+    // depends on them.
+    const host = document.createElement("div");
+    host.innerHTML = katex.renderToString(
+      "\\begin{cases} x & x < 0 \\\\ y & x = 0 \\\\ z & x > 0 \\end{cases} \\sqrt{w} \\widehat{AB}",
+      { output: "html", throwOnError: true, displayMode: true },
+    );
+
+    const before = [...host.querySelectorAll("svg")].map((s) =>
+      s.getAttribute("preserveAspectRatio"),
+    );
+    expect(before).toContain("xMinYMin"); // the brace extenders
+    expect(before.some((p) => p !== null && p.endsWith("slice"))).toBe(true); // sqrt/widehat
+
+    stabilizeSvgForRaster(host);
+
+    const after = [...host.querySelectorAll("svg")].map((s) =>
+      s.getAttribute("preserveAspectRatio"),
+    );
+    expect(after).not.toContain("xMinYMin");
+    // Slice-family SVGs unchanged.
+    after.forEach((par, i) => {
+      if (before[i] !== "xMinYMin") expect(par).toBe(before[i]);
+    });
   });
 });
 

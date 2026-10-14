@@ -110,7 +110,7 @@
     { name: 'markdown-it-anchor', license: 'Unlicense', copyright: 'Valérian Galliat', url: 'https://github.com/valeriangalliat/markdown-it-anchor' },
     { name: 'js-yaml', license: 'MIT', copyright: 'Vitaly Puzrin', url: 'https://github.com/nodeca/js-yaml' },
     { name: 'highlight.js', license: 'BSD 3-Clause', copyright: 'Ivan Sagalaev', url: 'https://highlightjs.org' },
-    { name: 'html2canvas', license: 'MIT', copyright: 'Niklas von Hertzen', url: 'https://html2canvas.hertzen.com' },
+    { name: 'html2canvas-pro', license: 'MIT', copyright: '2024-present yorickshan and html2canvas-pro contributors (fork of html2canvas by Niklas von Hertzen)', url: 'https://github.com/yorickshan/html2canvas-pro' },
     { name: 'serde', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://serde.rs' },
     { name: 'serde_json', license: 'MIT / Apache-2.0', copyright: 'The Rust Project Developers', url: 'https://github.com/serde-rs/json' },
     { name: 'thiserror', license: 'MIT / Apache-2.0', copyright: 'David Tolnay', url: 'https://github.com/dtolnay/thiserror' },

@@ -163,12 +163,12 @@ E = mc^2 \tag{1}
 
 ````
 ```math {fleqn leqno fontsize=1.5}
-\int_0^1 f(x)\,dx \tag{2}
+f(x) = \int_{-\infty}^\infty \hat{f}(\xi)\,e^{2 \pi i \xi x}\,d\xi \tag{2}
 ```
 ````
 
 ```math {fleqn leqno fontsize=1.5}
-\int_0^1 f(x)\,dx \tag{2}
+f(x) = \int_{-\infty}^\infty \hat{f}(\xi)\,e^{2 \pi i \xi x}\,d\xi \tag{2}
 ```
 
 ### HTML Comment Directives (document-level)
@@ -205,7 +205,7 @@ a^2 + b^2 = c^2 \tag{1}
 $$
 
 ```math {fontsize=1.44}
-\int_0^1 f(x)\,dx \tag{2}
+\oint_V f(s) \,ds \tag{2}
 ```
 
 $$
@@ -222,7 +222,7 @@ a^2 + b^2 = c^2 \tag{1}
 $$
 
 ```math {fontsize=1.44}
-\int_0^1 f(x)\,dx \tag{2}
+\oint_V f(s) \,ds \tag{2}
 ```
 
 $$
@@ -312,16 +312,18 @@ $$
 ```
 $$
 f(x) = \begin{cases}
-1 & \text{if } x > 0 \\
-0 & \text{if } x \leq 0
+  \det\begin{bmatrix}2 & 3\\ 5 & 7\end{bmatrix} & \text{if } x < 0 \\
+  x & \text{if } x = 0 \\
+  -e^{i\pi} & \text{if } x > 0 \\
 \end{cases}
 $$
 ```
 
 $$
 f(x) = \begin{cases}
-1 & \text{if } x > 0 \\
-0 & \text{if } x \leq 0
+ \det\begin{bmatrix}2 & 3\\ 5 & 7\end{bmatrix} & \text{if } x < 0 \\
+ x & \text{if } x = 0 \\
+ -e^{i\pi} & \text{if } x > 0 \\
 \end{cases}
 $$
 

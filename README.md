@@ -104,13 +104,20 @@ Store.
 
 ## Documentation
 
-| Guide                                  | Description                                          |
-| -------------------------------------- | ---------------------------------------------------- |
-| [Markdown Examples](docs/Examples.md)  | Syntax reference for all supported markdown features |
-| [Custom Themes](docs/CustomThemes.md)  | Creating and installing custom CSS themes            |
-| [Math Formulas](docs/Math.md)          | KaTeX math rendering and delimiter syntax            |
-| [Chemical Formulas](docs/Chemistry.md) | mhchem equations and physical units                  |
-| [Mermaid Diagrams](docs/Mermaid.md)    | Diagram types, host options and export behavior      |
+**Note**: The rendered look of these files might not be correct if you view them in
+any other Markdown viewer than `Markdown Viewditor` because they use extensions to
+Markdown that not all Markdown viewers can render correct and beautiful.
+Instead you can view them on [our github pages web-site](https://paw-hermansen.github.io/Markdown-Viewditor/) 
+to see how these files look inside `MarkDown Viewditor` - at least if you have a fairly 
+new internet browser.
+
+| Guide                                           | Description                                          |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| [Markdown Examples](docs/Examples/Examples.md)  | Syntax reference for all supported markdown features |
+| [Custom Themes](docs/CustomThemes.md)           | Creating and installing custom CSS themes            |
+| [Math Formulas](docs/Math.md)                   | KaTeX math rendering and delimiter syntax            |
+| [Chemical Formulas](docs/Chemistry.md)          | mhchem equations and physical units                  |
+| [Mermaid Diagrams](docs/Mermaid.md)             | Diagram types, host options and export behavior      |
 
 ## Markdown Compatibility Levels
 

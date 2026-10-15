@@ -427,6 +427,15 @@ standalone SVG **measured from that layout**:
 - per-run `<tspan>`s carry computed font-weight/style/family/decoration and
   fill, so bold/italic/code spans survive; everything is written as inline
   `style` so Mermaid's class CSS can never restyle the text.
+- label backgrounds (Mermaid's translucent gray edge-label box) become
+  plain `<rect>`s behind the text, measured from **every** label element
+  that paints one — `div.labelBkg` or the `span.edgeLabel` / `<p>`,
+  depending on the diagram family (state stylesheets have no `.labelBkg`
+  rule; measuring only the first element child dropped the box from
+  exported state transition labels). Same-color nesting collapses to one
+  box so its alpha never stacks, and `rgba()` is written as `fill` +
+  `fill-opacity` (SVG 1.1 `fill` has no `rgba()`; LibreOffice parses
+  SVG 1.1).
 - inline `<svg>` icons (`fa:fa-*`) are cloned in place with `currentColor`
   materialized; KaTeX label output (the export config sets
   `forceLegacyMathML`, so Mermaid emits KaTeX _HTML_, not bare MathML) is

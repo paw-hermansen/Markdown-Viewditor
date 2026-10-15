@@ -28,6 +28,10 @@
  *     Per-run `<tspan>`s carry computed font-weight/style/family/decoration
  *     and fill, so bold/italic/code spans survive. All of it is written as
  *     inline `style` so Mermaid's class CSS can never restyle it.
+ *   - Label backgrounds (Mermaid's translucent gray edge-label box) become
+ *     plain `<rect>`s behind the text, measured from whichever elements
+ *     paint them — the `labelBkg` div, the `.edgeLabel` span or its `<p>`,
+ *     depending on the diagram family.
  *   - Inline `<svg>` icons (`fa:fa-*` labels) are cloned in place with
  *     `currentColor` materialized to the computed label color.
  *   - KaTeX in labels (`$$…$$`; the export config sets `forceLegacyMathML`
@@ -69,6 +73,13 @@ export interface RunStyle {
 export interface FoLabelMetrics {
   /** Viewport rect of an element, or null when unmeasurable. */
   elementRect(el: Element): LabelRect | null;
+  /**
+   * Viewport rects of an element's painted boxes: one per line fragment for
+   * inline elements (`getClientRects`), the border box for blocks. CSS
+   * backgrounds paint exactly these boxes, so label backgrounds must be
+   * measured with this, not the bounding rect.
+   */
+  elementRects(el: Element): LabelRect[];
   /** Viewport rects of a range's rendered text fragments (one per line). */
   rangeRects(range: Range): LabelRect[];
   /** Computed run style of an element. */
@@ -219,9 +230,11 @@ async function buildReplacement(
     height: r.height * scaleY,
   });
 
-  // Label background (Mermaid's `labelBkg` div) as a plain rect behind text.
-  const background = backgroundRect(fo, metrics, toUserRect);
-  if (background) fragment.appendChild(background);
+  // Label backgrounds (Mermaid's `labelBkg` div, `.edgeLabel` span / `p` —
+  // different element per diagram family) as plain rects behind text.
+  for (const rect of labelBackgroundRects(fo, metrics, toUserRect)) {
+    fragment.appendChild(rect);
+  }
 
   const items = collectItems(fo, metrics);
   let segment: TextItem[] = [];
@@ -267,24 +280,134 @@ function fallbackLabel(fo: Element, box: LabelRect): SVGTextElement | null {
   return el;
 }
 
-function backgroundRect(
+/**
+ * Label backgrounds as plain rects behind the text.
+ *
+ * Mermaid paints the label background on different elements per diagram
+ * family: `div.labelBkg` (the `addHtmlSpan` `addBackground` case —
+ * flowchart/ER/requirement edge labels), but state (and other) edge labels
+ * only get `background-color` on the inner `span.edgeLabel` / `<p>` (their
+ * stylesheets have no `.labelBkg` rule at all), so the outer div is
+ * transparent. Measuring just the foreignObject's first element child —
+ * what this pass used to do — dropped the translucent gray transition-label
+ * box from every exported state diagram. Walk the whole label subtree
+ * instead and emit one rect per painted box (`elementRects` fragments, so
+ * inline backgrounds paint where the browser paints them), in document
+ * order = paint order (ancestor boxes behind descendant boxes).
+ */
+function labelBackgroundRects(
   fo: Element,
   metrics: FoLabelMetrics,
   toUserRect: (r: LabelRect) => LabelRect,
-): SVGRectElement | null {
-  const root = firstElementChild(fo);
-  if (!root) return null;
-  const color = metrics.backgroundOf(root);
-  const rect = metrics.elementRect(root);
-  if (!color || !rect || rect.width <= 0 || rect.height <= 0) return null;
-  const user = toUserRect(rect);
-  const el = document.createElementNS(SVG_NS, "rect");
-  el.setAttribute("x", String(user.x));
-  el.setAttribute("y", String(user.y));
-  el.setAttribute("width", String(user.width));
-  el.setAttribute("height", String(user.height));
-  el.setAttribute("fill", color);
-  return el;
+): SVGRectElement[] {
+  const candidates: BackgroundBox[] = [];
+  const visit = (el: Element): void => {
+    const tag = el.tagName.toLowerCase();
+    // SVG subtrees (inline icons) never paint CSS backgrounds — SVG shapes
+    // compute a `background-color` but ignore it — and captured KaTeX boxes
+    // carry their own pixels in the replacement image.
+    if (tag === "svg" || isKatexElement(el)) return;
+    const color = metrics.backgroundOf(el);
+    if (color) {
+      for (const rect of metrics.elementRects(el)) {
+        if (rect.width > 0 && rect.height > 0) candidates.push({ color, rect });
+      }
+    }
+    for (const child of Array.from(el.children)) visit(child);
+  };
+  for (const child of Array.from(fo.children)) visit(child);
+
+  return dedupeNestedSameColor(candidates).map(({ color, rect }) => {
+    const user = toUserRect(rect);
+    const el = document.createElementNS(SVG_NS, "rect");
+    el.setAttribute("x", String(user.x));
+    el.setAttribute("y", String(user.y));
+    el.setAttribute("width", String(user.width));
+    el.setAttribute("height", String(user.height));
+    applyFill(el, color);
+    return el;
+  });
+}
+
+interface BackgroundBox {
+  color: string;
+  rect: LabelRect;
+}
+
+/**
+ * Drop background boxes that another box of the same color already covers
+ * (same-color nesting — a `span.edgeLabel` wrapping its `<p>` — would
+ * otherwise stack its alpha twice over one region in the output while the
+ * browser composites the pair as a single layer). The outermost box of a
+ * same-color nest survives: it is the union of what the browser paints;
+ * equal boxes collapse to the first in document order.
+ */
+function dedupeNestedSameColor(candidates: BackgroundBox[]): BackgroundBox[] {
+  return candidates.filter((c, i) =>
+    candidates.every((d, j) => {
+      if (i === j || d.color !== c.color) return true;
+      if (!rectContains(d.rect, c.rect)) return true;
+      return sameRect(d.rect, c.rect) && j > i;
+    }),
+  );
+}
+
+function rectContains(outer: LabelRect, inner: LabelRect): boolean {
+  return (
+    inner.x >= outer.x - 0.01 &&
+    inner.y >= outer.y - 0.01 &&
+    inner.x + inner.width <= outer.x + outer.width + 0.01 &&
+    inner.y + inner.height <= outer.y + outer.height + 0.01
+  );
+}
+
+function sameRect(a: LabelRect, b: LabelRect): boolean {
+  return (
+    Math.abs(a.x - b.x) < 0.01 &&
+    Math.abs(a.y - b.y) < 0.01 &&
+    Math.abs(a.width - b.width) < 0.01 &&
+    Math.abs(a.height - b.height) < 0.01
+  );
+}
+
+/**
+ * Write a computed CSS color as a portable SVG fill. `rgba()` is CSS
+ * Color 4 syntax that SVG 1.1 `fill` does not accept (LibreOffice's svgio
+ * parses SVG 1.1), so alpha moves to `fill-opacity` and the color becomes
+ * `#rrggbb`. Unrecognized values pass through unchanged.
+ */
+function applyFill(el: Element, color: string): void {
+  const parsed = parseRgbColor(color);
+  if (!parsed) {
+    el.setAttribute("fill", color);
+    return;
+  }
+  el.setAttribute("fill", rgbHex(parsed.r, parsed.g, parsed.b));
+  if (parsed.a < 1) el.setAttribute("fill-opacity", String(parsed.a));
+}
+
+function parseRgbColor(
+  color: string,
+): { r: number; g: number; b: number; a: number } | null {
+  const m =
+    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+)\s*)?\)$/.exec(
+      color,
+    );
+  if (!m) return null;
+  const channel = (v: string): number =>
+    Math.min(255, Math.max(0, Math.round(parseFloat(v))));
+  const alpha = m[4] === undefined ? 1 : parseFloat(m[4]);
+  return {
+    r: channel(m[1]),
+    g: channel(m[2]),
+    b: channel(m[3]),
+    a: Number.isFinite(alpha) ? Math.min(1, Math.max(0, alpha)) : 1,
+  };
+}
+
+function rgbHex(r: number, g: number, b: number): string {
+  const hex = (v: number): string => v.toString(16).padStart(2, "0");
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
 function buildLineText(
@@ -596,6 +719,17 @@ export function domLabelMetrics(): FoLabelMetrics | null {
         return null;
       }
     },
+    elementRects(el: Element): LabelRect[] {
+      try {
+        return Array.from(el.getClientRects())
+          .map((r) => rectOf(r))
+          .filter(
+            (r): r is LabelRect => r !== null && r.width > 0 && r.height > 0,
+          );
+      } catch {
+        return [];
+      }
+    },
     rangeRects(range: Range): LabelRect[] {
       try {
         return Array.from(range.getClientRects())
@@ -756,13 +890,6 @@ function rangeWithin(node: Node, start: number, end: number): Range {
   range.setStart(node, start);
   range.setEnd(node, end);
   return range;
-}
-
-function firstElementChild(el: Element): Element | null {
-  for (const child of Array.from(el.childNodes)) {
-    if (child.nodeType === 1) return child as Element;
-  }
-  return null;
 }
 
 function numAttr(el: Element, name: string): number {

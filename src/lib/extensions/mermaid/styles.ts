@@ -69,6 +69,21 @@ export const MERMAID_STYLES = `
       body > div[id^="dmmd-"] svg foreignObject > div {
         font-size: ${MERMAID_FONT_SIZE};
       }
+      /* KaTeX's display wrapper carries \`margin: 1em 0\` — right for math
+         blocks in prose, but inside a Mermaid label it inflates the label
+         box Mermaid measures and bakes into the node geometry by 2em: a
+         one-line formula then sits in a box sized for three rows. Scoped to
+         foreignObject labels so markdown math blocks keep their margins.
+         The pre-render temp container (second selector) is where Mermaid
+         measures that box — measurement and paint must agree. Formulas are
+         rasterized to <img> by math-labels.ts after the render (WebKit
+         paints positioned elements inside foreignObject at untransformed
+         coordinates), so the reset is what the replacement image's tight
+         box matches. */
+      .mermaid-block svg foreignObject .katex-display,
+      body > div[id^="dmmd-"] svg foreignObject .katex-display {
+        margin: 0;
+      }
       /* Inner wrapper so the SVG is not a direct flex item. WebKitGTK does not
          reliably resolve width: max-content on SVG flex items, causing the
          diagram to shrink to the host width instead of scrolling. */

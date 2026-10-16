@@ -94,6 +94,25 @@ describe("Mermaid host-layout styles", () => {
     expect(MERMAID_FONT_SIZE).toBe("16px");
   });
 
+  it("resets KaTeX display margins inside labels only", () => {
+    const katexDisplay = ruleFor(
+      ".mermaid-block svg foreignObject .katex-display",
+    );
+
+    // KaTeX's `margin: 1em 0` inflates the label box Mermaid measures and
+    // bakes into node geometry by 2em — a one-line formula then sits in a
+    // box sized for three rows. Measurement happens in the pre-render temp
+    // container, so that host needs the reset as much as the placed one.
+    expect(katexDisplay).toContain(
+      'body > div[id^="dmmd-"] svg foreignObject .katex-display',
+    );
+    expect(katexDisplay).toContain("margin: 0;");
+
+    // Markdown math blocks outside diagrams must keep their margins: every
+    // occurrence has to sit behind a foreignObject scope.
+    expect(MERMAID_STYLES).not.toMatch(/(^|\n)\s*\.katex-display[\s,]*\{/m);
+  });
+
   it("clamps over-wide natural-size diagrams to the column in print", () => {
     const printWrapper = ruleFor(
       '.print-content .mermaid-block[data-fit-to-width="false"]',

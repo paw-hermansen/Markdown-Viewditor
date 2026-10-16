@@ -11,6 +11,7 @@ import {
   measureMathVisualBounds,
   stabilizeSvgForRaster,
   MATH_HOST_WIDTH_PX,
+  ensureMathFontsLoaded,
 } from "../math-render";
 
 // jsdom can't run html2canvas for real (it walks the DOM and tries to
@@ -1618,5 +1619,49 @@ describe("measureMathVisualBounds", () => {
       Element.prototype.getClientRects = origGetClientRects;
       div.remove();
     }
+  });
+});
+
+describe("ensureMathFontsLoaded", () => {
+  it("resolves safely when the FontFaceSet API is unusable", async () => {
+    await expect(ensureMathFontsLoaded()).resolves.toBeUndefined();
+  });
+
+  it("loads every KaTeX face and waits for the set to settle", async () => {
+    const calls: string[] = [];
+    const faces = [
+      {
+        family: "KaTeX_Main",
+        load: () => {
+          calls.push("KaTeX_Main");
+          return Promise.resolve();
+        },
+      },
+      {
+        family: "Some Sans",
+        load: () => {
+          calls.push("other");
+          return Promise.resolve();
+        },
+      },
+    ];
+    const stub = {
+      forEach(
+        cb: (face: { family: string; load: () => Promise<unknown> }) => void,
+      ): void {
+        faces.forEach(cb);
+      },
+      ready: Promise.resolve(),
+    };
+    Object.defineProperty(document, "fonts", {
+      value: stub,
+      configurable: true,
+    });
+    try {
+      await ensureMathFontsLoaded();
+    } finally {
+      delete (document as unknown as { fonts?: unknown }).fonts;
+    }
+    expect(calls).toEqual(["KaTeX_Main"]);
   });
 });

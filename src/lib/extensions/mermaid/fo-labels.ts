@@ -170,6 +170,15 @@ export async function convertForeignObjectLabels(
 
   document.body.appendChild(host);
   try {
+    // KaTeX's web fonts load lazily; text runs and formula boxes measured
+    // before the swap get fallback metrics (and captures paint fallback
+    // glyphs in KaTeX's slots). See ensureMathFontsLoaded.
+    try {
+      const { ensureMathFontsLoaded } = await import("$lib/export/math-render");
+      await ensureMathFontsLoaded();
+    } catch {
+      // Fidelity only: proceed with whatever fonts are active.
+    }
     const metrics =
       options.metrics !== undefined ? options.metrics : safeMetrics();
     const rasterizeHtml = options.rasterizeHtml ?? defaultRasterizer;
@@ -471,14 +480,26 @@ async function buildMedia(
   }
 
   if (item.kind === "math") {
-    let raster: { dataUri: string } | null = null;
+    let raster: {
+      dataUri: string;
+      widthPx?: number;
+      heightPx?: number;
+    } | null = null;
     try {
       raster = await rasterizeHtml(item.el as HTMLElement);
     } catch {
       raster = null;
     }
     if (raster && rect && rect.width > 0 && rect.height > 0) {
-      const user = toUserRect(rect);
+      // Size from the raster's own geometry when it reports one: a bitmap
+      // displayed at a different box shows up stretched (see
+      // captureElementToPng's capture-region contract).
+      const user = toUserRect({
+        x: rect.x,
+        y: rect.y,
+        width: raster.widthPx ?? rect.width,
+        height: raster.heightPx ?? rect.height,
+      });
       const image = document.createElementNS(SVG_NS, "image");
       image.setAttribute("x", String(user.x));
       image.setAttribute("y", String(user.y));
@@ -904,9 +925,13 @@ function round3(value: number): number {
 /**
  * The width the SVG would lay out at in the viewer: its `max-width` style
  * if present (Mermaid sets one), else the viewBox width. The hidden host is
- * given this width so label wrapping matches the viewer.
+ * given this width so label wrapping matches the viewer — and so the SVG
+ * renders 1:1 (display scale 1): Mermaid's label geometry is baked in SVG
+ * user units, and a self-scaled SVG (its `width="100%"`) makes
+ * `getBoundingClientRect` report scaled coordinates for label content,
+ * which then measures and rasterizes formulas at the wrong size.
  */
-function naturalSvgWidth(svg: string): number {
+export function naturalSvgWidth(svg: string): number {
   const opening = svg.match(/<svg\b[^>]*>/i)?.[0] ?? "";
   const maxWidth = opening.match(/max-width\s*:\s*([\d.]+)/i);
   if (maxWidth && Number.isFinite(parseFloat(maxWidth[1]))) {

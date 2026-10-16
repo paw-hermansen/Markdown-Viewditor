@@ -876,6 +876,33 @@ export interface CapturedElementPng {
 }
 
 /**
+ * Ensure the KaTeX web fonts are loaded before measuring or rasterizing
+ * formula markup. The faces load lazily — only when text first uses them —
+ * so a capture taken right after a render races the swap: html2canvas paints
+ * fallback serif glyphs at the fallback metrics while KaTeX's spans keep
+ * their (different) positions, which renders formulas with oversized,
+ * overlapping characters, and the measured box is the fallback box. Await
+ * this before any measurement or capture of KaTeX output.
+ */
+export async function ensureMathFontsLoaded(): Promise<void> {
+  if (typeof document === "undefined") return;
+  try {
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    if (!fonts || typeof fonts.forEach !== "function") return;
+    const loads: Promise<unknown>[] = [];
+    fonts.forEach((face) => {
+      if (/KaTeX/.test(face.family)) {
+        loads.push(Promise.resolve(face.load()).catch(() => undefined));
+      }
+    });
+    await Promise.all(loads);
+    await fonts.ready;
+  } catch {
+    // Capture fidelity only — never fail a render over font loading.
+  }
+}
+
+/**
  * Capture an already-laid-out element (e.g. a KaTeX formula inside a
  * Mermaid label) as a PNG via `html2canvas-pro`, preserving exactly what the
  * app renders for it. The element stays in place — html2canvas clones the
@@ -901,6 +928,9 @@ export async function captureElementToPng(
   if (!Number.isFinite(scale) || scale <= 0) {
     throw new Error(`captureElementToPng: invalid scale ${scale}`);
   }
+  // The box measured below and the glyphs painted by html2canvas must come
+  // from the same font state (see ensureMathFontsLoaded).
+  await ensureMathFontsLoaded();
   const rect = el.getBoundingClientRect();
   if (
     !Number.isFinite(rect.width) ||
@@ -923,13 +953,82 @@ export async function captureElementToPng(
     backgroundColor: null,
     scale,
     logging: false,
-    onclone: (doc: Document) => stabilizeSvgForRaster(doc),
+    // The clone must see the live page's KaTeX styles and web fonts before
+    // it lays the content out (see syncCaptureEnvironment): html2canvas
+    // sizes its canvas from the *clone's* layout, so a clone without
+    // KaTeX's `font: 1.21em` produces an undersized bitmap that displays
+    // stretched at the measured size — formulas came out with oversized,
+    // overlapping characters. The sync makes clone and live layout agree,
+    // so the default (element-bounds) capture region is the measured box.
+    onclone: async (doc: Document) => {
+      stabilizeSvgForRaster(doc);
+      await syncCaptureEnvironment(doc);
+    },
   });
   return {
     png: await canvasToPng(canvas),
     widthPx: rect.width,
     heightPx: rect.height,
   };
+}
+
+/**
+ * Give html2canvas's clone the style and font environment the live document
+ * has, before it lays the content out. The clone copies `<style>`/`<link>`
+ * elements but never waits for stylesheets: when KaTeX's CSS arrives late
+ * (an external `<link>`), the clone measures formulas without `.katex`'s
+ * `font: 1.21em` — 1/1.21 of their real box — and without the KaTeX faces,
+ * so the capture is undersized and painted with fallback glyphs. The
+ * `<style>` injected here is synchronous, and the faces are then loaded
+ * before html2canvas continues (its `onclone` is awaited).
+ */
+async function syncCaptureEnvironment(doc: Document): Promise<void> {
+  try {
+    const css = katexCssText();
+    if (css && doc.head) {
+      const style = doc.createElement("style");
+      style.textContent = css;
+      doc.head.appendChild(style);
+    }
+    const fonts = (doc as Document & { fonts?: FontFaceSet }).fonts;
+    if (fonts && typeof fonts.forEach === "function") {
+      const loads: Promise<unknown>[] = [];
+      fonts.forEach((face) => {
+        loads.push(Promise.resolve(face.load()).catch(() => undefined));
+      });
+      await Promise.all(loads);
+      await fonts.ready;
+    }
+  } catch {
+    // Capture fidelity only — never fail a render over the clone setup.
+  }
+}
+
+/**
+ * The live document's KaTeX stylesheets as inline CSS text (cached: the
+ * rules are static). Only KaTeX sheets are copied — that is what formula
+ * layout needs beyond the element's own inline styles.
+ */
+let cachedKatexCss: string | null = null;
+function katexCssText(): string {
+  if (cachedKatexCss !== null) return cachedKatexCss;
+  let css = "";
+  try {
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        const text = Array.from(sheet.cssRules)
+          .map((rule) => rule.cssText)
+          .join("\n");
+        if (/\.katex|KaTeX_/.test(text)) css += `${text}\n`;
+      } catch {
+        // Cross-origin sheet — skip.
+      }
+    }
+  } catch {
+    // No CSSOM — the clone falls back to the copied elements.
+  }
+  if (css) cachedKatexCss = css;
+  return css;
 }
 
 /**

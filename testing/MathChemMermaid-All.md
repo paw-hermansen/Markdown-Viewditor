@@ -545,3 +545,43 @@ block-beta
     columns 2
     a b
 ```
+
+## Mermaid — Math Labels
+
+Formulas in labels use Mermaid's `$$…$$` delimiter inside a quoted label.
+(Regression: KaTeX's display margins doubled the node box, and on Linux the
+formula painted at the box's top-left corner.)
+
+```mermaid
+graph LR
+    A["$$x^2$$"] --> B["some label"] --> C["$$\frac{a}{b} + \sqrt{2}$$"]
+```
+
+### Math in Sequence and State Labels
+
+```mermaid
+sequenceDiagram
+    Alice->>Bob: $$E = mc^2$$
+    Bob-->>Alice: $$\sum_{i=1}^{n} i$$
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Busy: $$\int_0^1 f(x)\,dx$$
+    Busy --> [*]
+```
+
+### Math Error (invalid TeX — the whole diagram fails)
+
+```mermaid
+graph LR
+    A["$$\undefinedcommand$$"] --> B
+```
+
+### Single Dollars Are Literal
+
+```mermaid
+graph LR
+    A["$x^2$"] --> B
+```

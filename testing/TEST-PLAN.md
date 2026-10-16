@@ -441,6 +441,7 @@ This section tests ODT export with various content types and rasterization optio
 | 10.40 | Mermaid — rasterize ON ("SVG images & Mermaid diagrams"). | Diagram replaced with PNG. |
 | 10.41 | Invalid mermaid fence. | Source kept as preformatted code block. |
 | 10.42 | Inspect the Gantt chart in the exported ODT (rasterize OFF and ON). | Its label text is the same relative size as the other diagram families' (regression: gantt text used to be built for the window width and came out tiny in the page column); the chart spans the full text column like in the Viewer. |
+| 10.50 | Export a `stateDiagram-v2` with transition labels (`[*] --> Idle`, `Idle --> Busy: work`, `Busy --> [*]: done`) as ODT — once with "SVG images & Mermaid diagrams" rasterize ON, once OFF — and compare with the Viewer. | The "work"/"done" arrow labels keep the same see-through gray label background as in the Viewer (regression: exports dropped the box — Mermaid paints it on the inner `span.edgeLabel`/`<p>`, while the label conversion only measured the outer, transparent `div.labelBkg`; fixed by measuring every painted label background). No dark double-box: the gray is exactly as translucent as on screen. |
 
 #### Frontmatter & Metadata
 
@@ -850,6 +851,7 @@ within each story gives the precise check.
 | Export ODT | Mermaid — vector | **S10** (10.39) |
 | Export ODT | Mermaid — rasterized | **S10** (10.40) |
 | Export ODT | Mermaid — failure fallback | **S10** (10.41) |
+| Export ODT | Mermaid — state edge-label background | **S10** (10.50) |
 | Export ODT | Options persisted | **S10** (10.43) |
 | Export PDF | Overlay (macOS) | **S14** (14.4) |
 | Export PDF | Overlay (Linux/Win) | **S14** (14.13) |

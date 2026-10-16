@@ -13,7 +13,7 @@
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { installCanvasStub, installSvgLayoutShim } from "./svg-layout-shim";
-import { convertForeignObjectLabels } from "../fo-labels";
+import { convertForeignObjectLabels, type FoLabelMetrics } from "../fo-labels";
 
 const DIAGRAMS: Record<string, string> = {
   journey: `journey
@@ -114,6 +114,55 @@ describe("foreignObject label conversion (real Mermaid output)", () => {
     expect(workTag).not.toBe("");
     expect(workTag).not.toContain("class");
     expect(out).not.toContain("switch");
+  });
+
+  it("keeps the state edge-label background (translucent gray box)", async () => {
+    // Mermaid's state stylesheet paints the transition-label box on the
+    // inner span.edgeLabel / <p> (`.edgeLabel { background-color: … }`) and
+    // has NO `.labelBkg` rule — the outer div is transparent. Regression:
+    // the conversion measured only that outer div, so exported state
+    // diagrams lost the gray box behind "work"/"done".
+    // jsdom has no layout, so fake the sizes a real render measures and the
+    // computed styles Mermaid's CSS contract produces.
+    const sized = rendered.state.replace(
+      /<foreignObject width="0" height="0">/g,
+      '<foreignObject x="0" y="0" width="200" height="40">',
+    );
+    const metrics: FoLabelMetrics = {
+      elementRect: (el) =>
+        el.tagName.toLowerCase() === "foreignobject"
+          ? { x: 0, y: 0, width: 200, height: 40 }
+          : null,
+      elementRects: () => [{ x: 5, y: 5, width: 60, height: 20 }],
+      rangeRects: (range) => {
+        const text = range.toString();
+        return text.trim()
+          ? [{ x: 5, y: 5, width: text.length * 8, height: 20 }]
+          : [];
+      },
+      runStyle: () => ({
+        fontFamily: "sans-serif",
+        fontSizePx: 16,
+        fontWeight: "normal",
+        fontStyle: "normal",
+        textDecoration: "none",
+        color: "#333333",
+      }),
+      baselineRatio: () => 0.8,
+      backgroundOf: (el) =>
+        el.classList.contains("edgeLabel") ||
+        (el.tagName.toLowerCase() === "p" && el.closest(".edgeLabel") !== null)
+          ? "rgba(232, 232, 232, 0.8)"
+          : null,
+    };
+    const out = await convertForeignObjectLabels(sized, { metrics });
+
+    // One box per transition label ("work", "done") — the span/p same-color
+    // pair collapses to one rect — behind the text.
+    expect(out.match(/fill="#e8e8e8"/g)).toHaveLength(2);
+    expect(out.match(/fill-opacity="0\.8"/g)).toHaveLength(2);
+    expect(out.indexOf('fill="#e8e8e8"')).toBeLessThan(out.indexOf(">work<"));
+    expect(out.indexOf('fill="#e8e8e8"')).toBeLessThan(out.indexOf(">done<"));
   });
 
   it("survives the full export pipeline (all normalization passes)", async () => {

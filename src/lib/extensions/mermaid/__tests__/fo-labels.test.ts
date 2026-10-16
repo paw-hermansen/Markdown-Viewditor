@@ -38,6 +38,9 @@ interface FakeLayout {
   baselineRatio?: number;
   styleOf?: (el: Element) => RunStyle;
   elementRectOf?: (el: Element) => LabelRect | null;
+  /** Painted boxes per element (background fragments); falls back to
+   *  `elementRectOf` wrapped as a single box. */
+  elementRectsOf?: (el: Element) => LabelRect[];
   backgroundOf?: (el: Element) => string | null;
 }
 
@@ -66,11 +69,18 @@ function fakeMetrics(layout: FakeLayout): FoLabelMetrics {
     return probe.toString().length;
   };
 
+  const elementRect = (el: Element): LabelRect | null =>
+    el.tagName.toLowerCase() === "foreignobject"
+      ? foRect
+      : (layout.elementRectOf?.(el) ?? null);
+
   return {
-    elementRect: (el) =>
-      el.tagName.toLowerCase() === "foreignobject"
-        ? foRect
-        : (layout.elementRectOf?.(el) ?? null),
+    elementRect,
+    elementRects: (el) =>
+      layout.elementRectsOf?.(el) ??
+      [elementRect(el)].filter(
+        (r): r is LabelRect => r !== null && r.width > 0 && r.height > 0,
+      ),
     rangeRects: (range) => {
       const from = absolute(range.startContainer, range.startOffset);
       const to = absolute(range.endContainer, range.endOffset);
@@ -292,7 +302,101 @@ describe("convertForeignObjectLabels", () => {
       },
     );
 
-    expect(out).toMatch(/<rect[^>]*fill="rgba\(232, 232, 232, 0\.8\)"/);
+    expect(out).toMatch(/<rect[^>]*fill="#e8e8e8"[^>]*fill-opacity="0\.8"/);
+  });
+
+  it("emits background rects for descendant-styled edge labels (state)", async () => {
+    // Real Mermaid state-diagram edge-label structure: the translucent gray
+    // box is painted on the inner span.edgeLabel / <p> (the `.edgeLabel`
+    // background rules); the outer div.labelBkg is transparent — state's
+    // stylesheet has no `.labelBkg` rule at all. Regression: the conversion
+    // used to measure only the outer div, so exported state diagrams lost
+    // the gray box behind their transition labels ("work"/"done").
+    const out = await convertForeignObjectLabels(
+      FO_SVG(
+        '<div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"><span class="edgeLabel"><p>work</p></span></div>',
+      ),
+      {
+        metrics: fakeMetrics({
+          foRect: { x: 0, y: 0, width: 200, height: 40 },
+          elementRectsOf: (el) =>
+            el.tagName.toLowerCase() === "div"
+              ? []
+              : [{ x: 5, y: 5, width: 50, height: 30 }],
+          backgroundOf: (el) =>
+            el.classList.contains("edgeLabel") ||
+            el.tagName.toLowerCase() === "p"
+              ? "rgba(232, 232, 232, 0.8)"
+              : null,
+        }),
+      },
+    );
+
+    // span and <p> share color and box — one rect, no alpha stacking — and
+    // it sits behind the text.
+    expect(out.match(/<rect /g)).toHaveLength(1);
+    expect(out).toMatch(/<rect[^>]*fill="#e8e8e8"[^>]*fill-opacity="0\.8"/);
+    expect(out.indexOf("<rect")).toBeLessThan(out.indexOf(">work<"));
+  });
+
+  it("stacks distinct background layers in paint order", async () => {
+    // Flowchart/ER edge labels paint two layers: a faded div.labelBkg box
+    // under the span.edgeLabel / <p> box. Distinct colors stack like in the
+    // browser, ancestors first (paint order).
+    const out = await convertForeignObjectLabels(
+      FO_SVG(
+        '<div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg"><span class="edgeLabel"><p>work</p></span></div>',
+      ),
+      {
+        metrics: fakeMetrics({
+          foRect: { x: 0, y: 0, width: 200, height: 40 },
+          elementRectsOf: (el) =>
+            el.tagName.toLowerCase() === "div"
+              ? [{ x: 5, y: 5, width: 50, height: 30 }]
+              : [{ x: 10, y: 10, width: 40, height: 20 }],
+          backgroundOf: (el) =>
+            el.classList.contains("labelBkg")
+              ? "rgba(232, 232, 232, 0.5)"
+              : el.classList.contains("edgeLabel") ||
+                  el.tagName.toLowerCase() === "p"
+                ? "rgba(232, 232, 232, 0.8)"
+                : null,
+        }),
+      },
+    );
+
+    expect(out.match(/<rect /g)).toHaveLength(2);
+    const outer = out.indexOf('fill-opacity="0.5"');
+    const inner = out.indexOf('fill-opacity="0.8"');
+    expect(outer).toBeGreaterThanOrEqual(0);
+    expect(inner).toBeGreaterThan(outer);
+  });
+
+  it("emits one rect per painted fragment and no fill-opacity for opaque colors", async () => {
+    const out = await convertForeignObjectLabels(
+      FO_SVG(
+        '<div xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">long wrapped label</span></div>',
+      ),
+      {
+        metrics: fakeMetrics({
+          foRect: { x: 0, y: 0, width: 200, height: 40 },
+          breaks: [5],
+          elementRectsOf: (el) =>
+            el.classList.contains("edgeLabel")
+              ? [
+                  { x: 5, y: 5, width: 60, height: 20 },
+                  { x: 5, y: 25, width: 40, height: 20 },
+                ]
+              : [],
+          backgroundOf: (el) =>
+            el.classList.contains("edgeLabel") ? "rgb(232, 232, 232)" : null,
+        }),
+      },
+    );
+
+    expect(out.match(/<rect /g)).toHaveLength(2);
+    expect(out).toContain('fill="#e8e8e8"');
+    expect(out).not.toContain("fill-opacity");
   });
 
   it("drops empty labels", async () => {

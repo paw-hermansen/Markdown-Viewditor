@@ -16,6 +16,7 @@ import {
   type LabelRect,
   type RunStyle,
 } from "../fo-labels";
+import { LABEL_HOST_CLASS, LABEL_HOST_RULES } from "../styles";
 
 const BASE_STYLE: RunStyle = {
   fontFamily: "'trebuchet ms', verdana, arial, sans-serif",
@@ -248,6 +249,43 @@ describe("convertForeignObjectLabels", () => {
     );
     expect(out).toContain("data:image/png;base64,QUJD");
     expect(out).not.toContain("katex");
+  });
+
+  it("measures labels in a label-host container carrying the shared label rules", async () => {
+    // The conversion re-lays out label HTML in its own host to measure it.
+    // That host must be covered by the label-host rules (font-size pin +
+    // KaTeX display-margin reset) — without them, KaTeX's stock
+    // `.katex-display { margin: 1em 0 }` measures every exported display
+    // formula one label row lower than the viewer places it.
+    let hostClassDuringCall = "";
+    let rulesInjectedDuringCall = false;
+    const svg = FO_SVG(
+      label('<span class="katex-display"><span class="katex">x</span></span>'),
+    );
+    await convertForeignObjectLabels(svg, {
+      metrics: fakeMetrics({
+        foRect: { x: 0, y: 0, width: 200, height: 40 },
+        elementRectOf: () => ({ x: 0, y: 0, width: 40, height: 20 }),
+      }),
+      rasterizeHtml: async () => {
+        const host = document.querySelector(`.${LABEL_HOST_CLASS}`);
+        hostClassDuringCall = host?.className ?? "";
+        rulesInjectedDuringCall = Array.from(
+          document.head.querySelectorAll("style"),
+        ).some((s) => (s.textContent ?? "").includes(LABEL_HOST_RULES));
+        return {
+          dataUri: "data:image/png;base64,QUJD",
+          widthPx: 40,
+          heightPx: 20,
+        };
+      },
+    });
+
+    expect(hostClassDuringCall.split(/\s+/)).toContain(LABEL_HOST_CLASS);
+    expect(rulesInjectedDuringCall).toBe(true);
+    // Cleanup: the host and its injected rules are gone after the call.
+    expect(document.querySelector(`.${LABEL_HOST_CLASS}`)).toBeNull();
+    expect(document.head.textContent).not.toContain(LABEL_HOST_RULES);
   });
 
   it("degrades KaTeX to plain text when rasterization fails", async () => {

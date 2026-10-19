@@ -79,11 +79,14 @@
   } from "$lib/export/registry.svelte";
   import { exportPdf } from "$lib/export/exporters/pdf";
   import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
+  import { usesCapturePdf } from "$lib/export/pdf-mode";
   import { getThemeLabel } from "$lib/utils/themes";
   import { showExportConfirmDialog } from "$lib/stores/export-confirm-dialog.svelte";
   import { updateStatus, checkForUpdates, updaterState, initUpdaterEnabled } from "$lib/stores/update.svelte";
 
-  const isMacOS = navigator.userAgent.includes("Macintosh");
+  // Capture-only platforms (macOS < 15) export PDFs via the save dialog +
+  // create_pdf capture and have no print dialog; everything else prints.
+  const exportOnly = usesCapturePdf();
 
   let viewMode = $state<ViewMode>(settingsState.viewMode);
   let editorComponent = $state<Editor | undefined>(undefined);
@@ -336,9 +339,10 @@
 
   /**
    * Print / Create PDF. Refactored to share the print-container builder with
-   * the PDF exporter (see src/lib/export/exporters/pdf.ts). Preserves the
-   * macOS `invoke('create_pdf')` branch and the `print-friendly` /
-   * `theme-export` body classes that app.css keys off of.
+   * the PDF exporter (see src/lib/export/exporters/pdf.ts), which also picks
+   * the platform output route (system print dialog, or the legacy macOS
+   * `invoke('create_pdf')` capture on macOS < 15). Preserves the
+   * `print-friendly` / `theme-export` body classes that app.css keys off of.
    */
   async function handlePrint() {
     // Bail out before any dialog when the viewer pane is not mounted (e.g.
@@ -380,11 +384,11 @@
         [PDF_OPTION_ID]: settingsState.pdfIncludeFrontmatter,
       };
       const result = await showExportConfirmDialog({
-        title: isMacOS ? 'Export PDF' : 'Print / PDF',
+        title: exportOnly ? 'Export PDF' : 'Print / PDF',
         themeKind: 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: "Print",
-        isMacOS,
+        exportOnly,
         optionGroups: pdfOptionGroups,
         currentOptions,
       });
@@ -414,7 +418,7 @@
       for (const w of result.warnings) toast.error("Export warning", w);
     } catch (e) {
       console.error("Print/PDF failed:", e);
-      toast.error(isMacOS ? "Create PDF failed" : "Print failed", String(e));
+      toast.error(exportOnly ? "Create PDF failed" : "Print failed", String(e));
     } finally {
       stopExporting();
     }
@@ -484,11 +488,11 @@
       const isNeutral = id === 'odt';
       const titleMap: Record<string, string> = { html: 'Export HTML', 'html-bundle': 'Export HTML Bundle', odt: 'Export ODT' };
       const result = await showExportConfirmDialog({
-        title: titleMap[id] ?? (isMacOS ? 'Export' : 'Export / Print'),
+        title: titleMap[id] ?? (exportOnly ? 'Export' : 'Export / Print'),
         themeKind: isNeutral ? 'neutral' : 'viewer',
         themeLabel: getThemeLabel(viewerState.theme),
         actionLabel: "Export",
-        isMacOS,
+        exportOnly,
         optionGroups,
         currentOptions,
       });
@@ -925,7 +929,7 @@
   onPrint={handlePrint}
   onExport={handleExport}
   onFormatDocument={handleFormatDocument}
-  printLabel={isMacOS ? "Create PDF" : "Print Preview"}
+  printLabel={exportOnly ? "Create PDF" : "Print Preview"}
 />
 
 <ConfirmDialog />

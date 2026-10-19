@@ -23,7 +23,7 @@ describe("export-confirm-dialog store", () => {
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups: [],
       currentOptions: {},
     });
@@ -32,7 +32,7 @@ describe("export-confirm-dialog store", () => {
     expect(exportConfirmState.current!.title).toBe("Export HTML");
     expect(exportConfirmState.current!.themeLabel).toBe("GitHub Dark");
     expect(exportConfirmState.current!.actionLabel).toBe("Export");
-    expect(exportConfirmState.current!.isMacOS).toBe(true);
+    expect(exportConfirmState.current!.exportOnly).toBe(true);
     expect(exportConfirmState.current!.themeKind).toBe("viewer");
     expect(exportConfirmState.current!.optionGroups).toEqual([]);
 
@@ -46,7 +46,7 @@ describe("export-confirm-dialog store", () => {
       themeKind: "viewer",
       themeLabel: "Monokai",
       actionLabel: "Print",
-      isMacOS: false,
+      exportOnly: false,
       optionGroups: [],
       currentOptions: {},
     });
@@ -62,7 +62,7 @@ describe("export-confirm-dialog store", () => {
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups: [],
       currentOptions: {},
     });
@@ -78,7 +78,7 @@ describe("export-confirm-dialog store", () => {
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups: [],
       currentOptions: {},
     });
@@ -94,13 +94,13 @@ describe("export-confirm-dialog store", () => {
       themeKind: "viewer",
       themeLabel: "Nord",
       actionLabel: "Print",
-      isMacOS: false,
+      exportOnly: false,
       optionGroups: [],
       currentOptions: {},
     });
 
     expect(exportConfirmState.current!.actionLabel).toBe("Print");
-    expect(exportConfirmState.current!.isMacOS).toBe(false);
+    expect(exportConfirmState.current!.exportOnly).toBe(false);
 
     resolveExportConfirm({ confirmed: true });
     await promise;
@@ -112,7 +112,7 @@ describe("export-confirm-dialog store", () => {
       themeKind: "neutral",
       themeLabel: "",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups: [],
       currentOptions: { "odt.rasterizeMath": false },
     });
@@ -134,7 +134,7 @@ describe("export-confirm-dialog store", () => {
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups: [],
       currentOptions: {},
       resolve: () => {},
@@ -150,13 +150,13 @@ describe("export-confirm-dialog setting hint", () => {
     exportConfirmState.current = null;
   });
 
-  function openHintDialog(isMacOS: boolean) {
+  function openHintDialog(exportOnly: boolean) {
     return showExportConfirmDialog({
-      title: isMacOS ? "Export PDF" : "Print / PDF",
+      title: exportOnly ? "Export PDF" : "Print / PDF",
       themeKind: "viewer",
       themeLabel: "GitHub Dark",
       actionLabel: "Export",
-      isMacOS,
+      exportOnly,
       optionGroups: [],
       currentOptions: {},
     });
@@ -230,7 +230,7 @@ describe("export-confirm-dialog select options", () => {
       themeKind: "neutral",
       themeLabel: "",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups,
       currentOptions,
     });
@@ -291,7 +291,7 @@ describe("export-confirm-dialog select options", () => {
       themeKind: "neutral",
       themeLabel: "",
       actionLabel: "Export",
-      isMacOS: true,
+      exportOnly: true,
       optionGroups,
       currentOptions: { "odt.rasterResolution": 2 },
       resolve: () => {},

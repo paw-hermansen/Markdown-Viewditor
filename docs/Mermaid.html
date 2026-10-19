@@ -2464,7 +2464,7 @@ graph LR
 <li data-line="367"><strong><code>fitToWidth=false</code></strong> - the diagram renders at its natural size and uses horizontal scrolling when it exceeds the host width. There is no vertical scrolling and no <code>maxHeight</code> option; tall diagrams expand vertically.</li>
 </ul>
 <p data-line="369">Print and PDF export have no scrolling: every diagram wider than the page content width is scaled down to fit it (even with <code>fitToWidth=false</code>), while diagrams that already fit the page — at natural size or already fit-scaled — print as they are. Diagrams are never split across pages.</p>
-<p data-line="371">In the macOS PDF, diagram labels are drawn as SVG text rather than HTML labels (identical sizing, slightly different label typography), and the PDF is captured at A4 width as one long page — its scale matches the Windows/Linux PDF at 100% zoom in a PDF viewer.</p>
+<p data-line="371">On macOS, diagram labels are drawn as SVG text rather than HTML labels (identical sizing, slightly different label typography). From macOS 15 the PDF goes through the system print dialog and paginates like the Windows/Linux output; on older macOS it is captured at A4 width as one long page. In both cases its scale matches the Windows/Linux PDF at 100% zoom in a PDF viewer.</p>
 <h3 id="scaling" data-line="373">Scaling</h3>
 <pre data-line="375"><code class="hljs">```mermaid {fitToWidth=true}
 flowchart LR

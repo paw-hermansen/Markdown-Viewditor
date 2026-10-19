@@ -40,8 +40,10 @@ tiny-skia = "0.12"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
-objc2-web-kit = "0.3"
+objc2-web-kit = { version = "0.3", features = ["objc2-app-kit"] }
 objc2-foundation = "0.3"
+# NSPrintInfo/NSPrintOperation drive the system print dialog (print_webview).
+objc2-app-kit = { version = "0.3", features = ["NSPrintInfo", "NSPrintOperation", "NSResponder", "NSView", "NSWindow"] }
 block2 = "0.6"
 
 [dev-dependencies]

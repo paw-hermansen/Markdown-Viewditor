@@ -50,6 +50,8 @@
  * measurement.
  */
 
+import { LABEL_HOST_CLASS, LABEL_HOST_RULES } from "./styles";
+
 /** Client-pixel rectangle (viewport coordinates). */
 export interface LabelRect {
   x: number;
@@ -123,7 +125,6 @@ type MediaItem = {
   el: Element;
   rect: LabelRect | null;
 };
-
 type Item = TextItem | MediaItem;
 
 /**
@@ -144,6 +145,12 @@ export async function convertForeignObjectLabels(
   }
 
   const host = document.createElement("div");
+  // Label-host contract: this container re-lays out Mermaid's label HTML to
+  // measure it, so it must see the same label rules the viewer paints with
+  // (the `LABEL_HOST_CLASS` rules in styles.ts). Without them KaTeX's stock
+  // `.katex-display { margin: 1em 0 }` shifts every display formula down by
+  // one label row — and the exported formula image with it.
+  host.className = LABEL_HOST_CLASS;
   // Off-screen but *rendered*: html2canvas respects `visibility: hidden` and
   // would capture blank KaTeX images, so hide by position only (same pattern
   // as math-render.ts's capture host).
@@ -169,6 +176,14 @@ export async function convertForeignObjectLabels(
   }
 
   document.body.appendChild(host);
+  // Belt and braces alongside MERMAID_STYLES: inject the label-host rules
+  // scoped to this host's class so the conversion measures correctly even
+  // where the extension stylesheet has not been injected. The rules are
+  // class-scoped (the live document has no such host outside this call), and
+  // the element is removed with the host below.
+  const hostStyle = document.createElement("style");
+  hostStyle.textContent = LABEL_HOST_RULES;
+  document.head.appendChild(hostStyle);
   try {
     // KaTeX's web fonts load lazily; text runs and formula boxes measured
     // before the swap get fallback metrics (and captures paint fallback
@@ -197,6 +212,7 @@ export async function convertForeignObjectLabels(
     }
     return changed ? host.innerHTML : svg;
   } finally {
+    hostStyle.remove();
     host.remove();
   }
 }

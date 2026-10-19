@@ -100,7 +100,19 @@ function makeFailingImageCtor(): new () => FakeImage {
 }
 
 describe("rasterizeSvg (Linux path: invoke resvg)", () => {
+  let originalUserAgent: string;
+
   beforeEach(() => {
+    originalUserAgent = navigator.userAgent;
+    // Force the Linux route: isLinux() reads the user agent at call time,
+    // and jsdom's ambient UA embeds the host platform — without this stub
+    // these tests silently take the WebView fallback (and never invoke the
+    // Rust resvg command) when run on macOS or Windows.
+    Object.defineProperty(navigator, "userAgent", {
+      value:
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+      configurable: true,
+    });
     invokeMock.mockReset();
     invokeMock.mockResolvedValue(PNG_BYTES);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +123,10 @@ describe("rasterizeSvg (Linux path: invoke resvg)", () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      value: originalUserAgent,
+      configurable: true,
+    });
     vi.restoreAllMocks();
   });
 

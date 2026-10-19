@@ -13,6 +13,7 @@ import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
 import { clampNegativeStrokeWidths } from "./svg-css";
 import { convertForeignObjectLabels } from "./fo-labels";
+import { rasterizeMermaidLabelMath } from "./math-labels";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
 import { currentZoom } from "$lib/stores/zoom.svelte";
 
@@ -214,6 +215,20 @@ async function ensureLoaded(): Promise<MermaidModule> {
 }
 
 /**
+ * Ensure KaTeX's web fonts are applied before a render measures its label
+ * math. Mermaid bakes label boxes during `mermaid.render`, and the fonts
+ * load lazily: without this, the boxes are fallback-sized while
+ * math-labels.ts (and fo-labels.ts) later measure and rasterize the same
+ * formulas at their real size, so the images overflow their slots. Only
+ * `$$…$$` content can contain KaTeX labels.
+ */
+async function awaitLabelFonts(content: string): Promise<void> {
+  if (!content.includes("$$")) return;
+  const { ensureMathFontsLoaded } = await import("$lib/export/math-render");
+  await ensureMathFontsLoaded();
+}
+
+/**
  * Initialize (or re-initialize) Mermaid for a render variant.
  *
  * Every config pins `themeVariables.fontSize` to {@link MERMAID_FONT_SIZE},
@@ -374,6 +389,7 @@ async function preRenderMermaidBlocksPass(
     try {
       if (!mod) mod = await ensureLoaded();
       await ensureInitialized(mod, appTheme, "viewer", renderWidth);
+      await awaitLabelFonts(diagramContent);
       const mermaid = mod;
       // Zoom-normalized measurement: on older WebKit, foreignObject label
       // rects are scaled by the page zoom and Mermaid bakes them into the
@@ -385,9 +401,17 @@ async function preRenderMermaidBlocksPass(
       // Cache the engine-proof form: em-based dy/dx offsets drift under
       // WebKit page zoom (see text-offsets.ts), and negative stroke-widths
       // (Mermaid's edge-depth ramp) vanish on older WebKit (svg-css.ts).
+      // Label math is rasterized to <img> on top of that (math-labels.ts):
+      // WebKit paints KaTeX's positioned boxes inside <foreignObject> at
+      // untransformed coordinates, so live formulas hang off their labels'
+      // top-left corner there. Export/print variants deliberately skip this
+      // — they convert labels via fo-labels.ts, which must see the live
+      // KaTeX to capture it.
       svgCache.set(
         key,
-        clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+        await rasterizeMermaidLabelMath(
+          clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+        ),
       );
     } catch (err) {
       // Scope cleanup to this render's temp nodes (mirrored as
@@ -515,6 +539,7 @@ export async function renderMermaidSvgForExport(
     const mod = await ensureLoaded();
     await ensureInitialized(mod, exportTheme, "export", renderWidth);
     try {
+      await awaitLabelFonts(content);
       const { svg } = await withZoomNormalizedLabelMeasurement(
         () => mod.default.render(`mmd-export-${nextRenderId++}`, content),
         currentZoom(),
@@ -571,6 +596,7 @@ export async function renderMermaidSvgForPrint(
     const mod = await ensureLoaded();
     await ensureInitialized(mod, appTheme, "print", renderWidth);
     try {
+      await awaitLabelFonts(content);
       const { svg } = await withZoomNormalizedLabelMeasurement(
         () => mod.default.render(`mmd-print-${nextRenderId++}`, content),
         currentZoom(),

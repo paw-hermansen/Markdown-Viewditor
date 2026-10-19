@@ -227,6 +227,12 @@ Each story is a self-contained walkthrough. Complete the stories in order.
 | 6.44 | Look at "Mermaid — Diagram Types → Mindmap" (4-space indent). | All four connector lines are visible — including the two second-level ones ("Origins" → "Long history" and "Research" → "On effectiveness"); none may be missing (regression: negative `stroke-width`, invisible on macOS/Monterey WebKit). |
 | 6.45 | Look at "Mermaid — Diagram Types → Gantt Chart" at 100% zoom on a wide window (≥1600px). | The chart fills the diagram column (800px) at natural height with readable ~11px task/axis text (regression: gantt used to be built for the *window* width and shrunk with it — barely readable text and a squashed chart on wide windows). |
 | 6.46 | Edit that fence to `mermaid {fitToWidth=false maxWidth=1600}`. | The chart renders at 1600px with the same readable text inside a horizontally scrollable box (no vertical scrollbar). Set `maxWidth=800` back with `fitToWidth=false`: identical to 6.45, no scrollbar. |
+| 6.47 | Look at "Mermaid — Math Labels" (flowchart) on a freshly opened document. | The `x²` formula renders in node A and `a/b + √2` in node C, each horizontally and vertically centered in its box; the boxes are only slightly taller than the plain "some label" node (regression: KaTeX's `1em` display margins doubled the box height). No `$` characters visible. |
+| 6.48 | Check the same flowchart on Linux (WebKitGTK) and macOS. | Formulas sit centered in their node boxes — never hanging off the box's top-left corner (regression: WebKit paints CSS-positioned boxes inside `<foreignObject>` at untransformed coordinates; label formulas are rasterized to images to dodge it). |
+| 6.49 | Look at "Mermaid — Math in Sequence and State Labels" on the document's *first* render. | Message and transition labels show their formulas as clean KaTeX — normal letter spacing, correct super/subscripts, no oversized or overlapping characters (regression: rasterization racing KaTeX's lazy web fonts and html2canvas's clone styles) — and the formula fills its label box exactly. |
+| 6.50 | Look at "Mermaid — Math Error (invalid TeX…)". | The diagram is replaced by the red "Mermaid rendering failed" block — a TeX typo fails the whole diagram, unlike math in prose, which degrades to a compact inline error (6.1). |
+| 6.51 | Look at "Mermaid — Single Dollars Are Literal". | The label reads `$x^2$` with both dollar signs — single dollars are never math in diagram labels. |
+| 6.52 | With the math flowchart visible, zoom the app to 300% and back to 70%. | The formulas scale with the diagram and stay centered in their boxes at every zoom level (they are drawn as high-resolution images). |
 
 ---
 
@@ -948,6 +954,8 @@ within each story gives the precise check.
 | Mermaid | HTML comment directives | **S6** (6.41) |
 | Mermaid | Theme override (YAML) | **S6** (6.42) |
 | Mermaid | Dark/light theme mapping | **S6** (6.43) |
+| Mermaid | Math labels — centered, tight box | **S6** (6.47–6.49) |
+| Mermaid | Math labels — TeX error, literal `$` | **S6** (6.50–6.51) |
 | Mermaid | Label geometry when starting zoomed | **S15** (15.29–15.31) |
 | Print / PDF | macOS — toolbar label | **S14** (14.1) |
 | Print / PDF | Linux/Win — toolbar labels | **S14** (14.7) |

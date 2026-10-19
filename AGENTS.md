@@ -452,6 +452,54 @@ The measurable path and the degradation path are covered in
 touching the export pipeline; if a Mermaid upgrade changes how labels are
 emitted, the integration suite is the tripwire.
 
+### Mermaid Label Math (KaTeX rasterization)
+
+Mermaid renders `$$…$$` label math as KaTeX HTML (`forceLegacyMathML` on
+every variant — bare MathML mispaints the same way, see below). Three engine
+contracts pin the rendering:
+
+- **KaTeX's `.katex-display { margin: 1em 0 }` stays reset inside labels**
+  (`MERMAID_STYLES`, both the `.mermaid-block` and `body > div[id^="dmmd-"]`
+  hosts — the label box is _measured_ in the temp container). Unreset, the
+  margins inflate the label box Mermaid bakes into node geometry by 2em: a
+  one-line formula gets a box sized for three rows.
+- **Formula boxes are rasterized to `<img>` at cache-fill time**
+  (`math-labels.ts`, viewer variant only). WebKitGTK / older WKWebView paint
+  CSS-positioned boxes inside `<foreignObject>` at _untransformed_
+  coordinates — ignoring ancestor `<g transform>` and the viewBox scale —
+  while layout accounts for them, so live KaTeX output (built from
+  `position: relative/absolute` boxes) hangs off its label's top-left corner
+  there. Blink/Gecko paint it correctly; measured on WebKitGTK 2.52. No CSS
+  workaround exists — layerization (`translateZ(0)`, `will-change`, `opacity`,
+  `filter`, `isolation`), `position: static` overrides (KaTeX's vlists need
+  `top` offsets), and counter-transforms all fail. Replaced content paints
+  correctly, so the pass swaps each formula for a PNG captured with
+  html2canvas-pro (paints from computed styles, immune to the bug). Failure
+  keeps the live markup.
+- **Everything measures with KaTeX's fonts applied, at scale 1.** The web
+  fonts load lazily; captures that raced the swap produced "large,
+  overlapping characters" (fallback glyphs painted in KaTeX's slots, and
+  bitmaps stretched when displayed at a different size than captured).
+  `awaitLabelFonts` (renderer.ts) runs before every `mermaid.render` —
+  Mermaid bakes label boxes during the render — and `ensureMathFontsLoaded`
+  gates every measurement and capture (`captureElementToPng`, `fo-labels`).
+  `captureElementToPng` also syncs its html2canvas clone with the live KaTeX
+  CSS and faces (`syncCaptureEnvironment`): the clone never waits for
+  `<link>` stylesheets, and without `.katex`'s `font: 1.21em` it measures
+  formulas at 1/1.21 of their box. `math-labels.ts` captures in a host
+  pinned to `MERMAID_FONT_SIZE` and the SVG's `naturalSvgWidth` (a
+  self-scaled SVG — `width="100%"` + viewBox — makes `getBoundingClientRect`
+  report display-scaled sizes for label content), and sizes each `<img>`
+  from the capture's own geometry.
+
+KaTeX sets `font-size: 1.21em`, so formulas sit ~20% taller than the label
+text — the same ratio as math in prose (app.css), by KaTeX design.
+
+Export/print variants deliberately skip the rasterization: `fo-labels.ts`
+must see live KaTeX to convert labels to SVG text + `<image>`. Any new
+Mermaid render path that feeds the viewer has to go through the pass.
+Regression: `__tests__/math-labels*.test.ts`, TEST-PLAN 6.47–6.52.
+
 ### Mermaid Edge Stroke Width (negative `edge-depth-N` ramp)
 
 Mermaid sizes mindmap/timeline/kanban edges from a per-depth ramp

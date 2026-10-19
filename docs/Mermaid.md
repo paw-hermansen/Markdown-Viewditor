@@ -160,6 +160,43 @@ pie title Languages
 
 For the full list of diagram types and their syntax, see the [Mermaid documentation](https://mermaid.ai/open-source/intro/).
 
+## Mathematical Notation
+
+Node and edge labels can contain $\KaTeX$ formulas wrapped in **double dollars** (`$$…$$`) — Mermaid's own math delimiter. Single dollars are ordinary text, and the label must be quoted so the formula is not read as diagram syntax:
+
+````
+```mermaid
+graph LR
+    A["$$x^2$$"] --> B["$$\frac{a}{b}$$"]
+```
+````
+
+```mermaid
+graph LR
+    A["$$x^2$$"] --> B["$$\frac{a}{b}$$"]
+```
+
+````
+```mermaid
+sequenceDiagram
+    Alice->>Bob: $$E = mc^2$$
+```
+````
+
+```mermaid
+sequenceDiagram
+    Alice->>Bob: $$E = mc^2$$
+```
+
+Math labels work in **flowchart, sequence, state, class, and ER** diagrams. The formula renders as display-style math (Mermaid has no inline form), and titles — gantt, pie, journey — show the dollars literally.
+
+Two caveats:
+
+- **Quote the label.** `$$x^2$$ --> Y` on its own is a parse error: `$` and `^` are not valid in an unquoted node name. Write `A["$$x^2$$"] --> Y`.
+- **A LaTeX error fails the whole diagram.** Mermaid renders label math with error reporting on, so a typo shows the "Mermaid rendering failed" block instead of an inline error — unlike math in prose, which degrades gracefully (see [Math.md](Math.md)).
+
+Formulas in diagrams are drawn as high-resolution images, so they paint identically in every web engine and survive all exports (HTML, PDF, ODT). Math in prose stays live, selectable HTML.
+
 ## Settings
 
 Mermaid rendering has two separate configuration layers:

@@ -343,6 +343,10 @@ $\KaTeX$ supports most of $\LaTeX$'s math mode. For the full list of supported c
 
 **[$\KaTeX$ Supported Functions](https://katex.org/docs/supported)**
 
+## Math in Diagram Labels
+
+Mermaid diagram labels use their own delimiter — `$$…$$` — and render as display-style math inside the diagram. See [Mermaid.md](Mermaid.md#mathematical-notation) for the syntax and its caveats.
+
 ## Chemistry in Math
 
 Chemical formulas use the `\ce{...}` and `\pu{...}` commands inside any math delimiter. See [Chemistry.md](Chemistry.md) for details.

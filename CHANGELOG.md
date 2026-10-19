@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.6.1] - 2026-10-19
+
+- fix(mermaid): correct KaTeX math in diagram labels (#150) (22a8140)
+- fix(export): keep Mermaid edge-label background in converted SVG labels (#149) (b5e9e71)
+- Setup GitHub pages with html-versions of Markdown Viewditor docs (#148) (5a4d227)
+- Exported html from docs to allow for github pages website (#147) (53072b7)
+- Change to html2canvas pro (#146) (0622a6b)
+- Improvement documents (#145) (6e71cec)
+- Improved README (Install section nearer top) (e86847e)
+- Added file with texts for app stores (664b5ec)
+
 ## [1.6.0] - 2026-10-12
 
 - Testing follow ups - fixes and small improvements (#143) (45be9c2)

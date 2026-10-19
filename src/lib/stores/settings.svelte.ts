@@ -99,8 +99,8 @@ export function updateSplitRatio(ratio: number): void {
  * menu checkbox and the export confirmation dialog hint so the two can never
  * drift apart — the hint quotes this label verbatim.
  */
-export function exportConfirmSettingLabel(isMacOS: boolean): string {
-  return isMacOS
+export function exportConfirmSettingLabel(exportOnly: boolean): string {
+  return exportOnly
     ? "Show export confirmation"
     : "Show export and print confirmation";
 }

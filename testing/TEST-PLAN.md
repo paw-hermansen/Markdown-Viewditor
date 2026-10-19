@@ -380,7 +380,7 @@ This story tests how the app handles files modified or deleted by external progr
 | 10.2 | With confirmation ON, click ODT export. | Dialog: "This export always uses a neutral, printer-friendly style."; shows ODT options (math rasterize, "SVG images & Mermaid diagrams" rasterize, resolution). |
 | 10.3 | Click Cancel / press Escape / click backdrop. | No export runs. |
 | 10.4 | Press Enter. | Export runs. |
-| 10.5 | With confirmation ON, open the confirm dialog. | Hint below the options names the "Show export and print confirmation" checkbox (macOS: "Show export confirmation") in the Export as… menu. No "Do not show this message again" checkbox. |
+| 10.5 | With confirmation ON, open the confirm dialog. | Hint below the options names the "Show export and print confirmation" checkbox (macOS <15: "Show export confirmation") in the Export as… menu. No "Do not show this message again" checkbox. |
 | 10.6 | Untick "Show export and print confirmation" in the dropdown footer. | Next export/print skips the dialog. Re-tick it: the dialog reappears. |
 
 ### 10b. Export as HTML
@@ -547,7 +547,11 @@ This section tests ODT export with various content types and rasterization optio
 
 *File: `Rendering-All.md`*
 
-### macOS
+### macOS 12–14 (legacy capture fallback)
+
+On macOS 15+ these steps do not apply — see the next table; the app routes
+through the system print dialog there and only falls back to the capture
+below (`pdf-mode.ts` gates on `invoke('macos_major_version')`).
 
 | Step | Action | Expected |
 |------|--------|----------|
@@ -559,18 +563,19 @@ This section tests ODT export with various content types and rasterization optio
 | 14.6 | Trigger a failure (e.g. save to a read-only location like `/System/test.pdf`). | Toast: "Create PDF failed" with detail. |
 | 14.18 | Compare with the Linux/Windows PDF of the same file (e.g. `MathChemMermaid-All.md`), both at 100% zoom. | Same physical content size and margins — no viewer zoom needed to match. |
 
-### Linux & Windows
+### Linux, Windows & macOS 15+
 
 | Step | Action | Expected |
 |------|--------|----------|
 | 14.7 | Inspect viewer toolbar. | Dropdown has "Export as PDF (Print…)" + separate "Print / PDF" button. |
-| 14.8 | Click "Print / PDF" (or `Ctrl+P`). | Native print dialog opens with styled content. |
-| 14.9 | Choose "Save as PDF". | Vector PDF written, opens correctly. |
+| 14.8 | Click "Print / PDF" (or `Ctrl+P`; macOS: `Cmd+P`). | Native print dialog opens with styled content (macOS: the system print panel, pre-set to A4 with 10mm margins). |
+| 14.9 | Choose "Save as PDF" (macOS: PDF ▾ menu). | Vector PDF written, paginated to A4 pages, opens correctly. |
 | 14.10 | Enable "Background graphics" if needed. | Background paints to paper edge (Chromium). |
 | 14.11 | Pick a real printer, print. | Document prints with correct styling. |
 | 14.12 | Trigger a failure (e.g. select a printer that is offline or disconnected, then print). | Toast: "Print failed" with detail. |
 | 14.13 | Trigger PDF export. | Overlay may flash; print dialog confirms export started. |
 | 14.21 | Export `MathChemMermaid-All.md` from Linux; inspect the Mermaid diagrams. | Node label text is the same size as in the Viewer (same line count, e.g. 3/4 lines, and no dead space below the label inside the boxes). |
+| 14.23 | (macOS 15+) While the print panel is open, then after closing it. | The panel is a sheet on the app window; closing it (Print, Save as PDF, or Cancel) restores the app UI with no stuck "Exporting…" overlay. |
 
 ### Common (all platforms)
 
@@ -581,6 +586,7 @@ This section tests ODT export with various content types and rasterization optio
 | 14.16 | Export with dark theme. | Page background matches viewer (not white). |
 | 14.17 | Cancel save / print dialog. | No file written. |
 | 14.19 | Export `MathChemMermaid-All.md`; inspect the Mermaid diagrams. | Arrow heads on every edge, sequence diagram shows its actor boxes, labels the same size as in the Viewer (no giant, clipped, or truncated text). |
+| 14.24 | Compare the `$$…$$` display math inside Mermaid labels with the Viewer. | The formula sits at the same height in its node box as in the Viewer — never shifted down by about a label row (regression: the export label-conversion host lacked the KaTeX display-margin reset, so exported formula images landed 1em low). |
 | 14.20 | Inspect the wide `fitToWidth=false` diagram. | Scaled to the page content width; every word of every node label visible. |
 | 14.22 | Inspect the Gantt chart in the exported PDF. | Its task/axis text is the same relative size as the other diagrams' labels (regression: gantt used to be built for the window width and shrunk to the column — tiny text in the PDF too), and the chart fills the content column like in the Viewer. |
 
@@ -614,7 +620,7 @@ This section tests ODT export with various content types and rasterization optio
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 15.11 | At 100% zoom, export PDF of `MathChemMermaid-All.md` and keep it. Set zoom to 200%, export again (macOS: Export as PDF; Linux/Windows: `Ctrl+P` / Export as PDF (Print…)). | The two PDFs are visually identical when compared at 100% in a PDF viewer: same physical content size and margins, the wide math formula scaled to the page content width in both, Mermaid labels the same size as in the viewer at 100% (as in 14.19–14.21). |
+| 15.11 | At 100% zoom, export PDF of `MathChemMermaid-All.md` and keep it. Set zoom to 200%, export again (macOS <15: Export as PDF; macOS 15+/Linux/Windows: `Ctrl+P` / Export as PDF (Print…)). | The two PDFs are visually identical when compared at 100% in a PDF viewer: same physical content size and margins, the wide math formula scaled to the page content width in both, Mermaid labels the same size as in the viewer at 100% (as in 14.19–14.21). |
 | 15.12 | At 200% zoom, export HTML and ODT. | Output is identical to exports made at 100% (open and compare); on-screen zoom does not leak into the files. |
 | 15.13 | After each export completes. | The app is back at the zoom level set before the export — the export's temporary 100% does not persist. |
 
@@ -699,7 +705,7 @@ This section tests ODT export with various content types and rasterization optio
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 15.11 | At 100% zoom, export PDF of `MathChemMermaid-All.md` and keep it. Set zoom to 200%, export again (macOS: Export as PDF; Linux/Windows: `Ctrl+P` / Export as PDF (Print…)). | The two PDFs are visually identical when compared at 100% in a PDF viewer: same physical content size and margins, the wide math formula scaled to the page content width in both, Mermaid labels the same size as in the viewer at 100% (as in 14.19–14.21). |
+| 15.11 | At 100% zoom, export PDF of `MathChemMermaid-All.md` and keep it. Set zoom to 200%, export again (macOS <15: Export as PDF; macOS 15+/Linux/Windows: `Ctrl+P` / Export as PDF (Print…)). | The two PDFs are visually identical when compared at 100% in a PDF viewer: same physical content size and margins, the wide math formula scaled to the page content width in both, Mermaid labels the same size as in the viewer at 100% (as in 14.19–14.21). |
 | 15.12 | At 200% zoom, export HTML and ODT. | Output is identical to exports made at 100% (open and compare); on-screen zoom does not leak into the files. |
 | 15.13 | After each export completes. | The app is back at the zoom level set before the export — the export's temporary 100% does not persist. |
 
@@ -859,23 +865,25 @@ within each story gives the precise check.
 | Export ODT | Mermaid — failure fallback | **S10** (10.41) |
 | Export ODT | Mermaid — state edge-label background | **S10** (10.50) |
 | Export ODT | Options persisted | **S10** (10.43) |
-| Export PDF | Overlay (macOS) | **S14** (14.4) |
-| Export PDF | Overlay (Linux/Win) | **S14** (14.13) |
+| Export PDF | Overlay (macOS <15) | **S14** (14.4) |
+| Export PDF | Overlay (dialog platforms) | **S14** (14.13) |
 | Export PDF | Line wrap matches viewer | **S14** (14.14) |
 | Export PDF | Math renders | **S14** (14.15) |
 | Export PDF | Full-bleed background | **S14** (14.16) |
-| Export PDF | macOS — save dialog | **S14** (14.2) |
-| Export PDF | macOS — vector PDF | **S14** (14.3) |
-| Export PDF | macOS — success/error toast | **S14** (14.5–14.6) |
-| Export PDF | macOS — A4 page scale matches other platforms | **S14** (14.18) |
+| Export PDF | macOS <15 — save dialog | **S14** (14.2) |
+| Export PDF | macOS <15 — vector PDF | **S14** (14.3) |
+| Export PDF | macOS <15 — success/error toast | **S14** (14.5–14.6) |
+| Export PDF | macOS <15 — A4 page scale matches other platforms | **S14** (14.18) |
+| Export PDF | macOS 15+ — print panel restores app UI | **S14** (14.23) |
 | Export PDF | Mermaid diagrams intact (arrows, boxes, labels) | **S14** (14.19) |
 | Export PDF | Mermaid label size matches viewer (Linux) | **S14** (14.21) |
 | Export PDF | Mermaid wide diagram scaled to page | **S14** (14.20) |
-| Export PDF | Linux/Win — print dialog | **S14** (14.8) |
-| Export PDF | Linux/Win — save as PDF | **S14** (14.9) |
-| Export PDF | Linux/Win — background margins | **S14** (14.10) |
-| Export PDF | Linux/Win — direct print | **S14** (14.11) |
-| Export PDF | Linux/Win — error toast | **S14** (14.12) |
+| Export PDF | Mermaid label math vertically aligned | **S14** (14.24) |
+| Export PDF | Linux/Win/macOS 15+ — print dialog | **S14** (14.8) |
+| Export PDF | Linux/Win/macOS 15+ — save as PDF | **S14** (14.9) |
+| Export PDF | Linux/Win/macOS 15+ — background margins | **S14** (14.10) |
+| Export PDF | Linux/Win/macOS 15+ — direct print | **S14** (14.11) |
+| Export PDF | Linux/Win/macOS 15+ — error toast | **S14** (14.12) |
 | External modification | Modified (clean) | **S9** (9.1) |
 | External modification | Modified (dirty) | **S9** (9.2) |
 | External modification | Decline reload | **S9** (9.3) |

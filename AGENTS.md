@@ -440,7 +440,11 @@ standalone SVG **measured from that layout**:
   materialized; KaTeX label output (the export config sets
   `forceLegacyMathML`, so Mermaid emits KaTeX _HTML_, not bare MathML) is
   captured via `captureElementToPng` (math-render.ts) and embedded as
-  `<image>`; failure degrades the formula to plain text.
+  `<image>` at its measured box; failure degrades the formula to plain text.
+  The measuring host carries `LABEL_HOST_CLASS` (and injects
+  `LABEL_HOST_RULES`), so the label HTML re-lays out under the same rules
+  the viewer paints with — see the `.katex-display` margin-reset contract in
+  "Mermaid Label Math" for the failure mode that caused.
 - all geometry is client-px ratios through the `foreignObject` box, so app
   zoom and SVG display scaling cancel (same argument as `math-fit.ts`).
 
@@ -459,10 +463,17 @@ every variant — bare MathML mispaints the same way, see below). Three engine
 contracts pin the rendering:
 
 - **KaTeX's `.katex-display { margin: 1em 0 }` stays reset inside labels**
-  (`MERMAID_STYLES`, both the `.mermaid-block` and `body > div[id^="dmmd-"]`
-  hosts — the label box is _measured_ in the temp container). Unreset, the
-  margins inflate the label box Mermaid bakes into node geometry by 2em: a
-  one-line formula gets a box sized for three rows.
+  (`MERMAID_STYLES`, the `.mermaid-block`, `body > div[id^="dmmd-"]` and
+  `LABEL_HOST_CLASS` hosts — the label box is _measured_ in the temp
+  container, and the export/print conversion host re-lays out the same label
+  HTML to measure its substitutions). Unreset, the margins inflate the label
+  box Mermaid bakes into node geometry by 2em: a one-line formula gets a box
+  sized for three rows — and the conversion host without the reset measures
+  every display formula 1em (one label row) below the viewer, so exported
+  formula images land a row too low (PDF on macOS, ODT everywhere). All
+  three hosts are named in `LABEL_HOST_CLASS`'s docstring; the conversion
+  host also injects `LABEL_HOST_RULES` scoped to its own class so it never
+  depends on `MERMAID_STYLES` injection.
 - **Formula boxes are rasterized to `<img>` at cache-fill time**
   (`math-labels.ts`, viewer variant only). WebKitGTK / older WKWebView paint
   CSS-positioned boxes inside `<foreignObject>` at _untransformed_
@@ -675,7 +686,9 @@ fences. If you touch this, the monotonicity test in
 webview's native **page** zoom (`getCurrentWebview().setZoom()` → WebKitGTK
 `set_zoom_level`, WKWebView `setPageZoom`, WebView2 `SetZoomFactor`). Never
 implement this with CSS `zoom`: WebKit mis-scales inline SVG under it (the
-reason the macOS PDF path refuses it — see below), while page zoom scales
+reason the macOS capture path refuses it — see below; the macOS 15+
+print-dialog path needs zoom's layout effect for pagination and swaps the
+diagrams for text labels first), while page zoom scales
 Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
 `settings.json` and is re-applied by `applySavedZoom()` right after
 `loadSettings()` in `+layout.svelte`.
@@ -814,13 +827,35 @@ scoped to the failing render's temp nodes
   inlines `url()` fonts and `localimg://` images to data URIs (via
   `assets.ts`), and wraps the body in `.viewer-content`.
 - `exporters/pdf.ts` shares `buildPrintContainer()` with the in-app Print
-  button; macOS uses `invoke('create_pdf')` (WKWebView
-  `createPDFWithConfiguration` with a nil configuration — an async capture
-  of the laid-out page that paginates the full document into vector pages),
-  other platforms use `window.print()`. The macOS path does NOT use
-  `NSPrintOperation`: that rasterizes WKWebView's layer tree at Retina
-  resolution (hundreds-of-MB files) and `runOperation` deadlocks the main
-  run loop when called from inside `with_webview`.
+  button. The output route is decided by `pdf-mode.ts` (probed once at app
+  startup via `invoke('macos_major_version')` — the WKWebView user agent is
+  frozen at 10_15_7 and cannot distinguish macOS releases):
+  - **Linux/Windows and macOS 15+** — the system print dialog:
+    `window.print()` on Linux/Windows, `invoke('print_webview')` on macOS
+    (WKWebView has no JS `window.print()`; `print.rs` drives the same
+    NSPrintPanel through `-[WKWebView printOperationWithPrintInfo:]` run via
+    `runOperationModalForWindow:delegate:didRunSelector:contextInfo:`, and
+    the command resolves when the operation finishes so the clone outlives
+    the capture).
+  - **macOS < 15** (legacy fallback) — `invoke('create_pdf')`
+    (`createPDFWithConfiguration` with an explicit A4-width rect — an async
+    capture of the laid-out page as one long vector page) after a save
+    dialog.
+    Two hard-won rules for the print-dialog route on macOS (both from the
+    2026 spike that un-broke it; the historical "WKWebView cannot print
+    injected DOM" diagnosis was wrong — the call shape was the problem):
+  - **Never use the synchronous `-[NSPrintOperation runOperation]`** — it
+    deadlocks the run loop (WebKit's printing view wants a running run loop
+    to build its page preview) and yields blank pages. Only the async
+    `runOperationModalForWindow…` works.
+  - **Initialize the print view's frame** (`op.view().setFrame(webView.bounds())`)
+    before starting, or AppKit logs "The NSPrintOperation view's frame was
+    not initialized properly" and may trap in future releases.
+    The completion delegate (`PrintRunDelegate` in `print.rs`) is deliberately
+    leaked per print: AppKit holds delegates unretained and the callback runs
+    on it. `NSPrintOperation printOperationWithView:` (view-based printing) is
+    a different, bad API — it rasterizes the layer tree at Retina resolution
+    (hundreds-of-MB files); `printOperationWithPrintInfo:` prints vector.
 - `src/lib/styles/markdown.css` is the single source of truth for markdown
   rendering styles — including the frontmatter/skill card — imported by
   `Viewer.svelte` and applied to the print clone, which carries the
@@ -873,19 +908,21 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   the live viewer's computed `max-width` and container padding so custom
   themes that change them still match). `exportPdf()` then maps that width
   onto the paper, platform-split:
-  - Linux/Windows print through the print dialog with CSS `zoom` on the
-    clone, mapping 832px onto the A4 printable width (718 CSS px at 96dpi).
-    Zoom is required here — it is layout-affecting, which is what lets the
-    print engine paginate the clone across A4 pages (never scale the print
-    path with a bare `transform: scale()`: it doesn't affect
-    layout/pagination).
-  - macOS captures one page sized to an explicit rect with
+  - Linux/Windows and macOS 15+ print through the print dialog with CSS
+    `zoom` on the clone, mapping 832px onto the A4 printable width (718 CSS
+    px at 96dpi). Zoom is required here — it is layout-affecting, which is
+    what lets the print engine paginate the clone across A4 pages (never
+    scale the print path with a bare `transform: scale()`: it doesn't affect
+    layout/pagination). On macOS the zoom hits WebKit's foreignObject
+    scaling bug (below), so the diagrams are swapped for their text-label
+    variant first.
+  - macOS < 15 captures one page sized to an explicit rect with
     `createPDFWithConfiguration` (1 CSS px = 1 PDF pt), so the clone is
     scaled by a paint-time `transform: scale()` inside a sized
     `.print-scaler` wrapper (which clips the un-scaled layout overflow;
     `syncScaleHeight()` sizes it to the scaled height after `beginPrint()`),
     mapping 832px onto the A4 printable width **in points** (538.6pt) so
-    the PDF's physical scale matches the Linux/Windows output. CSS `zoom`
+    the PDF's physical scale matches the print-dialog output. CSS `zoom`
     must NOT be used on this path: WebKit's zoom handling mis-scales inline
     SVG (font-size inside `<foreignObject>` is multiplied by the zoom factor
     twice — webkit.org/show_bug.cgi?id=279041 — and SVG geometry/markers
@@ -909,30 +946,36 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   and before the capture. Inline math is never scaled. The only CSS it needs
   is `.print-content .katex { font-size: calc(1.21em * var(--katex-font-scale, 1)) }`
   in app.css.
-- Mermaid diagrams in the macOS clone are swapped for their foreignObject-
-  free text-label variant before the capture (`prepareMermaidForPrint` →
-  `renderMermaidSvgForPrint`, same theme and `font-family: inherit` as the
-  viewer): the viewer's HTML labels are converted to measured `<text>` by
-  `convertForeignObjectLabels` — see "Mermaid Label Export Conversion" —
-  instead of Mermaid's `htmlLabels: false` dialect, which misplaces node
-  labels. Belt and braces next to the transform scaling, since old WebKit
-  mis-scales `<foreignObject>` even under transforms. The wrapper markup
-  (`data-align`, `--mermaid-max-width`, `data-fit-to-width`, `data-line`) is
-  preserved. Linux/Windows keep the viewer SVGs unchanged.
+- Mermaid diagrams in the macOS clone (both routes) are swapped for their
+  foreignObject-free text-label variant before the output
+  (`prepareMermaidForPrint` → `renderMermaidSvgForPrint`, same theme and
+  `font-family: inherit` as the viewer): the viewer's HTML labels are
+  converted to measured `<text>` by `convertForeignObjectLabels` — see
+  "Mermaid Label Export Conversion" — instead of Mermaid's
+  `htmlLabels: false` dialect, which misplaces node labels. Belt and braces
+  next to the transform scaling of the capture path, since old WebKit
+  mis-scales `<foreignObject>` even under transforms — and required on the
+  macOS 15+ dialog path, whose CSS `zoom` would otherwise hit the same bug.
+  The wrapper markup (`data-align`, `--mermaid-max-width`,
+  `data-fit-to-width`, `data-line`) is preserved. Linux/Windows keep the
+  viewer SVGs unchanged.
 - Paper target is A4 with 10mm margins: `@page { size: A4; margin: 10mm }`
   in app.css (default in Chromium print dialogs; WebKitGTK ignores it and
   uses the system paper size — wrapping is unaffected, only the fill ratio).
-  The macOS capture cannot honor `@page` size — `createPDF` has no paper
-  size and no pagination, and the rect passed to it _is_ the page.
-  `exportPdf()` therefore passes the A4 width (210mm in points) as the rect
-  width and the full document height as its height, while `beginPrint()`
-  constrains the document to that width with 10mm margins: the result is one
-  A4-wide page at the same physical scale as the Linux/Windows output, with
-  the content column centered at 10mm margins. One long page is accepted —
-  true A4 tiling would need Rust-side slicing of the capture.
+  The macOS 15+ dialog path pre-configures its `NSPrintInfo` to the same A4
+  sheet with 10mm margins in `print.rs` (the panel still lets the user pick
+  other paper). The macOS < 15 capture cannot honor `@page` size —
+  `createPDF` has no paper size and no pagination, and the rect passed to it
+  _is_ the page. `exportPdf()` therefore passes the A4 width (210mm in
+  points) as the rect width and the full document height as its height,
+  while `beginPrint()` constrains the document to that width with 10mm
+  margins: the result is one A4-wide page at the same physical scale as the
+  print-dialog output, with the content column centered at 10mm margins.
+  One long page is accepted there — true A4 tiling would need Rust-side
+  slicing of the capture.
 - Full-bleed backgrounds come from two channels set by `buildPrintContainer`:
   inline `background` on `html`/`body` (page content area everywhere; whole
-  captured area on macOS, whose capture has no physical margins) and an injected
+  captured area on the macOS < 15 capture, which has no physical margins) and an injected
   `@page { background: … }` rule (Chromium extends it over the margins too;
   WebKit can't paint the physical margin ring — engine limitation, same on
   Linux and macOS). `print-color-adjust: exact` on

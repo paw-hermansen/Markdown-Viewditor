@@ -29,6 +29,8 @@ const A4_WIDTH_PT = (210 / 25.4) * 72;
 const PAGE_MARGIN_PT = (10 / 25.4) * 72;
 /** A4 printable width in PDF points (190mm at 72dpi). */
 const PRINT_CONTENT_WIDTH_PT = ((210 - 2 * 10) / 25.4) * 72;
+/** A4 printable width in print CSS px (190mm at 96dpi) — the dialog path. */
+const PRINT_CONTENT_WIDTH_PX = ((210 - 2 * 10) / 25.4) * 96;
 
 const transformLayout = {
   layoutWidthPx: 832,
@@ -456,6 +458,23 @@ describe("exportPdf print lifecycle", () => {
   });
 });
 
+/**
+ * Import pdf.ts as if running on macOS with the given OS major version (the
+ * pdf-mode gate probes the real version in Rust — the user agent is frozen
+ * at 10_15_7 — so the tests pin the output route through the mock).
+ */
+async function importAsMacOS(macOSMajor: number = 14) {
+  vi.stubGlobal("navigator", {
+    userAgent:
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+  });
+  const { invoke } = await import("@tauri-apps/api/core");
+  vi.mocked(invoke).mockImplementation(async (cmd: string) =>
+    cmd === "macos_major_version" ? macOSMajor : undefined,
+  );
+  return await import("../exporters/pdf");
+}
+
 describe("exportPdf macOS capture lifecycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -475,14 +494,6 @@ describe("exportPdf macOS capture lifecycle", () => {
     vi.resetModules();
   });
 
-  async function importAsMacOS() {
-    vi.stubGlobal("navigator", {
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-    });
-    return await import("../exporters/pdf");
-  }
-
   it("scales with transform, swaps diagrams, and captures via create_pdf", async () => {
     const { exportPdf: exportPdfMac } = await importAsMacOS();
     const { save } = await import("@tauri-apps/plugin-dialog");
@@ -500,6 +511,7 @@ describe("exportPdf macOS capture lifecycle", () => {
     let bodyWidthAtCapture = "";
     let cloneTransformAtCapture = "";
     vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "macos_major_version") return 14;
       if (cmd === "create_pdf") {
         scalerAtCapture = document.querySelector(".print-scaler") !== null;
         bodyWidthAtCapture = document.body.style.width;
@@ -552,6 +564,7 @@ describe("exportPdf macOS capture lifecycle", () => {
 
     let scalerWidthAtCapture = "";
     vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "macos_major_version") return 14;
       if (cmd === "create_pdf") {
         scalerWidthAtCapture = (
           document.querySelector(".print-scaler") as HTMLElement
@@ -580,8 +593,126 @@ describe("exportPdf macOS capture lifecycle", () => {
     const result = await exportPdfMac("<p>math</p>", "Document");
 
     expect(result).toEqual({ warnings: [] });
-    expect(vi.mocked(invoke)).not.toHaveBeenCalled();
+    // Only the macOS version probe ran — no capture was attempted.
+    expect(vi.mocked(invoke).mock.calls.map((c) => c[0])).toEqual([
+      "macos_major_version",
+    ]);
     expect(document.querySelector(".print-content")).toBeNull();
     expect(document.querySelector(".print-scaler")).toBeNull();
+  });
+});
+
+describe("exportPdf macOS 15+ dialog lifecycle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = "";
+    document.documentElement.className = "";
+    document.body.className = "";
+    document.documentElement.removeAttribute("style");
+    document.body.removeAttribute("style");
+    document.getElementById("print-page-background")?.remove();
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("routes macOS 15+ through the system print dialog with zoom scaling", async () => {
+    const { exportPdf: exportPdfMac } = await importAsMacOS(15);
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    const { prepareMermaidForPrint: prepareMock } =
+      await import("$lib/extensions/mermaid/renderer");
+    vi.mocked(save).mockResolvedValue("/tmp/Document.pdf");
+    vi.mocked(invoke).mockImplementation(async (cmd: string) =>
+      cmd === "macos_major_version" ? 15 : undefined,
+    );
+
+    let cloneAtPrint: HTMLElement | null = null;
+    let exportingAtPrint = false;
+    const original = vi.mocked(invoke).getMockImplementation()!;
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "print_webview") {
+        cloneAtPrint = document.querySelector(".print-content");
+        exportingAtPrint = document.body.classList.contains("exporting");
+      }
+      return original(cmd);
+    });
+
+    const result = await exportPdfMac("<p>math</p>", "Document");
+
+    // No save dialog: the print panel's "Save as PDF" is the user's route.
+    expect(save).not.toHaveBeenCalled();
+    expect(result).toEqual({ warnings: [] });
+    const commands = vi.mocked(invoke).mock.calls.map((c) => c[0]);
+    expect(commands).toContain("print_webview");
+    expect(commands).not.toContain("create_pdf");
+
+    // The dialog paginates, so the clone scales with layout-affecting CSS
+    // zoom (the macOS < 15 capture uses a paint-time transform instead).
+    const clone = cloneAtPrint as unknown as HTMLElement;
+    expect(clone).not.toBeNull();
+    expect(clone.style.zoom).toBe(String(PRINT_CONTENT_WIDTH_PX / 832));
+    expect(document.querySelector(".print-scaler")).toBeNull();
+
+    // WKWebView mis-scales <foreignObject> under CSS scaling, so macOS keeps
+    // the foreignObject-free diagram variant on this path too.
+    expect(prepareMock).toHaveBeenCalledTimes(1);
+
+    // The clone was live while the print operation ran and gone after.
+    expect(exportingAtPrint).toBe(true);
+    expect(cloneAtPrint).not.toBeNull();
+    expect(document.querySelector(".print-content")).toBeNull();
+    expect(document.body.classList.contains("exporting")).toBe(false);
+  });
+
+  it("keeps the print clone alive until the print operation completes", async () => {
+    const { exportPdf: exportPdfMac } = await importAsMacOS(15);
+    const { invoke } = await import("@tauri-apps/api/core");
+    let releasePrint!: () => void;
+    const printDone = new Promise<void>((resolve) => {
+      releasePrint = resolve;
+    });
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "macos_major_version") return 15;
+      if (cmd === "print_webview") await printDone;
+      return undefined;
+    });
+
+    const exportPromise = exportPdfMac("<p>math</p>", "Document");
+    await vi.waitFor(() =>
+      expect(vi.mocked(invoke)).toHaveBeenCalledWith("print_webview"),
+    );
+
+    // The panel (and its capture) runs while the command is unresolved: the
+    // clone must still be in print mode — cleanup would make the print
+    // operation capture the restored app UI.
+    expect(document.querySelector(".print-content")).not.toBeNull();
+    expect(document.body.classList.contains("exporting")).toBe(true);
+
+    releasePrint();
+    await expect(exportPromise).resolves.toEqual({ warnings: [] });
+    expect(document.querySelector(".print-content")).toBeNull();
+  });
+
+  it("falls back to the capture path when the version probe fails", async () => {
+    const { exportPdf: exportPdfMac } = await importAsMacOS(15);
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue(null);
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "macos_major_version") throw new Error("no probe");
+      return undefined;
+    });
+
+    const result = await exportPdfMac("<p>math</p>", "Document");
+
+    expect(result).toEqual({ warnings: [] });
+    // The save dialog (the capture path's first step) was consulted.
+    expect(save).toHaveBeenCalled();
+    expect(vi.mocked(invoke)).not.toHaveBeenCalledWith("print_webview");
   });
 });

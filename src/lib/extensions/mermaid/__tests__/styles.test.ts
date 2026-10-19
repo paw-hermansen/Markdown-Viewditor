@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MERMAID_FONT_SIZE, MERMAID_STYLES } from "../styles";
+import {
+  LABEL_HOST_CLASS,
+  LABEL_HOST_RULES,
+  MERMAID_FONT_SIZE,
+  MERMAID_STYLES,
+} from "../styles";
 
 function ruleFor(selector: string): string {
   const start = MERMAID_STYLES.indexOf(selector);
@@ -90,6 +95,9 @@ describe("Mermaid host-layout styles", () => {
     // one can fall back to the page's 14px while the diagram root rule says
     // 16px, and Mermaid clips the label at whatever it measured.
     expect(labels).toContain('body > div[id^="dmmd-"] svg foreignObject > div');
+    // The export/print label conversion host re-lays out the same label HTML
+    // to measure it — the pin matters there just as much.
+    expect(labels).toContain(`.${LABEL_HOST_CLASS} svg foreignObject > div`);
     expect(labels).toContain(`font-size: ${MERMAID_FONT_SIZE};`);
     expect(MERMAID_FONT_SIZE).toBe("16px");
   });
@@ -106,11 +114,36 @@ describe("Mermaid host-layout styles", () => {
     expect(katexDisplay).toContain(
       'body > div[id^="dmmd-"] svg foreignObject .katex-display',
     );
+    // …and the export/print label conversion host, which re-measures label
+    // HTML to place the exported formula image: unreset there pushes every
+    // exported display formula one label row below where the viewer — and
+    // Mermaid's baked node geometry — put it.
+    expect(katexDisplay).toContain(
+      `.${LABEL_HOST_CLASS} svg foreignObject .katex-display`,
+    );
     expect(katexDisplay).toContain("margin: 0;");
 
     // Markdown math blocks outside diagrams must keep their margins: every
     // occurrence has to sit behind a foreignObject scope.
     expect(MERMAID_STYLES).not.toMatch(/(^|\n)\s*\.katex-display[\s,]*\{/m);
+  });
+
+  it("keeps the conversion host's self-injected rules in sync", () => {
+    // fo-labels.ts injects LABEL_HOST_RULES scoped to LABEL_HOST_CLASS so
+    // its measurement host works even where MERMAID_STYLES has not been
+    // injected. The rule bodies must match the MERMAID_STYLES ones above,
+    // or the conversion would measure labels differently from the viewer.
+    expect(LABEL_HOST_RULES).toContain(
+      `.${LABEL_HOST_CLASS} svg foreignObject > div`,
+    );
+    expect(LABEL_HOST_RULES).toContain(`font-size: ${MERMAID_FONT_SIZE};`);
+    expect(LABEL_HOST_RULES).toContain(
+      `.${LABEL_HOST_CLASS} svg foreignObject .katex-display`,
+    );
+    expect(LABEL_HOST_RULES).toContain("margin: 0;");
+    // Same scoping discipline as MERMAID_STYLES: never a bare .katex-display
+    // rule (prose math blocks keep their margins).
+    expect(LABEL_HOST_RULES).not.toMatch(/(^|\n)\s*\.katex-display[\s,]*\{/m);
   });
 
   it("clamps over-wide natural-size diagrams to the column in print", () => {

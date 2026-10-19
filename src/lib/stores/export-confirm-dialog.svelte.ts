@@ -9,8 +9,8 @@ export interface ExportConfirmRequest {
   themeLabel: string;
   /** Action label on the primary button ("Export", "Print", "Save", …). */
   actionLabel: string;
-  /** Whether we're on macOS (changes title copy). */
-  isMacOS: boolean;
+  /** Whether the PDF path is capture-only (macOS < 15: exports, but has no print dialog — changes title copy). */
+  exportOnly: boolean;
   /** Per-exporter option groups. Empty array = "no options for this export". */
   optionGroups: OptionGroup[];
   /** Current values for each option id (read from settings or defaults). */

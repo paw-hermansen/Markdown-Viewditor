@@ -77,7 +77,7 @@
       <p id="export-confirm-message" class="message">
         {#if req.themeKind === 'neutral'}
           This export always uses a neutral, printer-friendly style.
-        {:else if req.isMacOS}
+        {:else if req.exportOnly}
           Exports use the current viewer theme.
         {:else}
           Exports and prints use the current viewer theme.
@@ -143,7 +143,7 @@
       {/if}
 
       <p class="setting-hint">
-        You can turn this confirmation off with the "{exportConfirmSettingLabel(req.isMacOS)}"
+        You can turn this confirmation off with the "{exportConfirmSettingLabel(req.exportOnly)}"
         checkbox in the Export as… menu.
       </p>
 

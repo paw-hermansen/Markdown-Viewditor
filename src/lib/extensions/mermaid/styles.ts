@@ -10,6 +10,39 @@ let injected = false;
  */
 export const MERMAID_FONT_SIZE = "16px";
 
+/**
+ * Class marking a Mermaid label host: an element whose `svg foreignObject`
+ * labels must measure and paint exactly like the Viewer's. The label-host
+ * rules in MERMAID_STYLES (font-size pin + KaTeX display-margin reset) are
+ * scoped to these hosts — a host that re-lays out label HTML without one of
+ * the selectors measures labels differently from the layout Mermaid baked
+ * into its node geometry. The hosts are:
+ *
+ * - `.mermaid-block` — the on-screen diagrams and the print clone.
+ * - `body > div[id^="dmmd-"]` — Mermaid's pre-render temp container, where
+ *   Mermaid measures each label's clip box.
+ * - `.${LABEL_HOST_CLASS}` — the export/print label conversion host
+ *   (`convertForeignObjectLabels` in fo-labels.ts), which re-lays out label
+ *   HTML a third time to measure the text/media it substitutes for the
+ *   `<foreignObject>`.
+ */
+export const LABEL_HOST_CLASS = "mermaid-label-host";
+
+/**
+ * The label-host rules scoped to `LABEL_HOST_CLASS` alone, for consumers
+ * that cannot rely on MERMAID_STYLES being injected (the conversion host
+ * injects these itself). Keep the rule bodies identical to the
+ * corresponding MERMAID_STYLES rules.
+ */
+export const LABEL_HOST_RULES = `
+      .${LABEL_HOST_CLASS} svg foreignObject > div {
+        font-size: ${MERMAID_FONT_SIZE};
+      }
+      .${LABEL_HOST_CLASS} svg foreignObject .katex-display {
+        margin: 0;
+      }
+`;
+
 export const MERMAID_STYLES = `
       .mermaid-block {
         box-sizing: border-box;
@@ -64,9 +97,12 @@ export const MERMAID_STYLES = `
          must stay equal to MERMAID_FONT_SIZE, which renderer.ts also pins as
          themeVariables.fontSize for the diagram root rule. The second host is
          Mermaid's pre-render temp container (render id "mmd-N" mirrors as
-         "div#dmmd-N"), which is where the measurement happens. */
+         "div#dmmd-N"), which is where the measurement happens; the third is
+         the export/print label conversion host (see LABEL_HOST_CLASS), which
+         re-lays out the same label HTML to measure it. */
       .mermaid-block svg foreignObject > div,
-      body > div[id^="dmmd-"] svg foreignObject > div {
+      body > div[id^="dmmd-"] svg foreignObject > div,
+      .${LABEL_HOST_CLASS} svg foreignObject > div {
         font-size: ${MERMAID_FONT_SIZE};
       }
       /* KaTeX's display wrapper carries \`margin: 1em 0\` — right for math
@@ -79,9 +115,14 @@ export const MERMAID_STYLES = `
          rasterized to <img> by math-labels.ts after the render (WebKit
          paints positioned elements inside foreignObject at untransformed
          coordinates), so the reset is what the replacement image's tight
-         box matches. */
+         box matches. The conversion host (third selector) must get the
+         reset too: it re-measures the label HTML to place the exported
+         formula image, and unreset margins shift every display formula
+         1em (one label row) below where the viewer — and Mermaid's baked
+         node geometry — put it. */
       .mermaid-block svg foreignObject .katex-display,
-      body > div[id^="dmmd-"] svg foreignObject .katex-display {
+      body > div[id^="dmmd-"] svg foreignObject .katex-display,
+      .${LABEL_HOST_CLASS} svg foreignObject .katex-display {
         margin: 0;
       }
       /* Inner wrapper so the SVG is not a direct flex item. WebKitGTK does not

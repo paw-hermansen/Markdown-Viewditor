@@ -6,6 +6,7 @@ import type {
   ExportContext,
   OptionGroup,
 } from "../types";
+import { initPdfMode, usesCapturePdf } from "../pdf-mode";
 import { fileState } from "$lib/stores/file.svelte";
 import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
 import { scaleWideMathForPrint } from "../math-fit";
@@ -14,13 +15,21 @@ import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
- * the print container, then on Linux/Windows calls `window.print()` (the
- * user picks "Save as PDF" in the browser dialog) and on macOS calls
- * `invoke('create_pdf', …)`, which runs WKWebView's
- * `createPDFWithConfiguration` — an async capture of the laid-out page that
- * produces vector output. The macOS capture has no paper size and no
- * pagination: one page per capture rect (see `PrintLayout` and the A4
- * geometry notes below).
+ * the print container and then hands it to the platform's output route (see
+ * `pdf-mode.ts`):
+ *   - Linux/Windows (and macOS 15+): the system print dialog —
+ *     `window.print()` on Linux/Windows, and on macOS `invoke('print_webview')`
+ *     (WKWebView has no JS `window.print()`; Rust drives the same
+ *     NSPrintPanel through `printOperationWithPrintInfo`). The user prints or
+ *     picks "Save as PDF" in the dialog themselves; the output is paginated
+ *     to the paper size.
+ *   - macOS < 15: `invoke('create_pdf', …)`, which runs WKWebView's
+ *     `createPDFWithConfiguration` — an async capture of the laid-out page
+ *     that produces vector output. The capture has no paper size and no
+ *     pagination: one page per capture rect (see `PrintLayout` and the A4
+ *     geometry notes below). Kept only as the legacy fallback; the WKWebView
+ *     print operation used to deadlock/blank-page on older macOS (see the
+ *     Print/PDF Fidelity Contract in AGENTS.md).
  *
  * Fidelity contract (see also the export section in app.css): the print
  * container carries the `.viewer-content` class — and in theme mode the
@@ -35,14 +44,16 @@ import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
  * SVG (font-size inside `<foreignObject>` gets the zoom factor applied
  * twice — webkit.org/show_bug.cgi?id=279041 — and SVG geometry/markers
  * distort under zoom on older WebKit):
- *   - Linux/Windows print through the print dialog, which needs
- *     layout-affecting scaling to paginate the clone across A4 pages →
- *     CSS `zoom`.
- *   - macOS captures one page sized to the capture rect we pass to
+ *   - Linux/Windows and macOS 15+ print through the print dialog, which
+ *     needs layout-affecting scaling to paginate the clone across A4 pages →
+ *     CSS `zoom`. On macOS the diagrams are additionally swapped for their
+ *     foreignObject-free text-label variant (see below) so the zoom can
+ *     never hit WebKit's foreignObject scaling bug.
+ *   - macOS < 15 captures one page sized to the capture rect we pass to
  *     `createPDFWithConfiguration` (1 CSS px = 1 PDF pt) → a paint-time
  *     `transform: scale()` inside a sized wrapper, which leaves the SVG
  *     geometry untouched. The scale targets the A4 printable width in
- *     points, so the PDF's physical scale matches the Linux/Windows A4
+ *     points, so the PDF's physical scale matches the print-dialog A4
  *     output. Diagrams are additionally swapped for their
  *     foreignObject-free text-label variant (`prepareMermaidForPrint`)
  *     before the capture.
@@ -96,13 +107,13 @@ export interface PrintLayout {
   scale: number;
   /**
    * How the scale is applied to the clone:
-   * - "zoom" — CSS `zoom` on the clone (Linux/Windows print path). Zoom is
-   *   layout-affecting, which is what lets the print engine paginate the
-   *   clone across A4 pages.
+   * - "zoom" — CSS `zoom` on the clone (the print-dialog path: Linux/Windows
+   *   and macOS 15+). Zoom is layout-affecting, which is what lets the print
+   *   engine paginate the clone across A4 pages.
    * - "transform" — paint-time `transform: scale()` on the clone inside a
-   *   sized `.print-scaler` wrapper (macOS capture path). Layout still
-   *   happens at the un-scaled `layoutWidthPx`, so wrapping matches the
-   *   viewer exactly, but no SVG is laid out under CSS `zoom`.
+   *   sized `.print-scaler` wrapper (the macOS < 15 capture path). Layout
+   *   still happens at the un-scaled `layoutWidthPx`, so wrapping matches
+   *   the viewer exactly, but no SVG is laid out under CSS `zoom`.
    */
   scaleMode: "zoom" | "transform";
 }
@@ -459,27 +470,31 @@ export async function exportPdf(
   fileName: string,
   viewerContentElement?: HTMLElement,
 ): Promise<ExportResult> {
+  // Resolve the output route first: macOS < 15 keeps the legacy capture,
+  // everything else goes through the system print dialog.
+  await initPdfMode();
+  const useCapture = usesCapturePdf();
   const layoutWidthPx = computeViewerLayoutWidth(viewerContentElement);
-  // Both platforms scale the laid-out width onto the A4 printable width —
-  // macOS in PDF points (1 CSS px = 1 pt in the capture, so the PDF's
-  // physical scale matches the A4 print output), Linux/Windows in print CSS
-  // px — so wrapping still happens at the viewer's 800px column on both.
-  const targetWidthPx = isMacOS
+  // Both routes scale the laid-out width onto the A4 printable width —
+  // the capture in PDF points (1 CSS px = 1 pt in the capture, so the PDF's
+  // physical scale matches the A4 print output), the print dialog in print
+  // CSS px — so wrapping still happens at the viewer's 800px column on all.
+  const targetWidthPx = useCapture
     ? PRINT_CONTENT_WIDTH_PT
     : PRINT_CONTENT_WIDTH_PX;
   const layout: PrintLayout = {
     layoutWidthPx,
     scale: targetWidthPx / layoutWidthPx,
-    // The macOS capture lays the SVGs under a paint-time transform (WebKit's
+    // The capture lays the SVGs under a paint-time transform (WebKit's
     // CSS `zoom` mis-scales inline SVG); the print path needs zoom's
     // layout-affecting scaling so the print engine paginates the clone.
-    scaleMode: isMacOS ? "transform" : "zoom",
+    scaleMode: useCapture ? "transform" : "zoom",
   };
   const handle = buildPrintContainer(viewerHtml, layout, viewerContentElement);
 
   try {
     let savePath: string | null = null;
-    if (isMacOS) {
+    if (useCapture) {
       const defaultName = fileName
         ? fileName.replace(/\.[^.]+$/, "") + ".pdf"
         : "Untitled.pdf";
@@ -498,10 +513,11 @@ export async function exportPdf(
     // optional chaining only guards non-browser test environments.)
     await document.fonts?.ready;
 
-    // macOS: swap the Mermaid diagrams for their foreignObject-free
-    // text-label variant before the capture (belt and braces alongside the
-    // transform scaling — WebKit mis-scales <foreignObject> content even
-    // under transforms on older releases).
+    // macOS (both routes): swap the Mermaid diagrams for their
+    // foreignObject-free text-label variant before the output (belt and
+    // braces alongside the transform scaling of the capture — WebKit
+    // mis-scales <foreignObject> content even under transforms on older
+    // releases, and the dialog path's CSS zoom hits the same bug).
     if (isMacOS) {
       await prepareMermaidForPrint(handle.printDiv);
     }
@@ -531,7 +547,7 @@ export async function exportPdf(
 
     handle.syncScaleHeight();
 
-    if (isMacOS && savePath) {
+    if (useCapture && savePath) {
       // The capture paginates the full document from its top, so make sure
       // the live view isn't scrolled.
       window.scrollTo(0, 0);
@@ -540,7 +556,7 @@ export async function exportPdf(
       // constrained to it by beginPrint()) and the full document height, so
       // the result is exactly one A4-wide page with the content column
       // centered at 10mm margins — the same physical scale as the
-      // Linux/Windows A4 output.
+      // print-dialog A4 output.
       const captureHeight = Math.ceil(document.documentElement.scrollHeight);
       await invoke("create_pdf", {
         savePath,
@@ -549,9 +565,17 @@ export async function exportPdf(
       });
       return { savedPath: savePath, warnings: [] };
     }
-    if (!isMacOS) {
-      await printAndWaitForCompletion();
-      return { warnings: [] };
+    if (!useCapture) {
+      if (isMacOS) {
+        // macOS 15+: WKWebView has no JS window.print() (silent no-op), so
+        // Rust drives the system print panel instead. The command resolves
+        // when the print operation finishes — printed, saved as PDF, or
+        // cancelled — so the clone outlives the capture without the
+        // focus/timer heuristics the window.print() path needs.
+        await invoke("print_webview");
+      } else {
+        await printAndWaitForCompletion();
+      }
     }
     return { warnings: [] };
   } finally {
@@ -582,7 +606,11 @@ export function pdfOptionGroups(ctx: ExportContext): OptionGroup[] {
 
 export const pdfExporter: Exporter = {
   id: "pdf",
-  label: isMacOS ? "Export as PDF" : "Export as PDF (Print…)",
+  // Read lazily: the mode is resolved asynchronously at app startup (the
+  // macOS version probe), after this module may already have been imported.
+  get label() {
+    return usesCapturePdf() ? "Export as PDF" : "Export as PDF (Print…)";
+  },
   description: "Vector document",
   extension: "pdf",
   themeCapable: true,

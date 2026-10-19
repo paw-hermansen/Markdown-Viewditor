@@ -4,6 +4,7 @@
   import { getThemeLabel } from '$lib/utils/themes';
   import { viewerState } from '$lib/stores/viewer.svelte';
   import { settingsState, updateSetting, exportConfirmSettingLabel } from '$lib/stores/settings.svelte';
+  import { usesCapturePdf } from '$lib/export/pdf-mode';
   import { modLabel } from '$lib/utils/keyboard';
   import { listExporters } from '$lib/export/registry.svelte';
 
@@ -14,8 +15,9 @@
 
   let { onPrint, onExport }: Props = $props();
 
-  const isMacOS = navigator.userAgent.includes('Macintosh');
-  const confirmSettingLabel = exportConfirmSettingLabel(isMacOS);
+  // Capture-only platforms (macOS < 15) export PDFs but have no print entry.
+  const exportOnly = usesCapturePdf();
+  const confirmSettingLabel = exportConfirmSettingLabel(exportOnly);
 
   const themeLabel = $derived(getThemeLabel(viewerState.theme));
 
@@ -72,7 +74,7 @@
       </DropdownButton>
     {/if}
 
-    {#if !isMacOS && onPrint}
+    {#if !exportOnly && onPrint}
       <button class="toolbar-button" onclick={() => onPrint?.()} title={modLabel('Print / PDF (Ctrl+P)')} aria-label="Print / PDF">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="6 9 6 2 18 2 18 9" />

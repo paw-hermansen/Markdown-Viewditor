@@ -9,7 +9,9 @@ use tauri::Manager;
 use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, opened_urls, is_file_writable, list_files, read_file, read_file_as_base64, write_file, write_file_binary};
 use commands::print::{create_pdf, macos_major_version, print_webview};
 use commands::svg::rasterize_svg;
-use commands::window::{force_close_window, save_window_state, save_window_state_debounced};
+use commands::window::{
+    flush_window_state, force_close_window, save_window_state, save_window_state_debounced,
+};
 use state::{OpenedUrls, WindowState};
 
 #[cfg(target_os = "linux")]
@@ -171,8 +173,17 @@ pub fn run() {
         if let tauri::RunEvent::Opened { urls } = _event {
             use tauri::Emitter;
             let paths: Vec<String> = urls.iter().map(url_to_path).collect();
-            _app.state::<OpenedUrls>().0.lock().unwrap().extend(paths.clone());
+            _app.state::<OpenedUrls>()
+                .0
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .extend(paths.clone());
             let _ = _app.emit("open-file", paths);
+        }
+        if let tauri::RunEvent::Exit = _event {
+            // Settle any debounced window-state write on the way out; the
+            // trailing timer would otherwise lose the final geometry.
+            flush_window_state(_app);
         }
     });
 }

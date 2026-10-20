@@ -367,6 +367,26 @@ function escWithSpaces(s: string | null | undefined): string {
   return `<text:s text:c="${leadingCount}"/>${esc(rest)}`;
 }
 
+/* ─────────────────────── HTML tag matching ───────────────────────────── */
+
+/**
+ * Whether `lower` (a lowercased, trimmed `html_inline` fragment) is the
+ * opening tag `name` in any of its common spellings: `<x>`, `<x >`,
+ * `<x/>`, `<x />`.
+ *
+ * The inline-tag chain used to spell these out per tag — and once spelled
+ * `<sub>` twice where a variant was meant, leaving every spelling but the
+ * bare one unrecognized.
+ */
+function isOpeningTag(lower: string, name: string): boolean {
+  return (
+    lower === `<${name}>` ||
+    lower === `<${name} >` ||
+    lower === `<${name}/>` ||
+    lower === `<${name} />`
+  );
+}
+
 /* ─────────────────────── hljs → ODF span conversion ──────────────────── */
 
 interface HljsSpan {
@@ -1746,13 +1766,13 @@ async function buildDocument(
               break;
             }
           }
-          if (lower === "<br>" || lower === "<br/>" || lower === "<br />") {
+          if (isOpeningTag(lower, "br")) {
             xml += "<text:line-break/>";
-          } else if (lower === "<sub>" || lower === "<sub>") {
+          } else if (isOpeningTag(lower, "sub")) {
             subActive = true;
           } else if (lower === "</sub>") {
             subActive = false;
-          } else if (lower === "<sup>" || lower === "<sup>") {
+          } else if (isOpeningTag(lower, "sup")) {
             superActive = true;
           } else if (lower === "</sup>") {
             superActive = false;

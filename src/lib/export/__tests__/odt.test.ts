@@ -397,6 +397,45 @@ describe("odtExporter", () => {
     expect(xml).toContain('text:style-name="Char_BIS"');
   });
 
+  it("subscript toggles the sub character style", async () => {
+    const xml = await getContentXml("H<sub>2</sub>O");
+    expect(xml).toMatch(
+      /<text:span text:style-name="Char_P_sub">2<\/text:span>/,
+    );
+  });
+
+  it("superscript toggles the sup character style", async () => {
+    const xml = await getContentXml("x<sup>2</sup>");
+    expect(xml).toMatch(
+      /<text:span text:style-name="Char_P_sup">2<\/text:span>/,
+    );
+  });
+
+  it.each(["<sub/>", "<sub />", "<sub >"])(
+    "recognizes the %s spelling of subscript",
+    async (tag) => {
+      const xml = await getContentXml(`H${tag}2</sub>O`);
+      expect(xml).toContain('text:style-name="Char_P_sub"');
+    },
+  );
+
+  it.each(["<sup/>", "<sup />", "<sup >"])(
+    "recognizes the %s spelling of superscript",
+    async (tag) => {
+      const xml = await getContentXml(`x${tag}2</sup>`);
+      expect(xml).toContain('text:style-name="Char_P_sup"');
+    },
+  );
+
+  it("ends the subscript style at the closing tag", async () => {
+    // The trailing "O" must sit outside the sub-styled span.
+    const xml = await getContentXml("H<sub>2</sub>O");
+    expect(xml).toMatch(
+      /<text:span text:style-name="Char_P_sub">2<\/text:span>O/,
+    );
+    expect(xml).not.toMatch(/Char_P_sub[^>]*>[^<]*O/);
+  });
+
   it("code inline uses T4 auto-style", async () => {
     const xml = await getContentXml("use `console.log`");
     expect(xml).toContain('text:style-name="T4"');

@@ -1638,6 +1638,96 @@ describe("ODT rasterization options", () => {
     expect(files.some((f) => f.endsWith(".png"))).toBe(false);
   });
 
+  it("embeds a repeated image once and reads it from disk once", async () => {
+    // The `images` cache is keyed by the image's *source* so a second
+    // reference to the same picture reuses the resolved entry instead of
+    // re-embedding it and re-reading it over IPC.
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB" +
+      "Nl7BcQAAAABJRU5ErkJggg==";
+    fileState.currentFile = "/tmp/example.md";
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { invoke } = await import("@tauri-apps/api/core");
+      vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+      vi.mocked(invoke).mockReset();
+      vi.mocked(invoke).mockImplementation(async (cmd) =>
+        cmd === "read_file_as_base64" ? png : undefined,
+      );
+      await runOdtExport(`![a](./same.png) ![b](./same.png)`);
+      const reads = vi
+        .mocked(invoke)
+        .mock.calls.filter((c) => c[0] === "read_file_as_base64");
+      expect(reads).toHaveLength(1);
+      const writeCall = vi
+        .mocked(invoke)
+        .mock.calls.find((c) => c[0] === "write_file_binary");
+      const zip = await JSZip.loadAsync(
+        new Uint8Array((writeCall![1] as { content: number[] }).content),
+      );
+      expect(
+        Object.keys(zip.files).filter(
+          (f) => f.startsWith("Pictures/") && !f.endsWith("/"),
+        ),
+      ).toEqual(["Pictures/image1.png"]);
+      // Both images point at that one entry.
+      const xml = await zip.file("content.xml")!.async("text");
+      const hrefs = [...xml.matchAll(/xlink:href="(Pictures\/[^"]+)"/g)].map(
+        (m) => m[1],
+      );
+      expect(hrefs).toEqual(["Pictures/image1.png", "Pictures/image1.png"]);
+    } finally {
+      fileState.currentFile = null;
+    }
+  });
+
+  it("reuses one rasterized PNG for repeated references to the same SVG", async () => {
+    // Rasterizing an SVG replaces its cache entry with the PNG, so the
+    // second reference must reuse that PNG rather than rasterizing again.
+    const svg =
+      '<svg width="40" height="20" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="40" height="20" fill="red"/></svg>';
+    fileState.currentFile = "/tmp/example.md";
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { invoke } = await import("@tauri-apps/api/core");
+      vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+      vi.mocked(invoke).mockReset();
+      vi.mocked(invoke).mockImplementation(async (cmd) =>
+        cmd === "read_file_as_base64" ? btoa(svg) : undefined,
+      );
+      await runOdtExport(`![a](./same.svg) ![b](./same.svg)`, "test", {
+        "odt.rasterizeSvg": true,
+      });
+      const reads = vi
+        .mocked(invoke)
+        .mock.calls.filter((c) => c[0] === "read_file_as_base64");
+      expect(reads).toHaveLength(1);
+      expect(mockRasterizeSvg).toHaveBeenCalledTimes(1);
+      const writeCall = vi
+        .mocked(invoke)
+        .mock.calls.find((c) => c[0] === "write_file_binary");
+      const zip = await JSZip.loadAsync(
+        new Uint8Array((writeCall![1] as { content: number[] }).content),
+      );
+      const pictures = Object.keys(zip.files).filter(
+        (f) => f.startsWith("Pictures/") && !f.endsWith("/"),
+      );
+      // Exactly one raster, and no leftover vector SVG.
+      expect(pictures).toHaveLength(1);
+      expect(pictures[0]).toMatch(/^Pictures\/image\d+\.png$/);
+      // Both images point at that one raster.
+      const xml = await zip.file("content.xml")!.async("text");
+      const hrefs = [...xml.matchAll(/xlink:href="(Pictures\/[^"]+)"/g)].map(
+        (m) => m[1],
+      );
+      expect(hrefs).toHaveLength(2);
+      expect(hrefs[0]).toBe(hrefs[1]);
+    } finally {
+      fileState.currentFile = null;
+    }
+  });
+
   it("scales a wide formula's frame to fit the ODT page-content width", async () => {
     // A formula that returns 800px wide (wider than the 600px page)
     // should be scaled down proportionally.

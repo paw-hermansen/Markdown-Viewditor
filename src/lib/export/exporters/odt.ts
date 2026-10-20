@@ -679,6 +679,9 @@ async function resolveImage(
   imageCounter: { n: number },
   warnings: string[],
 ): Promise<string> {
+  // Keyed by source URL, not by the generated package name — that is what
+  // makes a second reference to the same picture a cache hit instead of a
+  // second embed plus a second IPC read.
   if (images.has(src)) return images.get(src)!.name;
 
   let bytes: Uint8Array | null = null;
@@ -749,7 +752,7 @@ async function resolveImage(
   const ext = extensionFromMime(mime);
   const name = `Pictures/image${imageCounter.n++}.${ext}`;
   const dims = sniffImageDimensions(bytes, mime, src, warnings);
-  images.set(name, {
+  images.set(src, {
     name,
     mime,
     data: bytes,
@@ -1182,6 +1185,12 @@ async function buildDocument(
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
 ): Promise<BuildResult> {
   const autoStyles: Map<string, string> = new Map();
+  // Package entries keyed by the image's *logical identity*: its source URL
+  // for images resolved from the document, or the generated package name for
+  // synthesized ones (math rasters, inline SVGs), which are unique by
+  // construction. Values carry the `Pictures/…` name actually written to the
+  // zip. Keying resolved images by source is what deduplicates repeated
+  // references; see `resolveImage`.
   const images = new Map<string, ResolvedImage>();
   const imageCounter = { n: 1 };
   const mathObjects: MathObject[] = [];
@@ -1288,9 +1297,14 @@ async function buildDocument(
     heightPx: number,
     srcLabel: string,
     graphicStyle = "fr1",
+    cacheKey?: string,
   ): string {
     const name = `Pictures/image${imageCounter.n++}.png`;
-    images.set(name, {
+    // `cacheKey` is the logical image identity (its markdown/HTML source) so
+    // a replacement raster supersedes the entry it replaces and later
+    // references reuse it. Without one, the image is synthesized and keyed
+    // by its own package name, which is unique by construction.
+    images.set(cacheKey ?? name, {
       name,
       mime: "image/png",
       data,
@@ -1337,6 +1351,7 @@ async function buildDocument(
     svgXml: string,
     dims: { width: number; height: number },
     srcLabel: string,
+    cacheKey?: string,
   ): Promise<string | null> {
     if (!rasterizeSvgFlag) return null;
     if (dims.width <= 0 || dims.height <= 0) {
@@ -1352,7 +1367,14 @@ async function buildDocument(
         dims.height,
         rasterScale,
       );
-      return addRasterImage(png, dims.width, dims.height, srcLabel);
+      return addRasterImage(
+        png,
+        dims.width,
+        dims.height,
+        srcLabel,
+        "fr1",
+        cacheKey,
+      );
     } catch (err) {
       warnings.push(
         `SVG ${srcLabel} rasterization failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -1540,7 +1562,7 @@ async function buildDocument(
             warnings,
           );
           if (resolvedSrc !== src) {
-            const img = images.get(resolvedSrc);
+            const img = images.get(src);
             // If rasterizeSvg is on and the resolved image is an SVG, swap
             // the vector file for a PNG raster.
             if (rasterizeSvgFlag && img && img.mime === "image/svg+xml") {
@@ -1548,12 +1570,13 @@ async function buildDocument(
                 new TextDecoder().decode(img.data),
                 { width: img.widthPx, height: img.heightPx },
                 `image(${src})`,
+                // Register the raster under the image's source key so it
+                // supersedes the vector entry (which must not be packaged
+                // unused) and later references reuse the same PNG.
+                src,
               );
               if (rasterized) {
                 xml += rasterized;
-                // resolveImage already added the SVG to `images`; drop it
-                // so it isn't packaged unused alongside its PNG raster.
-                images.delete(resolvedSrc);
                 break;
               }
               // Fall through to vector embed on rasterization failure.
@@ -1807,19 +1830,19 @@ async function buildDocument(
                 warnings,
               );
               if (resolvedSrc !== src) {
-                const img = images.get(resolvedSrc);
+                const img = images.get(src);
                 // Same rasterization branch as the markdown-image token.
                 if (rasterizeSvgFlag && img && img.mime === "image/svg+xml") {
                   const rasterized = await tryRasterizeSvg(
                     new TextDecoder().decode(img.data),
                     { width: img.widthPx, height: img.heightPx },
                     `html_img(${src})`,
+                    // Supersede the vector entry under the image's source
+                    // key (see the markdown-image branch).
+                    src,
                   );
                   if (rasterized) {
                     xml += rasterized;
-                    // Drop the eagerly-added SVG entry so it isn't
-                    // packaged unused alongside its PNG raster.
-                    images.delete(resolvedSrc);
                     break;
                   }
                 }

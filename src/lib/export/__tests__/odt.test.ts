@@ -1728,6 +1728,133 @@ describe("ODT rasterization options", () => {
     }
   });
 
+  it("sizes an <img> with a non-pixel width without dividing by 96", async () => {
+    // A length attribute is absolute: `2in` is 2 inches, not `2 / 96`. The
+    // proportional dimension is derived from the given one, so a unit mix-up
+    // here corrupts both axes.
+    const svg =
+      '<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="200" height="100"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const xml = await getContentXml(
+      `see <img src="${dataUri}" alt="a" width="2in"/>`,
+    );
+    expect(xml).toContain('svg:width="2.0000in"');
+    // 2in wide at a 2:1 aspect ratio is 1in tall.
+    expect(xml).toContain('svg:height="1.0000in"');
+    expect(xml).not.toContain("0.0208in");
+  });
+
+  it("sizes an <img> with a pixel width identically to an inch one", async () => {
+    // Regression guard: the pixel path must be unchanged by unit handling.
+    const svg =
+      '<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="200" height="100"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const xml = await getContentXml(
+      `see <img src="${dataUri}" alt="a" width="192px"/>`,
+    );
+    expect(xml).toContain('svg:width="2.0000in"');
+    expect(xml).toContain('svg:height="1.0000in"');
+  });
+
+  it("converts other absolute units when sizing an <img>", async () => {
+    const svg =
+      '<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="200" height="100"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    // 5.08cm = 2in; 144pt = 2in.
+    for (const [attr, expected] of [
+      ["5.08cm", "2.0000in"],
+      ["50.8mm", "2.0000in"],
+      ["144pt", "2.0000in"],
+    ] as const) {
+      const xml = await getContentXml(
+        `see <img src="${dataUri}" alt="a" width="${attr}"/>`,
+      );
+      expect(xml).toContain(`svg:width="${expected}"`);
+      expect(xml).toContain('svg:height="1.0000in"');
+    }
+  });
+
+  it("derives the missing axis from a lone <img> height", async () => {
+    // A single dimension sizes the other proportionally; a lone height must
+    // not leave the frame at its intrinsic width and a forced height, which
+    // stretches the picture.
+    const svg =
+      '<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="200" height="100"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const xml = await getContentXml(
+      `see <img src="${dataUri}" alt="a" height="1in"/>`,
+    );
+    expect(xml).toContain('svg:height="1.0000in"');
+    expect(xml).toContain('svg:width="2.0000in"');
+  });
+
+  it("omits an unsizable <img> dimension instead of emitting garbage", async () => {
+    // A percentage is relative, not absolute — there is no correct inch
+    // value to write, so the dimension is left to the consumer.
+    const svg =
+      '<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="200" height="100"/></svg>';
+    const dataUri = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const xml = await getContentXml(
+      `see <img src="${dataUri}" alt="a" width="50%"/>`,
+    );
+    expect(xml).not.toContain("svg:width");
+    expect(xml).not.toContain("svg:height");
+    // The image itself is still embedded.
+    expect(xml).toContain("<draw:image");
+  });
+
+  it("sizes a markdown image with non-pixel dimensions correctly", async () => {
+    // Same unit contract as the HTML path, for the `width`/`height`
+    // attributes a plugin may put on an image token. Built from a real PNG
+    // header so the aspect ratio (200x100) is what drives the missing axis.
+    const pngBytes = new Uint8Array(32);
+    pngBytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+    pngBytes.set([0, 0, 0, 200, 0, 0, 0, 100], 16); // width=200, height=100
+    const pngB64 = btoa(String.fromCharCode(...pngBytes));
+
+    fileState.currentFile = "/tmp/example.md";
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { invoke } = await import("@tauri-apps/api/core");
+      vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+      vi.mocked(invoke).mockReset();
+      vi.mocked(invoke).mockImplementation(async (cmd) =>
+        cmd === "read_file_as_base64" ? pngB64 : undefined,
+      );
+      const src = `![a](./pic.png)`;
+      const tokens = makeTokens(src);
+      const image = tokens
+        .flatMap((t) => t.children ?? [])
+        .find((t) => t.type === "image");
+      image!.attrSet("width", "2in");
+      const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
+      await odtExporter.export({
+        markdown: src,
+        html: md.render(src),
+        frontmatter: null,
+        fileName: "test",
+        tokens,
+      });
+      const writeCall = vi
+        .mocked(invoke)
+        .mock.calls.find((c) => c[0] === "write_file_binary");
+      const zip = await JSZip.loadAsync(
+        new Uint8Array((writeCall![1] as { content: number[] }).content),
+      );
+      const xml = await zip.file("content.xml")!.async("text");
+      expect(xml).toContain('svg:width="2.0000in"');
+      expect(xml).toContain('svg:height="1.0000in"');
+      expect(xml).not.toContain("0.0208in");
+    } finally {
+      fileState.currentFile = null;
+    }
+  });
+
   it("scales a wide formula's frame to fit the ODT page-content width", async () => {
     // A formula that returns 800px wide (wider than the 600px page)
     // should be scaled down proportionally.

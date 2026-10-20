@@ -510,6 +510,47 @@ function extensionFromMime(mime: string): string {
   }
 }
 
+/**
+ * Parse a CSS/HTML length attribute into inches, or `null` when it is not a
+ * length we can make absolute (`%`, `em`, …).
+ *
+ * Every `svg:width`/`svg:height` this exporter writes goes through here, so
+ * ODF always gets a real absolute unit. The proportional-dimension math
+ * especially needs this: it scales one given dimension by the image's aspect
+ * ratio, and reading `2in` as 192 pixels (`value / 96` regardless of unit)
+ * produced a 0.02in image.
+ */
+function cssLengthToInches(raw: string): number | null {
+  const match = raw.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+))([a-z%]*)$/i);
+  if (!match) return null;
+  const value = parseFloat(match[1]);
+  if (!Number.isFinite(value)) return null;
+  switch (match[2].toLowerCase()) {
+    case "":
+      // HTML length attributes: a bare number means pixels.
+      return value / 96;
+    case "px":
+      return value / 96;
+    case "in":
+      return value;
+    case "cm":
+      return value / 2.54;
+    case "mm":
+      return value / 25.4;
+    case "pt":
+      return value / 72;
+    case "pc":
+      return value / 6;
+    default:
+      return null;
+  }
+}
+
+/** Format an inch length for an `svg:width` / `svg:height` attribute. */
+function inchesAttr(value: number): string {
+  return `${value.toFixed(4)}in`;
+}
+
 interface ResolvedImage {
   name: string;
   mime: string;
@@ -1582,18 +1623,16 @@ async function buildDocument(
               // Fall through to vector embed on rasterization failure.
             }
             let sizeAttrs = "";
-            // Calculate dimensions from pixel size at 96 DPI (CSS reference)
-            if (widthAttr) {
-              const w = widthAttr.endsWith("px")
-                ? (parseFloat(widthAttr) / 96).toFixed(4) + "in"
-                : widthAttr;
-              sizeAttrs += ` svg:width="${esc(w)}"`;
+            // Explicit dimensions, converted to the absolute unit ODF wants.
+            // A dimension we cannot make absolute (a percentage, `em`, …) is
+            // simply left out rather than written as a length it is not.
+            const widthIn = widthAttr ? cssLengthToInches(widthAttr) : null;
+            const heightIn = heightAttr ? cssLengthToInches(heightAttr) : null;
+            if (widthIn !== null) {
+              sizeAttrs += ` svg:width="${inchesAttr(widthIn)}"`;
             }
-            if (heightAttr) {
-              const h = heightAttr.endsWith("px")
-                ? (parseFloat(heightAttr) / 96).toFixed(4) + "in"
-                : heightAttr;
-              sizeAttrs += ` svg:height="${esc(h)}"`;
+            if (heightIn !== null) {
+              sizeAttrs += ` svg:height="${inchesAttr(heightIn)}"`;
             }
             // If no explicit size, use image pixel dimensions at 96 DPI
             if (
@@ -1603,35 +1642,28 @@ async function buildDocument(
               img.widthPx > 0 &&
               img.heightPx > 0
             ) {
-              sizeAttrs = ` svg:width="${(img.widthPx / 96).toFixed(4)}in" svg:height="${(img.heightPx / 96).toFixed(4)}in"`;
+              sizeAttrs = ` svg:width="${inchesAttr(img.widthPx / 96)}" svg:height="${inchesAttr(img.heightPx / 96)}"`;
             }
-            // Proportional calculation when only one dimension given
+            // Proportional calculation when only one dimension is usable
             if (
-              widthAttr &&
-              !heightAttr &&
+              widthIn !== null &&
+              heightIn === null &&
               img &&
               img.widthPx > 0 &&
               img.heightPx > 0
             ) {
-              const widthIn =
-                parseFloat(widthAttr.endsWith("px") ? widthAttr : widthAttr) /
-                96;
               const ratio = img.heightPx / img.widthPx;
-              sizeAttrs += ` svg:height="${(widthIn * ratio).toFixed(4)}in"`;
+              sizeAttrs += ` svg:height="${inchesAttr(widthIn * ratio)}"`;
             }
             if (
-              !widthAttr &&
-              heightAttr &&
+              widthIn === null &&
+              heightIn !== null &&
               img &&
               img.widthPx > 0 &&
               img.heightPx > 0
             ) {
-              const heightIn =
-                parseFloat(
-                  heightAttr.endsWith("px") ? heightAttr : heightAttr,
-                ) / 96;
               const ratio = img.widthPx / img.heightPx;
-              sizeAttrs = ` svg:width="${(heightIn * ratio).toFixed(4)}in"${sizeAttrs}`;
+              sizeAttrs = ` svg:width="${inchesAttr(heightIn * ratio)}"${sizeAttrs}`;
             }
             const mimeAttr = img ? ` draw:mime-type="${esc(img.mime)}"` : "";
             xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
@@ -1847,29 +1879,41 @@ async function buildDocument(
                   }
                 }
                 let sizeAttrs = "";
-                if (widthMatch) {
-                  const w = widthMatch[1].endsWith("px")
-                    ? (parseFloat(widthMatch[1]) / 96).toFixed(4) + "in"
-                    : widthMatch[1];
-                  sizeAttrs += ` svg:width="${esc(w)}"`;
+                // Same unit contract as the markdown-image branch: absolute
+                // units only, and one given dimension sizes the other
+                // proportionally so the image is never stretched.
+                const widthIn = widthMatch
+                  ? cssLengthToInches(widthMatch[1])
+                  : null;
+                const heightIn = heightMatch
+                  ? cssLengthToInches(heightMatch[1])
+                  : null;
+                if (widthIn !== null) {
+                  sizeAttrs += ` svg:width="${inchesAttr(widthIn)}"`;
                 }
-                if (heightMatch) {
-                  const h = heightMatch[1].endsWith("px")
-                    ? (parseFloat(heightMatch[1]) / 96).toFixed(4) + "in"
-                    : heightMatch[1];
-                  sizeAttrs += ` svg:height="${esc(h)}"`;
+                if (heightIn !== null) {
+                  sizeAttrs += ` svg:height="${inchesAttr(heightIn)}"`;
                 }
                 // If only width given, calculate proportional height
                 if (
-                  widthMatch &&
-                  !heightMatch &&
+                  widthIn !== null &&
+                  heightIn === null &&
                   img &&
                   img.widthPx > 0 &&
                   img.heightPx > 0
                 ) {
-                  const widthIn = parseFloat(widthMatch[1]) / 96;
                   const ratio = img.heightPx / img.widthPx;
-                  sizeAttrs += ` svg:height="${(widthIn * ratio).toFixed(4)}in"`;
+                  sizeAttrs += ` svg:height="${inchesAttr(widthIn * ratio)}"`;
+                }
+                if (
+                  widthIn === null &&
+                  heightIn !== null &&
+                  img &&
+                  img.widthPx > 0 &&
+                  img.heightPx > 0
+                ) {
+                  const ratio = img.widthPx / img.heightPx;
+                  sizeAttrs = ` svg:width="${inchesAttr(heightIn * ratio)}"${sizeAttrs}`;
                 }
                 const mimeAttr = img
                   ? ` draw:mime-type="${esc(img.mime)}"`

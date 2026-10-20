@@ -511,6 +511,44 @@ must see live KaTeX to convert labels to SVG text + `<image>`. Any new
 Mermaid render path that feeds the viewer has to go through the pass.
 Regression: `__tests__/math-labels*.test.ts`, TEST-PLAN 6.47–6.52.
 
+### Mermaid Label Math Paint (KaTeX glyph paths)
+
+Mermaid's theme CSS hard-codes the paint of KaTeX's SVG glyph paths inside
+node labels — `#mmd-N .node .katex path { fill: #000; stroke: #000;
+stroke-width: 1px }` (flowchart styles; the agentflow copy of the rule uses
+`${nodeTextColor || textColor}` instead), on top of the generic
+`#mmd-N .node … path { fill: mainBkg; … }` node-shape rule it escapes from.
+Label text is HTML and inherits `color`, but those id-scoped rules outrank
+KaTeX's `.katex svg { fill: currentColor }` and its inheritance, so every
+glyph KaTeX draws as a `<path>` — the `\sqrt` radical + vinculum, wide
+accents (`\widehat`, `\widetilde`, `\overline`, `\overbrace`,
+`\underbrace`), extensible arrows (`\overrightarrow`, `\xleftarrow`, …) —
+comes out pure black: invisible in light themes (black ink on a light
+background), "darker than the dark background" in dark ones. The added
+stroke (Mermaid's edge gradient in some looks) also fattens the glyph
+outlines. Everything else in math — letters, operators, fraction boxes,
+delimiter glyphs — is font/HTML based and unaffected.
+
+`pinLabelMathPaint()` (`label-paint.ts`) appends `fill: currentColor;
+stroke: none` (exactly KaTeX's own CSS contract) as inline `style` to every
+`<path>` under a `.katex` wrapper inside `<foreignObject>`: inline style
+beats any stylesheet rule (Mermaid's carry no `!important`), and
+`currentColor` resolves to the label's actual text color at paint time —
+theme-proof, unlike any fixed color. Mermaid's own diagram paths and label
+icons are deliberately untouched. It runs at cache-fill time and in the
+export/print render paths (renderer.ts), next to `normalizeSvgTextOffsets`
+/ `clampNegativeStrokeWidths`, and BEFORE `rasterizeMermaidLabelMath` /
+`convertForeignObjectLabels` — those capture label markup to PNG and bake
+in whatever paint is in effect (that capture is where the black square root
+shipped to users).
+
+Regression: `__tests__/label-paint.test.ts`; the upgrade-contract suite
+pins that Mermaid still emits the black rule ("no longer paints …" there
+means the pass may be obsolete). Upstream, the hard-coded `#000` is an
+inconsistency (agentflow got the theme-aware variant, flowchart did not) —
+worth an issue/PR, but keep the pin regardless: it also removes the stroke
+and follows custom theme colors Mermaid's theme variables don't know.
+
 ### Mermaid Edge Stroke Width (negative `edge-depth-N` ramp)
 
 Mermaid sizes mindmap/timeline/kanban edges from a per-depth ramp
@@ -596,8 +634,9 @@ The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
 its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
 label offsets plus translate-based text placement (the `text-offsets.ts`
 rewrites), its negative `edge-depth-N` stroke-width ramp (the `svg-css.ts`
-clamp) and the `gantt.useWidth` config knob (the Gantt width pin). The
-`upgrade-contract.test.ts` suites in both extensions render _REAL_ library
+clamp), the `gantt.useWidth` config knob (the Gantt width pin) and the
+hard-coded black fill on label KaTeX glyph paths (the `label-paint.ts` pin).
+The `upgrade-contract.test.ts` suites in both extensions render _REAL_ library
 output and fail when those internals change shape. Read the
 failure message: "lost its target / no longer emits" means either upstream
 changed the mechanism (extend the fix) or dropped it (the compensation may be

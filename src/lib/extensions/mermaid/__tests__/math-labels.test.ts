@@ -7,6 +7,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { rasterizeMermaidLabelMath } from "../math-labels";
+import { MERMAID_FONT_SIZE } from "../styles";
 
 const DATA_URI = "data:image/png;base64,AAAA";
 
@@ -35,6 +36,17 @@ const rasterize = async () => ({
   widthPx: 18.8,
   heightPx: 24,
 });
+
+/**
+ * Walk up from a formula element to the off-screen host the pass re-lays
+ * the label out in (the only `position: fixed` ancestor).
+ */
+function measurementHost(el: HTMLElement): HTMLElement {
+  let node: HTMLElement | null = el;
+  while (node && node.style.position !== "fixed") node = node.parentElement;
+  if (!node) throw new Error("measurement host not found");
+  return node;
+}
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -66,6 +78,46 @@ describe("mermaid label math rasterization", () => {
 
     expect(out).toContain("width:18.8px;");
     expect(out).toContain("height:24px;");
+  });
+
+  it("pins the measurement host to the Mermaid label font size", async () => {
+    // Formulas must measure and capture at the size they occupy in
+    // Mermaid's baked label slot (MERMAID_FONT_SIZE). The viewer's font
+    // context supplies family and colour — never the size, which would
+    // quietly rasterize every formula at the wrong scale.
+    const viewer = document.createElement("div");
+    viewer.id = "viewer-content";
+    viewer.style.fontSize = "14px";
+    document.body.appendChild(viewer);
+
+    const hosts: HTMLElement[] = [];
+    await rasterizeMermaidLabelMath(svgWithLabel(katexDisplay()), {
+      measure: (el) => {
+        hosts.push(measurementHost(el));
+        return { widthPx: 18.8, heightPx: 24 };
+      },
+      rasterize,
+    });
+
+    expect(hosts).toHaveLength(1);
+    expect(getComputedStyle(hosts[0]).fontSize).toBe(MERMAID_FONT_SIZE);
+    // Sanity: the viewer context really is applied around the pin, so the
+    // assertion above is meaningful rather than vacuous.
+    expect(getComputedStyle(hosts[0]).fontFamily).not.toBe("");
+  });
+
+  it("keeps the font-size pin even when no viewer element exists", async () => {
+    const hosts: HTMLElement[] = [];
+    await rasterizeMermaidLabelMath(svgWithLabel(katexDisplay()), {
+      measure: (el) => {
+        hosts.push(measurementHost(el));
+        return { widthPx: 18.8, heightPx: 24 };
+      },
+      rasterize,
+    });
+
+    expect(hosts).toHaveLength(1);
+    expect(getComputedStyle(hosts[0]).fontSize).toBe(MERMAID_FONT_SIZE);
   });
 
   it("replaces only the outermost formula box", async () => {

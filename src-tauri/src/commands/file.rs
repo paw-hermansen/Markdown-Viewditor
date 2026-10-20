@@ -73,6 +73,23 @@ pub async fn is_file_writable(path: String) -> Result<bool, AppError> {
     Ok(true)
 }
 
+/// `EXDEV` on Unix, `ERROR_NOT_SAME_DEVICE` on Windows.
+///
+/// `rename(2)` refuses to move a file across devices, so the atomic write
+/// falls back to copy+delete there. The code is 18 on Unix but 17 on
+/// Windows: hardcoding 18 silently disabled the fallback on Windows, where
+/// a write across drives failed instead of degrading to a non-atomic one.
+#[cfg(unix)]
+const CROSS_DEVICE: i32 = 18;
+#[cfg(windows)]
+const CROSS_DEVICE: i32 = 17;
+
+/// Whether `err` is the "source and destination are on different devices"
+/// failure that makes an atomic rename impossible.
+fn is_cross_device(err: &std::io::Error) -> bool {
+    err.raw_os_error() == Some(CROSS_DEVICE)
+}
+
 /// Atomically write `content` to `path`, leaving a `<path>.bak` backup of the
 /// previous version when it existed. A pre-write read-only check emits a typed
 /// `AppError::ReadOnly` so the frontend can route to Save As.
@@ -104,14 +121,13 @@ pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
         Ok(()) => Ok(()),
         Err(e) => {
             let _ = fs::remove_file(&tmp);
-            match e.raw_os_error() {
-                // EXDEV (cross-device): fall back to copy+delete (non-atomic)
-                // so the write still succeeds on unusual mount layouts.
-                Some(18) => {
-                    fs::write(p, &content)?;
-                    Ok(())
-                }
-                _ => Err(AppError::Io(e)),
+            if is_cross_device(&e) {
+                // Cross-device: fall back to copy+delete (non-atomic) so the
+                // write still succeeds on unusual mount layouts.
+                fs::write(p, &content)?;
+                Ok(())
+            } else {
+                Err(AppError::Io(e))
             }
         }
     }
@@ -147,12 +163,12 @@ pub async fn write_file_binary(path: String, content: Vec<u8>) -> Result<(), App
         Ok(()) => Ok(()),
         Err(e) => {
             let _ = fs::remove_file(&tmp);
-            match e.raw_os_error() {
-                Some(18) => {
-                    fs::write(p, &content)?;
-                    Ok(())
-                }
-                _ => Err(AppError::Io(e)),
+            if is_cross_device(&e) {
+                // Cross-device: same non-atomic fallback as `write_file`.
+                fs::write(p, &content)?;
+                Ok(())
+            } else {
+                Err(AppError::Io(e))
             }
         }
     }
@@ -676,5 +692,47 @@ mod tests {
     async fn delete_file_returns_error_for_missing_file() {
         let result = delete_file("/nonexistent/file.md".to_string()).await;
         assert!(result.is_err());
+    }
+
+    // --- cross-device rename fallback ---
+
+    #[test]
+    fn cross_device_error_code_matches_the_platform() {
+        // The regression this pins: the fallback used to be gated on the
+        // literal 18 (Unix `EXDEV`), which silently disabled it on Windows,
+        // where the code is 17 (`ERROR_NOT_SAME_DEVICE`) — a write across
+        // drives failed there instead of degrading to copy+delete.
+        #[cfg(unix)]
+        assert_eq!(CROSS_DEVICE, 18, "Unix EXDEV");
+        #[cfg(windows)]
+        assert_eq!(CROSS_DEVICE, 17, "Windows ERROR_NOT_SAME_DEVICE");
+    }
+
+    #[test]
+    fn recognizes_the_cross_device_error() {
+        let err = std::io::Error::from_raw_os_error(CROSS_DEVICE);
+        assert!(is_cross_device(&err));
+    }
+
+    #[test]
+    fn does_not_treat_other_os_errors_as_cross_device() {
+        // `EXISTS` (17) is a real Unix errno — matching it there would
+        // misroute an unrelated failure into the non-atomic fallback.
+        for code in [1, 2, 13, 17, 30, 28] {
+            let err = std::io::Error::from_raw_os_error(code);
+            assert_eq!(
+                is_cross_device(&err),
+                code == CROSS_DEVICE,
+                "raw_os_error {code}"
+            );
+        }
+    }
+
+    #[test]
+    fn does_not_treat_non_os_errors_as_cross_device() {
+        // Errors without an OS code (parse failures, custom errors) can
+        // never be a cross-device rename.
+        let err = std::io::Error::other("synthetic");
+        assert!(!is_cross_device(&err));
     }
 }

@@ -15,6 +15,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { installCanvasStub, installSvgLayoutShim } from "./svg-layout-shim";
 import { normalizeSvgTextOffsets } from "../text-offsets";
 import { clampNegativeStrokeWidths } from "../svg-css";
+import { pinLabelMathPaint } from "../label-paint";
 import { isContainerSizedDiagram } from "../renderer";
 
 const DIAGRAMS = {
@@ -43,6 +44,10 @@ const DIAGRAMS = {
 const EM_OFFSET = /d[xy]="[^"]*em"/;
 const TRANSLATE_PLACE = /transform="translate\([^"]*\)\s*rotate\(0\)"/;
 const NEGATIVE_STROKE_WIDTH = /stroke-width:\s*-[\d.]/;
+const KATEX_PATH_PAINT = /\.node \.katex path[^{]*\{[^}]*fill:\s*#000/;
+
+/** Label math needs `forceLegacyMathML` to get KaTeX markup in jsdom. */
+const MATH_LABEL = 'graph LR\n    A["$$\\frac{a}{b} + \\sqrt{2}$$"] --> B';
 
 const rendered: Record<string, string> = {};
 
@@ -208,5 +213,68 @@ describe("mermaid upgrade contract (real output)", () => {
           `for ${JSON.stringify(source)}`,
       ).toBe(detected === "gantt");
     }
+  });
+});
+
+describe("mermaid upgrade contract (label math paint)", () => {
+  const rendered: { mathLabel?: string } = {};
+
+  beforeAll(async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    installSvgLayoutShim();
+    installCanvasStub();
+    const mermaid = (await import("mermaid")).default;
+    mermaid.initialize({ startOnLoad: false, forceLegacyMathML: true });
+    const { svg } = await mermaid.render("contract_math_paint", MATH_LABEL);
+    rendered.mathLabel = svg;
+  }, 60000);
+
+  it("flowchart theme CSS still paints label KaTeX glyph paths black", () => {
+    expect(
+      rendered.mathLabel,
+      "Mermaid no longer paints label KaTeX paths with a hard-coded fill — " +
+        "re-verify whether pinLabelMathPaint in label-paint.ts is still " +
+        "needed (see AGENTS.md, Mermaid Label Math Paint)",
+    ).toMatch(KATEX_PATH_PAINT);
+  });
+
+  it("pinLabelMathPaint overrides that paint on real label math", () => {
+    const out = pinLabelMathPaint(rendered.mathLabel!);
+    const host = document.createElement("div");
+    host.innerHTML = out;
+
+    // Scoped per foreignObject: jsdom drops cross-boundary descendant
+    // matches for querySelectorAll("foreignObject path").
+    const pinned: Element[] = [];
+    for (const fo of Array.from(host.querySelectorAll("foreignObject"))) {
+      for (const path of Array.from(fo.querySelectorAll("path"))) {
+        if (path.closest(".katex")) pinned.push(path);
+      }
+    }
+    expect(pinned.length).toBeGreaterThan(0);
+    for (const path of pinned) {
+      expect(path.getAttribute("style")).toContain(
+        "fill: currentColor; stroke: none",
+      );
+    }
+
+    // Mermaid's own diagram paths keep their theme paint. (Parent walk, not
+    // `closest("foreignObject")`: jsdom's selector engine is inconsistent on
+    // camel-cased SVG type selectors — same helper as the fo-measure test.)
+    const inForeignObject = (el: Element): boolean => {
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        if (node.localName?.toLowerCase() === "foreignobject") return true;
+      }
+      return false;
+    };
+    const edges = Array.from(host.querySelectorAll("path")).filter(
+      (p) => !inForeignObject(p),
+    );
+    expect(edges.length).toBeGreaterThan(0);
+    for (const edge of edges) {
+      expect(edge.getAttribute("style") ?? "").not.toContain("currentColor");
+    }
+
+    expect(pinLabelMathPaint(out)).toBe(out);
   });
 });

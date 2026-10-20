@@ -367,6 +367,26 @@ function escWithSpaces(s: string | null | undefined): string {
   return `<text:s text:c="${leadingCount}"/>${esc(rest)}`;
 }
 
+/* ─────────────────────── HTML tag matching ───────────────────────────── */
+
+/**
+ * Whether `lower` (a lowercased, trimmed `html_inline` fragment) is the
+ * opening tag `name` in any of its common spellings: `<x>`, `<x >`,
+ * `<x/>`, `<x />`.
+ *
+ * The inline-tag chain used to spell these out per tag — and once spelled
+ * `<sub>` twice where a variant was meant, leaving every spelling but the
+ * bare one unrecognized.
+ */
+function isOpeningTag(lower: string, name: string): boolean {
+  return (
+    lower === `<${name}>` ||
+    lower === `<${name} >` ||
+    lower === `<${name}/>` ||
+    lower === `<${name} />`
+  );
+}
+
 /* ─────────────────────── hljs → ODF span conversion ──────────────────── */
 
 interface HljsSpan {
@@ -508,6 +528,47 @@ function extensionFromMime(mime: string): string {
     default:
       return "bin";
   }
+}
+
+/**
+ * Parse a CSS/HTML length attribute into inches, or `null` when it is not a
+ * length we can make absolute (`%`, `em`, …).
+ *
+ * Every `svg:width`/`svg:height` this exporter writes goes through here, so
+ * ODF always gets a real absolute unit. The proportional-dimension math
+ * especially needs this: it scales one given dimension by the image's aspect
+ * ratio, and reading `2in` as 192 pixels (`value / 96` regardless of unit)
+ * produced a 0.02in image.
+ */
+function cssLengthToInches(raw: string): number | null {
+  const match = raw.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+))([a-z%]*)$/i);
+  if (!match) return null;
+  const value = parseFloat(match[1]);
+  if (!Number.isFinite(value)) return null;
+  switch (match[2].toLowerCase()) {
+    case "":
+      // HTML length attributes: a bare number means pixels.
+      return value / 96;
+    case "px":
+      return value / 96;
+    case "in":
+      return value;
+    case "cm":
+      return value / 2.54;
+    case "mm":
+      return value / 25.4;
+    case "pt":
+      return value / 72;
+    case "pc":
+      return value / 6;
+    default:
+      return null;
+  }
+}
+
+/** Format an inch length for an `svg:width` / `svg:height` attribute. */
+function inchesAttr(value: number): string {
+  return `${value.toFixed(4)}in`;
 }
 
 interface ResolvedImage {
@@ -679,6 +740,9 @@ async function resolveImage(
   imageCounter: { n: number },
   warnings: string[],
 ): Promise<string> {
+  // Keyed by source URL, not by the generated package name — that is what
+  // makes a second reference to the same picture a cache hit instead of a
+  // second embed plus a second IPC read.
   if (images.has(src)) return images.get(src)!.name;
 
   let bytes: Uint8Array | null = null;
@@ -749,7 +813,7 @@ async function resolveImage(
   const ext = extensionFromMime(mime);
   const name = `Pictures/image${imageCounter.n++}.${ext}`;
   const dims = sniffImageDimensions(bytes, mime, src, warnings);
-  images.set(name, {
+  images.set(src, {
     name,
     mime,
     data: bytes,
@@ -1182,6 +1246,12 @@ async function buildDocument(
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
 ): Promise<BuildResult> {
   const autoStyles: Map<string, string> = new Map();
+  // Package entries keyed by the image's *logical identity*: its source URL
+  // for images resolved from the document, or the generated package name for
+  // synthesized ones (math rasters, inline SVGs), which are unique by
+  // construction. Values carry the `Pictures/…` name actually written to the
+  // zip. Keying resolved images by source is what deduplicates repeated
+  // references; see `resolveImage`.
   const images = new Map<string, ResolvedImage>();
   const imageCounter = { n: 1 };
   const mathObjects: MathObject[] = [];
@@ -1288,9 +1358,14 @@ async function buildDocument(
     heightPx: number,
     srcLabel: string,
     graphicStyle = "fr1",
+    cacheKey?: string,
   ): string {
     const name = `Pictures/image${imageCounter.n++}.png`;
-    images.set(name, {
+    // `cacheKey` is the logical image identity (its markdown/HTML source) so
+    // a replacement raster supersedes the entry it replaces and later
+    // references reuse it. Without one, the image is synthesized and keyed
+    // by its own package name, which is unique by construction.
+    images.set(cacheKey ?? name, {
       name,
       mime: "image/png",
       data,
@@ -1337,6 +1412,7 @@ async function buildDocument(
     svgXml: string,
     dims: { width: number; height: number },
     srcLabel: string,
+    cacheKey?: string,
   ): Promise<string | null> {
     if (!rasterizeSvgFlag) return null;
     if (dims.width <= 0 || dims.height <= 0) {
@@ -1352,7 +1428,14 @@ async function buildDocument(
         dims.height,
         rasterScale,
       );
-      return addRasterImage(png, dims.width, dims.height, srcLabel);
+      return addRasterImage(
+        png,
+        dims.width,
+        dims.height,
+        srcLabel,
+        "fr1",
+        cacheKey,
+      );
     } catch (err) {
       warnings.push(
         `SVG ${srcLabel} rasterization failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -1540,7 +1623,7 @@ async function buildDocument(
             warnings,
           );
           if (resolvedSrc !== src) {
-            const img = images.get(resolvedSrc);
+            const img = images.get(src);
             // If rasterizeSvg is on and the resolved image is an SVG, swap
             // the vector file for a PNG raster.
             if (rasterizeSvgFlag && img && img.mime === "image/svg+xml") {
@@ -1548,29 +1631,28 @@ async function buildDocument(
                 new TextDecoder().decode(img.data),
                 { width: img.widthPx, height: img.heightPx },
                 `image(${src})`,
+                // Register the raster under the image's source key so it
+                // supersedes the vector entry (which must not be packaged
+                // unused) and later references reuse the same PNG.
+                src,
               );
               if (rasterized) {
                 xml += rasterized;
-                // resolveImage already added the SVG to `images`; drop it
-                // so it isn't packaged unused alongside its PNG raster.
-                images.delete(resolvedSrc);
                 break;
               }
               // Fall through to vector embed on rasterization failure.
             }
             let sizeAttrs = "";
-            // Calculate dimensions from pixel size at 96 DPI (CSS reference)
-            if (widthAttr) {
-              const w = widthAttr.endsWith("px")
-                ? (parseFloat(widthAttr) / 96).toFixed(4) + "in"
-                : widthAttr;
-              sizeAttrs += ` svg:width="${esc(w)}"`;
+            // Explicit dimensions, converted to the absolute unit ODF wants.
+            // A dimension we cannot make absolute (a percentage, `em`, …) is
+            // simply left out rather than written as a length it is not.
+            const widthIn = widthAttr ? cssLengthToInches(widthAttr) : null;
+            const heightIn = heightAttr ? cssLengthToInches(heightAttr) : null;
+            if (widthIn !== null) {
+              sizeAttrs += ` svg:width="${inchesAttr(widthIn)}"`;
             }
-            if (heightAttr) {
-              const h = heightAttr.endsWith("px")
-                ? (parseFloat(heightAttr) / 96).toFixed(4) + "in"
-                : heightAttr;
-              sizeAttrs += ` svg:height="${esc(h)}"`;
+            if (heightIn !== null) {
+              sizeAttrs += ` svg:height="${inchesAttr(heightIn)}"`;
             }
             // If no explicit size, use image pixel dimensions at 96 DPI
             if (
@@ -1580,35 +1662,28 @@ async function buildDocument(
               img.widthPx > 0 &&
               img.heightPx > 0
             ) {
-              sizeAttrs = ` svg:width="${(img.widthPx / 96).toFixed(4)}in" svg:height="${(img.heightPx / 96).toFixed(4)}in"`;
+              sizeAttrs = ` svg:width="${inchesAttr(img.widthPx / 96)}" svg:height="${inchesAttr(img.heightPx / 96)}"`;
             }
-            // Proportional calculation when only one dimension given
+            // Proportional calculation when only one dimension is usable
             if (
-              widthAttr &&
-              !heightAttr &&
+              widthIn !== null &&
+              heightIn === null &&
               img &&
               img.widthPx > 0 &&
               img.heightPx > 0
             ) {
-              const widthIn =
-                parseFloat(widthAttr.endsWith("px") ? widthAttr : widthAttr) /
-                96;
               const ratio = img.heightPx / img.widthPx;
-              sizeAttrs += ` svg:height="${(widthIn * ratio).toFixed(4)}in"`;
+              sizeAttrs += ` svg:height="${inchesAttr(widthIn * ratio)}"`;
             }
             if (
-              !widthAttr &&
-              heightAttr &&
+              widthIn === null &&
+              heightIn !== null &&
               img &&
               img.widthPx > 0 &&
               img.heightPx > 0
             ) {
-              const heightIn =
-                parseFloat(
-                  heightAttr.endsWith("px") ? heightAttr : heightAttr,
-                ) / 96;
               const ratio = img.widthPx / img.heightPx;
-              sizeAttrs = ` svg:width="${(heightIn * ratio).toFixed(4)}in"${sizeAttrs}`;
+              sizeAttrs = ` svg:width="${inchesAttr(heightIn * ratio)}"${sizeAttrs}`;
             }
             const mimeAttr = img ? ` draw:mime-type="${esc(img.mime)}"` : "";
             xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
@@ -1691,13 +1766,13 @@ async function buildDocument(
               break;
             }
           }
-          if (lower === "<br>" || lower === "<br/>" || lower === "<br />") {
+          if (isOpeningTag(lower, "br")) {
             xml += "<text:line-break/>";
-          } else if (lower === "<sub>" || lower === "<sub>") {
+          } else if (isOpeningTag(lower, "sub")) {
             subActive = true;
           } else if (lower === "</sub>") {
             subActive = false;
-          } else if (lower === "<sup>" || lower === "<sup>") {
+          } else if (isOpeningTag(lower, "sup")) {
             superActive = true;
           } else if (lower === "</sup>") {
             superActive = false;
@@ -1807,46 +1882,58 @@ async function buildDocument(
                 warnings,
               );
               if (resolvedSrc !== src) {
-                const img = images.get(resolvedSrc);
+                const img = images.get(src);
                 // Same rasterization branch as the markdown-image token.
                 if (rasterizeSvgFlag && img && img.mime === "image/svg+xml") {
                   const rasterized = await tryRasterizeSvg(
                     new TextDecoder().decode(img.data),
                     { width: img.widthPx, height: img.heightPx },
                     `html_img(${src})`,
+                    // Supersede the vector entry under the image's source
+                    // key (see the markdown-image branch).
+                    src,
                   );
                   if (rasterized) {
                     xml += rasterized;
-                    // Drop the eagerly-added SVG entry so it isn't
-                    // packaged unused alongside its PNG raster.
-                    images.delete(resolvedSrc);
                     break;
                   }
                 }
                 let sizeAttrs = "";
-                if (widthMatch) {
-                  const w = widthMatch[1].endsWith("px")
-                    ? (parseFloat(widthMatch[1]) / 96).toFixed(4) + "in"
-                    : widthMatch[1];
-                  sizeAttrs += ` svg:width="${esc(w)}"`;
+                // Same unit contract as the markdown-image branch: absolute
+                // units only, and one given dimension sizes the other
+                // proportionally so the image is never stretched.
+                const widthIn = widthMatch
+                  ? cssLengthToInches(widthMatch[1])
+                  : null;
+                const heightIn = heightMatch
+                  ? cssLengthToInches(heightMatch[1])
+                  : null;
+                if (widthIn !== null) {
+                  sizeAttrs += ` svg:width="${inchesAttr(widthIn)}"`;
                 }
-                if (heightMatch) {
-                  const h = heightMatch[1].endsWith("px")
-                    ? (parseFloat(heightMatch[1]) / 96).toFixed(4) + "in"
-                    : heightMatch[1];
-                  sizeAttrs += ` svg:height="${esc(h)}"`;
+                if (heightIn !== null) {
+                  sizeAttrs += ` svg:height="${inchesAttr(heightIn)}"`;
                 }
                 // If only width given, calculate proportional height
                 if (
-                  widthMatch &&
-                  !heightMatch &&
+                  widthIn !== null &&
+                  heightIn === null &&
                   img &&
                   img.widthPx > 0 &&
                   img.heightPx > 0
                 ) {
-                  const widthIn = parseFloat(widthMatch[1]) / 96;
                   const ratio = img.heightPx / img.widthPx;
-                  sizeAttrs += ` svg:height="${(widthIn * ratio).toFixed(4)}in"`;
+                  sizeAttrs += ` svg:height="${inchesAttr(widthIn * ratio)}"`;
+                }
+                if (
+                  widthIn === null &&
+                  heightIn !== null &&
+                  img &&
+                  img.widthPx > 0 &&
+                  img.heightPx > 0
+                ) {
+                  const ratio = img.widthPx / img.heightPx;
+                  sizeAttrs = ` svg:width="${inchesAttr(heightIn * ratio)}"${sizeAttrs}`;
                 }
                 const mimeAttr = img
                   ? ` draw:mime-type="${esc(img.mime)}"`

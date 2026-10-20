@@ -12,10 +12,14 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { installCanvasStub, installSvgLayoutShim } from "./svg-layout-shim";
 import { rasterizeMermaidLabelMath } from "../math-labels";
+import { pinLabelMathPaint } from "../label-paint";
 
 const DIAGRAMS = {
   math: `graph LR
     A["$$x^2$$"] --> B`,
+  // SVG-drawn glyph (the sqrt radical): the case label-paint.ts pins.
+  mathGlyph: `graph LR
+    A["$$\\sqrt{2}$$"] --> B`,
   plain: `graph LR
     A["some label"] --> B`,
 };
@@ -93,5 +97,19 @@ describe("label math rasterization (real Mermaid output)", () => {
       rasterize: async () => ({ dataUri: DATA_URI, widthPx: 19, heightPx: 24 }),
     });
     expect(out).toBe(rendered.plain);
+  });
+
+  it("pinned label math still rasterizes (the viewer pipeline order)", async () => {
+    // pinLabelMathPaint runs before rasterizeMermaidLabelMath at cache-fill
+    // time (renderer.ts) — the pin must not break formula discovery.
+    const pinned = pinLabelMathPaint(rendered.mathGlyph);
+    expect(pinned).toContain("fill: currentColor; stroke: none");
+    const out = await rasterizeMermaidLabelMath(pinned, {
+      measure: () => ({ widthPx: 19, heightPx: 24 }),
+      rasterize: async () => ({ dataUri: DATA_URI, widthPx: 19, heightPx: 24 }),
+    });
+    expect(out).toContain(`<img`);
+    expect(out).toContain(`src="${DATA_URI}"`);
+    expect(out).not.toContain('class="katex');
   });
 });

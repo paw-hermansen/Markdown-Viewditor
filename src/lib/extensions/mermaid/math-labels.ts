@@ -109,11 +109,6 @@ async function rasterizeLabelMathInner(
   // Off-screen but *rendered*: html2canvas respects `visibility: hidden`
   // and would capture blank images (same pattern as fo-labels.ts).
   host.style.cssText = "position:fixed;left:-99999px;top:0;pointer-events:none";
-  // The label font-size pin (MERMAID_STYLES sets it on
-  // `foreignObject > div` in Mermaid's render hosts): formulas must
-  // measure and capture at the size they occupy in Mermaid's baked label
-  // slot, or the replacement image comes out smaller than the slot.
-  host.style.fontSize = MERMAID_FONT_SIZE;
   // Natural SVG width, so the SVG renders at display scale 1: label
   // geometry is baked in SVG user units, and a self-scaled SVG makes
   // getBoundingClientRect report scaled sizes for label content (the
@@ -124,19 +119,30 @@ async function rasterizeLabelMathInner(
   if (!svgEl) return svg;
 
   // Match the viewer's font context so formulas rasterize with the fonts
-  // they render with on screen (KaTeX resolves em against this).
+  // they render with on screen (KaTeX resolves em against this). Size is
+  // deliberately NOT taken from here — see the pin below.
   try {
     const reference =
       document.getElementById("viewer-content") ?? document.body;
     if (reference) {
       const cs = getComputedStyle(reference);
       host.style.fontFamily = cs.fontFamily;
-      host.style.fontSize = cs.fontSize;
       host.style.color = cs.color;
     }
   } catch {
     // No getComputedStyle — the default rasterizer needs it, ours may not.
   }
+  // The label font-size pin (MERMAID_STYLES sets it on
+  // `foreignObject > div` in Mermaid's render hosts): formulas must
+  // measure and capture at the size they occupy in Mermaid's baked label
+  // slot, or the replacement image comes out smaller than the slot.
+  //
+  // Applied after the viewer font context on purpose — that context has no
+  // font-size of its own (`#viewer-content` inherits from `html, body`), so
+  // copying its size would replace this pin with the page's 14px, or with
+  // the `medium` keyword where no viewer exists. Only family and colour
+  // come from the viewer; the size is ours.
+  host.style.fontSize = MERMAID_FONT_SIZE;
 
   document.body.appendChild(host);
   try {

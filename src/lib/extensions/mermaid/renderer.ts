@@ -12,6 +12,7 @@ import { withZoomNormalizedLabelMeasurement } from "./fo-measure";
 import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
 import { clampNegativeStrokeWidths } from "./svg-css";
+import { pinLabelMathPaint } from "./label-paint";
 import { convertForeignObjectLabels } from "./fo-labels";
 import { rasterizeMermaidLabelMath } from "./math-labels";
 import { rewriteIdSelectors } from "$lib/utils/css-id-rewrite";
@@ -401,8 +402,10 @@ async function preRenderMermaidBlocksPass(
       // Cache the engine-proof form: em-based dy/dx offsets drift under
       // WebKit page zoom (see text-offsets.ts), and negative stroke-widths
       // (Mermaid's edge-depth ramp) vanish on older WebKit (svg-css.ts).
-      // Label math is rasterized to <img> on top of that (math-labels.ts):
-      // WebKit paints KaTeX's positioned boxes inside <foreignObject> at
+      // Label-math glyph paths are pinned to currentColor paint first
+      // (label-paint.ts): Mermaid's theme CSS fills them black. Label math
+      // is rasterized to <img> on top of that (math-labels.ts): WebKit
+      // paints KaTeX's positioned boxes inside <foreignObject> at
       // untransformed coordinates, so live formulas hang off their labels'
       // top-left corner there. Export/print variants deliberately skip this
       // — they convert labels via fo-labels.ts, which must see the live
@@ -410,7 +413,9 @@ async function preRenderMermaidBlocksPass(
       svgCache.set(
         key,
         await rasterizeMermaidLabelMath(
-          clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+          pinLabelMathPaint(
+            clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+          ),
         ),
       );
     } catch (err) {
@@ -545,7 +550,9 @@ export async function renderMermaidSvgForExport(
         currentZoom(),
       );
       raw = await convertForeignObjectLabels(
-        clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+        pinLabelMathPaint(
+          clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+        ),
       );
       svgCache.set(key, raw);
     } catch (err) {
@@ -602,7 +609,9 @@ export async function renderMermaidSvgForPrint(
         currentZoom(),
       );
       raw = await convertForeignObjectLabels(
-        clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+        pinLabelMathPaint(
+          clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+        ),
       );
       svgCache.set(key, raw);
     } catch (err) {

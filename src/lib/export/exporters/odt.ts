@@ -1444,6 +1444,86 @@ async function buildDocument(
     }
   }
 
+  /**
+   * Render one formula to ODF body XML.
+   *
+   * One three-step contract for inline and display math, which used to be
+   * three copy-pasted blocks (inline, ` ```math ` fence, `math_block`) that
+   * had already drifted apart in their warning wording:
+   *
+   * 1. a rasterized PNG frame, when the option is on and the capture works;
+   * 2. otherwise a native MathObject reference (MathML, embedded as an
+   *    OLE sub-package);
+   * 3. otherwise the escaped source as plain text.
+   *
+   * `kind` selects everything the two spellings genuinely differ in: the
+   * frame style (inline frames center vertically, block ones sit in a
+   * centered paragraph and center horizontally), the framing, and the
+   * warning labels. The MathML frame is `Formula` for both — only the PNG
+   * frame switches to `fr1` for display math.
+   */
+  async function renderMathObject(
+    kind: "inline" | "block",
+    tex: string,
+    renderOpts: MathmlRenderOptions,
+  ): Promise<string> {
+    const display = kind === "block";
+    const frameOf = (frame: string): string =>
+      display
+        ? `      <text:p text:style-name="${S.mathDisplay}">${frame}</text:p>`
+        : frame;
+
+    if (rasterizeMath) {
+      try {
+        const { png, widthPx, heightPx } = await renderMathToPng({
+          tex,
+          displayMode: display,
+          resolution: rasterScale,
+          targetFontSize: mathTargetFontSize,
+          ...renderOpts,
+        });
+        const { frameWidthPx, frameHeightPx } = fitFrameToPage(
+          widthPx,
+          heightPx,
+        );
+        // "Formula" centers inline frames vertically; "fr1" leaves block
+        // frames to the centered Math_20_Display paragraph.
+        return frameOf(
+          addRasterImage(
+            png,
+            frameWidthPx,
+            frameHeightPx,
+            `${kind}-math(${tex.slice(0, 40)})`,
+            display ? "fr1" : "Formula",
+          ),
+        );
+      } catch (err) {
+        warnings.push(
+          `${display ? "Block" : "Inline"} math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
+        );
+      }
+    }
+
+    try {
+      const mathMl = renderMathToMathml(tex, display, renderOpts);
+      const objId = `Object ${++mathCounter}`;
+      mathObjects.push({ id: objId, mathml: mathMl });
+      return frameOf(
+        `<draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`,
+      );
+    } catch {
+      // Wording is kept verbatim from the two original call sites; note the
+      // block one historically omitted the "Block" qualifier. Normalizing it
+      // would be a user-visible tweak, not a refactor.
+      warnings.push(
+        `${display ? "Math" : "Inline math"} rendering failed for: ${tex.slice(0, 50)}…`,
+      );
+      return display
+        ? `      <text:p text:style-name="${S.body}">${esc(tex)}</text:p>`
+        : esc(tex);
+    }
+  }
+
   function paragraphStyle(): string {
     let quoteDepth = 0;
     for (let j = 0; j < contextStack.length; j++) {
@@ -1693,46 +1773,11 @@ async function buildDocument(
           break;
         }
         case "math_inline": {
-          const inlineOpts = buildMathRenderOpts(sourceLine);
-          if (rasterizeMath) {
-            try {
-              const { png, widthPx, heightPx } = await renderMathToPng({
-                tex: child.content,
-                displayMode: false,
-                resolution: rasterScale,
-                targetFontSize: mathTargetFontSize,
-                ...inlineOpts,
-              });
-              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
-                widthPx,
-                heightPx,
-              );
-              xml += addRasterImage(
-                png,
-                frameWidthPx,
-                frameHeightPx,
-                `inline-math(${child.content.slice(0, 40)})`,
-                "Formula",
-              );
-              break;
-            } catch (err) {
-              warnings.push(
-                `Inline math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
-              );
-              // Fall through to MathML embedding.
-            }
-          }
-          try {
-            const mathMl = renderMathToMathml(child.content, false, inlineOpts);
-            const objId = `Object ${++mathCounter}`;
-            mathObjects.push({ id: objId, mathml: mathMl });
-            xml += `<draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
-          } catch {
-            warnings.push(
-              `Inline math rendering failed for: ${child.content.slice(0, 50)}…`,
-            );
-            xml += esc(child.content);
-          }
+          xml += await renderMathObject(
+            "inline",
+            child.content,
+            buildMathRenderOpts(sourceLine),
+          );
           break;
         }
         case "footnote_ref": {
@@ -2356,57 +2401,13 @@ async function buildDocument(
               );
             }
             const sourceLine = token.map?.[0] ?? 0;
-            const blockRenderOpts = buildMathRenderOpts(sourceLine, fenceOpts);
-
-            if (rasterizeMath) {
-              try {
-                const { png, widthPx, heightPx } = await renderMathToPng({
-                  tex: token.content,
-                  displayMode: true,
-                  resolution: rasterScale,
-                  targetFontSize: mathTargetFontSize,
-                  ...blockRenderOpts,
-                });
-                const { frameWidthPx, frameHeightPx } = fitFrameToPage(
-                  widthPx,
-                  heightPx,
-                );
-                const inner = addRasterImage(
-                  png,
-                  frameWidthPx,
-                  frameHeightPx,
-                  `block-math(${token.content.slice(0, 40)})`,
-                );
-                parts.push(
-                  `      <text:p text:style-name="${S.mathDisplay}">${inner}</text:p>`,
-                );
-                i++;
-                break;
-              } catch (err) {
-                warnings.push(
-                  `Block math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
-                );
-              }
-            }
-            try {
-              const mathMl = renderMathToMathml(
+            parts.push(
+              await renderMathObject(
+                "block",
                 token.content,
-                true,
-                blockRenderOpts,
-              );
-              const objId = `Object ${++mathCounter}`;
-              mathObjects.push({ id: objId, mathml: mathMl });
-              parts.push(
-                `      <text:p text:style-name="${S.mathDisplay}"><draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
-              );
-            } catch {
-              warnings.push(
-                `Math rendering failed for: ${token.content.slice(0, 50)}…`,
-              );
-              parts.push(
-                `      <text:p text:style-name="${S.body}">${esc(token.content)}</text:p>`,
-              );
-            }
+                buildMathRenderOpts(sourceLine, fenceOpts),
+              ),
+            );
             i++;
             break;
           }
@@ -2511,53 +2512,13 @@ async function buildDocument(
 
         // ── Math block ──
         case "math_block": {
-          const blockOpts = buildMathRenderOpts(token.map?.[0] ?? 0);
-          if (rasterizeMath) {
-            try {
-              const { png, widthPx, heightPx } = await renderMathToPng({
-                tex: token.content,
-                displayMode: true,
-                resolution: rasterScale,
-                targetFontSize: mathTargetFontSize,
-                ...blockOpts,
-              });
-              const { frameWidthPx, frameHeightPx } = fitFrameToPage(
-                widthPx,
-                heightPx,
-              );
-              const inner = addRasterImage(
-                png,
-                frameWidthPx,
-                frameHeightPx,
-                `block-math(${token.content.slice(0, 40)})`,
-              );
-              parts.push(
-                `      <text:p text:style-name="${S.mathDisplay}">${inner}</text:p>`,
-              );
-              i++;
-              break;
-            } catch (err) {
-              warnings.push(
-                `Block math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
-              );
-              // Fall through to MathML embedding.
-            }
-          }
-          try {
-            const mathMl = renderMathToMathml(token.content, true, blockOpts);
-            const objId = `Object ${++mathCounter}`;
-            mathObjects.push({ id: objId, mathml: mathMl });
-            parts.push(
-              `      <text:p text:style-name="${S.mathDisplay}"><draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame></text:p>`,
-            );
-          } catch {
-            warnings.push(
-              `Math rendering failed for: ${token.content.slice(0, 50)}…`,
-            );
-            parts.push(
-              `      <text:p text:style-name="${S.body}">${esc(token.content)}</text:p>`,
-            );
-          }
+          parts.push(
+            await renderMathObject(
+              "block",
+              token.content,
+              buildMathRenderOpts(token.map?.[0] ?? 0),
+            ),
+          );
           i++;
           break;
         }

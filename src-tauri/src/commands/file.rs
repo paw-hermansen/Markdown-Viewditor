@@ -9,13 +9,20 @@ use crate::state::{FileInfo, FileInfoMeta, OpenedUrls};
 
 #[tauri::command]
 pub fn opened_urls(state: State<OpenedUrls>) -> Vec<String> {
-    state.0.lock().unwrap().drain(..).collect()
+    // Poison-tolerant: a panic on another thread must not make this command
+    // panic too and take the app down with it.
+    state
+        .0
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .drain(..)
+        .collect()
 }
 
 /// Decode raw bytes to a String, handling a UTF-8 BOM and falling back to a
 /// lossless Latin-1 (ISO-8859-1) decode when the file is not valid UTF-8 so
 /// content is never silently corrupted.
-fn decode_bytes(bytes: Vec<u8>) -> Result<String, AppError> {
+fn decode_bytes(bytes: Vec<u8>) -> String {
     let bytes = match bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
         Some(rest) => rest,
         None => &bytes,
@@ -25,18 +32,15 @@ fn decode_bytes(bytes: Vec<u8>) -> Result<String, AppError> {
         // saved-content baseline all agree. CodeMirror already uses \n
         // internally; doing it here avoids redundant full-document replacements
         // and state drift when opening CRLF files.
-        Ok(s) => Ok(s.to_string().replace("\r\n", "\n")),
-        Err(utf8_err) => {
-            let _ = utf8_err;
-            Ok(bytes.iter().map(|b| *b as char).collect())
-        }
+        Ok(s) => s.replace("\r\n", "\n"),
+        // Neither arm can fail, so this is infallible by construction.
+        Err(_) => bytes.iter().map(|b| *b as char).collect(),
     }
 }
 
 #[tauri::command]
 pub async fn read_file(path: String) -> Result<String, AppError> {
-    let bytes = fs::read(&path)?;
-    decode_bytes(bytes).map_err(|e| AppError::Encoding(e.to_string()))
+    Ok(decode_bytes(fs::read(&path)?))
 }
 
 /// Read raw file bytes and return them as a base64-encoded string. Unlike
@@ -47,6 +51,29 @@ pub async fn read_file_as_base64(path: String) -> Result<String, AppError> {
     use base64::Engine;
     let bytes = fs::read(&path)?;
     Ok(base64::engine::general_purpose::STANDARD.encode(&bytes))
+}
+
+/// Whether the existing file at `p` can be written to by this process.
+///
+/// `permissions().readonly()` is not the whole story on Unix — it misses ACL
+/// and ownership restrictions — so there we also probe by opening the file
+/// with write intent. Other platforms have no equivalent probe.
+fn is_writable(p: &Path, metadata: &fs::Metadata) -> bool {
+    if metadata.permissions().readonly() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::fs::OpenOptions;
+        if OpenOptions::new().write(true).open(p).is_err() {
+            return false;
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = p;
+    }
+    true
 }
 
 /// Returns `true` if the file at `path` is writable by the current process.
@@ -60,17 +87,7 @@ pub async fn is_file_writable(path: String) -> Result<bool, AppError> {
         Err(e) if e.kind() == ErrorKind::NotFound => return Ok(false),
         Err(e) => return Err(AppError::Io(e)),
     };
-    if metadata.permissions().readonly() {
-        return Ok(false);
-    }
-    #[cfg(unix)]
-    {
-        use std::fs::OpenOptions;
-        if OpenOptions::new().write(true).open(p).is_err() {
-            return Ok(false);
-        }
-    }
-    Ok(true)
+    Ok(is_writable(p, &metadata))
 }
 
 /// `EXDEV` on Unix, `ERROR_NOT_SAME_DEVICE` on Windows.
@@ -90,32 +107,26 @@ fn is_cross_device(err: &std::io::Error) -> bool {
     err.raw_os_error() == Some(CROSS_DEVICE)
 }
 
-/// Atomically write `content` to `path`, leaving a `<path>.bak` backup of the
-/// previous version when it existed. A pre-write read-only check emits a typed
-/// `AppError::ReadOnly` so the frontend can route to Save As.
-#[tauri::command]
-pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
-    let p = Path::new(&path);
+/// Write `bytes` to `path` as atomically as the filesystem allows, leaving a
+/// `<path>.bak` backup of the previous version when it existed. A pre-write
+/// read-only check emits a typed `AppError::ReadOnly` so the frontend can
+/// route to Save As.
+///
+/// Shared by the text and binary write commands, which differ only in how
+/// their payload reaches us.
+fn write_atomic(path: &str, bytes: &[u8]) -> Result<(), AppError> {
+    let p = Path::new(path);
 
     if let Ok(metadata) = fs::metadata(p) {
-        if metadata.permissions().readonly() {
-            return Err(AppError::ReadOnly(path));
+        if !is_writable(p, &metadata) {
+            return Err(AppError::ReadOnly(path.to_string()));
         }
-        #[cfg(unix)]
-        {
-            use std::fs::OpenOptions;
-            if OpenOptions::new().write(true).open(p).is_err() {
-                return Err(AppError::ReadOnly(path));
-            }
-        }
-
         // Best-effort backup next to the target.
-        let bak = format!("{}.bak", path);
-        let _ = fs::copy(p, &bak);
+        let _ = fs::copy(p, format!("{path}.bak"));
     }
 
-    let tmp = format!("{}.tmp.{}", path, std::process::id());
-    fs::write(&tmp, &content)?;
+    let tmp = format!("{path}.tmp.{}", std::process::id());
+    fs::write(&tmp, bytes)?;
 
     match fs::rename(&tmp, p) {
         Ok(()) => Ok(()),
@@ -124,7 +135,7 @@ pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
             if is_cross_device(&e) {
                 // Cross-device: fall back to copy+delete (non-atomic) so the
                 // write still succeeds on unusual mount layouts.
-                fs::write(p, &content)?;
+                fs::write(p, bytes)?;
                 Ok(())
             } else {
                 Err(AppError::Io(e))
@@ -133,45 +144,20 @@ pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
     }
 }
 
+/// Atomically write `content` to `path`, leaving a `<path>.bak` backup of the
+/// previous version when it existed. A pre-write read-only check emits a typed
+/// `AppError::ReadOnly` so the frontend can route to Save As.
+#[tauri::command]
+pub async fn write_file(path: String, content: String) -> Result<(), AppError> {
+    write_atomic(&path, content.as_bytes())
+}
+
 /// Atomically write binary `content` to `path`, leaving a `<path>.bak`
-/// backup of the previous version when it existed. Same logic as `write_file`
-/// but for opaque binary data (ODT, EPUB, etc.).
+/// backup of the previous version when it existed. Same contract as
+/// `write_file`, for opaque binary data (ODT, EPUB, etc.).
 #[tauri::command]
 pub async fn write_file_binary(path: String, content: Vec<u8>) -> Result<(), AppError> {
-    let p = Path::new(&path);
-
-    if let Ok(metadata) = fs::metadata(p) {
-        if metadata.permissions().readonly() {
-            return Err(AppError::ReadOnly(path));
-        }
-        #[cfg(unix)]
-        {
-            use std::fs::OpenOptions;
-            if OpenOptions::new().write(true).open(p).is_err() {
-                return Err(AppError::ReadOnly(path));
-            }
-        }
-
-        let bak = format!("{}.bak", path);
-        let _ = fs::copy(p, &bak);
-    }
-
-    let tmp = format!("{}.tmp.{}", path, std::process::id());
-    fs::write(&tmp, &content)?;
-
-    match fs::rename(&tmp, p) {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            let _ = fs::remove_file(&tmp);
-            if is_cross_device(&e) {
-                // Cross-device: same non-atomic fallback as `write_file`.
-                fs::write(p, &content)?;
-                Ok(())
-            } else {
-                Err(AppError::Io(e))
-            }
-        }
-    }
+    write_atomic(&path, &content)
 }
 
 #[tauri::command]
@@ -299,8 +285,6 @@ mod tests {
     async fn read_file_strips_utf8_bom() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("bom.md");
-        std::fs::write(&file_path, [0xEF, 0xBB, 0xBF])
-            .unwrap();
         std::fs::write(&file_path, b"\xEF\xBB\xBF# No BOM").unwrap();
 
         let result = read_file(file_path.to_string_lossy().to_string())
@@ -445,13 +429,131 @@ mod tests {
         perms.set_readonly(true);
         std::fs::set_permissions(&file_path, perms).unwrap();
 
-        let result = write_file(
-            file_path.to_string_lossy().to_string(),
-            "new".to_string(),
-        )
-        .await;
+        let result = write_file(file_path.to_string_lossy().to_string(), "new".to_string()).await;
         assert!(matches!(result, Err(AppError::ReadOnly(_))));
         assert_eq!(std::fs::read_to_string(&file_path).unwrap(), "original");
+    }
+
+    // --- write_file_binary ---
+
+    #[tokio::test]
+    async fn write_file_binary_writes_bytes_exactly() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("out.bin");
+        // Deliberately not valid UTF-8: preserving this is the whole point of
+        // the binary command, and the text one would corrupt it.
+        let payload = [0x00, 0xFF, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+        write_file_binary(file_path.to_string_lossy().to_string(), payload.to_vec())
+            .await
+            .unwrap();
+
+        assert_eq!(std::fs::read(&file_path).unwrap(), payload);
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_overwrites_existing_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("overwrite.bin");
+        std::fs::write(&file_path, [1, 2, 3]).unwrap();
+
+        write_file_binary(file_path.to_string_lossy().to_string(), vec![9, 8])
+            .await
+            .unwrap();
+
+        assert_eq!(std::fs::read(&file_path).unwrap(), [9, 8]);
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_creates_bak_when_overwriting() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("bak.bin");
+        std::fs::write(&file_path, [1, 2, 3]).unwrap();
+
+        write_file_binary(file_path.to_string_lossy().to_string(), vec![9, 8])
+            .await
+            .unwrap();
+
+        let bak_path = dir.path().join("bak.bin.bak");
+        assert!(bak_path.exists());
+        assert_eq!(std::fs::read(&bak_path).unwrap(), [1, 2, 3]);
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_no_bak_for_new_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("fresh.bin");
+
+        write_file_binary(file_path.to_string_lossy().to_string(), vec![1])
+            .await
+            .unwrap();
+
+        assert!(!dir.path().join("fresh.bin.bak").exists());
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_leaves_no_temp_file_on_success() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("temp_check.bin");
+
+        write_file_binary(file_path.to_string_lossy().to_string(), vec![1])
+            .await
+            .unwrap();
+
+        let leftover: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .contains(&format!(".tmp.{}", std::process::id()))
+            })
+            .collect();
+        assert!(leftover.is_empty());
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_returns_readonly_error_for_ro_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("ro.bin");
+        std::fs::write(&file_path, [1, 2, 3]).unwrap();
+        let mut perms = std::fs::metadata(&file_path).unwrap().permissions();
+        perms.set_readonly(true);
+        std::fs::set_permissions(&file_path, perms).unwrap();
+
+        let result = write_file_binary(file_path.to_string_lossy().to_string(), vec![9]).await;
+        assert!(matches!(result, Err(AppError::ReadOnly(_))));
+        assert_eq!(std::fs::read(&file_path).unwrap(), [1, 2, 3]);
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_returns_error_for_invalid_path() {
+        let result = write_file_binary("/nonexistent/dir/file.bin".to_string(), vec![1]).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn write_file_binary_matches_write_file_for_the_same_bytes() {
+        // The two commands are one implementation; they must stay that way.
+        let dir = tempdir().unwrap();
+        let text_path = dir.path().join("a.md");
+        let bin_path = dir.path().join("b.md");
+        let content = "line one\nline two\n";
+
+        write_file(text_path.to_string_lossy().to_string(), content.to_string())
+            .await
+            .unwrap();
+        write_file_binary(
+            bin_path.to_string_lossy().to_string(),
+            content.as_bytes().to_vec(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(&text_path).unwrap(),
+            std::fs::read(&bin_path).unwrap()
+        );
     }
 
     // --- list_files ---

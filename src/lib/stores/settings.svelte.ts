@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: Settings = {
   odtRasterResolution: 2,
   autoCheckUpdates: false,
   htmlIncludeFrontmatter: true,
+  htmlBundleIncludeFrontmatter: true,
   pdfIncludeFrontmatter: true,
   odtIncludeFrontmatter: true,
   zoomLevel: 1,

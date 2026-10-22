@@ -34,11 +34,7 @@
     checkExternalModification,
     markCurrentFileDeleted,
   } from "$lib/stores/file.svelte";
-  import {
-    settingsState,
-    updateViewMode,
-    updateSetting,
-  } from "$lib/stores/settings.svelte";
+  import { settingsState, updateViewMode } from "$lib/stores/settings.svelte";
   import {
     zoomIn,
     zoomOut,
@@ -79,6 +75,7 @@
   } from "$lib/export/registry.svelte";
   import { exportPdf } from "$lib/export/exporters/pdf";
   import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
+  import { OPTION_SETTING } from "$lib/export/option-settings";
   import { usesCapturePdf } from "$lib/export/pdf-mode";
   import { getThemeLabel } from "$lib/utils/themes";
   import { showExportConfirmDialog } from "$lib/stores/export-confirm-dialog.svelte";
@@ -117,71 +114,61 @@
     }
   }
 
+  /**
+   * The unsaved-changes gate shared by New, Open and Exit: confirm, and on
+   * "save" run the save and honour its outcome. Returns false when the user
+   * cancelled or the save failed — the caller must not proceed.
+   */
+  async function confirmUnsavedChanges(message: string): Promise<boolean> {
+    if (!hasUnsavedChanges()) return true;
+    const choice = await confirmSaveDiscardCancel(message);
+    if (choice !== "save" && choice !== "discard") return false;
+    return choice !== "save" || (await handleSave());
+  }
+
+  /**
+   * Load a file into the editor and viewer. Returns false when the file
+   * could not be read, in which case the previous document is left as-is.
+   */
+  async function loadContentIntoEditor(path: string): Promise<boolean> {
+    fileState.isLoadingContent = true;
+    viewerComponent?.resetRenderState();
+    try {
+      const content = await readFile(path);
+      if (content === null) return false;
+      editorState.content = content;
+      updateWordCount(content);
+      editorComponent?.setContent(content, false);
+      viewerComponent?.scrollToTop();
+      markSaved();
+      await viewerComponent?.waitForRender();
+      return true;
+    } finally {
+      // Always clear the flag: a read that throws would otherwise leave the
+      // loading overlay up forever.
+      fileState.isLoadingContent = false;
+    }
+  }
+
   async function handleNew() {
     if (fileState.isLoading) return;
 
-    if (hasUnsavedChanges()) {
-      const choice = await confirmSaveDiscardCancel(MSG.newUnsaved);
-      if (choice !== "save" && choice !== "discard") return;
-      if (choice === "save") {
-        const saved = await handleSave();
-        if (!saved) return;
-      }
-    }
+    if (!(await confirmUnsavedChanges(MSG.newUnsaved))) return;
+
     resetEditor();
     editorComponent?.setContent("");
     closeFile();
   }
 
-  async function handleOpen() {
-    if (hasUnsavedChanges()) {
-      const choice = await confirmSaveDiscardCancel(MSG.openUnsaved);
-      if (choice !== "save" && choice !== "discard") return;
-      if (choice === "save") {
-        const saved = await handleSave();
-        if (!saved) return;
-      }
-    }
+  /** Open a file. With `path` given it is opened directly; otherwise the
+   *  picker runs first. */
+  async function handleOpen(path?: string) {
+    if (!(await confirmUnsavedChanges(MSG.openUnsaved))) return;
 
-    const path = await showOpenDialog();
-    if (!path) return;
+    const target = path ?? (await showOpenDialog());
+    if (!target) return;
 
-    fileState.isLoadingContent = true;
-    viewerComponent?.resetRenderState();
-    const content = await readFile(path);
-    if (content !== null) {
-      editorState.content = content;
-      updateWordCount(content);
-      editorComponent?.setContent(content, false);
-      viewerComponent?.scrollToTop();
-      markSaved();
-      await viewerComponent?.waitForRender();
-    }
-    fileState.isLoadingContent = false;
-  }
-
-  async function handleLocalMarkdownOpen(path: string) {
-    if (hasUnsavedChanges()) {
-      const choice = await confirmSaveDiscardCancel(MSG.openUnsaved);
-      if (choice !== "save" && choice !== "discard") return;
-      if (choice === "save") {
-        const saved = await handleSave();
-        if (!saved) return;
-      }
-    }
-
-    fileState.isLoadingContent = true;
-    viewerComponent?.resetRenderState();
-    const content = await readFile(path);
-    if (content !== null) {
-      editorState.content = content;
-      updateWordCount(content);
-      editorComponent?.setContent(content, false);
-      viewerComponent?.scrollToTop();
-      markSaved();
-      await viewerComponent?.waitForRender();
-    }
-    fileState.isLoadingContent = false;
+    await loadContentIntoEditor(target);
   }
 
   /** Returns true when the document was saved (or nothing needed saving), false on cancel/failure. */
@@ -310,14 +297,7 @@
 
   /** Shared exit flow used by both window-close and Ctrl+Q. Returns true if the app closed. */
   async function handleExit(): Promise<boolean> {
-    if (hasUnsavedChanges()) {
-      const choice = await confirmSaveDiscardCancel(MSG.exitUnsaved);
-      if (choice !== "save" && choice !== "discard") return false;
-      if (choice === "save") {
-        const saved = await handleSave();
-        if (!saved) return false;
-      }
-    }
+    if (!(await confirmUnsavedChanges(MSG.exitUnsaved))) return false;
     try {
       await invoke("save_window_state");
     } catch {
@@ -377,11 +357,13 @@
       },
     ];
 
-    let resolvedIncludeFrontmatter = settingsState.pdfIncludeFrontmatter;
+    let resolvedIncludeFrontmatter = Boolean(
+      OPTION_SETTING[PDF_OPTION_ID]?.get() ?? true,
+    );
 
     if (!settingsState.exportConfirmDismissed) {
       const currentOptions: Record<string, unknown> = {
-        [PDF_OPTION_ID]: settingsState.pdfIncludeFrontmatter,
+        [PDF_OPTION_ID]: resolvedIncludeFrontmatter,
       };
       const result = await showExportConfirmDialog({
         title: exportOnly ? 'Export PDF' : 'Print / PDF',
@@ -395,7 +377,7 @@
       if (!result.confirmed) return;
       if (result.options) {
         resolvedIncludeFrontmatter = !!result.options[PDF_OPTION_ID];
-        updateSetting("pdfIncludeFrontmatter", resolvedIncludeFrontmatter);
+        OPTION_SETTING[PDF_OPTION_ID]?.set(result.options[PDF_OPTION_ID]);
       }
     }
 
@@ -469,10 +451,8 @@
     if (!shouldShowDialog && hasOptions) {
       for (const group of optionGroups) {
         for (const opt of group.options) {
-          (resolvedOptions ??= {})[opt.id] = readSettingForOption(
-            opt.id,
-            opt.value,
-          );
+          (resolvedOptions ??= {})[opt.id] =
+            OPTION_SETTING[opt.id]?.get() ?? opt.value;
         }
       }
     }
@@ -482,7 +462,7 @@
       const currentOptions: Record<string, unknown> = {};
       for (const group of optionGroups) {
         for (const opt of group.options) {
-          currentOptions[opt.id] = readSettingForOption(opt.id, opt.value);
+          currentOptions[opt.id] = OPTION_SETTING[opt.id]?.get() ?? opt.value;
         }
       }
       const isNeutral = id === 'odt';
@@ -501,7 +481,7 @@
       // last-used preference even when the dialog is dismissed.
       if (result.options) {
         for (const [k, v] of Object.entries(result.options)) {
-          persistOption(k, v);
+          OPTION_SETTING[k]?.set(v);
         }
         resolvedOptions = result.options;
       }
@@ -531,51 +511,6 @@
       toast.error("Export failed", String(e));
     } finally {
       stopExporting();
-    }
-  }
-
-  /** Read a setting by its option-id suffix; falls back to the default. */
-  function readSettingForOption(id: string, fallback: unknown): unknown {
-    switch (id) {
-      case "odt.rasterizeMath":
-        return settingsState.odtRasterizeMath;
-      case "odt.rasterizeSvg":
-        return settingsState.odtRasterizeSvg;
-      case "odt.rasterResolution":
-        return settingsState.odtRasterResolution;
-      case "html.includeFrontmatter":
-        return settingsState.htmlIncludeFrontmatter;
-      case "pdf.includeFrontmatter":
-        return settingsState.pdfIncludeFrontmatter;
-      case "odt.includeFrontmatter":
-        return settingsState.odtIncludeFrontmatter;
-      default:
-        return fallback;
-    }
-  }
-
-  function persistOption(id: string, value: unknown) {
-    switch (id) {
-      case "odt.rasterizeMath":
-        updateSetting("odtRasterizeMath", !!value);
-        break;
-      case "odt.rasterizeSvg":
-        updateSetting("odtRasterizeSvg", !!value);
-        break;
-      case "odt.rasterResolution":
-        if (value === 1 || value === 2 || value === 3 || value === 4) {
-          updateSetting("odtRasterResolution", value);
-        }
-        break;
-      case "html.includeFrontmatter":
-        updateSetting("htmlIncludeFrontmatter", !!value);
-        break;
-      case "pdf.includeFrontmatter":
-        updateSetting("pdfIncludeFrontmatter", !!value);
-        break;
-      case "odt.includeFrontmatter":
-        updateSetting("odtIncludeFrontmatter", !!value);
-        break;
     }
   }
 
@@ -804,48 +739,15 @@
     // and listener registration.
     unlistenOpenFile = await listen<string[]>("open-file", async (event) => {
       if (event.payload.length > 0) {
-        fileState.isLoadingContent = true;
-        viewerComponent?.resetRenderState();
-        const content = await readFile(event.payload[0]);
-        if (content !== null) {
-          editorState.content = content;
-          updateWordCount(content);
-          editorComponent?.setContent(content, false);
-          viewerComponent?.scrollToTop();
-          markSaved();
-          await viewerComponent?.waitForRender();
-        }
-        fileState.isLoadingContent = false;
+        await loadContentIntoEditor(event.payload[0]);
       }
     });
 
     const initialUrls = await invoke<string[]>("opened_urls");
     if (initialUrls.length > 0) {
-      fileState.isLoadingContent = true;
-      viewerComponent?.resetRenderState();
-      const content = await readFile(initialUrls[0]);
-      if (content !== null) {
-        editorState.content = content;
-        updateWordCount(content);
-        editorComponent?.setContent(content, false);
-        viewerComponent?.scrollToTop();
-        markSaved();
-        await viewerComponent?.waitForRender();
-      }
-      fileState.isLoadingContent = false;
+      await loadContentIntoEditor(initialUrls[0]);
     } else if (settingsState.lastOpenedFile) {
-      fileState.isLoadingContent = true;
-      viewerComponent?.resetRenderState();
-      const content = await readFile(settingsState.lastOpenedFile);
-      if (content !== null) {
-        editorState.content = content;
-        updateWordCount(content);
-        editorComponent?.setContent(content, false);
-        viewerComponent?.scrollToTop();
-        markSaved();
-        await viewerComponent?.waitForRender();
-      }
-      fileState.isLoadingContent = false;
+      await loadContentIntoEditor(settingsState.lastOpenedFile);
     } else {
       editorState.content = DEFAULT_CONTENT;
       updateWordCount(DEFAULT_CONTENT);
@@ -907,7 +809,7 @@
         content={editorState.content}
         loading={fileState.isLoadingContent}
         onViewerReady={handleViewerReady}
-        onLocalMarkdownOpen={handleLocalMarkdownOpen}
+        onLocalMarkdownOpen={handleOpen}
       />
     </div>
   {/if}

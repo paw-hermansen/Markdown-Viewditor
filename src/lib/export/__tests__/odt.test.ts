@@ -2,14 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the rasterization helpers so tests don't need a real DOM/canvas.
 // Tests that exercise rasterization override these with their own behavior.
-const { mockRasterizeSvg, mockRenderMathToPng } = vi.hoisted(() => ({
-  mockRasterizeSvg: vi.fn(async () => new Uint8Array([1, 2, 3])),
-  mockRenderMathToPng: vi.fn(async () => ({
-    png: new Uint8Array([1, 2, 3]),
-    widthPx: 32,
-    heightPx: 16,
-  })),
-}));
+// `mockRenderMathToMathml` delegates to the real renderer by default — it
+// exists so tests can drive the (otherwise unreachable) MathML failure path.
+const { mockRasterizeSvg, mockRenderMathToPng, mockRenderMathToMathml } =
+  vi.hoisted(() => ({
+    mockRasterizeSvg: vi.fn(async () => new Uint8Array([1, 2, 3])),
+    mockRenderMathToPng: vi.fn(async () => ({
+      png: new Uint8Array([1, 2, 3]),
+      widthPx: 32,
+      heightPx: 16,
+    })),
+    mockRenderMathToMathml: vi.fn(),
+  }));
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
@@ -46,8 +50,14 @@ vi.mock("../svg-rasterize", () => ({
 }));
 vi.mock("../math-render", async (importOriginal) => {
   const original = await importOriginal<typeof import("../math-render")>();
+  // Default to the real MathML renderer; tests override per call to drive
+  // the failure path.
+  mockRenderMathToMathml.mockImplementation((tex, displayMode, opts) =>
+    original.renderMathToMathml(tex, displayMode, opts),
+  );
   return {
     ...original,
+    renderMathToMathml: mockRenderMathToMathml,
     renderMathToPng: mockRenderMathToPng,
     MATH_HOST_WIDTH_PX: 600,
   };
@@ -1484,6 +1494,66 @@ describe("ODT rasterization options", () => {
       `<text:p text:style-name="Math_20_Display">${inlineFrame}</text:p>`,
     );
     expect(inlineNorm).not.toContain("Math_20_Display");
+  });
+
+  it("labels math rasterization failures by display kind", async () => {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    mockRenderMathToPng.mockRejectedValueOnce(new Error("no canvas"));
+    const inline = await runOdtExportWithMath("$x^2$", {
+      "odt.rasterizeMath": true,
+    });
+    expect(inline.warnings).toContain(
+      "Inline math rasterization failed (no canvas); embedded as native formula.",
+    );
+
+    mockRenderMathToPng.mockRejectedValueOnce(new Error("no canvas"));
+    const block = await runOdtExportWithMath("$$\nx^2\n$$", {
+      "odt.rasterizeMath": true,
+    });
+    expect(block.warnings).toContain(
+      "Block math rasterization failed (no canvas); embedded as native formula.",
+    );
+  });
+
+  it("labels MathML rendering failures by display kind", async () => {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(save).mockResolvedValue("/tmp/test.odt");
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    // KaTeX renders with `throwOnError: false`, so this path is only
+    // reachable when the renderer itself fails.
+    mockRenderMathToMathml.mockImplementationOnce(() => {
+      throw new Error("bad tex");
+    });
+    const inline = await runOdtExportWithMath("$x^2$", {
+      "odt.rasterizeMath": false,
+    });
+    expect(
+      inline.warnings.some((w) =>
+        w.startsWith("Inline math rendering failed for: "),
+      ),
+    ).toBe(true);
+
+    mockRenderMathToMathml.mockImplementationOnce(() => {
+      throw new Error("bad tex");
+    });
+    const block = await runOdtExportWithMath("$$\nx^2\n$$", {
+      "odt.rasterizeMath": false,
+    });
+    // The block path used to drop the "Block" qualifier.
+    expect(
+      block.warnings.some((w) =>
+        w.startsWith("Block math rendering failed for: "),
+      ),
+    ).toBe(true);
+    expect(
+      block.warnings.some((w) => w.startsWith("Math rendering failed")),
+    ).toBe(false);
   });
 
   it("falls back to vector SVG when rasterization throws", async () => {

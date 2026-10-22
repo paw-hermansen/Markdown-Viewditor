@@ -1451,6 +1451,41 @@ describe("ODT rasterization options", () => {
     expect(xml).toContain("<draw:object");
   });
 
+  it("emits an identical formula frame for inline and display math", async () => {
+    // The inline and display spellings share one renderer and differ only
+    // in how the result is framed. Pin that so the two cannot silently fork
+    // again — they used to be three copy-pasted blocks that had already
+    // drifted in their warning wording.
+    // `getMathContentXml` reads `invoke.mock.calls[0]`, which only holds the
+    // export it just ran — clear between the two so the second read is its
+    // own, not the first's.
+    const inlineXml = await getMathContentXml("$x^2$", {
+      "odt.rasterizeMath": false,
+    });
+    vi.clearAllMocks();
+    const blockXml = await getMathContentXml("$$\nx^2\n$$", {
+      "odt.rasterizeMath": false,
+    });
+
+    // Object ids are per-export counters, so normalize them out.
+    const normalize = (xml: string) => xml.replace(/Object \d+/g, "Object N");
+    const inlineNorm = normalize(inlineXml);
+    const blockNorm = normalize(blockXml);
+
+    const frameOf = (xml: string): string | undefined =>
+      xml.match(/<draw:frame[^>]*>[\s\S]*?<\/draw:frame>/)?.[0];
+
+    const inlineFrame = frameOf(inlineNorm);
+    expect(inlineFrame).toBeDefined();
+    expect(inlineFrame).toContain('draw:style-name="Formula"');
+    expect(frameOf(blockNorm)).toBe(inlineFrame);
+    // The only difference is the display wrapper around it.
+    expect(blockNorm).toContain(
+      `<text:p text:style-name="Math_20_Display">${inlineFrame}</text:p>`,
+    );
+    expect(inlineNorm).not.toContain("Math_20_Display");
+  });
+
   it("falls back to vector SVG when rasterization throws", async () => {
     mockRasterizeSvg.mockRejectedValueOnce(new Error("canvas unavailable"));
     const xml = await getContentXml(

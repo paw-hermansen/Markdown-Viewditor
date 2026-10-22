@@ -35,6 +35,8 @@ export interface Settings {
   autoCheckUpdates: boolean;
   /** Include frontmatter/skill card in HTML exports. */
   htmlIncludeFrontmatter: boolean;
+  /** Include frontmatter/skill card in HTML Bundle exports. */
+  htmlBundleIncludeFrontmatter: boolean;
   /** Include frontmatter/skill card in PDF exports. */
   pdfIncludeFrontmatter: boolean;
   /** Include frontmatter/skill card in ODT exports. */

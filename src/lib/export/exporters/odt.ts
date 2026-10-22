@@ -47,6 +47,15 @@ import {
   OPTION_INCLUDE_FRONTMATTER,
 } from "../frontmatter-card";
 import type { Frontmatter } from "$lib/types";
+import { VIEWER_CONTENT_MAX_WIDTH_PX } from "$lib/constants/layout";
+import { escapeXml } from "$lib/utils/escape";
+import { base64ToBytes } from "$lib/utils/base64";
+import {
+  extensionFromMime,
+  extractLocalImgPath,
+  mimeFromHref,
+} from "../image-src";
+import { findClosing } from "../token-walker";
 
 /* ─────────────────────── option ids / helpers ─────────────────────────── */
 
@@ -162,20 +171,13 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
 const ODT_PAGE_CONTENT_WIDTH_PX = MATH_HOST_WIDTH_PX;
 
 /**
- * Viewer content column width in CSS px. Keep in sync with
- * `.viewer-content`'s max-width in `markdown.css` and
- * `DEFAULT_VIEWER_MAX_WIDTH_PX` in `pdf.ts`.
- */
-const VIEWER_CONTENT_WIDTH_PX = 800;
-
-/**
  * Scale factor mapping viewer CSS px to ODT page-content px. The viewer
  * column (800 px) corresponds to the ODT text column (600 px), so a
  * diagram occupying N viewer px occupies N × 0.75 ODT px — preserving
  * its relative width within the page, just like in the Viewer.
  */
 const VIEWER_TO_PAGE_SCALE =
-  ODT_PAGE_CONTENT_WIDTH_PX / VIEWER_CONTENT_WIDTH_PX;
+  ODT_PAGE_CONTENT_WIDTH_PX / VIEWER_CONTENT_MAX_WIDTH_PX;
 
 /**
  * Fit logical image dimensions inside the ODT page-content width.
@@ -232,7 +234,7 @@ function computeMermaidFrameDims(
   const displayWidthPx =
     opts.fitToWidth === false
       ? naturalWidthPx
-      : Math.min(naturalWidthPx, opts.maxWidth, VIEWER_CONTENT_WIDTH_PX);
+      : Math.min(naturalWidthPx, opts.maxWidth, VIEWER_CONTENT_MAX_WIDTH_PX);
   const scale = (displayWidthPx / naturalWidthPx) * VIEWER_TO_PAGE_SCALE;
   const frameWidthPx = naturalWidthPx * scale;
   const frameHeightPx = naturalHeightPx * scale;
@@ -323,18 +325,6 @@ const S = {
   fmMetaVal: "FrontmatterMetaVal",
 } as const;
 
-/* ─────────────────────── XML escaping ─────────────────────────────────── */
-
-function esc(s: string | null | undefined): string {
-  if (s == null) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 /* ─────────────────────── HTML entity decoding ────────────────────────── */
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -361,10 +351,10 @@ function escWithSpaces(s: string | null | undefined): string {
   const str = String(s);
   // Count leading spaces and encode them as <text:s/> elements
   const match = str.match(/^( +)/);
-  if (!match) return esc(str);
+  if (!match) return escapeXml(str);
   const leadingCount = match[1].length;
   const rest = str.slice(leadingCount);
-  return `<text:s text:c="${leadingCount}"/>${esc(rest)}`;
+  return `<text:s text:c="${leadingCount}"/>${escapeXml(rest)}`;
 }
 
 /* ─────────────────────── HTML tag matching ───────────────────────────── */
@@ -447,14 +437,14 @@ function renderHighlightedLine(
 
     const chunk = line.slice(srcPos, srcPos + takeLen);
     // Use escWithSpaces for the first chunk to preserve leading whitespace
-    const escFn = srcPos === 0 ? escWithSpaces : esc;
+    const escFn = srcPos === 0 ? escWithSpaces : escapeXml;
 
     if (span.color) {
       const safeName = `T_hljs_${span.color.replace(/[^a-zA-Z0-9]/g, "_")}`;
       if (!styles.has(safeName)) {
         styles.set(
           safeName,
-          `<style:style style:name="${safeName}" style:family="text"><style:text-properties fo:color="${esc(span.color)}"/></style:style>`,
+          `<style:style style:name="${safeName}" style:family="text"><style:text-properties fo:color="${escapeXml(span.color)}"/></style:style>`,
         );
       }
       xml += `<text:span text:style-name="${safeName}">${escFn(chunk)}</text:span>`;
@@ -466,7 +456,7 @@ function renderHighlightedLine(
 
   // Remaining characters not covered by spans
   if (srcPos < line.length) {
-    const escFn = srcPos === 0 ? escWithSpaces : esc;
+    const escFn = srcPos === 0 ? escWithSpaces : escapeXml;
     xml += escFn(line.slice(srcPos));
   }
 
@@ -479,56 +469,6 @@ type InvokeImpl = (
   cmd: string,
   args?: Record<string, unknown>,
 ) => Promise<unknown>;
-
-function extractLocalImgPath(src: string): string | null {
-  for (const prefix of [
-    "localimg://localhost/",
-    "http://localimg.localhost/",
-    "asset://localhost/",
-    "http://asset.localhost/",
-  ]) {
-    if (src.startsWith(prefix)) {
-      return decodeURIComponent(src.slice(prefix.length));
-    }
-  }
-  return null;
-}
-
-function mimeFromHref(href: string): string {
-  const ext = href.split(".").pop()?.toLowerCase() ?? "";
-  switch (ext) {
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "gif":
-      return "image/gif";
-    case "svg":
-      return "image/svg+xml";
-    case "webp":
-      return "image/webp";
-    default:
-      return "application/octet-stream";
-  }
-}
-
-function extensionFromMime(mime: string): string {
-  switch (mime) {
-    case "image/png":
-      return "png";
-    case "image/jpeg":
-      return "jpg";
-    case "image/gif":
-      return "gif";
-    case "image/svg+xml":
-      return "svg";
-    case "image/webp":
-      return "webp";
-    default:
-      return "bin";
-  }
-}
 
 /**
  * Parse a CSS/HTML length attribute into inches, or `null` when it is not a
@@ -823,13 +763,6 @@ async function resolveImage(
   return name;
 }
 
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
 /* ─────────────────────── ODF XML templates ───────────────────────────── */
 
 function generateMimetype(): string {
@@ -838,10 +771,10 @@ function generateMimetype(): string {
 
 function generateMetaXml(title: string, author: string): string {
   const dcTitle = title
-    ? `    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">${esc(title)}</dc:title>\n`
+    ? `    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">${escapeXml(title)}</dc:title>\n`
     : "";
   const dcCreator = author
-    ? `    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">${esc(author)}</dc:creator>\n`
+    ? `    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">${escapeXml(author)}</dc:creator>\n`
     : "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <office:document-meta
@@ -1205,7 +1138,7 @@ function generateManifestXml(entries: ManifestEntry[]): string {
   const items = entries
     .map(
       (e) =>
-        `    <manifest:file-entry manifest:full-path="${esc(e.fullPath)}" manifest:media-type="${esc(e.mediaType)}"/>`,
+        `    <manifest:file-entry manifest:full-path="${escapeXml(e.fullPath)}" manifest:media-type="${escapeXml(e.mediaType)}"/>`,
     )
     .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1331,7 +1264,7 @@ async function buildDocument(
   }
 
   function wrapSpan(text: string, styleName: string): string {
-    return `<text:span text:style-name="${esc(styleName)}">${esc(text)}</text:span>`;
+    return `<text:span text:style-name="${escapeXml(styleName)}">${escapeXml(text)}</text:span>`;
   }
 
   function currentTextStyle(): string | null {
@@ -1377,7 +1310,7 @@ async function buildDocument(
       sizeAttrs = ` svg:width="${(widthPx / 96).toFixed(4)}in" svg:height="${(heightPx / 96).toFixed(4)}in"`;
     }
     void srcLabel;
-    return `<draw:frame draw:style-name="${graphicStyle}" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
+    return `<draw:frame draw:style-name="${graphicStyle}" draw:name="${escapeXml(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${escapeXml(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
   }
 
   /** Add a raw SVG as a Pictures/ entry and return its ODF XML. */
@@ -1400,7 +1333,7 @@ async function buildDocument(
       sizeAttrs = ` svg:width="${(dims.width / 96).toFixed(4)}in" svg:height="${(dims.height / 96).toFixed(4)}in"`;
     }
     void srcLabel;
-    return `<draw:frame draw:style-name="fr1" draw:name="${esc(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame>`;
+    return `<draw:frame draw:style-name="fr1" draw:name="${escapeXml(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${escapeXml(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame>`;
   }
 
   /**
@@ -1515,8 +1448,8 @@ async function buildDocument(
     } catch {
       warnings.push(`${label} math rendering failed for: ${tex.slice(0, 50)}…`);
       return display
-        ? `      <text:p text:style-name="${S.body}">${esc(tex)}</text:p>`
-        : esc(tex);
+        ? `      <text:p text:style-name="${S.body}">${escapeXml(tex)}</text:p>`
+        : escapeXml(tex);
     }
   }
 
@@ -1633,12 +1566,12 @@ async function buildDocument(
             break;
           }
           if (linkHref) {
-            xml += `<text:a xlink:type="simple" xlink:href="${esc(linkHref)}"><text:span text:style-name="T_link">${esc(child.content)}</text:span></text:a>`;
+            xml += `<text:a xlink:type="simple" xlink:href="${escapeXml(linkHref)}"><text:span text:style-name="T_link">${escapeXml(child.content)}</text:span></text:a>`;
           } else {
             const styleName = currentTextStyle();
             let inner = styleName
               ? wrapSpan(child.content, styleName)
-              : esc(child.content);
+              : escapeXml(child.content);
             if (markActive) {
               inner = `<text:span text:style-name="T_mark">${inner}</text:span>`;
             }
@@ -1761,10 +1694,12 @@ async function buildDocument(
               const ratio = img.widthPx / img.heightPx;
               sizeAttrs = ` svg:width="${inchesAttr(heightIn * ratio)}"${sizeAttrs}`;
             }
-            const mimeAttr = img ? ` draw:mime-type="${esc(img.mime)}"` : "";
-            xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
+            const mimeAttr = img
+              ? ` draw:mime-type="${escapeXml(img.mime)}"`
+              : "";
+            xml += `<draw:frame draw:style-name="fr1" draw:name="${escapeXml(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${escapeXml(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
           } else {
-            xml += `[Image: ${esc(alt || src)}]`;
+            xml += `[Image: ${escapeXml(alt || src)}]`;
           }
           break;
         }
@@ -1782,7 +1717,7 @@ async function buildDocument(
           const body =
             footnoteBodies.get(noteId) ??
             `<text:p text:style-name="${S.body}"/>`;
-          xml += `<text:note text:note-class="footnote" text:id="ftn${esc(noteId)}"><text:note-citation>${esc(label)}</text:note-citation><text:note-body>${body}</text:note-body></text:note>`;
+          xml += `<text:note text:note-class="footnote" text:id="ftn${escapeXml(noteId)}"><text:note-citation>${escapeXml(label)}</text:note-citation><text:note-body>${body}</text:note-body></text:note>`;
           break;
         }
         case "html_inline": {
@@ -1862,29 +1797,29 @@ async function buildDocument(
               // Parse color
               const colorMatch = cssStyle.match(/color\s*:\s*([^;]+)/i);
               if (colorMatch)
-                odfXml += ` fo:color="${esc(colorMatch[1].trim())}"`;
+                odfXml += ` fo:color="${escapeXml(colorMatch[1].trim())}"`;
               // Parse background-color
               const bgMatch = cssStyle.match(
                 /background(?:-color)?\s*:\s*([^;]+)/i,
               );
               if (bgMatch)
-                odfXml += ` fo:background-color="${esc(bgMatch[1].trim())}"`;
+                odfXml += ` fo:background-color="${escapeXml(bgMatch[1].trim())}"`;
               // Parse font-size
               const sizeMatch = cssStyle.match(/font-size\s*:\s*([^;]+)/i);
               if (sizeMatch)
-                odfXml += ` fo:font-size="${esc(sizeMatch[1].trim())}"`;
+                odfXml += ` fo:font-size="${escapeXml(sizeMatch[1].trim())}"`;
               // Parse font-family
               const familyMatch = cssStyle.match(/font-family\s*:\s*([^;]+)/i);
               if (familyMatch)
-                odfXml += ` fo:font-family="${esc(familyMatch[1].trim())}"`;
+                odfXml += ` fo:font-family="${escapeXml(familyMatch[1].trim())}"`;
               // Parse font-weight
               const weightMatch = cssStyle.match(/font-weight\s*:\s*([^;]+)/i);
               if (weightMatch)
-                odfXml += ` fo:font-weight="${esc(weightMatch[1].trim())}"`;
+                odfXml += ` fo:font-weight="${escapeXml(weightMatch[1].trim())}"`;
               // Parse font-style
               const fstyleMatch = cssStyle.match(/font-style\s*:\s*([^;]+)/i);
               if (fstyleMatch)
-                odfXml += ` fo:font-style="${esc(fstyleMatch[1].trim())}"`;
+                odfXml += ` fo:font-style="${escapeXml(fstyleMatch[1].trim())}"`;
               // Parse text-decoration
               const decoMatch = cssStyle.match(
                 /text-decoration\s*:\s*([^;]+)/i,
@@ -1977,11 +1912,11 @@ async function buildDocument(
                   sizeAttrs = ` svg:width="${inchesAttr(heightIn * ratio)}"${sizeAttrs}`;
                 }
                 const mimeAttr = img
-                  ? ` draw:mime-type="${esc(img.mime)}"`
+                  ? ` draw:mime-type="${escapeXml(img.mime)}"`
                   : "";
-                xml += `<draw:frame draw:style-name="fr1" draw:name="${esc(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${esc(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
+                xml += `<draw:frame draw:style-name="fr1" draw:name="${escapeXml(uniqueDrawName(alt || "image"))}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${escapeXml(resolvedSrc)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"${mimeAttr}/></draw:frame>`;
               } else {
-                xml += `[Image: ${esc(alt || src)}]`;
+                xml += `[Image: ${escapeXml(alt || src)}]`;
               }
             }
           }
@@ -2105,7 +2040,7 @@ async function buildDocument(
           );
         }
         if (firstParagraph && checkboxPrefix) {
-          content = esc(checkboxPrefix) + content;
+          content = escapeXml(checkboxPrefix) + content;
           firstParagraph = false;
         }
         const closeIdx = findClosing(liInner, i, "paragraph_close");
@@ -2120,7 +2055,7 @@ async function buildDocument(
           t.map?.[0] ?? 0,
         );
         if (firstParagraph && checkboxPrefix) {
-          content = esc(checkboxPrefix) + content;
+          content = escapeXml(checkboxPrefix) + content;
           firstParagraph = false;
         }
         result += `<text:p text:style-name="${listItemParagraphStyle()}">${content}</text:p>\n`;
@@ -2212,7 +2147,7 @@ async function buildDocument(
           );
           const style = inList ? "Standard" : paragraphStyle();
           parts.push(
-            `      <text:p text:style-name="${esc(style)}">${content}</text:p>`,
+            `      <text:p text:style-name="${escapeXml(style)}">${content}</text:p>`,
           );
           i = closeIdx >= 0 ? closeIdx + 1 : i + 1;
           break;
@@ -2657,23 +2592,6 @@ function countTableColumns(tokens: Token[]): number {
   return 1;
 }
 
-function findClosing(
-  tokens: Token[],
-  startIdx: number,
-  closeType: string,
-): number {
-  const openType = tokens[startIdx].type;
-  let depth = 1;
-  for (let j = startIdx + 1; j < tokens.length; j++) {
-    if (tokens[j].type === openType) depth++;
-    if (tokens[j].type === closeType) {
-      depth--;
-      if (depth === 0) return j;
-    }
-  }
-  return -1;
-}
-
 /* ─────────────────────── frontmatter card (ODF) ──────────────────────── */
 
 /**
@@ -2690,14 +2608,14 @@ function generateFrontmatterCardOdf(fm: Frontmatter): string {
     rows.push(
       `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
         `<text:p text:style-name="${S.fmHeading}">` +
-        `<text:span text:style-name="T_fm_accent">${esc("SKILL")}</text:span>` +
+        `<text:span text:style-name="T_fm_accent">${escapeXml("SKILL")}</text:span>` +
         `</text:p></table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
     );
     // Name row.
     if (fm.name) {
       rows.push(
         `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
-          `<text:p text:style-name="${S.fmBody}"><text:span text:style-name="T_fm_name">${esc(String(fm.name))}</text:span></text:p>` +
+          `<text:p text:style-name="${S.fmBody}"><text:span text:style-name="T_fm_name">${escapeXml(String(fm.name))}</text:span></text:p>` +
           `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
       );
     }
@@ -2705,7 +2623,7 @@ function generateFrontmatterCardOdf(fm: Frontmatter): string {
     if (fm.description) {
       rows.push(
         `<table:table-row><table:table-cell table:number-columns-spanned="2">` +
-          `<text:p text:style-name="${S.fmDesc}">${esc(String(fm.description))}</text:p>` +
+          `<text:p text:style-name="${S.fmDesc}">${escapeXml(String(fm.description))}</text:p>` +
           `</table:table-cell><table:table-cell table:number-columns-spanned="2"/></table:table-row>`,
       );
     }
@@ -2715,9 +2633,9 @@ function generateFrontmatterCardOdf(fm: Frontmatter): string {
       if (skip.has(key)) continue;
       rows.push(
         `<table:table-row><table:table-cell>` +
-          `<text:p text:style-name="${S.fmMetaKey}">${esc(key)}</text:p>` +
+          `<text:p text:style-name="${S.fmMetaKey}">${escapeXml(key)}</text:p>` +
           `</table:table-cell><table:table-cell>` +
-          `<text:p text:style-name="${S.fmMetaVal}">${esc(formatValue(value))}</text:p>` +
+          `<text:p text:style-name="${S.fmMetaVal}">${escapeXml(formatValue(value))}</text:p>` +
           `</table:table-cell></table:table-row>`,
       );
     }
@@ -2726,9 +2644,9 @@ function generateFrontmatterCardOdf(fm: Frontmatter): string {
     for (const [key, value] of Object.entries(fm)) {
       rows.push(
         `<table:table-row><table:table-cell>` +
-          `<text:p text:style-name="${S.fmMetaKey}">${esc(key)}</text:p>` +
+          `<text:p text:style-name="${S.fmMetaKey}">${escapeXml(key)}</text:p>` +
           `</table:table-cell><table:table-cell>` +
-          `<text:p text:style-name="${S.fmMetaVal}">${esc(formatValue(value))}</text:p>` +
+          `<text:p text:style-name="${S.fmMetaVal}">${escapeXml(formatValue(value))}</text:p>` +
           `</table:table-cell></table:table-row>`,
       );
     }

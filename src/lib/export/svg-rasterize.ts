@@ -19,6 +19,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { base64ToBytes } from "$lib/utils/base64";
 
 export const MAX_RASTER_AXIS_PX = 4096;
 
@@ -256,11 +257,4 @@ async function canvasToPng(canvas: RasterCanvas): Promise<Uint8Array> {
     return base64ToBytes(dataUrl.slice(comma + 1));
   }
   throw new Error("rasterizeSvg: canvas has no PNG export method");
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }

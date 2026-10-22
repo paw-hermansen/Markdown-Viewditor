@@ -5,6 +5,7 @@ import katex from "katex";
 // (e.g. $\pu{123 kJ/mol}$) render in ODT/EPUB MathML exports. Ships inside
 // katex; no extra dependency.
 import "katex/contrib/mhchem";
+import { base64ToBytes } from "$lib/utils/base64";
 
 // Re-export the directive extractor for use by the export pipeline.
 export { extractMathDirectives } from "$lib/extensions/directives";
@@ -1267,11 +1268,4 @@ export function cropTransparentRows(
   scale: number,
 ): HTMLCanvasElement {
   return cropTransparentBounds(canvas, bufferCssPx, scale, "vertical");
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }

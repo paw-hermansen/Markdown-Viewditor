@@ -1,6 +1,7 @@
 import type { Frontmatter } from "$lib/types";
 import { deriveTitle } from "./frontmatter-card";
 import { inlineCssAssets, inlineImages } from "./assets";
+import { escapeHtml } from "$lib/utils/escape";
 
 /**
  * Build a self-contained standalone HTML document from rendered viewer HTML.
@@ -138,12 +139,4 @@ ${cardHtml}${inlinedHtml}
 `;
 
   return { html: doc, warnings };
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

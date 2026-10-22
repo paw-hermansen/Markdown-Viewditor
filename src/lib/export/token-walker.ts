@@ -427,7 +427,12 @@ export function walkTokens(
  * Scans forward from `startIdx + 1`, tracking nesting depth.
  * Returns -1 if not found.
  */
-function findClosing(
+/**
+ * Index of the token closing the one at `startIdx`, or -1. Balances nested
+ * open/close pairs of the same type, so it skips over inner blocks rather
+ * than stopping at the first close.
+ */
+export function findClosing(
   tokens: Token[],
   startIdx: number,
   closeType: string,

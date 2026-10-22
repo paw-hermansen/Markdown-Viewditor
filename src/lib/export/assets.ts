@@ -8,6 +8,9 @@
  * URL is left in place, so a single broken image doesn't abort the export.
  */
 
+import { bytesToDataUri } from "$lib/utils/base64";
+import { extractLocalImgPath, mimeFromHref } from "./image-src";
+
 export interface InlineResult<T> {
   value: T;
   warnings: string[];
@@ -72,29 +75,6 @@ type InvokeImpl = (
   cmd: string,
   args?: Record<string, unknown>,
 ) => Promise<unknown>;
-
-/**
- * Extract the filesystem path from a Tauri local-file URL.
- *
- * Handles both platform variants:
- * - Linux/macOS: `localimg://localhost/<encoded-path>`
- * - Windows:     `http://localimg.localhost/<encoded-path>`
- *
- * Returns null when the src is not a recognized local-file URL.
- */
-function extractLocalImgPath(src: string): string | null {
-  for (const prefix of [
-    "localimg://localhost/",
-    "http://localimg.localhost/",
-    "asset://localhost/",
-    "http://asset.localhost/",
-  ]) {
-    if (src.startsWith(prefix)) {
-      return decodeURIComponent(src.slice(prefix.length));
-    }
-  }
-  return null;
-}
 
 /**
  * Inline `localimg://` / `asset://` / `http://localhost` image srcs by
@@ -173,38 +153,4 @@ export async function inlineImages(
     out = out.split(src).join(dataUri);
   }
   return { value: out, warnings };
-}
-
-function mimeFromHref(href: string): string {
-  const ext = href.split(".").pop()?.toLowerCase() ?? "";
-  switch (ext) {
-    case "woff2":
-      return "font/woff2";
-    case "woff":
-      return "font/woff";
-    case "ttf":
-      return "font/ttf";
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "gif":
-      return "image/gif";
-    case "svg":
-      return "image/svg+xml";
-    case "webp":
-      return "image/webp";
-    default:
-      return "application/octet-stream";
-  }
-}
-
-function bytesToDataUri(bytes: Uint8Array, mime: string): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return `data:${mime};base64,${btoa(binary)}`;
 }

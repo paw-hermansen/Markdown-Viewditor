@@ -48,6 +48,7 @@
 
 import { MERMAID_FONT_SIZE } from "./styles";
 import { naturalSvgWidth } from "./fo-labels";
+import { bytesToBase64 } from "$lib/utils/base64";
 
 /** Rasterizes a laid-out element to a data URI plus its captured size. */
 export type FormulaRasterizer = (
@@ -336,13 +337,4 @@ const defaultRasterizer: FormulaRasterizer = async (el) => {
 
 function round3(value: number): number {
   return Math.round(value * 1000) / 1000;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
 }

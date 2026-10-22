@@ -186,6 +186,27 @@
     await openFile();
   }
 
+  async function handleNew() {
+    if (fileState.isLoading) return;
+
+    if (!(await confirmUnsavedChanges(MSG.newUnsaved))) return;
+
+    resetEditor();
+    editorComponent?.setContent("");
+    closeFile();
+  }
+
+  /** Open a file. With `path` given it is opened directly; otherwise the
+   *  picker runs first. */
+  async function handleOpen(path?: string) {
+    if (!(await confirmUnsavedChanges(MSG.openUnsaved))) return;
+
+    const target = path ?? (await showOpenDialog());
+    if (!target) return;
+
+    await loadContentIntoEditor(target);
+  }
+
   /** Returns true when the document was saved (or nothing needed saving), false on cancel/failure. */
   async function handleSave(): Promise<boolean> {
     if (

@@ -160,15 +160,30 @@
     closeFile();
   }
 
-  /** Open a file. With `path` given it is opened directly; otherwise the
-   *  picker runs first. */
-  async function handleOpen(path?: string) {
+  /**
+   * Open a file. With `path` given it is opened directly; otherwise the
+   * picker runs first.
+   *
+   * Not safe to bind to a button: a DOM handler is called with its event as
+   * the first argument, which would be taken for a path and handed to
+   * `read_file`. Use {@link handleOpen} for that.
+   */
+  async function openFile(path?: string) {
     if (!(await confirmUnsavedChanges(MSG.openUnsaved))) return;
 
     const target = path ?? (await showOpenDialog());
     if (!target) return;
 
     await loadContentIntoEditor(target);
+  }
+
+  /**
+   * Open handler for the toolbar and command palette. Deliberately
+   * zero-argument: `onclick={onOpen}` passes a MouseEvent, which `openFile`
+   * would read as a path.
+   */
+  async function handleOpen() {
+    await openFile();
   }
 
   /** Returns true when the document was saved (or nothing needed saving), false on cancel/failure. */
@@ -809,7 +824,7 @@
         content={editorState.content}
         loading={fileState.isLoadingContent}
         onViewerReady={handleViewerReady}
-        onLocalMarkdownOpen={handleOpen}
+        onLocalMarkdownOpen={openFile}
       />
     </div>
   {/if}

@@ -97,6 +97,46 @@ describe("AppLayout", () => {
     expect(onOpen).toHaveBeenCalled();
   });
 
+  it("invokes toolbar callbacks with no arguments", async () => {
+    // These props are typed `() => void`, but a bare `onclick={onOpen}`
+    // still hands the callback its MouseEvent. A handler that then takes
+    // its first parameter as data treats the event as data: `handleOpen(path)`
+    // passed a click event to `read_file` as a file path and the app
+    // reported "invalid type: map, expected a string". `toHaveBeenCalled`
+    // passes either way — the call must be with zero arguments.
+    const onNew = vi.fn();
+    const onOpen = vi.fn();
+    const onSave = vi.fn();
+    const onSaveAs = vi.fn();
+    const onReload = vi.fn();
+    const onAbout = vi.fn();
+    render(AppLayout, {
+      props: {
+        ...defaultProps,
+        onNew,
+        onOpen,
+        onSave,
+        onSaveAs,
+        onReload,
+        onAbout,
+        children: snippet(),
+      },
+    });
+    await fireEvent.click(screen.getByTitle("New file (Ctrl+N)"));
+    await fireEvent.click(screen.getByTitle("Open file (Ctrl+O)"));
+    await fireEvent.click(screen.getByTitle("Save (Ctrl+S)"));
+    await fireEvent.click(screen.getByTitle("Save As (Ctrl+Shift+S)"));
+    await fireEvent.click(screen.getByTitle("Reload from Disk (Ctrl+R)"));
+    await fireEvent.click(screen.getByTitle("About (F1)"));
+
+    expect(onNew).toHaveBeenCalledWith();
+    expect(onOpen).toHaveBeenCalledWith();
+    expect(onSave).toHaveBeenCalledWith();
+    expect(onSaveAs).toHaveBeenCalledWith();
+    expect(onReload).toHaveBeenCalledWith();
+    expect(onAbout).toHaveBeenCalledWith();
+  });
+
   it("calls onSave on Save button click", async () => {
     const onSave = vi.fn();
     render(AppLayout, {

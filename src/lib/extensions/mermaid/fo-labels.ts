@@ -51,6 +51,7 @@
  */
 
 import { LABEL_HOST_CLASS, LABEL_HOST_RULES } from "./styles";
+import { bytesToBase64 } from "$lib/utils/base64";
 
 /** Client-pixel rectangle (viewport coordinates). */
 export interface LabelRect {
@@ -959,13 +960,4 @@ export function naturalSvgWidth(svg: string): number {
     if (Number.isFinite(width) && width > 0) return width;
   }
   return 2000;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
 }

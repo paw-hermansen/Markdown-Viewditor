@@ -12,6 +12,7 @@ import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
 import { scaleWideMathForPrint } from "../math-fit";
 import { scopeSubtreeIds } from "../id-scope";
 import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
+import { VIEWER_CONTENT_MAX_WIDTH_PX } from "$lib/constants/layout";
 
 /**
  * PDF exporter. Reuses the in-app print path on every platform: it builds
@@ -156,7 +157,7 @@ const PAGE_MARGIN_PT = (PAGE_MARGIN_MM / MM_PER_INCH) * POINTS_PER_INCH;
    actual values are read from the live viewer at export time so custom themes
    that override max-width or padding still produce viewer-identical
    wrapping. */
-const DEFAULT_VIEWER_MAX_WIDTH_PX = 800;
+const DEFAULT_VIEWER_MAX_WIDTH_PX = VIEWER_CONTENT_MAX_WIDTH_PX;
 const DEFAULT_VIEWER_GUTTER_PX = 16;
 
 /**

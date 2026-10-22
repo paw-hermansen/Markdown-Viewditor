@@ -9,6 +9,8 @@ import { mergeOptions } from "../directive-merge";
 import type { FenceOptionSchema } from "../types";
 import { ensureConstructableStylesheet } from "./css-stylesheet-shim";
 import { withZoomNormalizedLabelMeasurement } from "./fo-measure";
+import { escapeHtml } from "$lib/utils/escape";
+import { VIEWER_CONTENT_MAX_WIDTH_PX } from "$lib/constants/layout";
 import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
 import { clampNegativeStrokeWidths } from "./svg-css";
@@ -51,12 +53,10 @@ const ERROR = "ERROR";
 const DEFAULT_MAX_WIDTH_PX = 800;
 
 /**
- * Fallback for {@link viewerColumnWidth}. Keep in sync with
- * `.viewer-content`'s max-width in `src/lib/styles/markdown.css`,
- * `DEFAULT_VIEWER_MAX_WIDTH_PX` in `exporters/pdf.ts` and
- * `VIEWER_CONTENT_WIDTH_PX` in `exporters/odt.ts`.
+ * Fallback for {@link viewerColumnWidth} — the Viewer content column's
+ * `max-width`.
  */
-const VIEWER_COLUMN_FALLBACK_PX = 800;
+const VIEWER_COLUMN_FALLBACK_PX = VIEWER_CONTENT_MAX_WIDTH_PX;
 
 /**
  * Concrete font stack for exported SVGs. Mermaid's own default stack,
@@ -691,14 +691,6 @@ function materializeSvgFonts(svg: string): string {
     },
   );
   return out;
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 interface MermaidFenceToken {

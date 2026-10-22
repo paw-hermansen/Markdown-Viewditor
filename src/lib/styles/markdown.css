@@ -5,6 +5,9 @@
    `.viewer-content` so importing this file never leaks rules into the rest
    of the app shell. */
 
+/* The 800px column is the authoritative value; `VIEWER_CONTENT_MAX_WIDTH_PX`
+   in `src/lib/constants/layout.ts` is the fallback code uses when it cannot
+   read this rule. Keep them equal. */
 .viewer-content {
   max-width: 800px;
   margin: 0 auto;

@@ -26,6 +26,9 @@ import type {
 import type { Frontmatter } from "$lib/types";
 import { fileState } from "$lib/stores/file.svelte";
 import { getThemeType } from "$lib/stores/viewer.svelte";
+import { escapeHtml } from "$lib/utils/escape";
+import { base64ToBytes } from "$lib/utils/base64";
+import { extractLocalImgPath, mimeFromHref } from "../image-src";
 import {
   generateFrontmatterCardHtml,
   deriveTitle,
@@ -110,14 +113,6 @@ function resolveViewerBackground(): string {
   return isTransparent(bodyColor) ? "#ffffff" : bodyColor;
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 /* ─────────────────────── asset helpers (from assets.ts) ───────────────── */
 
 /** Match `url(...)` references in CSS, capturing the inside. */
@@ -130,54 +125,6 @@ type InvokeImpl = (
   cmd: string,
   args?: Record<string, unknown>,
 ) => Promise<unknown>;
-
-/**
- * Extract the filesystem path from a Tauri local-file URL.
- *
- * Handles both platform variants:
- * - Linux/macOS: `localimg://localhost/<encoded-path>`
- * - Windows:     `http://localimg.localhost/<encoded-path>`
- *
- * Returns null when the src is not a recognized local-file URL.
- */
-function extractLocalImgPath(src: string): string | null {
-  for (const prefix of [
-    "localimg://localhost/",
-    "http://localimg.localhost/",
-    "asset://localhost/",
-    "http://asset.localhost/",
-  ]) {
-    if (src.startsWith(prefix)) {
-      return decodeURIComponent(src.slice(prefix.length));
-    }
-  }
-  return null;
-}
-
-function mimeFromHref(href: string): string {
-  const ext = href.split(".").pop()?.toLowerCase() ?? "";
-  switch (ext) {
-    case "woff2":
-      return "font/woff2";
-    case "woff":
-      return "font/woff";
-    case "ttf":
-      return "font/ttf";
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "gif":
-      return "image/gif";
-    case "svg":
-      return "image/svg+xml";
-    case "webp":
-      return "image/webp";
-    default:
-      return "application/octet-stream";
-  }
-}
 
 /** Return the basename of a URL path or href (last segment). */
 function basename(href: string): string {
@@ -297,11 +244,7 @@ export async function extractImages(
             path: localPath,
           })) as string;
           // Decode base64 to bytes.
-          const binary = atob(base64);
-          data = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) {
-            data[i] = binary.charCodeAt(i);
-          }
+          data = base64ToBytes(base64);
           mime = mimeFromHref(localPath);
         } else {
           // http://localhost or asset:// — use fetch.

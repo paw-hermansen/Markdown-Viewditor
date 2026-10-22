@@ -8,6 +8,7 @@
  */
 
 import type { Frontmatter } from "$lib/types";
+import { escapeHtml } from "$lib/utils/escape";
 
 /** Shared option ID — each exporter prefixes with its own id. */
 export const OPTION_INCLUDE_FRONTMATTER = "includeFrontmatter";
@@ -45,14 +46,6 @@ export function formatValue(v: unknown): string {
   } catch {
     return String(v);
   }
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 /**

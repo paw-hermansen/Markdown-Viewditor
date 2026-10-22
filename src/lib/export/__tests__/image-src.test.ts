@@ -60,6 +60,65 @@ describe("mimeFromHref", () => {
     expect(mimeFromHref("a.WOFF2")).toBe("font/woff2");
   });
 
+  describe("URL query strings and fragments", () => {
+    it("reads the extension with the query string removed", () => {
+      expect(mimeFromHref("font.woff2?v=2")).toBe("font/woff2");
+      expect(mimeFromHref("a.png?width=200")).toBe("image/png");
+    });
+
+    it("is not fooled by a dotted version query", () => {
+      // The raw string's last dot sits inside `?v=1.2.3`, so reading the
+      // extension straight off it yields "2.3".
+      expect(mimeFromHref("font.woff2?v=1.2.3")).toBe("font/woff2");
+    });
+
+    it("reads the extension with a fragment removed", () => {
+      expect(mimeFromHref("a.svg#icon")).toBe("image/svg+xml");
+      expect(mimeFromHref("a.png?v=2#frag")).toBe("image/png");
+    });
+
+    it("handles full URLs carrying both", () => {
+      expect(
+        mimeFromHref(
+          "https://cdn.example.com/fonts/KaTeX_Main.woff2?v=1.2.3#x",
+        ),
+      ).toBe("font/woff2");
+      expect(mimeFromHref("https://cdn.example.com/img/a.png?w=2")).toBe(
+        "image/png",
+      );
+    });
+
+    it("still reads an unknown extension as unknown", () => {
+      expect(mimeFromHref("a.unknown?v=2")).toBe("application/octet-stream");
+      expect(mimeFromHref("a.unknown#f")).toBe("application/octet-stream");
+    });
+  });
+
+  describe("filenames that contain URL delimiters", () => {
+    // `?` and `#` are legal in a Unix filename. Such names arrive here
+    // decoded from `%3F` / `%23` (see extractLocalImgPath), so the
+    // delimiter must not cost us a type we recognize.
+    it("reads the extension of a name containing '#'", () => {
+      expect(mimeFromHref("/tmp/my#pic.png")).toBe("image/png");
+      expect(mimeFromHref("/tmp/my#pic.woff2")).toBe("font/woff2");
+    });
+
+    it("reads the extension of a name containing '?'", () => {
+      expect(mimeFromHref("/tmp/my?pic.png")).toBe("image/png");
+      expect(mimeFromHref("/tmp/my?pic.woff2")).toBe("font/woff2");
+    });
+
+    it("leaves names without a recognized extension alone", () => {
+      expect(mimeFromHref("/tmp/my#pic")).toBe("application/octet-stream");
+    });
+  });
+
+  it("does not read an extension out of an earlier path segment", () => {
+    // Preserved from the previous implementation: only what follows the last
+    // dot is considered, even when that crosses a directory boundary.
+    expect(mimeFromHref("x.png/woff2")).toBe("application/octet-stream");
+  });
+
   it("falls back to octet-stream for unknown and missing extensions", () => {
     expect(mimeFromHref("a.unknown")).toBe("application/octet-stream");
     expect(mimeFromHref("noextension")).toBe("application/octet-stream");

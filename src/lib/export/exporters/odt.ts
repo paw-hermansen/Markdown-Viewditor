@@ -1468,6 +1468,7 @@ async function buildDocument(
     renderOpts: MathmlRenderOptions,
   ): Promise<string> {
     const display = kind === "block";
+    const label = display ? "Block" : "Inline";
     const frameOf = (frame: string): string =>
       display
         ? `      <text:p text:style-name="${S.mathDisplay}">${frame}</text:p>`
@@ -1499,7 +1500,7 @@ async function buildDocument(
         );
       } catch (err) {
         warnings.push(
-          `${display ? "Block" : "Inline"} math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
+          `${label} math rasterization failed (${err instanceof Error ? err.message : String(err)}); embedded as native formula.`,
         );
       }
     }
@@ -1512,12 +1513,7 @@ async function buildDocument(
         `<draw:frame draw:style-name="Formula" draw:name="${objId}" text:anchor-type="as-char" draw:z-index="0"><draw:object xlink:href="./${objId}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`,
       );
     } catch {
-      // Wording is kept verbatim from the two original call sites; note the
-      // block one historically omitted the "Block" qualifier. Normalizing it
-      // would be a user-visible tweak, not a refactor.
-      warnings.push(
-        `${display ? "Math" : "Inline math"} rendering failed for: ${tex.slice(0, 50)}…`,
-      );
+      warnings.push(`${label} math rendering failed for: ${tex.slice(0, 50)}…`);
       return display
         ? `      <text:p text:style-name="${S.body}">${esc(tex)}</text:p>`
         : esc(tex);

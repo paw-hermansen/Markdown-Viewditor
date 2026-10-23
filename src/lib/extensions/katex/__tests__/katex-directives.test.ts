@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  convertFileSrc: (path: string, protocol = "asset") =>
-    `${protocol}://localhost/${encodeURIComponent(path)}`,
-}));
+vi.mock("@tauri-apps/api/core", async () => {
+  const { tauriCoreMock } = await import("../../../../test/mocks/tauri-core");
+  return tauriCoreMock();
+});
 
 import { vi } from "vitest";
 import { renderMarkdown, analyzeContent } from "$lib/utils/markdown";

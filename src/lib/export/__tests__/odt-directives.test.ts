@@ -46,65 +46,15 @@ vi.mock("../math-render", async (importOriginal) => {
   };
 });
 
-import JSZip from "jszip";
-import katex from "katex";
-import MarkdownIt from "markdown-it";
-import footnote from "markdown-it-footnote";
-import taskLists from "markdown-it-task-lists";
-import vscodeKatex from "@vscode/markdown-it-katex";
-import mathBracketsPlugin from "$lib/utils/math-brackets";
-import { odtExporter } from "../exporters/odt";
-import type { ExportContext } from "../types";
 import { registerExtensionSchema } from "$lib/extensions/registry";
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
+import { exportToZip } from "./odt-harness";
 
 // Schema will be registered in beforeAll.
 
-function makeMathTokens(src: string) {
-  const md = new MarkdownIt({ html: true })
-    .use(footnote)
-    .use(taskLists)
-    .use(vscodeKatex, {
-      katex,
-      enableBareBlocks: true,
-      enableFencedBlocks: true,
-    })
-    .use(mathBracketsPlugin);
-  return md.parse(src, {});
-}
-
-async function runOdtExport(src: string, options?: Record<string, unknown>) {
-  const tokens = makeMathTokens(src);
-  const md = new MarkdownIt({ html: true })
-    .use(footnote)
-    .use(taskLists)
-    .use(vscodeKatex, {
-      katex,
-      enableBareBlocks: true,
-      enableFencedBlocks: true,
-    })
-    .use(mathBracketsPlugin);
-  const html = md.render(src);
-  const ctx: ExportContext = {
-    markdown: src,
-    html,
-    frontmatter: null,
-    fileName: "test",
-    tokens,
-    options,
-  };
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockResolvedValue(undefined);
-  await odtExporter.export(ctx);
-  const calls = vi.mocked(invoke).mock.calls;
-  const content = calls[calls.length - 1][1] as {
-    content: number[];
-  };
-  const buffer = new Uint8Array(content.content);
-  return JSZip.loadAsync(buffer);
-}
+/** This suite exports math documents — the preset is the only difference. */
+const exportMathZip = (src: string, options?: Record<string, unknown>) =>
+  exportToZip(src, { plugins: ["math"], options });
 
 describe("ODT math directives and fence attributes", () => {
   beforeAll(() => {
@@ -122,7 +72,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("passes leqno directive to renderMathToMathml", async () => {
     const src = "<!-- math: leqno -->\n\n$$\nE=mc^2 \\tag{1}\n$$";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("</math>");
@@ -130,7 +80,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("passes fontsize directive to renderMathToMathml", async () => {
     const src = "<!-- math: fontsize=2.0 -->\n\n$$\nx^2\n$$";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("mathsize");
@@ -138,7 +88,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("passes fence {leqno} to renderMathToMathml", async () => {
     const src = "```math {leqno}\nE = mc^2 \\tag{1}\n```";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("</math>");
@@ -146,7 +96,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("passes fence {fontsize=2.0} to renderMathToMathml", async () => {
     const src = "```math {fontsize=2.0}\nx^2\n```";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain('mathsize="2em"');
@@ -155,7 +105,7 @@ describe("ODT math directives and fence attributes", () => {
   it("fence attrs override HTML comment directives", async () => {
     const src =
       "<!-- math: fontsize=1.5 -->\n\n```math {fontsize=3.0}\nx^2\n```";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain('mathsize="3em"');
     expect(mathXml).not.toContain('mathsize="1.5em"');
@@ -175,7 +125,7 @@ describe("ODT math directives and fence attributes", () => {
       "b",
       "$$",
     ].join("\n");
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const obj1Xml = await zip.file("Object 1/content.xml")!.async("text");
     const obj2Xml = await zip.file("Object 2/content.xml")!.async("text");
     // First formula should have fontsize=2.0
@@ -198,7 +148,7 @@ describe("ODT math directives and fence attributes", () => {
       "b \\tag{2}",
       "$$",
     ].join("\n");
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const obj1Xml = await zip.file("Object 1/content.xml")!.async("text");
     const obj2Xml = await zip.file("Object 2/content.xml")!.async("text");
     // Both should render without errors
@@ -207,7 +157,7 @@ describe("ODT math directives and fence attributes", () => {
   });
   it("rasterized math receives directive options", async () => {
     const src = "<!-- math: leqno -->\n\n$$\nE=mc^2 \\tag{1}\n$$";
-    await runOdtExport(src, { "odt.rasterizeMath": true });
+    await exportMathZip(src, { "odt.rasterizeMath": true });
     expect(mockRenderMathToPng).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const callOpts = (mockRenderMathToPng as any).mock.lastCall[0];
@@ -216,7 +166,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("rasterized fenced math receives merged fence + directive options", async () => {
     const src = "<!-- math: leqno -->\n\n```math {fontsize=2.0}\nx^2\n```";
-    await runOdtExport(src, { "odt.rasterizeMath": true });
+    await exportMathZip(src, { "odt.rasterizeMath": true });
     expect(mockRenderMathToPng).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const callOpts = (mockRenderMathToPng as any).mock.lastCall[0];
@@ -226,7 +176,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("math without directives uses defaults", async () => {
     const src = "$$\nx^2\n$$";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     // No fontsize wrapper (default is 1.0)
@@ -235,7 +185,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("inline math $x^2$ with fontsize directive in ODT", async () => {
     const src = "<!-- math: fontsize=2.0 -->\n\n$x^2$";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain('mathsize="2em"');
@@ -243,7 +193,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("inline math $x^2$ with leqno directive in ODT", async () => {
     const src = "<!-- math: leqno -->\n\n$x^2$";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("</math>");
@@ -251,7 +201,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("fleqn directive in ODT MathML", async () => {
     const src = "<!-- math: fleqn -->\n\n$$\n\\int_0^1 f(x) dx\n$$";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("</math>");
@@ -259,7 +209,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("fence {fleqn} in ODT MathML", async () => {
     const src = "```math {fleqn}\n\\int_0^1 f(x) dx\n```";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("</math>");
@@ -267,7 +217,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("rasterized inline math receives directive options", async () => {
     const src = "<!-- math: leqno -->\n\n$x^2$";
-    await runOdtExport(src, { "odt.rasterizeMath": true });
+    await exportMathZip(src, { "odt.rasterizeMath": true });
     expect(mockRenderMathToPng).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const callOpts = (mockRenderMathToPng as any).mock.lastCall[0];
@@ -276,7 +226,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("rasterized inline math receives fontsize", async () => {
     const src = "<!-- math: fontsize=2.0 -->\n\n$x^2$";
-    await runOdtExport(src, { "odt.rasterizeMath": true });
+    await exportMathZip(src, { "odt.rasterizeMath": true });
     expect(mockRenderMathToPng).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const callOpts = (mockRenderMathToPng as any).mock.lastCall[0];
@@ -285,7 +235,7 @@ describe("ODT math directives and fence attributes", () => {
 
   it("\\begin{align} bare block with leqno directive", async () => {
     const src = "<!-- math: leqno -->\n\n\\begin{align}\nx &= 1\n\\end{align}";
-    const zip = await runOdtExport(src);
+    const zip = await exportMathZip(src);
     const mathXml = await zip.file("Object 1/content.xml")!.async("text");
     expect(mathXml).toContain("<math");
     expect(mathXml).toContain("</math>");

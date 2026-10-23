@@ -64,217 +64,24 @@ vi.mock("../math-render", async (importOriginal) => {
 });
 
 import JSZip from "jszip";
-import katex from "katex";
 import MarkdownIt from "markdown-it";
 import footnote from "markdown-it-footnote";
 import taskLists from "markdown-it-task-lists";
-import vscodeKatex from "@vscode/markdown-it-katex";
-import mark from "markdown-it-mark";
-import mathBracketsPlugin from "$lib/utils/math-brackets";
 import { odtExporter } from "../exporters/odt";
 import type { ExportContext } from "../types";
-
-function makeTokens(src: string) {
-  const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
-  return md.parse(src, {});
-}
-
-function makeMarkTokens(src: string) {
-  const md = new MarkdownIt({ html: true })
-    .use(footnote)
-    .use(taskLists)
-    .use(mark);
-  return md.parse(src, {});
-}
-
-function makeMathTokens(src: string) {
-  const md = new MarkdownIt({ html: true })
-    .use(footnote)
-    .use(taskLists)
-    .use(vscodeKatex, {
-      katex,
-      enableBareBlocks: true,
-      enableFencedBlocks: true,
-    })
-    .use(mathBracketsPlugin);
-  return md.parse(src, {});
-}
-
-async function runOdtExport(
-  src: string,
-  fileName = "test",
-  options?: Record<string, unknown>,
-) {
-  const tokens = makeTokens(src);
-  const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
-  const html = md.render(src);
-  const ctx: ExportContext = {
-    markdown: src,
-    html,
-    frontmatter: null,
-    fileName,
-    tokens,
-    options,
-  };
-  return odtExporter.export(ctx);
-}
-
-async function runOdtExportWithFrontmatter(
-  src: string,
-  frontmatter: Record<string, unknown>,
-  fileName = "test",
-  options?: Record<string, unknown>,
-) {
-  const tokens = makeTokens(src);
-  const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
-  const html = md.render(src);
-  const ctx: ExportContext = {
-    markdown: src,
-    html,
-    frontmatter,
-    fileName,
-    tokens,
-    options,
-  };
-  return odtExporter.export(ctx);
-}
-
-async function runOdtExportWithMark(
-  src: string,
-  fileName = "test",
-  options?: Record<string, unknown>,
-) {
-  const tokens = makeMarkTokens(src);
-  const md = new MarkdownIt({ html: true })
-    .use(footnote)
-    .use(taskLists)
-    .use(mark);
-  const html = md.render(src);
-  const ctx: ExportContext = {
-    markdown: src,
-    html,
-    frontmatter: null,
-    fileName,
-    tokens,
-    options,
-  };
-  return odtExporter.export(ctx);
-}
-
-async function runOdtExportWithMath(
-  src: string,
-  options?: Record<string, unknown>,
-) {
-  const tokens = makeMathTokens(src);
-  const md = new MarkdownIt({ html: true })
-    .use(footnote)
-    .use(taskLists)
-    .use(vscodeKatex, {
-      katex,
-      enableBareBlocks: true,
-      enableFencedBlocks: true,
-    })
-    .use(mathBracketsPlugin);
-  const html = md.render(src);
-  const ctx: ExportContext = {
-    markdown: src,
-    html,
-    frontmatter: null,
-    fileName: "test",
-    tokens,
-    options,
-  };
-  return odtExporter.export(ctx);
-}
-
-async function getContentXml(
-  src: string,
-  options?: Record<string, unknown>,
-): Promise<string> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockResolvedValue(undefined);
-  await runOdtExport(src, "test", options);
-  const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
-  const buffer = new Uint8Array(content.content);
-  const zip = await JSZip.loadAsync(buffer);
-  return zip.file("content.xml")!.async("text");
-}
-
-async function getContentXmlWithMark(
-  src: string,
-  options?: Record<string, unknown>,
-): Promise<string> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockResolvedValue(undefined);
-  await runOdtExportWithMark(src, "test", options);
-  const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
-  const buffer = new Uint8Array(content.content);
-  const zip = await JSZip.loadAsync(buffer);
-  return zip.file("content.xml")!.async("text");
-}
-
-/**
- * Return the list of file paths inside the exported ODT ZIP.
- * `readStubs` (optional) maps additional `invoke` commands to canned
- * responses — used by tests that hit the relative-path branch in
- * `resolveImage` which calls `read_file_as_base64`.
- */
-async function getZipFileList(
-  src: string,
-  options?: Record<string, unknown>,
-  readStubs?: Record<string, unknown>,
-): Promise<string[]> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockReset();
-  vi.mocked(invoke).mockImplementation(async (cmd) => {
-    if (readStubs && cmd in readStubs) return readStubs[cmd];
-    return undefined;
-  });
-  await runOdtExport(src, "test", options);
-  // The ODT exporter writes via `write_file_binary`; find that call
-  // regardless of any earlier `read_file_as_base64` etc.
-  const writeCall = vi
-    .mocked(invoke)
-    .mock.calls.find((call) => call[0] === "write_file_binary");
-  if (!writeCall) throw new Error("write_file_binary was never invoked");
-  const args = writeCall[1] as { content: number[] };
-  const buffer = new Uint8Array(args.content);
-  const zip = await JSZip.loadAsync(buffer);
-  return Object.keys(zip.files);
-}
-
-async function getMathContentXml(
-  src: string,
-  options?: Record<string, unknown>,
-): Promise<string> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockResolvedValue(undefined);
-  await runOdtExportWithMath(src, options);
-  const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
-  const buffer = new Uint8Array(content.content);
-  const zip = await JSZip.loadAsync(buffer);
-  return zip.file("content.xml")!.async("text");
-}
-
-async function getStylesXml(src: string): Promise<string> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockResolvedValue(undefined);
-  await runOdtExport(src);
-  const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
-  const buffer = new Uint8Array(content.content);
-  const zip = await JSZip.loadAsync(buffer);
-  return zip.file("styles.xml")!.async("text");
-}
+import {
+  getContentXml,
+  getContentXmlWithMark,
+  getMathContentXml,
+  getStylesXml,
+  getZipFileList,
+  makeMathTokens,
+  makeTokens,
+  exportToZip,
+  runOdtExport,
+  zipEntries,
+  zipText,
+} from "./odt-harness";
 
 describe("odtExporter", () => {
   beforeEach(() => {
@@ -329,9 +136,7 @@ describe("odtExporter", () => {
   });
 
   it("returns empty warnings when user cancels save dialog", async () => {
-    const { save } = await import("@tauri-apps/plugin-dialog");
-    vi.mocked(save).mockResolvedValue(null);
-    const result = await runOdtExport("# Hello");
+    const result = await runOdtExport("# Hello", { savePath: null });
     expect(result.warnings).toEqual([]);
     expect(result.savedPath).toBeUndefined();
   });
@@ -563,7 +368,7 @@ describe("odtExporter", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     vi.mocked(save).mockResolvedValue("/tmp/test.odt");
     vi.mocked(invoke).mockResolvedValue(undefined);
-    await runOdtExport("# Hello", "my-doc");
+    await runOdtExport("# Hello", { fileName: "my-doc" });
     const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
     const zip = await JSZip.loadAsync(new Uint8Array(content.content));
     expect(await zip.file("meta.xml")!.async("text")).toContain("my-doc");
@@ -574,11 +379,10 @@ describe("odtExporter", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     vi.mocked(save).mockResolvedValue("/tmp/test.odt");
     vi.mocked(invoke).mockResolvedValue(undefined);
-    await runOdtExportWithFrontmatter(
-      "# Hello",
-      { title: "Render Title" },
-      "my-doc",
-    );
+    await runOdtExport("# Hello", {
+      frontmatter: { title: "Render Title" },
+      fileName: "my-doc",
+    });
     const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
     const zip = await JSZip.loadAsync(new Uint8Array(content.content));
     const meta = await zip.file("meta.xml")!.async("text");
@@ -593,11 +397,10 @@ describe("odtExporter", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     vi.mocked(save).mockResolvedValue("/tmp/test.odt");
     vi.mocked(invoke).mockResolvedValue(undefined);
-    await runOdtExportWithFrontmatter(
-      "# Hello",
-      { name: "Skill Name", title: "Doc Title" },
-      "my-doc",
-    );
+    await runOdtExport("# Hello", {
+      frontmatter: { name: "Skill Name", title: "Doc Title" },
+      fileName: "my-doc",
+    });
     const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
     const zip = await JSZip.loadAsync(new Uint8Array(content.content));
     const meta = await zip.file("meta.xml")!.async("text");
@@ -612,11 +415,10 @@ describe("odtExporter", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     vi.mocked(save).mockResolvedValue("/tmp/test.odt");
     vi.mocked(invoke).mockResolvedValue(undefined);
-    await runOdtExportWithFrontmatter(
-      "# Hello",
-      { title: "Render Title", author: "Test Suite" },
-      "my-doc",
-    );
+    await runOdtExport("# Hello", {
+      frontmatter: { title: "Render Title", author: "Test Suite" },
+      fileName: "my-doc",
+    });
     const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
     const zip = await JSZip.loadAsync(new Uint8Array(content.content));
     const meta = await zip.file("meta.xml")!.async("text");
@@ -630,7 +432,7 @@ describe("odtExporter", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     vi.mocked(save).mockResolvedValue("/tmp/test.odt");
     vi.mocked(invoke).mockResolvedValue(undefined);
-    await runOdtExport("# Hello", "my-doc");
+    await runOdtExport("# Hello", { fileName: "my-doc" });
     const content = vi.mocked(invoke).mock.calls[0][1] as { content: number[] };
     const zip = await JSZip.loadAsync(new Uint8Array(content.content));
     const meta = await zip.file("meta.xml")!.async("text");
@@ -1503,16 +1305,18 @@ describe("ODT rasterization options", () => {
     vi.mocked(invoke).mockResolvedValue(undefined);
 
     mockRenderMathToPng.mockRejectedValueOnce(new Error("no canvas"));
-    const inline = await runOdtExportWithMath("$x^2$", {
-      "odt.rasterizeMath": true,
+    const inline = await runOdtExport("$x^2$", {
+      plugins: ["math"],
+      options: { "odt.rasterizeMath": true },
     });
     expect(inline.warnings).toContain(
       "Inline math rasterization failed (no canvas); embedded as native formula.",
     );
 
     mockRenderMathToPng.mockRejectedValueOnce(new Error("no canvas"));
-    const block = await runOdtExportWithMath("$$\nx^2\n$$", {
-      "odt.rasterizeMath": true,
+    const block = await runOdtExport("$$\nx^2\n$$", {
+      plugins: ["math"],
+      options: { "odt.rasterizeMath": true },
     });
     expect(block.warnings).toContain(
       "Block math rasterization failed (no canvas); embedded as native formula.",
@@ -1530,8 +1334,9 @@ describe("ODT rasterization options", () => {
     mockRenderMathToMathml.mockImplementationOnce(() => {
       throw new Error("bad tex");
     });
-    const inline = await runOdtExportWithMath("$x^2$", {
-      "odt.rasterizeMath": false,
+    const inline = await runOdtExport("$x^2$", {
+      plugins: ["math"],
+      options: { "odt.rasterizeMath": false },
     });
     expect(
       inline.warnings.some((w) =>
@@ -1542,8 +1347,9 @@ describe("ODT rasterization options", () => {
     mockRenderMathToMathml.mockImplementationOnce(() => {
       throw new Error("bad tex");
     });
-    const block = await runOdtExportWithMath("$$\nx^2\n$$", {
-      "odt.rasterizeMath": false,
+    const block = await runOdtExport("$$\nx^2\n$$", {
+      plugins: ["math"],
+      options: { "odt.rasterizeMath": false },
     });
     // The block path used to drop the "Block" qualifier.
     expect(
@@ -1791,31 +1597,21 @@ describe("ODT rasterization options", () => {
       "Nl7BcQAAAABJRU5ErkJggg==";
     fileState.currentFile = "/tmp/example.md";
     try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
       const { invoke } = await import("@tauri-apps/api/core");
-      vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-      vi.mocked(invoke).mockReset();
-      vi.mocked(invoke).mockImplementation(async (cmd) =>
-        cmd === "read_file_as_base64" ? png : undefined,
-      );
-      await runOdtExport(`![a](./same.png) ![b](./same.png)`);
+      const zip = await exportToZip(`![a](./same.png) ![b](./same.png)`, {
+        invokeStubs: { read_file_as_base64: png },
+      });
       const reads = vi
         .mocked(invoke)
         .mock.calls.filter((c) => c[0] === "read_file_as_base64");
       expect(reads).toHaveLength(1);
-      const writeCall = vi
-        .mocked(invoke)
-        .mock.calls.find((c) => c[0] === "write_file_binary");
-      const zip = await JSZip.loadAsync(
-        new Uint8Array((writeCall![1] as { content: number[] }).content),
-      );
       expect(
-        Object.keys(zip.files).filter(
+        zipEntries(zip).filter(
           (f) => f.startsWith("Pictures/") && !f.endsWith("/"),
         ),
       ).toEqual(["Pictures/image1.png"]);
       // Both images point at that one entry.
-      const xml = await zip.file("content.xml")!.async("text");
+      const xml = await zipText(zip, "content.xml");
       const hrefs = [...xml.matchAll(/xlink:href="(Pictures\/[^"]+)"/g)].map(
         (m) => m[1],
       );
@@ -1833,35 +1629,24 @@ describe("ODT rasterization options", () => {
       '<rect width="40" height="20" fill="red"/></svg>';
     fileState.currentFile = "/tmp/example.md";
     try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
       const { invoke } = await import("@tauri-apps/api/core");
-      vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-      vi.mocked(invoke).mockReset();
-      vi.mocked(invoke).mockImplementation(async (cmd) =>
-        cmd === "read_file_as_base64" ? btoa(svg) : undefined,
-      );
-      await runOdtExport(`![a](./same.svg) ![b](./same.svg)`, "test", {
-        "odt.rasterizeSvg": true,
+      const zip = await exportToZip(`![a](./same.svg) ![b](./same.svg)`, {
+        invokeStubs: { read_file_as_base64: btoa(svg) },
+        options: { "odt.rasterizeSvg": true },
       });
       const reads = vi
         .mocked(invoke)
         .mock.calls.filter((c) => c[0] === "read_file_as_base64");
       expect(reads).toHaveLength(1);
       expect(mockRasterizeSvg).toHaveBeenCalledTimes(1);
-      const writeCall = vi
-        .mocked(invoke)
-        .mock.calls.find((c) => c[0] === "write_file_binary");
-      const zip = await JSZip.loadAsync(
-        new Uint8Array((writeCall![1] as { content: number[] }).content),
-      );
-      const pictures = Object.keys(zip.files).filter(
+      const pictures = zipEntries(zip).filter(
         (f) => f.startsWith("Pictures/") && !f.endsWith("/"),
       );
       // Exactly one raster, and no leftover vector SVG.
       expect(pictures).toHaveLength(1);
       expect(pictures[0]).toMatch(/^Pictures\/image\d+\.png$/);
       // Both images point at that one raster.
-      const xml = await zip.file("content.xml")!.async("text");
+      const xml = await zipText(zip, "content.xml");
       const hrefs = [...xml.matchAll(/xlink:href="(Pictures\/[^"]+)"/g)].map(
         (m) => m[1],
       );

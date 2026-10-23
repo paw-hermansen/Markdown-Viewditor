@@ -4,7 +4,6 @@ import { getThemeById } from "$lib/utils/themes";
 
 export const viewerState = $state<ViewerState>({
   theme: settingsState.viewerTheme || "github-dark",
-  scrollTop: 0,
 });
 
 export function getThemeType(): "light" | "dark" {

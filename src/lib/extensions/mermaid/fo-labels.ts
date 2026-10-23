@@ -738,7 +738,7 @@ function safeMetrics(): FoLabelMetrics | null {
  * scale-invariant; the zoom probe normalizes computed font sizes the same
  * way `text-offsets.ts` does (WebKit reports declared/zoom under page zoom).
  */
-export function domLabelMetrics(): FoLabelMetrics | null {
+function domLabelMetrics(): FoLabelMetrics | null {
   if (
     typeof document === "undefined" ||
     typeof document.createElement !== "function" ||

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import ThemeSelector from "../ThemeSelector.svelte";
 
 const { mockViewerState, mockSetTheme, mockApplyTheme } = vi.hoisted(() => ({
-  mockViewerState: { theme: "github-dark", scrollTop: 0 },
+  mockViewerState: { theme: "github-dark" },
   mockSetTheme: vi.fn(),
   mockApplyTheme: vi.fn().mockResolvedValue(undefined),
 }));

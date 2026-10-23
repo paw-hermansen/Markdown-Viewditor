@@ -1289,7 +1289,6 @@ async function buildDocument(
     data: Uint8Array,
     widthPx: number,
     heightPx: number,
-    srcLabel: string,
     graphicStyle = "fr1",
     cacheKey?: string,
   ): string {
@@ -1309,7 +1308,6 @@ async function buildDocument(
     if (widthPx > 0 && heightPx > 0) {
       sizeAttrs = ` svg:width="${(widthPx / 96).toFixed(4)}in" svg:height="${(heightPx / 96).toFixed(4)}in"`;
     }
-    void srcLabel;
     return `<draw:frame draw:style-name="${graphicStyle}" draw:name="${escapeXml(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${escapeXml(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/></draw:frame>`;
   }
 
@@ -1317,7 +1315,6 @@ async function buildDocument(
   function addSvgImage(
     svgXml: string,
     dims: { width: number; height: number },
-    srcLabel: string,
   ): string {
     const bytes = new TextEncoder().encode(svgXml);
     const name = `Pictures/image${imageCounter.n++}.svg`;
@@ -1332,7 +1329,6 @@ async function buildDocument(
     if (dims.width > 0 && dims.height > 0) {
       sizeAttrs = ` svg:width="${(dims.width / 96).toFixed(4)}in" svg:height="${(dims.height / 96).toFixed(4)}in"`;
     }
-    void srcLabel;
     return `<draw:frame draw:style-name="fr1" draw:name="${escapeXml(name)}" text:anchor-type="as-char"${sizeAttrs} draw:z-index="0"><draw:image xlink:href="${escapeXml(name)}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/svg+xml"/></draw:frame>`;
   }
 
@@ -1361,14 +1357,7 @@ async function buildDocument(
         dims.height,
         rasterScale,
       );
-      return addRasterImage(
-        png,
-        dims.width,
-        dims.height,
-        srcLabel,
-        "fr1",
-        cacheKey,
-      );
+      return addRasterImage(png, dims.width, dims.height, "fr1", cacheKey);
     } catch (err) {
       warnings.push(
         `SVG ${srcLabel} rasterization failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -1427,7 +1416,6 @@ async function buildDocument(
             png,
             frameWidthPx,
             frameHeightPx,
-            `${kind}-math(${tex.slice(0, 40)})`,
             display ? "fr1" : "Formula",
           ),
         );
@@ -1561,7 +1549,7 @@ async function buildDocument(
               warnings,
             ) ?? { width: 0, height: 0 };
             const rasterized = await tryRasterizeSvg(svg.svgXml, dims, label);
-            xml += rasterized ?? addSvgImage(svg.svgXml, dims, label);
+            xml += rasterized ?? addSvgImage(svg.svgXml, dims);
             ci += svg.consumedCount - 1;
             break;
           }
@@ -1737,7 +1725,7 @@ async function buildDocument(
                 dims,
                 label,
               );
-              xml += rasterized ?? addSvgImage(svgRes.svgXml, dims, label);
+              xml += rasterized ?? addSvgImage(svgRes.svgXml, dims);
               ci += svgRes.consumedCount - 1;
               break;
             }
@@ -2392,7 +2380,7 @@ async function buildDocument(
                 frameDims,
                 label,
               );
-              const inner = rasterized ?? addSvgImage(svgXml, frameDims, label);
+              const inner = rasterized ?? addSvgImage(svgXml, frameDims);
               parts.push(
                 `      <text:p text:style-name="${S.diagramDisplay(mermaidOpts.align)}">${inner}</text:p>`,
               );
@@ -2432,7 +2420,7 @@ async function buildDocument(
               warnings,
             ) ?? { width: 0, height: 0 };
             const rasterized = await tryRasterizeSvg(html, dims, label);
-            const inner = rasterized ?? addSvgImage(html, dims, label);
+            const inner = rasterized ?? addSvgImage(html, dims);
             parts.push(
               `      <text:p text:style-name="${paragraphStyle()}">${inner}</text:p>`,
             );

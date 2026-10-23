@@ -101,7 +101,7 @@ coverage/
 .opencode/
 
 # Markdown Viewditor
-*.md.bak
+*.bak
 
 # Python tooling (testing/tools/)
 __pycache__/

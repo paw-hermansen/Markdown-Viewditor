@@ -43,7 +43,7 @@ vi.mock("$lib/utils/user-themes", () => ({
 
 vi.mock("$lib/stores/viewer.svelte", () => ({
   setTheme: vi.fn(),
-  viewerState: { theme: "github-dark", scrollTop: 0 },
+  viewerState: { theme: "github-dark" },
   getThemeType: () => "dark",
 }));
 

@@ -46,14 +46,15 @@
  * today's behavior, misplaced on WebKit but never missing.
  */
 
-import { MERMAID_FONT_SIZE } from "./styles";
-import { naturalSvgWidth } from "./fo-labels";
-import { bytesToBase64 } from "$lib/utils/base64";
+import {
+  defaultRasterizer,
+  round3,
+  withLabelHost,
+  type LabelRasterizer,
+} from "./label-host";
 
 /** Rasterizes a laid-out element to a data URI plus its captured size. */
-export type FormulaRasterizer = (
-  el: HTMLElement,
-) => Promise<{ dataUri: string; widthPx: number; heightPx: number } | null>;
+export type FormulaRasterizer = LabelRasterizer;
 
 /** Measures an element's layout box in CSS px. Returns null when unmeasurable. */
 export type FormulaMeasurer = (
@@ -106,97 +107,52 @@ async function rasterizeLabelMathInner(
     return svg;
   }
 
-  const host = document.createElement("div");
-  // Off-screen but *rendered*: html2canvas respects `visibility: hidden`
-  // and would capture blank images (same pattern as fo-labels.ts).
-  host.style.cssText = "position:fixed;left:-99999px;top:0;pointer-events:none";
-  // Natural SVG width, so the SVG renders at display scale 1: label
-  // geometry is baked in SVG user units, and a self-scaled SVG makes
-  // getBoundingClientRect report scaled sizes for label content (the
-  // image would then not fill Mermaid's slot — see naturalSvgWidth).
-  host.style.width = `${naturalSvgWidth(svg)}px`;
-  host.innerHTML = svg;
-  const svgEl = host.querySelector("svg");
-  if (!svgEl) return svg;
+  return withLabelHost(
+    svg,
+    async (svgEl) => {
+      const measure = options.measure ?? measureBox;
+      const rasterize = options.rasterize ?? defaultRasterizer;
+      let changed = false;
 
-  // Match the viewer's font context so formulas rasterize with the fonts
-  // they render with on screen (KaTeX resolves em against this). Size is
-  // deliberately NOT taken from here — see the pin below.
-  try {
-    const reference =
-      document.getElementById("viewer-content") ?? document.body;
-    if (reference) {
-      const cs = getComputedStyle(reference);
-      host.style.fontFamily = cs.fontFamily;
-      host.style.color = cs.color;
-    }
-  } catch {
-    // No getComputedStyle — the default rasterizer needs it, ours may not.
-  }
-  // The label font-size pin (MERMAID_STYLES sets it on
-  // `foreignObject > div` in Mermaid's render hosts): formulas must
-  // measure and capture at the size they occupy in Mermaid's baked label
-  // slot, or the replacement image comes out smaller than the slot.
-  //
-  // Applied after the viewer font context on purpose — that context has no
-  // font-size of its own (`#viewer-content` inherits from `html, body`), so
-  // copying its size would replace this pin with the page's 14px, or with
-  // the `medium` keyword where no viewer exists. Only family and colour
-  // come from the viewer; the size is ours.
-  host.style.fontSize = MERMAID_FONT_SIZE;
+      for (const fo of Array.from(svgEl.querySelectorAll("foreignObject"))) {
+        // Only top-level labels (a foreignObject inside a foreignObject is not
+        // a Mermaid label).
+        if (fo.querySelector("foreignObject")) continue;
+        for (const el of outermostFormulaElements(fo)) {
+          const box = measure(el as HTMLElement);
+          if (!box || box.widthPx <= 0 || box.heightPx <= 0) continue;
 
-  document.body.appendChild(host);
-  try {
-    // Font readiness first: the measured box and the captured glyphs must
-    // come from the same font state. (KaTeX's faces load lazily; a capture
-    // that races the swap paints fallback glyphs in KaTeX's slots —
-    // oversized, overlapping characters.)
-    const loadFonts = options.loadFonts ?? awaitFormulaFonts;
-    await loadFonts();
+          let raster: {
+            dataUri: string;
+            widthPx: number;
+            heightPx: number;
+          } | null = null;
+          try {
+            raster = await rasterize(el as HTMLElement);
+          } catch {
+            raster = null;
+          }
+          if (!raster) continue; // keep the live formula
 
-    const measure = options.measure ?? measureBox;
-    const rasterize = options.rasterize ?? defaultRasterizer;
-    let changed = false;
-
-    for (const fo of Array.from(svgEl.querySelectorAll("foreignObject"))) {
-      // Only top-level labels (a foreignObject inside a foreignObject is not
-      // a Mermaid label).
-      if (fo.querySelector("foreignObject")) continue;
-      for (const el of outermostFormulaElements(fo)) {
-        const box = measure(el as HTMLElement);
-        if (!box || box.widthPx <= 0 || box.heightPx <= 0) continue;
-
-        let raster: {
-          dataUri: string;
-          widthPx: number;
-          heightPx: number;
-        } | null = null;
-        try {
-          raster = await rasterize(el as HTMLElement);
-        } catch {
-          raster = null;
+          // Size the image from the raster's own geometry (which the capture
+          // pins to its measured box), never from a separate measurement: a
+          // bitmap displayed at a different size shows up stretched —
+          // oversized, overlapping characters.
+          const img = buildFormulaImage(
+            el,
+            raster.dataUri,
+            raster.widthPx,
+            raster.heightPx,
+          );
+          el.replaceWith(img);
+          changed = true;
         }
-        if (!raster) continue; // keep the live formula
-
-        // Size the image from the raster's own geometry (which the capture
-        // pins to its measured box), never from a separate measurement: a
-        // bitmap displayed at a different size shows up stretched —
-        // oversized, overlapping characters.
-        const img = buildFormulaImage(
-          el,
-          raster.dataUri,
-          raster.widthPx,
-          raster.heightPx,
-        );
-        el.replaceWith(img);
-        changed = true;
       }
-    }
 
-    return changed ? host.innerHTML : svg;
-  } finally {
-    host.remove();
-  }
+      return changed;
+    },
+    { loadFonts: options.loadFonts },
+  );
 }
 
 /**
@@ -304,37 +260,4 @@ function measureBox(el: HTMLElement): {
   }
   if (rectW > 0 && rectH > 0) return { widthPx: rectW, heightPx: rectH };
   return null;
-}
-
-/**
- * Default font gate: the shared KaTeX web-font loader. Lazy for the same
- * reason as the rasterizer below — math-free documents never touch the
- * capture module.
- */
-async function awaitFormulaFonts(): Promise<void> {
-  try {
-    const { ensureMathFontsLoaded } = await import("$lib/export/math-render");
-    await ensureMathFontsLoaded();
-  } catch {
-    // Fidelity only: proceed with whatever fonts are active.
-  }
-}
-
-/**
- * Default rasterizer: the same html2canvas-pro capture the export label
- * conversion uses (fo-labels.ts), at 2x for sharpness. Lazy import keeps
- * html2canvas-pro out of documents without label math.
- */
-const defaultRasterizer: FormulaRasterizer = async (el) => {
-  const { captureElementToPng } = await import("$lib/export/math-render");
-  const { png, widthPx, heightPx } = await captureElementToPng(el, 2);
-  return {
-    dataUri: `data:image/png;base64,${bytesToBase64(png)}`,
-    widthPx,
-    heightPx,
-  };
-};
-
-function round3(value: number): number {
-  return Math.round(value * 1000) / 1000;
 }

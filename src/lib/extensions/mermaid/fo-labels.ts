@@ -50,8 +50,12 @@
  * measurement.
  */
 
-import { LABEL_HOST_CLASS, LABEL_HOST_RULES } from "./styles";
-import { bytesToBase64 } from "$lib/utils/base64";
+import {
+  defaultRasterizer,
+  round3,
+  withLabelHost,
+  type LabelRasterizer,
+} from "./label-host";
 
 /** Client-pixel rectangle (viewport coordinates). */
 export interface LabelRect {
@@ -99,9 +103,7 @@ export interface FoLabelMetrics {
 }
 
 /** Rasterizes an already-laid-out HTML element (e.g. KaTeX) to a PNG. */
-export type HtmlRasterizer = (
-  el: HTMLElement,
-) => Promise<{ dataUri: string; widthPx: number; heightPx: number } | null>;
+export type HtmlRasterizer = LabelRasterizer;
 
 export interface ConvertOptions {
   /** Overrides the DOM measurement seam (tests). `null` forces the
@@ -145,56 +147,11 @@ export async function convertForeignObjectLabels(
     return svg;
   }
 
-  const host = document.createElement("div");
-  // Label-host contract: this container re-lays out Mermaid's label HTML to
-  // measure it, so it must see the same label rules the viewer paints with
-  // (the `LABEL_HOST_CLASS` rules in styles.ts). Without them KaTeX's stock
-  // `.katex-display { margin: 1em 0 }` shifts every display formula down by
-  // one label row — and the exported formula image with it.
-  host.className = LABEL_HOST_CLASS;
-  // Off-screen but *rendered*: html2canvas respects `visibility: hidden` and
-  // would capture blank KaTeX images, so hide by position only (same pattern
-  // as math-render.ts's capture host).
-  host.style.cssText = "position:fixed;left:-99999px;top:0;pointer-events:none";
-  host.style.width = `${naturalSvgWidth(svg)}px`;
-  host.innerHTML = svg;
-  const svgEl = host.querySelector("svg");
-  if (!svgEl) return svg;
-
-  // Match the viewer's font context so `font-family: inherit` labels (print
-  // variant) measure and wrap exactly like they do inside `#viewer-content`.
-  try {
-    const reference =
-      document.getElementById("viewer-content") ?? document.body;
-    if (reference) {
-      const cs = getComputedStyle(reference);
-      host.style.fontFamily = cs.fontFamily;
-      host.style.fontSize = cs.fontSize;
-      host.style.color = cs.color;
-    }
-  } catch {
-    // No getComputedStyle — the fallback placement does not need it.
-  }
-
-  document.body.appendChild(host);
-  // Belt and braces alongside MERMAID_STYLES: inject the label-host rules
-  // scoped to this host's class so the conversion measures correctly even
-  // where the extension stylesheet has not been injected. The rules are
-  // class-scoped (the live document has no such host outside this call), and
-  // the element is removed with the host below.
-  const hostStyle = document.createElement("style");
-  hostStyle.textContent = LABEL_HOST_RULES;
-  document.head.appendChild(hostStyle);
-  try {
-    // KaTeX's web fonts load lazily; text runs and formula boxes measured
-    // before the swap get fallback metrics (and captures paint fallback
-    // glyphs in KaTeX's slots). See ensureMathFontsLoaded.
-    try {
-      const { ensureMathFontsLoaded } = await import("$lib/export/math-render");
-      await ensureMathFontsLoaded();
-    } catch {
-      // Fidelity only: proceed with whatever fonts are active.
-    }
+  // The host (off-screen, natural width, label rules, font gate) is the
+  // shared label-host harness — see its module docstring for the contract.
+  return withLabelHost(svg, async (svgEl) => {
+    // Font readiness is handled by the host; measurement starts here so it
+    // sees the loaded font metrics.
     const metrics =
       options.metrics !== undefined ? options.metrics : safeMetrics();
     const rasterizeHtml = options.rasterizeHtml ?? defaultRasterizer;
@@ -211,11 +168,8 @@ export async function convertForeignObjectLabels(
       target.replaceWith(replacement);
       changed = true;
     }
-    return changed ? host.innerHTML : svg;
-  } finally {
-    hostStyle.remove();
-    host.remove();
-  }
+    return changed;
+  });
 }
 
 /* ──────────────────── label construction ─────────────────────────────── */
@@ -878,22 +832,6 @@ function measureZoomFactor(): number {
   }
 }
 
-/**
- * Default KaTeX rasterizer: capture the laid-out `.katex` element with
- * html2canvas-pro (the same pipeline `export/math-render.ts` uses for
- * rasterized math). Lazy import keeps html2canvas-pro out of diagrams
- * that have no math labels.
- */
-const defaultRasterizer: HtmlRasterizer = async (el) => {
-  const { captureElementToPng } = await import("$lib/export/math-render");
-  const { png, widthPx, heightPx } = await captureElementToPng(el, 2);
-  return {
-    dataUri: `data:image/png;base64,${bytesToBase64(png)}`,
-    widthPx,
-    heightPx,
-  };
-};
-
 /* ──────────────────── small utilities ────────────────────────────────── */
 
 function rectOf(rect: DOMRect): LabelRect | null {
@@ -933,31 +871,4 @@ function rangeWithin(node: Node, start: number, end: number): Range {
 function numAttr(el: Element, name: string): number {
   const value = parseFloat(el.getAttribute(name) ?? "");
   return Number.isFinite(value) ? value : 0;
-}
-
-function round3(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
-
-/**
- * The width the SVG would lay out at in the viewer: its `max-width` style
- * if present (Mermaid sets one), else the viewBox width. The hidden host is
- * given this width so label wrapping matches the viewer — and so the SVG
- * renders 1:1 (display scale 1): Mermaid's label geometry is baked in SVG
- * user units, and a self-scaled SVG (its `width="100%"`) makes
- * `getBoundingClientRect` report scaled coordinates for label content,
- * which then measures and rasterizes formulas at the wrong size.
- */
-export function naturalSvgWidth(svg: string): number {
-  const opening = svg.match(/<svg\b[^>]*>/i)?.[0] ?? "";
-  const maxWidth = opening.match(/max-width\s*:\s*([\d.]+)/i);
-  if (maxWidth && Number.isFinite(parseFloat(maxWidth[1]))) {
-    return parseFloat(maxWidth[1]);
-  }
-  const viewBox = opening.match(/viewBox\s*=\s*["']([^"']+)["']/i);
-  if (viewBox) {
-    const width = parseFloat(viewBox[1].trim().split(/[\s,]+/)[2]);
-    if (Number.isFinite(width) && width > 0) return width;
-  }
-  return 2000;
 }

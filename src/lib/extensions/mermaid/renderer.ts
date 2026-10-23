@@ -337,6 +337,67 @@ export function themeSnapshotFromEnv(
   return env?.[THEME_SNAPSHOT_ENV_KEY] as AppThemeInfo | undefined;
 }
 
+/**
+ * The engine-proof post-processing chain every cached SVG goes through. The
+ * order is a contract (AGENTS.md "Mermaid Label Math Paint" / "Mermaid Edge
+ * Stroke Width"):
+ *
+ *   1. `normalizeSvgTextOffsets` — em-based dy/dx label offsets drift under
+ *      WebKit page zoom (text-offsets.ts).
+ *   2. `clampNegativeStrokeWidths` — Mermaid's edge-depth ramp goes negative
+ *      and vanishes on older WebKit (svg-css.ts).
+ *   3. `pinLabelMathPaint` — label-math glyph paths are pinned to
+ *      currentColor paint; Mermaid's theme CSS fills them black
+ *      (label-paint.ts).
+ *   4. The label pass, last and only after the paint pin — it bakes whatever
+ *      paint is in effect into its output. The viewer rasterizes label math
+ *      to `<img>` (math-labels.ts: WebKit paints KaTeX's positioned boxes
+ *      inside `<foreignObject>` at untransformed coordinates, so live
+ *      formulas hang off their labels' top-left corner there). Export/print
+ *      convert labels to SVG text (fo-labels.ts), which must see live KaTeX
+ *      to capture it — so they deliberately skip the rasterization.
+ */
+async function postProcessSvg(
+  svg: string,
+  labelPass: "rasterize" | "convert",
+): Promise<string> {
+  const engineProofed = pinLabelMathPaint(
+    clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
+  );
+  return labelPass === "rasterize"
+    ? rasterizeMermaidLabelMath(engineProofed)
+    : convertForeignObjectLabels(engineProofed);
+}
+
+/**
+ * Render one diagram and produce its cached form: the zoom-normalized
+ * Mermaid render followed by the post-processing chain ({@link postProcessSvg}).
+ *
+ * `ensureLoaded`/`ensureInitialized` are deliberately NOT part of this: the
+ * pre-render pass loads and initializes inside its guarded region (a failure
+ * poisons the pass through its error block) while export/print do both
+ * outside (a failure propagates to the caller uncached and is retried on the
+ * next call).
+ */
+async function renderDiagramSvg(
+  mod: MermaidModule,
+  cfg: {
+    content: string;
+    renderId: string;
+    labelPass: "rasterize" | "convert";
+  },
+): Promise<string> {
+  await awaitLabelFonts(cfg.content);
+  // Zoom-normalized measurement: on older WebKit, foreignObject label
+  // rects are scaled by the page zoom and Mermaid bakes them into the
+  // geometry (see fo-measure.ts).
+  const { svg } = await withZoomNormalizedLabelMeasurement(
+    () => mod.default.render(cfg.renderId, cfg.content),
+    currentZoom(),
+  );
+  return postProcessSvg(svg, cfg.labelPass);
+}
+
 export function preRenderMermaidBlocks(
   tokens: readonly MermaidFenceToken[],
   env: Record<string, unknown>,
@@ -389,34 +450,17 @@ async function preRenderMermaidBlocksPass(
     const renderId = `mmd-${nextRenderId++}`;
     try {
       if (!mod) mod = await ensureLoaded();
+      // Init inside the guarded region on purpose: a failed initialize lands
+      // in the error block below (export/print initialize outside it — see
+      // renderMermaidSvgForVariant).
       await ensureInitialized(mod, appTheme, "viewer", renderWidth);
-      await awaitLabelFonts(diagramContent);
-      const mermaid = mod;
-      // Zoom-normalized measurement: on older WebKit, foreignObject label
-      // rects are scaled by the page zoom and Mermaid bakes them into the
-      // geometry (see fo-measure.ts).
-      const { svg } = await withZoomNormalizedLabelMeasurement(
-        () => mermaid.default.render(renderId, diagramContent),
-        currentZoom(),
-      );
-      // Cache the engine-proof form: em-based dy/dx offsets drift under
-      // WebKit page zoom (see text-offsets.ts), and negative stroke-widths
-      // (Mermaid's edge-depth ramp) vanish on older WebKit (svg-css.ts).
-      // Label-math glyph paths are pinned to currentColor paint first
-      // (label-paint.ts): Mermaid's theme CSS fills them black. Label math
-      // is rasterized to <img> on top of that (math-labels.ts): WebKit
-      // paints KaTeX's positioned boxes inside <foreignObject> at
-      // untransformed coordinates, so live formulas hang off their labels'
-      // top-left corner there. Export/print variants deliberately skip this
-      // — they convert labels via fo-labels.ts, which must see the live
-      // KaTeX to capture it.
       svgCache.set(
         key,
-        await rasterizeMermaidLabelMath(
-          pinLabelMathPaint(
-            clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
-          ),
-        ),
+        await renderDiagramSvg(mod, {
+          content: diagramContent,
+          renderId,
+          labelPass: "rasterize",
+        }),
       );
     } catch (err) {
       // Scope cleanup to this render's temp nodes (mirrored as
@@ -534,39 +578,13 @@ export async function renderMermaidSvgForExport(
   content: string,
   options: Record<string, unknown> = {},
 ): Promise<string> {
-  const exportTheme: AppThemeInfo = { type: "default", themeId: "export" };
-  const renderWidth = diagramRenderWidth(options);
-  const key = cacheKey(content, exportTheme, renderWidth, "export");
-  let raw = svgCache.get(key);
-  if (raw === ERROR) raw = undefined;
-
-  if (!raw) {
-    const mod = await ensureLoaded();
-    await ensureInitialized(mod, exportTheme, "export", renderWidth);
-    try {
-      await awaitLabelFonts(content);
-      const { svg } = await withZoomNormalizedLabelMeasurement(
-        () => mod.default.render(`mmd-export-${nextRenderId++}`, content),
-        currentZoom(),
-      );
-      raw = await convertForeignObjectLabels(
-        pinLabelMathPaint(
-          clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
-        ),
-      );
-      svgCache.set(key, raw);
-    } catch (err) {
-      removeMermaidTempElements();
-      svgCache.set(key, ERROR);
-      throw err instanceof Error ? err : new Error(String(err));
-    }
-  }
-
-  return materializeSvgFonts(
-    normalizeSvgForNaturalSize(
-      namespaceSvgIds(raw, `mmd-exp-${nextWrapperId++}`),
-    ),
-  );
+  return renderMermaidSvgForVariant(content, options, {
+    theme: { type: "default", themeId: "export" },
+    variant: "export",
+    renderIdPrefix: "mmd-export-",
+    namespacePrefix: "mmd-exp-",
+    materializeFonts: true,
+  });
 }
 
 /**
@@ -593,26 +611,64 @@ export async function renderMermaidSvgForPrint(
   content: string,
   options: Record<string, unknown> = {},
 ): Promise<string> {
-  const appTheme = getAppTheme();
+  return renderMermaidSvgForVariant(content, options, {
+    theme: getAppTheme(),
+    variant: "print",
+    renderIdPrefix: "mmd-print-",
+    namespacePrefix: "mmd-print-",
+    materializeFonts: false,
+  });
+}
+
+/**
+ * The shared pipeline behind {@link renderMermaidSvgForExport} and
+ * {@link renderMermaidSvgForPrint}: cache-fill for one diagram plus the
+ * per-call tail (id namespacing, explicit width/height, and for export the
+ * concrete font stack). The two families differ only in config family /
+ * theme (see {@link ensureInitialized}), the render-id and id-namespace
+ * prefixes, and whether fonts are materialized.
+ *
+ * The raw SVG (labels already converted) is cached under the variant's key
+ * so it is never mixed up with the viewer's foreignObject output. A cached
+ * ERROR is retried — each caller has its own per-diagram fallback (ODT
+ * exports the source code; the print clone keeps the viewer SVG) — while a
+ * failed render sweeps the temp containers, caches ERROR, and throws a
+ * normalized Error.
+ *
+ * Load and initialize deliberately run OUTSIDE the guarded region: a load or
+ * init failure propagates to the caller uncached and is retried on the next
+ * call. The viewer pass loads/initializes inside its guard instead (see
+ * {@link preRenderMermaidBlocksPass}), so one load failure can poison the
+ * whole pass without retrying.
+ */
+async function renderMermaidSvgForVariant(
+  content: string,
+  options: Record<string, unknown>,
+  cfg: {
+    theme: AppThemeInfo;
+    variant: "export" | "print";
+    /** Prefix of this render's Mermaid render id (`mmd-export-` / `mmd-print-`). */
+    renderIdPrefix: string;
+    /** Prefix of the per-call id namespace (`mmd-exp-` / `mmd-print-`). */
+    namespacePrefix: string;
+    /** Export only: copy the concrete font stack onto the text shapes. */
+    materializeFonts: boolean;
+  },
+): Promise<string> {
   const renderWidth = diagramRenderWidth(options);
-  const key = cacheKey(content, appTheme, renderWidth, "print");
+  const key = cacheKey(content, cfg.theme, renderWidth, cfg.variant);
   let raw = svgCache.get(key);
   if (raw === ERROR) raw = undefined;
 
   if (!raw) {
     const mod = await ensureLoaded();
-    await ensureInitialized(mod, appTheme, "print", renderWidth);
+    await ensureInitialized(mod, cfg.theme, cfg.variant, renderWidth);
     try {
-      await awaitLabelFonts(content);
-      const { svg } = await withZoomNormalizedLabelMeasurement(
-        () => mod.default.render(`mmd-print-${nextRenderId++}`, content),
-        currentZoom(),
-      );
-      raw = await convertForeignObjectLabels(
-        pinLabelMathPaint(
-          clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
-        ),
-      );
+      raw = await renderDiagramSvg(mod, {
+        content,
+        renderId: `${cfg.renderIdPrefix}${nextRenderId++}`,
+        labelPass: "convert",
+      });
       svgCache.set(key, raw);
     } catch (err) {
       removeMermaidTempElements();
@@ -621,9 +677,10 @@ export async function renderMermaidSvgForPrint(
     }
   }
 
-  return normalizeSvgForNaturalSize(
-    namespaceSvgIds(raw, `mmd-print-${nextWrapperId++}`),
+  const svg = normalizeSvgForNaturalSize(
+    namespaceSvgIds(raw, `${cfg.namespacePrefix}${nextWrapperId++}`),
   );
+  return cfg.materializeFonts ? materializeSvgFonts(svg) : svg;
 }
 
 /**

@@ -54,7 +54,6 @@ export interface EditorState {
 
 export interface ViewerState {
   theme: string;
-  scrollTop: number;
 }
 
 export interface Frontmatter {

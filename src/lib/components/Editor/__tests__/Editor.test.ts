@@ -23,7 +23,7 @@ const {
     markdownLevel: "basic",
     enabledFeatures: [] as string[],
   },
-  mockViewerState: { theme: "github-dark", scrollTop: 0 },
+  mockViewerState: { theme: "github-dark" },
   mockGetThemeType: vi.fn().mockReturnValue("dark"),
   mockLevelState: {
     violations: [] as Array<{

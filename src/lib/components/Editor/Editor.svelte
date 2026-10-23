@@ -264,17 +264,6 @@
     editorView.contentDOM.addEventListener('beforeinput', preventNativeFormat);
 
     handleKeydown = (e: KeyboardEvent) => {
-      if (import.meta.env.DEV) {
-        const sel = editorView?.state.selection.main;
-        console.log('[Editor keydown]', {
-          key: e.key,
-          shift: e.shiftKey,
-          ctrl: e.ctrlKey,
-          activeElement: document.activeElement?.className,
-          cmHasFocus: editorView?.hasFocus,
-          selection: sel ? `${sel.from}-${sel.to}` : 'none'
-        });
-      }
       if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key !== 'i') return;
       e.stopImmediatePropagation();
       e.preventDefault();

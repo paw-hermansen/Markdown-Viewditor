@@ -286,12 +286,6 @@
     }
   });
 
-  function handleScroll() {
-    if (viewerElement) {
-      viewerState.scrollTop = viewerElement.scrollTop;
-    }
-  }
-
   async function handleLinkClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
@@ -404,10 +398,6 @@
     } catch {
       return String(v);
     }
-  }
-
-  export function getViewerElement() {
-    return viewerElement;
   }
 
   export function scrollToTop() {
@@ -537,7 +527,9 @@
   // in-flight render.
   export function forceRender(): Promise<void> {
     if (activeForceRender) return activeForceRender;
-    const savedScrollTop = viewerElement?.scrollTop ?? viewerState.scrollTop;
+    // `restoreScrollPosition` does nothing without a viewer element, so
+    // there is no case where this has to fall back to a remembered value.
+    const savedScrollTop = viewerElement?.scrollTop ?? 0;
     const anchor = captureScrollAnchor();
     const currentContent = content;
     const request = requestRender(async (generation, clearBusy) => {
@@ -585,7 +577,6 @@
     role="group"
     aria-label="Markdown view"
     bind:this={viewerElement}
-    onscroll={handleScroll}
     onclick={handleLinkClick}
     onkeydown={handleKeydown}
   >

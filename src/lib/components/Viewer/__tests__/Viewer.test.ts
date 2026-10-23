@@ -57,7 +57,6 @@ describe("Viewer", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     viewerState.theme = "github-dark";
-    viewerState.scrollTop = 0;
   });
 
   afterEach(() => {

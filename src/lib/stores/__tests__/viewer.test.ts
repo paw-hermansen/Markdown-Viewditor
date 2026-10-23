@@ -25,7 +25,6 @@ describe("viewer store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     viewerState.theme = "github-dark";
-    viewerState.scrollTop = 0;
   });
 
   describe("getThemeType", () => {

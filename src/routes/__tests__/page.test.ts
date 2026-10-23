@@ -152,7 +152,7 @@ vi.mock("$lib/stores/settings.svelte", () => ({
 }));
 
 vi.mock("$lib/stores/viewer.svelte", () => ({
-  viewerState: { theme: "github-dark", scrollTop: 0 },
+  viewerState: { theme: "github-dark" },
   setTheme: vi.fn(),
   getThemeType: () => "dark",
 }));

@@ -3,5 +3,4 @@
 // render $effect exactly as in the app (a plain-object mock would not).
 export const viewerState = $state({
   theme: "github-dark",
-  scrollTop: 0,
 });

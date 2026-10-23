@@ -21,16 +21,18 @@ export const MERMAID_FONT_SIZE = "16px";
  * - `.mermaid-block` — the on-screen diagrams and the print clone.
  * - `body > div[id^="dmmd-"]` — Mermaid's pre-render temp container, where
  *   Mermaid measures each label's clip box.
- * - `.${LABEL_HOST_CLASS}` — the export/print label conversion host
- *   (`convertForeignObjectLabels` in fo-labels.ts), which re-lays out label
- *   HTML a third time to measure the text/media it substitutes for the
- *   `<foreignObject>`.
+ * - `.${LABEL_HOST_CLASS}` — the shared label-host harness's measurement
+ *   host (the `withLabelHost` host in label-host.ts), which both label
+ *   passes re-lay label HTML out in: `convertForeignObjectLabels`
+ *   (fo-labels.ts) to measure the text/media it substitutes for the
+ *   `<foreignObject>`, and `rasterizeMermaidLabelMath` (math-labels.ts) to
+ *   measure and capture formula boxes.
  */
 export const LABEL_HOST_CLASS = "mermaid-label-host";
 
 /**
  * The label-host rules scoped to `LABEL_HOST_CLASS` alone, for consumers
- * that cannot rely on MERMAID_STYLES being injected (the conversion host
+ * that cannot rely on MERMAID_STYLES being injected (the label-host harness
  * injects these itself). Keep the rule bodies identical to the
  * corresponding MERMAID_STYLES rules.
  */

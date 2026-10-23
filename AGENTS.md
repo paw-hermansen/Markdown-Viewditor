@@ -471,9 +471,10 @@ contracts pin the rendering:
   sized for three rows — and the conversion host without the reset measures
   every display formula 1em (one label row) below the viewer, so exported
   formula images land a row too low (PDF on macOS, ODT everywhere). All
-  three hosts are named in `LABEL_HOST_CLASS`'s docstring; the conversion
-  host also injects `LABEL_HOST_RULES` scoped to its own class so it never
-  depends on `MERMAID_STYLES` injection.
+  hosts are named in `LABEL_HOST_CLASS`'s docstring; the shared label-host
+  harness (`label-host.ts`, used by both `math-labels.ts` and `fo-labels.ts`)
+  injects `LABEL_HOST_RULES` scoped to its own class so it never depends on
+  `MERMAID_STYLES` injection.
 - **Formula boxes are rasterized to `<img>` at cache-fill time**
   (`math-labels.ts`, viewer variant only). WebKitGTK / older WKWebView paint
   CSS-positioned boxes inside `<foreignObject>` at _untransformed_

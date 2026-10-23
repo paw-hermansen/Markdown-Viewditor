@@ -49,12 +49,8 @@ vi.mock("$lib/extensions/mermaid/renderer", () => ({
   renderMermaidSvgForExport: mockRenderMermaidSvgForExport,
 }));
 
-import JSZip from "jszip";
-import MarkdownIt from "markdown-it";
-import footnote from "markdown-it-footnote";
-import taskLists from "markdown-it-task-lists";
-import { odtExporter, odtOptionGroups } from "../exporters/odt";
-import type { ExportContext } from "../types";
+import { odtOptionGroups } from "../exporters/odt";
+import { exportToZip } from "./odt-harness";
 import {
   registerExtensionSchema,
   resetExtensions,
@@ -72,33 +68,9 @@ const MEDIUM_MERMAID_SVG =
 
 const MERMAID_SRC = "graph LR\n    A-->B";
 
-function makeTokens(src: string) {
-  const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
-  return md.parse(src, {});
-}
-
-async function runOdtExport(src: string, options?: Record<string, unknown>) {
-  const tokens = makeTokens(src);
-  const md = new MarkdownIt({ html: true }).use(footnote).use(taskLists);
-  const html = md.render(src);
-  const ctx: ExportContext = {
-    markdown: src,
-    html,
-    frontmatter: null,
-    fileName: "test",
-    tokens,
-    options,
-  };
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
-  vi.mocked(save).mockResolvedValue("/tmp/test.odt");
-  vi.mocked(invoke).mockResolvedValue(undefined);
-  await odtExporter.export(ctx);
-  const calls = vi.mocked(invoke).mock.calls;
-  const content = calls[calls.length - 1][1] as { content: number[] };
-  const buffer = new Uint8Array(content.content);
-  return JSZip.loadAsync(buffer);
-}
+/** This suite exports plain markdown — no math plugins. */
+const exportBaseZip = (src: string, options?: Record<string, unknown>) =>
+  exportToZip(src, { options });
 
 describe("ODT Mermaid diagram export", () => {
   beforeEach(() => {
@@ -114,7 +86,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("embeds a mermaid fence as a vector SVG image by default", async () => {
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain("<draw:frame");
     expect(xml).toContain('draw:mime-type="image/svg+xml"');
@@ -129,7 +101,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("stores the SVG under Pictures/ in the package", async () => {
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
     const names = Object.keys(zip.files);
     expect(
       names.some((n) => n.startsWith("Pictures/") && n.endsWith(".svg")),
@@ -137,7 +109,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("rasterizes mermaid as PNG when the shared SVG/diagram option is on", async () => {
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
       "odt.rasterizeSvg": true,
       "odt.rasterResolution": 2,
     });
@@ -152,7 +124,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("fits wide diagrams to the ODT page content width", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
       "odt.rasterizeSvg": true,
       "odt.rasterResolution": 1,
     });
@@ -171,7 +143,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("scales wide diagrams down to the maxWidth fraction of the page", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `\`\`\`mermaid {maxWidth=400}\n${MERMAID_SRC}\n\`\`\``,
     );
     // maxWidth=400 → 400/800 × page width = 3.125in; 1200×400 → 300×100.
@@ -182,10 +154,13 @@ describe("ODT Mermaid diagram export", () => {
 
   it("scales rasterized diagrams down to the maxWidth fraction of the page", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    await runOdtExport(`\`\`\`mermaid {maxWidth=400}\n${MERMAID_SRC}\n\`\`\``, {
-      "odt.rasterizeSvg": true,
-      "odt.rasterResolution": 1,
-    });
+    await exportBaseZip(
+      `\`\`\`mermaid {maxWidth=400}\n${MERMAID_SRC}\n\`\`\``,
+      {
+        "odt.rasterizeSvg": true,
+        "odt.rasterResolution": 1,
+      },
+    );
     expect(mockRasterizeSvg).toHaveBeenCalledWith(
       WIDE_MERMAID_SVG,
       300,
@@ -196,7 +171,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("honors mermaid maxWidth directives", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `<!-- mermaid: maxWidth=400 -->\n\n\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``,
     );
     const xml = await zip.file("content.xml")!.async("text");
@@ -206,7 +181,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("lets fence attributes override mermaid maxWidth directives", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `<!-- mermaid: maxWidth=400 -->\n\n\`\`\`mermaid {maxWidth=200}\n${MERMAID_SRC}\n\`\`\``,
     );
     // 200/800 × 6.25in = 1.5625in; 1200×400 → 150×50.
@@ -217,7 +192,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("clamps maxWidth above the viewer column to the page content width", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `\`\`\`mermaid {maxWidth=1200}\n${MERMAID_SRC}\n\`\`\``,
     );
     const xml = await zip.file("content.xml")!.async("text");
@@ -227,7 +202,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("shows diagrams at natural size when fitToWidth is false, clamped to the page", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(MEDIUM_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `\`\`\`mermaid {maxWidth=280 fitToWidth=false}\n${MERMAID_SRC}\n\`\`\``,
     );
     // Natural 700×320 → 700/800 × page width = 5.4688in (under the page
@@ -236,7 +211,7 @@ describe("ODT Mermaid diagram export", () => {
     expect(xml).toContain('svg:width="5.4688in"');
     expect(xml).toContain('svg:height="2.5000in"');
 
-    const fitZip = await runOdtExport(
+    const fitZip = await exportBaseZip(
       `\`\`\`mermaid {maxWidth=280}\n${MERMAID_SRC}\n\`\`\``,
     );
     // 280/800 × 6.25in = 2.1875in; 700×320 → 210×96.
@@ -247,7 +222,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("clamps fitToWidth=false diagrams to the page content width", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `\`\`\`mermaid {fitToWidth=false}\n${MERMAID_SRC}\n\`\`\``,
     );
     // Natural 1200×400 maps to 900px wide but the page clamps to 600×200.
@@ -258,7 +233,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("applies maxWidth with align so narrow frames align like the viewer", async () => {
     mockRenderMermaidSvgForExport.mockResolvedValue(WIDE_MERMAID_SVG);
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `\`\`\`mermaid {align=left maxWidth=300}\n${MERMAID_SRC}\n\`\`\``,
     );
     // 300/800 × 6.25in = 2.3438in; 1200×400 → 225×75.
@@ -272,7 +247,7 @@ describe("ODT Mermaid diagram export", () => {
 
   it("falls back to source code when Mermaid rendering fails", async () => {
     mockRenderMermaidSvgForExport.mockRejectedValue(new Error("bad diagram"));
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
       "odt.rasterizeSvg": true,
     });
     const xml = await zip.file("content.xml")!.async("text");
@@ -282,7 +257,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("keeps other fenced code blocks as source", async () => {
-    const zip = await runOdtExport("```js\nconst x = 1;\n```");
+    const zip = await exportBaseZip("```js\nconst x = 1;\n```");
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain("Preformatted_20_Text");
     expect(mockRenderMermaidSvgForExport).not.toHaveBeenCalled();
@@ -291,7 +266,7 @@ describe("ODT Mermaid diagram export", () => {
   it("embeds each mermaid fence as its own image", async () => {
     const src = `\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\`\n\n\`\`\`mermaid\ngraph TB\n    C-->D\n\`\`\``;
     mockRenderMermaidSvgForExport.mockResolvedValue(MERMAID_SVG);
-    const zip = await runOdtExport(src);
+    const zip = await exportBaseZip(src);
     expect(mockRenderMermaidSvgForExport).toHaveBeenCalledTimes(2);
     const xml = await zip.file("content.xml")!.async("text");
     const frames = xml.match(/<draw:frame/g) ?? [];
@@ -299,7 +274,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("centers mermaid diagrams by default (vector SVG)", async () => {
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``);
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toMatch(
       /<text:p[^>]*text:style-name="Diagram_20_Display"[^>]*>[\s\S]*?<draw:frame/,
@@ -312,7 +287,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("centers mermaid diagrams by default (rasterized PNG)", async () => {
-    const zip = await runOdtExport(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
+    const zip = await exportBaseZip(`\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``, {
       "odt.rasterizeSvg": true,
     });
     const xml = await zip.file("content.xml")!.async("text");
@@ -322,7 +297,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("honors align fence attributes (left/right)", async () => {
-    const leftZip = await runOdtExport(
+    const leftZip = await exportBaseZip(
       `\`\`\`mermaid {align=left}\n${MERMAID_SRC}\n\`\`\``,
     );
     const leftXml = await leftZip.file("content.xml")!.async("text");
@@ -331,7 +306,7 @@ describe("ODT Mermaid diagram export", () => {
     );
     expect(leftXml).not.toContain('text:style-name="Diagram_20_Display"');
 
-    const rightZip = await runOdtExport(
+    const rightZip = await exportBaseZip(
       `\`\`\`mermaid {align=right}\n${MERMAID_SRC}\n\`\`\``,
     );
     const rightXml = await rightZip.file("content.xml")!.async("text");
@@ -349,7 +324,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("honors mermaid align directives", async () => {
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `<!-- mermaid: align=right -->\n\n\`\`\`mermaid\n${MERMAID_SRC}\n\`\`\``,
     );
     const xml = await zip.file("content.xml")!.async("text");
@@ -359,7 +334,7 @@ describe("ODT Mermaid diagram export", () => {
   });
 
   it("lets fence attributes override mermaid align directives", async () => {
-    const zip = await runOdtExport(
+    const zip = await exportBaseZip(
       `<!-- mermaid: align=right -->\n\n\`\`\`mermaid {align=left}\n${MERMAID_SRC}\n\`\`\``,
     );
     const xml = await zip.file("content.xml")!.async("text");

@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  convertFileSrc: (path: string, protocol = "asset") =>
-    `${protocol}://localhost/${encodeURIComponent(path)}`,
-  invoke: vi.fn(),
-}));
+vi.mock("@tauri-apps/api/core", async () => {
+  const { tauriCoreMock } = await import("../../../test/mocks/tauri-core");
+  return tauriCoreMock();
+});
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   save: vi.fn(),

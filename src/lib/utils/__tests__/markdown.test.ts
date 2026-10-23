@@ -4,10 +4,10 @@ import { describe, it, expect, vi } from "vitest";
 // from @tauri-apps/api/core, which requires `window`/`navigator`. The Node
 // test environment doesn't have those, so mock the helper to expose the
 // arguments it was called with via a deterministic URL form.
-vi.mock("@tauri-apps/api/core", () => ({
-  convertFileSrc: (path: string, protocol = "asset") =>
-    `${protocol}://localhost/${encodeURIComponent(path)}`,
-}));
+vi.mock("@tauri-apps/api/core", async () => {
+  const { tauriCoreMock } = await import("../../../test/mocks/tauri-core");
+  return tauriCoreMock();
+});
 
 import { renderMarkdown } from "../markdown";
 

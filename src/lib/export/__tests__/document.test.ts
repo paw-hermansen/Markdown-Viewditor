@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  convertFileSrc: (path: string, protocol = "asset") =>
-    `${protocol}://localhost/${encodeURIComponent(path)}`,
-  invoke: vi.fn(),
-}));
+vi.mock("@tauri-apps/api/core", async () => {
+  const { tauriCoreMock } = await import("../../../test/mocks/tauri-core");
+  return tauriCoreMock();
+});
 
 import { buildStandaloneHtml } from "../document";
 

@@ -3,10 +3,10 @@ import { describe, it, expect, vi } from "vitest";
 // markdown.ts imports `convertFileSrc` from @tauri-apps/api/core, which needs
 // a browser environment. Mock it deterministically (same pattern as
 // markdown.test.ts).
-vi.mock("@tauri-apps/api/core", () => ({
-  convertFileSrc: (path: string, protocol = "asset") =>
-    `${protocol}://localhost/${encodeURIComponent(path)}`,
-}));
+vi.mock("@tauri-apps/api/core", async () => {
+  const { tauriCoreMock } = await import("../../../test/mocks/tauri-core");
+  return tauriCoreMock();
+});
 
 import { analyzeContent } from "../markdown";
 import {

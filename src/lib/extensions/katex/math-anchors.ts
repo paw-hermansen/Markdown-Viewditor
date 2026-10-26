@@ -9,29 +9,7 @@ import {
   validateExplicitFenceOptions,
 } from "../fence-options";
 import { KATEX_OPTIONS_SCHEMA } from "./renderer";
-
-/**
- * Inject `data-line="${line}"` into the first opening tag of `html` so
- * scroll-sync can anchor the rendered element to its source line. Used for
- * math output (`<p class="katex-block">…`) which the line-numbers plugin
- * can't tag (its fence wrapper only injects into `<pre`, and `math_block`
- * has no `renderToken`-based rule to attrSet on).
- *
- * If the html already carries a `data-line` (e.g. the line-numbers fence
- * wrapper already tagged `<pre data-line="…">` for a non-math fence), the
- * injection is a no-op so we don't double-tag.
- */
-function injectDataLine(html: string, line: number): string {
-  if (html.includes('data-line="')) return html;
-  const m = html.match(/<([a-zA-Z][\w-]*)/);
-  if (!m || m.index === undefined) {
-    return `<div data-line="${line}">${html}</div>`;
-  }
-  const insertPos = m.index + m[0].length;
-  return (
-    html.slice(0, insertPos) + ` data-line="${line}"` + html.slice(insertPos)
-  );
-}
+import { injectDataLine } from "$lib/utils/data-line";
 
 /**
  * Wrap `math_block` and `math_inline` renderers to inject `data-line` on math

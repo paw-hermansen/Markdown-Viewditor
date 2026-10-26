@@ -6,6 +6,9 @@ describe("Mermaid lazy-load failures", () => {
     vi.resetModules();
   });
 
+  // Cold-imports the whole mermaid extension chain after vi.resetModules()
+  // (3.5–4.6s measured); the vitest default 5s budget was flaking under
+  // parallel-suite load.
   it("caches an error wrapper when the Mermaid module cannot load", async () => {
     vi.resetModules();
     vi.doMock("mermaid", () => {
@@ -28,5 +31,5 @@ describe("Mermaid lazy-load failures", () => {
     expect(output).toContain("mermaid-error");
     expect(output).toContain("graph LR");
     expect(output).not.toContain("<svg");
-  });
+  }, 20_000);
 });

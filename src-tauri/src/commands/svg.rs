@@ -12,11 +12,14 @@
 //!
 //! Default `resvg` features are enabled (text, filter, pattern, image).
 //! Text support still needs a populated font database — `usvg::Options::default()`
-//! ships an empty `fontdb`, so we load system fonts here (mirroring resvg's
-//! own CLI) or every `<text>` span would be silently dropped.
+//! ships an empty `fontdb`, so we load system fonts once per process
+//! (mirroring resvg's own CLI) or every `<text>` span would be silently
+//! dropped (see `font_runtime`).
 
 #[cfg(target_os = "linux")]
 use resvg::tiny_skia;
+#[cfg(target_os = "linux")]
+use std::sync::{Arc, OnceLock};
 #[cfg(target_os = "linux")]
 use usvg::{Options, Tree};
 
@@ -32,6 +35,9 @@ use crate::error::AppError;
 /// When that single name is not installed (slim distros, containers, CI
 /// runners) usvg silently drops every `<text>` span. Re-pointing the
 /// generics keeps text rendering with whatever font the system does have.
+///
+/// Runs once per process, when `font_runtime` builds the shared database
+/// (it is idempotent, so a second run would be a no-op).
 #[cfg(target_os = "linux")]
 fn ensure_generic_families_resolve(db: &mut usvg::fontdb::Database) {
     use usvg::fontdb::{Family, Query, Stretch, Style, Weight};
@@ -88,6 +94,50 @@ fn ensure_generic_families_resolve(db: &mut usvg::fontdb::Database) {
     }
 }
 
+/// The system font database, built once per process.
+///
+/// `usvg::Options::default()` ships an empty fontdb, which makes usvg
+/// silently drop every `<text>` span at layout time; populating it means
+/// scanning every font directory and parsing every face — far too
+/// expensive to repeat per SVG (the ODT exporter rasterizes one SVG per
+/// diagram/image, back to back). The generic-family fixup is idempotent
+/// and belongs to the same one-time build.
+///
+/// The database is shared through an `Arc` because `usvg::Options::fontdb`
+/// is one — each call clones the `Arc` (cheap) into its own `Options`.
+/// Never call `Options::fontdb_mut()` on that value: it is
+/// `Arc::make_mut` and would deep-clone the whole database on first
+/// mutation.
+#[cfg(target_os = "linux")]
+struct FontRuntime {
+    db: Arc<usvg::fontdb::Database>,
+    /// Whatever `sans-serif` resolves to after the generic-family fixup —
+    /// see the `Options::font_family` note in `rasterize_svg_sync`.
+    fallback_family: String,
+}
+
+#[cfg(target_os = "linux")]
+fn font_runtime() -> &'static FontRuntime {
+    static FONT_RUNTIME: OnceLock<FontRuntime> = OnceLock::new();
+    FONT_RUNTIME.get_or_init(|| {
+        let mut db = usvg::fontdb::Database::new();
+        // resvg's own CLI calls load_system_fonts() — mirror that here so
+        // diagram / SVG labels actually appear in the PNG.
+        db.load_system_fonts();
+        // The generic families may point at fonts that are not installed;
+        // re-point them at faces that are actually present so <text> is
+        // never silently dropped.
+        ensure_generic_families_resolve(&mut db);
+        let fallback_family = db
+            .family_name(&usvg::fontdb::Family::SansSerif)
+            .to_owned();
+        FontRuntime {
+            db: Arc::new(db),
+            fallback_family,
+        }
+    })
+}
+
 /// Render `svg` into a PNG whose pixel dimensions are exactly
 /// `width*scale` × `height*scale`. `width`/`height` are the SVG's intrinsic
 /// CSS-pixel dimensions (matches its `width=` / `height=` attributes); the
@@ -98,9 +148,24 @@ fn ensure_generic_families_resolve(db: &mut usvg::fontdb::Database) {
 /// The SVG must declare its namespace (`xmlns="http://www.w3.org/2000/svg"`
 /// on the root `<svg>`) so usvg's parser can disambiguate SVG elements
 /// from XML defaults. The frontend guarantees this before invoking.
+///
+/// Async so the (blocking) rasterization runs on Tauri's worker pool
+/// instead of the main thread — the same shape as the `file` commands.
+/// The system-font database is built once per process (see `font_runtime`).
 #[tauri::command]
-pub fn rasterize_svg(
+pub async fn rasterize_svg(
     svg: String,
+    width: u32,
+    height: u32,
+    scale: u32,
+) -> Result<Vec<u8>, AppError> {
+    rasterize_svg_sync(&svg, width, height, scale)
+}
+
+/// The synchronous rasterization core; `rasterize_svg` delegates here and
+/// the tests call it directly.
+fn rasterize_svg_sync(
+    svg: &str,
     width: u32,
     height: u32,
     scale: u32,
@@ -124,28 +189,25 @@ pub fn rasterize_svg(
             return Err(AppError::Svg(format!("invalid scale: {scale}")));
         }
 
-        let mut options = Options::default();
-        // `Options::default()` ships an empty fontdb (fontdb::Database::new()),
-        // which makes usvg silently drop every <text> span at layout time.
-        // resvg's own CLI calls load_system_fonts() — mirror that here so
-        // diagram / SVG labels actually appear in the PNG.
-        options.fontdb_mut().load_system_fonts();
-        // The generic families may point at fonts that are not installed;
-        // re-point them at faces that are actually present so <text> is
-        // never silently dropped.
-        let resolved_sans = {
-            let db = options.fontdb_mut();
-            ensure_generic_families_resolve(db);
-            db.family_name(&usvg::fontdb::Family::SansSerif).to_owned()
+        // Fonts come from the process-wide cache: the system-font scan and
+        // the generic-family fixup run once per process (font_runtime), not
+        // once per SVG — the ODT exporter rasterizes one SVG per
+        // diagram/image, back to back. The share is a cheap Arc clone;
+        // never go through `Options::fontdb_mut()` on it (that is
+        // `Arc::make_mut` and would deep-clone the whole database).
+        let runtime = font_runtime();
+        let options = Options {
+            fontdb: runtime.db.clone(),
+            // `Options::font_family` is the fallback for a missing or unusable
+            // SVG font-family (e.g. the CSS-wide keyword `inherit`, which usvg
+            // drops). usvg wraps the value in `FontFamily::Named`, so it is a
+            // plain family-name lookup — not a generic alias — and must name a
+            // family that really resolves; use whatever "sans-serif" maps to.
+            font_family: runtime.fallback_family.clone(),
+            ..Default::default()
         };
-        // `Options::font_family` is the fallback for a missing or unusable
-        // SVG font-family (e.g. the CSS-wide keyword `inherit`, which usvg
-        // drops). usvg wraps the value in `FontFamily::Named`, so it is a
-        // plain family-name lookup — not a generic alias — and must name a
-        // family that really resolves; use whatever "sans-serif" maps to.
-        options.font_family = resolved_sans;
 
-        let tree = Tree::from_str(&svg, &options)
+        let tree = Tree::from_str(svg, &options)
             .map_err(|e| AppError::Svg(format!("usvg parse failed: {e}")))?;
 
         // The output PNG is width*scale × height*scale pixels; the SVG's
@@ -207,7 +269,7 @@ mod tests {
         height: u32,
         scale: u32,
     ) -> tiny_skia::Pixmap {
-        let png = rasterize_svg(svg.to_string(), width, height, scale).expect("rasterize");
+        let png = rasterize_svg_sync(svg, width, height, scale).expect("rasterize");
         let (w, h) = decode_png_size(&png);
         let pixmap =
             tiny_skia::Pixmap::decode_png(&png).expect("decode PNG that resvg just produced");
@@ -218,7 +280,7 @@ mod tests {
     #[test]
     fn rasterizes_basic_svg() {
         let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="red"/></svg>"#;
-        let png = rasterize_svg(svg.to_string(), 32, 32, 1).expect("rasterize");
+        let png = rasterize_svg_sync(svg, 32, 32, 1).expect("rasterize");
         let (w, h) = decode_png_size(&png);
         assert_eq!((w, h), (32, 32));
     }
@@ -230,7 +292,7 @@ mod tests {
         let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="150" height="60" viewBox="0 30 100 40">
             <ellipse id="outer" cx="50" cy="50" rx="35" ry="20" fill="#4fd1ff"/>
         </svg>"##;
-        let png = rasterize_svg(svg.to_string(), 150, 60, 2).expect("rasterize");
+        let png = rasterize_svg_sync(svg, 150, 60, 2).expect("rasterize");
         let (w, h) = decode_png_size(&png);
         assert_eq!((w, h), (300, 120));
     }
@@ -266,7 +328,7 @@ mod tests {
         // defaults to the SVG namespace if missing. The frontend
         // nevertheless injects xmlns for consistency with browsers.
         let svg = r##"<svg width="32" height="32"><rect width="32" height="32"/></svg>"##;
-        let png = rasterize_svg(svg.to_string(), 32, 32, 1).expect("parse without xmlns");
+        let png = rasterize_svg_sync(svg, 32, 32, 1).expect("parse without xmlns");
         let (w, h) = decode_png_size(&png);
         assert_eq!((w, h), (32, 32));
     }
@@ -279,7 +341,7 @@ mod tests {
         let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
             <animate xlink:href="#x" attributeName="rx" values="0;1;0" dur="2s"/>
         </svg>"##;
-        let err = rasterize_svg(svg.to_string(), 32, 32, 1).unwrap_err();
+        let err = rasterize_svg_sync(svg, 32, 32, 1).unwrap_err();
         assert!(
             err.to_string().contains("usvg parse failed"),
             "expected usvg parse failure, got: {err}"
@@ -292,7 +354,7 @@ mod tests {
         let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32">
             <animate xlink:href="#x" attributeName="rx" values="0;1;0" dur="2s"/>
         </svg>"##;
-        let png = rasterize_svg(svg.to_string(), 32, 32, 1).expect("parse with xlink");
+        let png = rasterize_svg_sync(svg, 32, 32, 1).expect("parse with xlink");
         let (w, h) = decode_png_size(&png);
         assert_eq!((w, h), (32, 32));
     }
@@ -300,14 +362,14 @@ mod tests {
     #[test]
     fn rejects_zero_dimensions() {
         let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"/>";
-        let err = rasterize_svg(svg.to_string(), 0, 10, 1).unwrap_err();
+        let err = rasterize_svg_sync(svg, 0, 10, 1).unwrap_err();
         assert!(err.to_string().contains("invalid dimensions"));
     }
 
     #[test]
     fn rejects_zero_scale() {
         let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>";
-        let err = rasterize_svg(svg.to_string(), 10, 10, 0).unwrap_err();
+        let err = rasterize_svg_sync(svg, 10, 10, 0).unwrap_err();
         assert!(err.to_string().contains("invalid scale"));
     }
 
@@ -402,5 +464,31 @@ mod tests {
              needs at least one installed Latin font (e.g. package \
              `fonts-noto-core` on Debian/Ubuntu)"
         );
+    }
+
+    #[test]
+    fn second_call_reuses_cached_fontdb() {
+        // The font database (system-font scan + generic-family fixup) is
+        // built once per process and shared across calls: the second call
+        // must render text identically through the cached database — both
+        // byte-identical output and still-inked glyphs (a broken share
+        // would drop every <text> span again).
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50">
+            <rect width="200" height="50" fill="white"/>
+            <text x="10" y="35" font-family="sans-serif" font-size="28" fill="black">Hi</text>
+        </svg>"##;
+        let first = rasterize_svg_sync(svg, 200, 50, 1).expect("first rasterize");
+        let second = rasterize_svg_sync(svg, 200, 50, 1).expect("second rasterize");
+        assert_eq!(
+            first, second,
+            "two calls through the cached fontdb must be byte-identical"
+        );
+        let pixmap = tiny_skia::Pixmap::decode_png(&second).expect("decode PNG");
+        let dark = pixmap
+            .pixels()
+            .iter()
+            .filter(|p| p.red() < 128 && p.green() < 128 && p.blue() < 128)
+            .count();
+        assert!(dark > 20, "expected dark text pixels on the second call, found {dark}");
     }
 }

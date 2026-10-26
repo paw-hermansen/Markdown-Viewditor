@@ -10,16 +10,7 @@ import {
 } from "./directives";
 import { listExtensions } from "./registry";
 import { mergeOptions } from "./directive-merge";
-
-function injectDataLine(html: string, line: string): string {
-  const firstTag = html.match(/^\s*<[A-Za-z][\w-]*(?:\s[^>]*)?\s*\/?>/);
-  if (!firstTag || /\bdata-line\s*=/i.test(firstTag[0])) return html;
-
-  return html.replace(
-    /^(\s*<[A-Za-z][\w-]*)(?=\s|\/?>)/,
-    `$1 data-line="${line}"`,
-  );
-}
+import { injectDataLine } from "$lib/utils/data-line";
 
 /**
  * Extension-aware fence renderer plugin. Always registered on the base md
@@ -67,7 +58,7 @@ export function extensionFencePlugin(md: MarkdownIt): void {
         if (rendered !== null) {
           // Inject data-line into the first tag for scroll-sync.
           if (token.map) {
-            return injectDataLine(rendered, String(token.map[0] + 1));
+            return injectDataLine(rendered, token.map[0] + 1);
           }
           return rendered;
         }

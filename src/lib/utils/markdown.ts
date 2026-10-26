@@ -8,6 +8,7 @@ import anchor from "markdown-it-anchor";
 import { load as yamlLoad } from "js-yaml";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { resolveLink } from "$lib/utils/path";
+import { withDataLine } from "$lib/utils/data-line";
 import mark from "markdown-it-mark";
 
 import type { Frontmatter, RenderResult } from "$lib/types";
@@ -177,230 +178,51 @@ function createCustomHeadingIdPlugin() {
 
 function createLineNumbersPlugin() {
   return function lineNumbersPlugin(md: MarkdownIt) {
-    const defaultRender =
-      md.renderer.rules.paragraph_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
+    // Rules that render their token via renderToken get the anchor as a
+    // token attribute. list_item_open fills the gap between
+    // bullet_list_open/ordered_list_open (which only tag the first line) and
+    // the next block element, which can be many lines away for long lists
+    // (e.g. Example.md's HTML/SVG bullet list spans 13 lines but only the
+    // opening line was tagged).
+    for (const ruleName of [
+      "paragraph_open",
+      "heading_open",
+      "bullet_list_open",
+      "ordered_list_open",
+      "blockquote_open",
+      "table_open",
+      "hr",
+      "list_item_open",
+    ]) {
+      withDataLine(md, ruleName);
+    }
 
-    md.renderer.rules.paragraph_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultRender(tokens, idx, options, env, self);
-    };
-
-    const defaultHeadingOpen =
-      md.renderer.rules.heading_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.heading_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultHeadingOpen(tokens, idx, options, env, self);
-    };
-
-    const defaultFence =
-      md.renderer.rules.fence ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
-      const token = tokens[idx];
-      const html = defaultFence(tokens, idx, options, env, self);
-      if (token.map) {
-        const line = String(token.map[0] + 1);
-        return html.replace(/<pre(?=\s|>)/, `<pre data-line="${line}"`);
-      }
-      return html;
-    };
-
-    const defaultBulletListOpen =
-      md.renderer.rules.bullet_list_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.bullet_list_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultBulletListOpen(tokens, idx, options, env, self);
-    };
-
-    const defaultOrderedListOpen =
-      md.renderer.rules.ordered_list_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.ordered_list_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultOrderedListOpen(tokens, idx, options, env, self);
-    };
-
-    const defaultBlockquoteOpen =
-      md.renderer.rules.blockquote_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.blockquote_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultBlockquoteOpen(tokens, idx, options, env, self);
-    };
-
-    const defaultTableOpen =
-      md.renderer.rules.table_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.table_open = function (tokens, idx, options, env, self) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultTableOpen(tokens, idx, options, env, self);
-    };
+    // Rules that render their own HTML string get the anchor injected into
+    // that string instead: the first tag of the default fence output is its
+    // `<pre`.
+    withDataLine(md, "fence", { strategy: "first-tag" });
 
     // The footnote plugin renders all footnote definitions as a single block
-    // at the end of the document. Tag that block (its <section>) with a
-    // data-line anchored to the end of the source so scroll-sync can map it
-    // correctly. The inner footnote content is handled separately in
-    // renderMarkdown (its source-line maps are stripped, since that content is
-    // rendered at the bottom rather than at its original source location).
-    const defaultFootnoteBlockOpen =
-      md.renderer.rules.footnote_block_open ||
-      function (_tokens, _idx, options) {
-        return (
-          (options.xhtmlOut
-            ? '<hr class="footnotes-sep" />\n'
-            : '<hr class="footnotes-sep">\n') +
-          '<section class="footnotes">\n<ol class="footnotes-list">\n'
-        );
-      };
-
-    md.renderer.rules.footnote_block_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      const out = defaultFootnoteBlockOpen(tokens, idx, options, env, self);
-      if (token.map) {
-        return out.replace(
-          '<section class="footnotes">',
-          `<section class="footnotes" data-line="${token.map[0] + 1}">`,
-        );
-      }
-      return out;
-    };
-
-    // Tag <hr> elements with data-line.
-    const defaultHr =
-      md.renderer.rules.hr ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.hr = function (tokens, idx, options, env, self) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultHr(tokens, idx, options, env, self);
-    };
-
-    // Tag list items (<li>) with data-line. This fills the gap between
-    // bullet_list_open/ordered_list_open (which only tags the first line)
-    // and the next block element, which can be many lines away for long
-    // lists (e.g. Example.md's HTML/SVG bullet list spans 13 lines but
-    // only the opening line was tagged).
-    const defaultListItemOpen =
-      md.renderer.rules.list_item_open ||
-      function (tokens, idx, options, _env, self) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    md.renderer.rules.list_item_open = function (
-      tokens,
-      idx,
-      options,
-      env,
-      self,
-    ) {
-      const token = tokens[idx];
-      if (token.map) {
-        token.attrSet("data-line", String(token.map[0] + 1));
-      }
-      return defaultListItemOpen(tokens, idx, options, env, self);
-    };
+    // at the end of the document. Tag that block (its <section> — the middle
+    // of its three opening tags) with a data-line anchored to the end of the
+    // source so scroll-sync can map it correctly. The inner footnote content
+    // is handled separately in renderMarkdown (its source-line maps are
+    // stripped, since that content is rendered at the bottom rather than at
+    // its original source location).
+    withDataLine(md, "footnote_block_open", {
+      strategy: { openingTag: '<section class="footnotes">' },
+      fallback: (_tokens, _idx, options) =>
+        (options.xhtmlOut
+          ? '<hr class="footnotes-sep" />\n'
+          : '<hr class="footnotes-sep">\n') +
+        '<section class="footnotes">\n<ol class="footnotes-list">\n',
+    });
 
     // Tag raw HTML blocks with data-line. html_block renders raw HTML
     // content (e.g. <details>, <svg>), so we wrap it in a <div
     // data-line="..."> since the raw HTML can't have attributes added to
     // it directly. This is safe because html_block is always block-level.
-    const defaultHtmlBlock =
-      md.renderer.rules.html_block ||
-      function (tokens, idx, _options, _env, self) {
-        return self.renderToken(tokens, idx, _options);
-      };
-
-    md.renderer.rules.html_block = function (tokens, idx, options, env, self) {
-      const token = tokens[idx];
-      const html = defaultHtmlBlock(tokens, idx, options, env, self);
-      if (token.map) {
-        const line = String(token.map[0] + 1);
-        return `<div data-line="${line}">${html}</div>`;
-      }
-      return html;
-    };
+    withDataLine(md, "html_block", { strategy: "wrap" });
   };
 }
 

@@ -823,7 +823,9 @@ is applied").
 ### Render busy overlay
 
 `Viewer.svelte` shows a ghosted "Rendering…" overlay (the same pill/spinner as
-the file-open "Loading…" overlay) for **major renders only**: the first render
+the file-open "Loading…" overlay; the request/debounce/busy state machine is
+`createRenderScheduler` in `stores/render-scheduler.svelte.ts`) for **major
+renders only**: the first render
 of a document, a theme change (every Mermaid diagram misses the theme-keyed
 cache and re-renders) and `forceRender()`/Reload. Routine typing re-renders
 never show it — an overlay flickering on every debounced keystroke render is

@@ -4,6 +4,13 @@
   import { resolveLink } from '$lib/utils/path';
   import { viewerState } from '$lib/stores/viewer.svelte';
   import { fileState } from '$lib/stores/file.svelte';
+  import { createRenderScheduler } from '$lib/stores/render-scheduler.svelte';
+  import { bustImageCache } from '$lib/utils/image-cache-bust';
+  import {
+    captureScrollAnchor,
+    restoreScrollPosition,
+    waitForImages
+  } from '$lib/utils/scroll-restore';
   import { openUrl, openPath } from '@tauri-apps/plugin-opener';
   import type { Frontmatter } from '$lib/types';
   import '$lib/styles/markdown.css';
@@ -39,111 +46,11 @@
   // routine content change. null = nothing rendered yet.
   let lastRenderedTheme: string | null = null;
 
-  // Ghosted busy overlay ("Rendering…") shown over the viewer for major
-  // renders only: the first render of a document, theme changes (every
-  // Mermaid diagram misses the theme-keyed cache and re-renders) and
-  // forceRender/Reload. Routine typing re-renders never show it — an overlay
-  // flickering on every debounced keystroke render would be worse than the
-  // wait. Raised synchronously when a major render starts: the early render
-  // phases are synchronous, so a render that finishes quickly never paints
-  // the overlay at all and small documents don't flash it.
-  let renderBusy = $state(false);
-
-  interface RenderRequest {
-    generation: number;
-    promise: Promise<void>;
-    superseded: Promise<void>;
-    cancel: () => void;
-    supersede: () => void;
-  }
-
-  let renderGeneration = 0;
-  let currentRender: RenderRequest | null = null;
-
-  function requestRender(
-    task: (generation: number, clearBusy: () => void) => Promise<void>,
-    delay: number,
-    major = false,
-  ): RenderRequest {
-    currentRender?.supersede();
-
-    const generation = ++renderGeneration;
-    let resolveRender!: () => void;
-    let resolveSuperseded!: () => void;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    let started = false;
-    let settled = false;
-    let wasSuperseded = false;
-    let busyShown = false;
-
-    const promise = new Promise<void>((resolve) => {
-      resolveRender = resolve;
-    });
-    const superseded = new Promise<void>((resolve) => {
-      resolveSuperseded = resolve;
-    });
-
-    // Per-request busy bookkeeping: a request only clears the overlay it
-    // raised itself, so a stale render settling late can never take down a
-    // newer request's overlay.
-    const clearBusy = () => {
-      if (busyShown) {
-        busyShown = false;
-        renderBusy = false;
-      }
-    };
-
-    const finish = () => {
-      if (!settled) {
-        settled = true;
-        clearBusy();
-        resolveRender();
-      }
-    };
-
-    const supersede = () => {
-      if (!wasSuperseded) {
-        wasSuperseded = true;
-        resolveSuperseded();
-      }
-      clearBusy();
-      if (!started) {
-        if (timeout) {
-          clearTimeout(timeout);
-          timeout = undefined;
-        }
-        finish();
-      }
-    };
-
-    const request: RenderRequest = {
-      generation,
-      promise,
-      superseded,
-      cancel: supersede,
-      supersede,
-    };
-
-    const run = () => {
-      if (started || wasSuperseded) return;
-      started = true;
-      timeout = undefined;
-      if (major) {
-        busyShown = true;
-        renderBusy = true;
-      }
-      void task(generation, clearBusy).then(finish, finish);
-    };
-
-    currentRender = request;
-    if (delay > 0) {
-      timeout = setTimeout(run, delay);
-    } else {
-      run();
-    }
-
-    return request;
-  }
+  // Ghosted busy overlay ("Rendering…") semantics — major renders
+  // only, synchronous raise, drop-on-DOM, per-request ownership — live in
+  // the render scheduler (see $lib/stores/render-scheduler.svelte.ts and
+  // AGENTS.md "Render busy overlay").
+  const scheduler = createRenderScheduler();
 
   $effect(() => {
     const currentContent = content;
@@ -155,9 +62,9 @@
     // Major renders (first render of a document, theme change) start
     // immediately — they are discrete actions, not typing. Routine content
     // changes keep the 150 ms debounce.
-    const request = requestRender(async (generation, clearBusy) => {
+    const request = scheduler.requestRender(async (generation, clearBusy) => {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
-      if (generation !== renderGeneration) return;
+      if (!scheduler.isCurrent(generation)) return;
       html = result.html;
       frontmatter = result.frontmatter;
       lastRenderedTheme = theme;
@@ -413,104 +320,8 @@
   // Wait for the newest render request and the DOM update caused by it. If a
   // newer request supersedes the one being awaited, follow that request
   // instead of waiting for stale async work to finish.
-  export async function waitForRender(): Promise<void> {
-    await tick();
-    while (currentRender) {
-      const request = currentRender;
-      await Promise.race([request.promise, request.superseded]);
-      await tick();
-      if (request === currentRender) return;
-    }
-  }
-
-  // Append a cache-busting query parameter to image URLs so a forced render
-  // re-fetches them instead of being served from the webview's in-memory
-  // image cache. The localimg protocol handler ignores the query string (it
-  // only reads request.uri().path()), so local file resolution is unaffected.
-  // data:/blob: URLs carry no remote resource and are left untouched.
-  function bustImageCache(html: string, nonce: number): string {
-    return html.replace(
-      /(<img\s[^>]*?src=["'])([^"']+)(["'])/gi,
-      (match, prefix, src, quote) => {
-        if (/^(data:|blob:)/i.test(src)) return match;
-        const sep = src.includes('?') ? '&' : '?';
-        return `${prefix}${src}${sep}_r=${nonce}${quote}`;
-      }
-    );
-  }
-
-  // Capture the topmost visible data-line element and its fractional offset
-  // from the container's top edge. Restoring via this anchor avoids the ~1px
-  // per-reload drift caused by integer scrollTop round-trips.
-  function captureScrollAnchor(): { line: string; offset: number } | null {
-    if (!viewerElement || !viewerContentElement) return null;
-    const containerTop = viewerElement.getBoundingClientRect().top;
-    for (const el of viewerContentElement.querySelectorAll('[data-line]')) {
-      const rect = el.getBoundingClientRect();
-      if (rect.bottom > containerTop) {
-        const line = el.getAttribute('data-line');
-        if (line) {
-          return { line, offset: rect.top - containerTop };
-        }
-      }
-    }
-    return null;
-  }
-
-  // Setting scrollTop snaps the scroll position to whole device pixels
-  // (WebKit floors in device space). At a fractional devicePixelRatio (e.g.
-  // 0.9 zoom) every assignment — even re-assigning the current value — can
-  // shift the position by up to 1/dpr CSS pixels, and the integer getter
-  // then reports a new value, so re-applying it on the next reload ratchets
-  // the view ~1px per reload. Skipping sub-pixel adjustments avoids touching
-  // scrollTop at all when the anchor is already where it was captured.
-  const SCROLL_RESTORE_EPSILON_PX = 0.5;
-
-  function restoreScrollPosition(
-    anchor: { line: string; offset: number } | null,
-    fallbackScrollTop: number
-  ) {
-    if (!viewerElement) return;
-    if (anchor) {
-      const newEl = viewerContentElement?.querySelector(`[data-line="${anchor.line}"]`);
-      if (newEl) {
-        const containerTop = viewerElement.getBoundingClientRect().top;
-        const newOffset = newEl.getBoundingClientRect().top - containerTop;
-        const adjustment = newOffset - anchor.offset;
-        if (Math.abs(adjustment) >= SCROLL_RESTORE_EPSILON_PX) {
-          viewerElement.scrollTop = viewerElement.scrollTop + adjustment;
-        }
-        return;
-      }
-    }
-    if (Math.abs(viewerElement.scrollTop - fallbackScrollTop) >= SCROLL_RESTORE_EPSILON_PX) {
-      viewerElement.scrollTop = fallbackScrollTop;
-    }
-  }
-
-  const IMAGE_SETTLE_TIMEOUT_MS = 2000;
-
-  // Resolve once all current images have finished loading (or failed), so
-  // the scroll position can be restored against the final layout. Capped by
-  // a timeout so slow external images don't delay the restore indefinitely.
-  function waitForImages(): Promise<void> {
-    const imgs = viewerContentElement
-      ? Array.from(viewerContentElement.querySelectorAll('img'))
-      : [];
-    const pending = imgs
-      .filter((img) => !img.complete)
-      .map(
-        (img) =>
-          new Promise<void>((resolve) => {
-            img.addEventListener('load', () => resolve(), { once: true });
-            img.addEventListener('error', () => resolve(), { once: true });
-          })
-      );
-    if (pending.length === 0) return Promise.resolve();
-    return Promise.race([
-      Promise.all(pending).then(() => undefined),
-      new Promise<void>((resolve) => setTimeout(resolve, IMAGE_SETTLE_TIMEOUT_MS)),
-    ]);
+  export function waitForRender(): Promise<void> {
+    return scheduler.waitForRender();
   }
 
   let activeForceRender: Promise<void> | null = null;
@@ -530,11 +341,11 @@
     // `restoreScrollPosition` does nothing without a viewer element, so
     // there is no case where this has to fall back to a remembered value.
     const savedScrollTop = viewerElement?.scrollTop ?? 0;
-    const anchor = captureScrollAnchor();
+    const anchor = captureScrollAnchor(viewerElement, viewerContentElement);
     const currentContent = content;
-    const request = requestRender(async (generation, clearBusy) => {
+    const request = scheduler.requestRender(async (generation, clearBusy) => {
       const result = await renderMarkdown(currentContent, fileState.currentFile);
-      if (generation !== renderGeneration) return;
+      if (!scheduler.isCurrent(generation)) return;
 
       // Bumping the key forces the {#key} block around {@html} to destroy and
       // recreate the DOM even when the rendered HTML is identical (Svelte
@@ -547,20 +358,20 @@
       // Reload is a major render: drop the overlay once the refreshed DOM is
       // on screen; scroll restore + image settling continue below.
       clearBusy();
-      if (generation !== renderGeneration) return;
+      if (!scheduler.isCurrent(generation)) return;
 
       // First restore: positions the anchor correctly in the transient layout
       // where freshly recreated images have no dimensions yet.
-      restoreScrollPosition(anchor, savedScrollTop);
+      restoreScrollPosition(viewerElement, viewerContentElement, anchor, savedScrollTop);
       const scrollAfterRestore = viewerElement?.scrollTop;
       // Recreated images load asynchronously; when they finish, their heights
       // shift the layout above the anchor. Restore again against the settled
       // layout so the view ends up exactly where it was captured.
-      await waitForImages();
-      if (generation !== renderGeneration) return;
+      await waitForImages(viewerContentElement);
+      if (!scheduler.isCurrent(generation)) return;
       // If the user scrolled while images were loading, don't yank the view back.
       if (viewerElement && viewerElement.scrollTop === scrollAfterRestore) {
-        restoreScrollPosition(anchor, savedScrollTop);
+        restoreScrollPosition(viewerElement, viewerContentElement, anchor, savedScrollTop);
       }
     }, 0, true);
     activeForceRender = request.promise.finally(() => {
@@ -615,8 +426,8 @@
       {/key}
     </div>
   </div>
-  {#if loading || renderBusy}
-    <div class="loading-overlay" class:rendering-overlay={renderBusy && !loading} role="presentation">
+  {#if loading || scheduler.busy}
+    <div class="loading-overlay" class:rendering-overlay={scheduler.busy && !loading} role="presentation">
       <div
         class="loading-overlay-content"
         role={loading ? "alert" : "status"}

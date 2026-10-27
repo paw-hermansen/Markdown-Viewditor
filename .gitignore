@@ -99,6 +99,7 @@ coverage/
 # AI
 .agents/
 .opencode/
+skills-lock.json
 
 # Markdown Viewditor
 *.bak

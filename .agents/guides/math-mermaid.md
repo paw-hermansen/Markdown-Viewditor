@@ -5,7 +5,7 @@ library internals — the `upgrade-contract.test.ts` suites are the tripwires.
 
 ## Math (KaTeX) Integration
 
-`src/lib/utils/markdown.ts` registers the @vscode/markdown-it-katex plugin
+`src/lib/utils/markdown-it-setup.ts` registers the @vscode/markdown-it-katex plugin
 (dollar/bare/fence delimiters) **after** the line-numbers plugin, then the
 custom `math-brackets.ts` plugin (`\(...\)` / `\[...\]`). Order matters: the
 bracket inline rule must run **before** markdown-it's `escape` rule, which
@@ -465,7 +465,7 @@ Upgrade checklist:
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only
 injects into `<pre`; `math_block` has no `renderToken`-based rule). The
-`wrapMathAnchorRenderers()` helper in `markdown.ts` runs **after** every
+`wrapMathAnchorRenderers()` helper in `markdown-it-setup.ts` runs **after** every
 `.use()` and wraps `math_block` + `fence` renderers to inject `data-line`
 into the first opening tag of the returned HTML (idempotent — skips if
 `data-line` is already present). This is deterministic regardless of plugin

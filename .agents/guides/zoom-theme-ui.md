@@ -73,7 +73,7 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
 
 Theme CSS scopes its colors to `#viewer-content`, and the app-wide background
 (editor, viewer container, chrome) comes from `--viewer-bg`, which is derived
-at runtime: `syncViewerBackground()` (`utils/markdown.ts`) copies the computed
+at runtime: `syncViewerBackground()` (`utils/theme-css.ts`) copies the computed
 `#viewer-content` background onto `<html>`. It runs from the Viewer's
 mount/theme effect (`Viewer.svelte`) and from `setTheme()` after the theme CSS
 is injected. Never derive it from a bare startup rAF: `#viewer-content` does

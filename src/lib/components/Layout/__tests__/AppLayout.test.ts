@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import type { Snippet } from "svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AppLayout from "../AppLayout.svelte";
+import { registerCommands, clearCommands } from "$lib/commands/registry.svelte";
 import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
 
 const snippet = (content = "") => (() => content) as unknown as Snippet;
@@ -32,6 +33,16 @@ vi.mock("$lib/stores/settings.svelte", () => ({
 
 vi.mock("$lib/stores/editor.svelte", () => ({
   editorState: { content: "" },
+  hasUnsavedChanges: () => false,
+}));
+
+vi.mock("$lib/stores/file.svelte", () => ({
+  fileState: { currentFile: null, isLoading: false },
+  getFileName: (p: string) => p.split("/").pop() ?? p,
+}));
+
+vi.mock("$lib/stores/update.svelte", () => ({
+  updateStatus: { available: false, version: "" },
 }));
 
 vi.mock("$lib/stores/markdown-levels.svelte", () => ({
@@ -51,21 +62,19 @@ describe("AppLayout", () => {
   const defaultProps = {
     viewMode: "split" as const,
     onViewModeChange: vi.fn(),
-    onSave: vi.fn(),
-    onSaveAs: vi.fn(),
-    onReload: vi.fn(),
-    onOpen: vi.fn(),
-    onNew: vi.fn(),
-    onAbout: vi.fn(),
-    onUpdateClick: vi.fn(),
-    updateAvailable: false,
-    updateVersion: "",
-    isModified: false,
-    fileName: "test.md",
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearCommands();
+    registerCommands([
+      { id: "file.new", title: "New File", category: "File", run: vi.fn() },
+      { id: "file.open", title: "Open File", category: "File", run: vi.fn() },
+      { id: "file.save", title: "Save", category: "File", run: vi.fn() },
+      { id: "file.save-as", title: "Save As", category: "File", run: vi.fn() },
+      { id: "file.reload", title: "Reload", category: "File", run: vi.fn() },
+      { id: "help.about", title: "About", category: "Help", run: vi.fn() },
+    ]);
     mockSettingsState.splitRatio = 0.5;
   });
 
@@ -79,48 +88,45 @@ describe("AppLayout", () => {
     expect(screen.getByTitle("About (F1)")).toBeInTheDocument();
   });
 
-  it("calls onNew on New button click", async () => {
-    const onNew = vi.fn();
+  it("calls file.new on New button click", async () => {
     render(AppLayout, {
-      props: { ...defaultProps, onNew, children: snippet() },
+      props: { ...defaultProps, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("New file (Ctrl+N)"));
-    expect(onNew).toHaveBeenCalled();
+    const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
+      "file.new",
+    );
+    expect(cmd?.run).toHaveBeenCalled();
   });
 
-  it("calls onOpen on Open button click", async () => {
-    const onOpen = vi.fn();
+  it("calls file.open on Open button click", async () => {
     render(AppLayout, {
-      props: { ...defaultProps, onOpen, children: snippet() },
+      props: { ...defaultProps, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("Open file (Ctrl+O)"));
-    expect(onOpen).toHaveBeenCalled();
+    const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
+      "file.open",
+    );
+    expect(cmd?.run).toHaveBeenCalled();
   });
 
-  it("invokes toolbar callbacks with no arguments", async () => {
-    // These props are typed `() => void`, but a bare `onclick={onOpen}`
-    // still hands the callback its MouseEvent. A handler that then takes
-    // its first parameter as data treats the event as data: `handleOpen(path)`
-    // passed a click event to `read_file` as a file path and the app
-    // reported "invalid type: map, expected a string". `toHaveBeenCalled`
-    // passes either way — the call must be with zero arguments.
-    const onNew = vi.fn();
-    const onOpen = vi.fn();
-    const onSave = vi.fn();
-    const onSaveAs = vi.fn();
-    const onReload = vi.fn();
-    const onAbout = vi.fn();
+  it("invokes toolbar commands with no arguments", async () => {
+    const reg = await import("$lib/commands/registry.svelte");
+    const onNew = reg.getCommand("file.new")!.run as ReturnType<typeof vi.fn>;
+    const onOpen = reg.getCommand("file.open")!.run as ReturnType<typeof vi.fn>;
+    const onSave = reg.getCommand("file.save")!.run as ReturnType<typeof vi.fn>;
+    const onSaveAs = reg.getCommand("file.save-as")!.run as ReturnType<
+      typeof vi.fn
+    >;
+    const onReload = reg.getCommand("file.reload")!.run as ReturnType<
+      typeof vi.fn
+    >;
+    const onAbout = reg.getCommand("help.about")!.run as ReturnType<
+      typeof vi.fn
+    >;
+
     render(AppLayout, {
-      props: {
-        ...defaultProps,
-        onNew,
-        onOpen,
-        onSave,
-        onSaveAs,
-        onReload,
-        onAbout,
-        children: snippet(),
-      },
+      props: { ...defaultProps, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("New file (Ctrl+N)"));
     await fireEvent.click(screen.getByTitle("Open file (Ctrl+O)"));
@@ -137,22 +143,26 @@ describe("AppLayout", () => {
     expect(onAbout).toHaveBeenCalledWith();
   });
 
-  it("calls onSave on Save button click", async () => {
-    const onSave = vi.fn();
+  it("calls file.save on Save button click", async () => {
     render(AppLayout, {
-      props: { ...defaultProps, onSave, children: snippet() },
+      props: { ...defaultProps, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("Save (Ctrl+S)"));
-    expect(onSave).toHaveBeenCalled();
+    const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
+      "file.save",
+    );
+    expect(cmd?.run).toHaveBeenCalled();
   });
 
-  it("calls onAbout on About button click", async () => {
-    const onAbout = vi.fn();
+  it("calls help.about on About button click", async () => {
     render(AppLayout, {
-      props: { ...defaultProps, onAbout, children: snippet() },
+      props: { ...defaultProps, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("About (F1)"));
-    expect(onAbout).toHaveBeenCalled();
+    const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
+      "help.about",
+    );
+    expect(cmd?.run).toHaveBeenCalled();
   });
 
   it("renders resize handle", () => {
@@ -164,36 +174,37 @@ describe("AppLayout", () => {
 
   it("does not show update icon when updateAvailable is false", () => {
     render(AppLayout, {
-      props: { ...defaultProps, updateAvailable: false, children: snippet() },
+      props: { ...defaultProps, children: snippet() },
     });
     expect(screen.queryByTitle(/Update available/)).not.toBeInTheDocument();
   });
 
-  it("shows update icon when updateAvailable is true", () => {
+  it("shows update icon when updateAvailable is true", async () => {
+    const { updateStatus } = await import("$lib/stores/update.svelte");
+    updateStatus.available = true;
+    updateStatus.version = "1.2.0";
     render(AppLayout, {
-      props: {
-        ...defaultProps,
-        updateAvailable: true,
-        updateVersion: "1.2.0",
-        children: snippet(),
-      },
+      props: { ...defaultProps, children: snippet() },
     });
     expect(screen.getByTitle("Update available: v1.2.0")).toBeInTheDocument();
+    updateStatus.available = false;
+    updateStatus.version = "";
   });
 
-  it("calls onUpdateClick when update icon is clicked", async () => {
-    const onUpdateClick = vi.fn();
+  it("calls help.about when update icon is clicked", async () => {
+    const { updateStatus } = await import("$lib/stores/update.svelte");
+    updateStatus.available = true;
+    updateStatus.version = "1.2.0";
     render(AppLayout, {
-      props: {
-        ...defaultProps,
-        updateAvailable: true,
-        updateVersion: "1.2.0",
-        onUpdateClick,
-        children: snippet(),
-      },
+      props: { ...defaultProps, children: snippet() },
     });
     await fireEvent.click(screen.getByTitle("Update available: v1.2.0"));
-    expect(onUpdateClick).toHaveBeenCalled();
+    const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
+      "help.about",
+    );
+    expect(cmd?.run).toHaveBeenCalled();
+    updateStatus.available = false;
+    updateStatus.version = "";
   });
 
   it("has no accessibility violations", async () => {

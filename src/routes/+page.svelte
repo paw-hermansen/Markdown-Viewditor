@@ -84,7 +84,7 @@ import {
   import { usesCapturePdf } from "$lib/export/pdf-mode";
   import { getThemeLabel } from "$lib/utils/themes";
   import { showExportConfirmDialog } from "$lib/stores/export-confirm-dialog.svelte";
-  import { updateStatus, checkForUpdates, updaterState, initUpdaterEnabled } from "$lib/stores/update.svelte";
+  import { checkForUpdates, updaterState, initUpdaterEnabled } from "$lib/stores/update.svelte";
 
   // Capture-only platforms (macOS < 15) export PDFs via the save dialog +
   // create_pdf capture and have no print dialog; everything else prints.
@@ -742,18 +742,6 @@ import {
 <AppLayout
   {viewMode}
   onViewModeChange={handleViewModeChange}
-  onSave={handleSave}
-  onSaveAs={handleSaveAs}
-  onReload={handleReload}
-  onOpen={handleOpen}
-  onNew={handleNew}
-  onAbout={handleAbout}
-  onUpdateClick={handleAbout}
-  updateAvailable={updateStatus.available}
-  updateVersion={updateStatus.version}
-  isModified={hasUnsavedChanges()}
-  isLoading={fileState.isLoading}
-  {fileName}
 >
   {#if viewMode === "split" || viewMode === "editor"}
     <div class="editor-pane">

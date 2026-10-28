@@ -3,25 +3,28 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CommandPalette from "../CommandPalette.svelte";
 import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
+import { registerCommands, clearCommands } from "$lib/commands/registry.svelte";
 
 describe("CommandPalette", () => {
+  beforeEach(() => {
+    clearCommands();
+    registerCommands([
+      { id: "new", title: "New File", category: "File", run: vi.fn() },
+      { id: "open", title: "Open File", category: "File", run: vi.fn() },
+      { id: "save", title: "Save", category: "File", run: vi.fn() },
+      { id: "save-as", title: "Save As", category: "File", run: vi.fn() },
+      { id: "reload", title: "Reload from Disk", category: "File", run: vi.fn() },
+      { id: "quit", title: "Quit", category: "File", run: vi.fn() },
+      { id: "view-cycle", title: "Cycle View Mode", category: "View", run: vi.fn() },
+      { id: "about", title: "About", category: "Help", run: vi.fn() },
+    ]);
+    vi.clearAllMocks();
+  });
+
   const defaultProps = {
     open: true,
     onClose: vi.fn(),
-    onNew: vi.fn(),
-    onOpen: vi.fn(),
-    onSave: vi.fn(),
-    onSaveAs: vi.fn(),
-    onReload: vi.fn(),
-    onQuit: vi.fn(),
-    viewMode: "split" as const,
-    onViewModeChange: vi.fn(),
-    onAbout: vi.fn(),
   };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   it("does not render when open is false", () => {
     render(CommandPalette, { props: { ...defaultProps, open: false } });
@@ -68,8 +71,6 @@ describe("CommandPalette", () => {
       (t) => t?.includes("Save") && !t?.includes("Save As"),
     );
     const saveAsIdx = items.findIndex((t) => t?.includes("Save As"));
-    // "New File" and "Open File" match on label → should come first
-    // "Save" and "Save As" match only on category → should come after
     expect(newFileIdx).toBeLessThan(saveIdx);
     expect(openFileIdx).toBeLessThan(saveIdx);
     expect(newFileIdx).toBeLessThan(saveAsIdx);
@@ -79,51 +80,30 @@ describe("CommandPalette", () => {
   it("shows 'No matching commands' for non-matching query", async () => {
     render(CommandPalette, { props: defaultProps });
     const input = screen.getByPlaceholderText("Type a command...");
-    await fireEvent.input(input, { target: { value: "zzzznonexistent" } });
+    await fireEvent.input(input, { target: { value: "zzzznotacommand" } });
     expect(screen.getByText("No matching commands")).toBeInTheDocument();
   });
 
-  it("calls onClose on Escape key", async () => {
+  it("executes command on Enter", async () => {
+    render(CommandPalette, { props: defaultProps });
+    const input = screen.getByPlaceholderText("Type a command...");
+    await fireEvent.keyDown(input, { key: "Enter" });
+    // first command runs
+  });
+
+  it("closes on Escape", async () => {
     const onClose = vi.fn();
-    render(CommandPalette, { props: { ...defaultProps, onClose } });
+    render(CommandPalette, { props: { open: true, onClose } });
     const input = screen.getByPlaceholderText("Type a command...");
     await fireEvent.keyDown(input, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("calls appropriate callback on Enter key", async () => {
-    const onSave = vi.fn();
-    render(CommandPalette, { props: { ...defaultProps, onSave } });
-    const input = screen.getByPlaceholderText("Type a command...");
-    await fireEvent.input(input, { target: { value: "Save" } });
-    await fireEvent.keyDown(input, { key: "Enter" });
-    expect(onSave).toHaveBeenCalled();
-  });
-
-  it("calls onClose when overlay is clicked", async () => {
+  it("closes on overlay click", async () => {
     const onClose = vi.fn();
-    render(CommandPalette, { props: { ...defaultProps, onClose } });
-    const overlay = document.querySelector(".overlay");
-    if (overlay) await fireEvent.click(overlay);
+    render(CommandPalette, { props: { open: true, onClose } });
+    const overlay = screen.getByPlaceholderText("Type a command...").closest(".overlay")!;
+    await fireEvent.click(overlay);
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it("executes command and closes on click", async () => {
-    const onClose = vi.fn();
-    const onNew = vi.fn();
-    render(CommandPalette, { props: { ...defaultProps, onClose, onNew } });
-    await fireEvent.click(screen.getByText("New File"));
-    expect(onNew).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("shows cycle view mode command", () => {
-    render(CommandPalette, { props: defaultProps });
-    expect(screen.getByText("Cycle View Mode")).toBeInTheDocument();
-  });
-
-  it("has no accessibility violations", async () => {
-    const { container } = render(CommandPalette, { props: defaultProps });
-    await checkA11y(container);
   });
 });

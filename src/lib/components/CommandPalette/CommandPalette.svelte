@@ -1,83 +1,28 @@
 <script lang="ts">
-  import type { ViewMode } from '$lib/types';
-  import { modLabel } from '$lib/utils/keyboard';
-  import { zoomIn, zoomOut, resetZoom } from '$lib/stores/zoom.svelte';
-  import { listExporters } from '$lib/export/registry.svelte';
-  import { focusTrap } from '$lib/utils/focus-trap';
-
-  interface Command {
-    id: string;
-    label: string;
-    shortcut?: string;
-    category: string;
-    action: () => void;
-  }
+  import { listCommands, formatShortcut, runCommand } from "$lib/commands/registry.svelte";
+  import { focusTrap } from "$lib/utils/focus-trap";
 
   interface Props {
     open: boolean;
     onClose: () => void;
-    onNew: () => void;
-    onOpen: () => void;
-    onSave: () => void;
-    onSaveAs: () => void;
-    onReload: () => void;
-    onQuit: () => void;
-    viewMode: ViewMode;
-    onViewModeChange: (mode: ViewMode) => void;
-    onAbout: () => void;
-    onPrint?: () => void;
-    onExport?: (id: string) => void;
-    onFormatDocument?: () => void;
-    printLabel?: string;
   }
 
-  let { open, onClose, onNew, onOpen, onSave, onSaveAs, onReload, onQuit, viewMode, onViewModeChange, onAbout, onPrint, onExport, onFormatDocument, printLabel = 'Print Preview' }: Props = $props();
+  let { open, onClose }: Props = $props();
 
-  let searchQuery = $state('');
+  let searchQuery = $state("");
   let selectedIndex = $state(0);
   let searchInput = $state<HTMLInputElement | undefined>();
   let commandsList = $state<HTMLDivElement | undefined>();
 
-  // Export commands are registry-fed: any exporter registered via
-  // `registerExporter` appears here automatically (File category).
-  const exportCommands = $derived(
-    onExport
-      ? listExporters().map((e) => ({
-          id: `export-${e.id}`,
-          label: e.label,
-          category: 'File',
-          action: () => onExport(e.id),
-        }))
-      : [],
-  );
-
-  const commands: Command[] = $derived([
-    { id: 'new', label: 'New File', shortcut: modLabel('Ctrl+N'), category: 'File', action: onNew },
-    { id: 'open', label: 'Open File', shortcut: modLabel('Ctrl+O'), category: 'File', action: onOpen },
-    { id: 'save', label: 'Save', shortcut: modLabel('Ctrl+S'), category: 'File', action: onSave },
-    { id: 'save-as', label: 'Save As', shortcut: modLabel('Ctrl+Shift+S'), category: 'File', action: onSaveAs },
-    { id: 'reload', label: 'Reload from Disk', shortcut: modLabel('Ctrl+R'), category: 'File', action: onReload },
-    { id: 'quit', label: 'Quit', shortcut: modLabel('Ctrl+Q'), category: 'File', action: onQuit },
-    ...exportCommands,
-    { id: 'view-cycle', label: 'Cycle View Mode', shortcut: modLabel('Ctrl+Shift+V'), category: 'View', action: () => {
-      const next: ViewMode = viewMode === 'editor' ? 'split' : viewMode === 'split' ? 'viewer' : 'editor';
-      onViewModeChange(next);
-    }},
-    { id: 'zoom-in', label: 'Zoom In', shortcut: modLabel('Ctrl++'), category: 'View', action: () => void zoomIn() },
-    { id: 'zoom-out', label: 'Zoom Out', shortcut: modLabel('Ctrl+-'), category: 'View', action: () => void zoomOut() },
-    { id: 'zoom-reset', label: 'Reset Zoom', shortcut: modLabel('Ctrl+0'), category: 'View', action: () => void resetZoom() },
-    ...(onFormatDocument ? [{ id: 'format-document', label: 'Format Document', shortcut: modLabel('Shift+Alt+F'), category: 'Edit', action: onFormatDocument }] : []),
-    ...(onPrint ? [{ id: 'print', label: printLabel, shortcut: modLabel('Ctrl+P'), category: 'File', action: onPrint }] : []),
-    { id: 'about', label: 'About', shortcut: 'F1', category: 'Help', action: onAbout },
-  ]);
+  const commands = $derived(listCommands());
 
   let filteredCommands = $derived.by(() => {
     if (!searchQuery.trim()) return commands;
     const query = searchQuery.toLowerCase();
-    const labelMatches: Command[] = [];
-    const categoryMatches: Command[] = [];
+    const labelMatches: (typeof commands)[number][] = [];
+    const categoryMatches: (typeof commands)[number][] = [];
     for (const cmd of commands) {
-      const matchesLabel = cmd.label.toLowerCase().includes(query);
+      const matchesLabel = cmd.title.toLowerCase().includes(query);
       const matchesCategory = cmd.category.toLowerCase().includes(query);
       if (matchesLabel) {
         labelMatches.push(cmd);
@@ -90,7 +35,7 @@
 
   $effect(() => {
     if (open) {
-      searchQuery = '';
+      searchQuery = "";
       selectedIndex = 0;
       setTimeout(() => searchInput?.focus(), 0);
     }
@@ -105,40 +50,40 @@
 
   $effect(() => {
     void selectedIndex;
-    const selected = commandsList?.querySelector('.selected');
-    selected?.scrollIntoView({ block: 'nearest' });
+    const selected = commandsList?.querySelector(".selected");
+    selected?.scrollIntoView({ block: "nearest" });
   });
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       onClose();
       return;
     }
 
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       selectedIndex = (selectedIndex + 1) % filteredCommands.length;
       return;
     }
 
-    if (e.key === 'ArrowUp') {
+    if (e.key === "ArrowUp") {
       e.preventDefault();
       selectedIndex = (selectedIndex - 1 + filteredCommands.length) % filteredCommands.length;
       return;
     }
 
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       executeSelected();
       return;
     }
   }
 
-  function executeSelected() {
+  async function executeSelected() {
     const cmd = filteredCommands[selectedIndex];
     if (cmd) {
-      cmd.action();
+      await runCommand(cmd.id);
       onClose();
     }
   }
@@ -150,11 +95,10 @@
   }
 
   function handleOverlayKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       onClose();
     }
   }
-
 </script>
 
 {#if open}
@@ -185,14 +129,14 @@
             class:selected={i === selectedIndex}
             role="option"
             aria-selected={i === selectedIndex}
-            onclick={() => { command.action(); onClose(); }}
+            onclick={() => { runCommand(command.id); onClose(); }}
             onmouseenter={() => selectedIndex = i}
           >
-            <span class="command-label">{command.label}</span>
+            <span class="command-label">{command.title}</span>
             <span class="command-meta">
               <span class="command-category">{command.category}</span>
               {#if command.shortcut}
-                <span class="command-shortcut">{command.shortcut}</span>
+                <span class="command-shortcut">{formatShortcut(command.shortcut)}</span>
               {/if}
             </span>
           </button>

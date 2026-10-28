@@ -2,7 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CommandPalette from "../CommandPalette.svelte";
-import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
+
 import { registerCommands, clearCommands } from "$lib/commands/registry.svelte";
 
 describe("CommandPalette", () => {
@@ -13,9 +13,19 @@ describe("CommandPalette", () => {
       { id: "open", title: "Open File", category: "File", run: vi.fn() },
       { id: "save", title: "Save", category: "File", run: vi.fn() },
       { id: "save-as", title: "Save As", category: "File", run: vi.fn() },
-      { id: "reload", title: "Reload from Disk", category: "File", run: vi.fn() },
+      {
+        id: "reload",
+        title: "Reload from Disk",
+        category: "File",
+        run: vi.fn(),
+      },
       { id: "quit", title: "Quit", category: "File", run: vi.fn() },
-      { id: "view-cycle", title: "Cycle View Mode", category: "View", run: vi.fn() },
+      {
+        id: "view-cycle",
+        title: "Cycle View Mode",
+        category: "View",
+        run: vi.fn(),
+      },
       { id: "about", title: "About", category: "Help", run: vi.fn() },
     ]);
     vi.clearAllMocks();
@@ -102,7 +112,9 @@ describe("CommandPalette", () => {
   it("closes on overlay click", async () => {
     const onClose = vi.fn();
     render(CommandPalette, { props: { open: true, onClose } });
-    const overlay = screen.getByPlaceholderText("Type a command...").closest(".overlay")!;
+    const overlay = screen
+      .getByPlaceholderText("Type a command...")
+      .closest(".overlay")!;
     await fireEvent.click(overlay);
     expect(onClose).toHaveBeenCalled();
   });

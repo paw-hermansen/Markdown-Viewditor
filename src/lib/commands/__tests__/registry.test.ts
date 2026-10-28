@@ -7,14 +7,15 @@ import {
   getCommand,
   runCommand,
   handleGlobalKeydown,
-  type Command,
 } from "../registry.svelte";
 
 describe("command registry", () => {
   beforeEach(() => clearCommands());
 
   it("registers and lists commands", () => {
-    registerCommands([{ id: "a", title: "A", category: "File", run: () => {} }]);
+    registerCommands([
+      { id: "a", title: "A", category: "File", run: () => {} },
+    ]);
     expect(listCommands()).toHaveLength(1);
     expect(getCommand("a")?.title).toBe("A");
   });

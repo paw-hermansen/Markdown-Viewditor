@@ -49,7 +49,7 @@
   // Ghosted busy overlay ("Rendering…") semantics — major renders
   // only, synchronous raise, drop-on-DOM, per-request ownership — live in
   // the render scheduler (see $lib/stores/render-scheduler.svelte.ts and
-  // AGENTS.md "Render busy overlay").
+  // .agents/guides/zoom-theme-ui.md "Render busy overlay").
   const scheduler = createRenderScheduler();
 
   $effect(() => {

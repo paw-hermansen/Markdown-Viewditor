@@ -69,7 +69,7 @@ describe("mermaid upgrade contract (real output)", () => {
       expect(
         EM_OFFSET.test(rendered[name]),
         `${name}: Mermaid no longer emits em-based dy/dx — re-verify whether ` +
-          "normalizeSvgTextOffsets is still needed (see AGENTS.md, zoom-sweep)",
+          "normalizeSvgTextOffsets is still needed (see .agents/guides/math-mermaid.md, zoom-sweep)",
       ).toBe(true);
     }
   });
@@ -105,7 +105,7 @@ describe("mermaid upgrade contract (real output)", () => {
       NEGATIVE_STROKE_WIDTH.test(rendered.mindmap),
       "mindmap: Mermaid no longer emits negative stroke-width values — " +
         "re-verify whether clampNegativeStrokeWidths in svg-css.ts is still " +
-        "needed (see AGENTS.md, Mermaid Edge Stroke Width)",
+        "needed (see .agents/guides/math-mermaid.md, Mermaid Edge Stroke Width)",
     ).toBe(true);
   });
 
@@ -158,14 +158,14 @@ describe("mermaid upgrade contract (real output)", () => {
       measured.some(inForeignObject),
       "Mermaid no longer measures <foreignObject> label content with " +
         "getBoundingClientRect — re-verify whether the fo-measure.ts zoom " +
-        "normalization is still needed (see AGENTS.md, Mermaid Label " +
+        "normalization is still needed (see .agents/guides/math-mermaid.md, Mermaid Label " +
         "Measurement)",
     ).toBe(true);
   });
 
   it("gantt still lays its geometry out for gantt.useWidth", async () => {
     // The app pins gantt.useWidth to the diagram's display width so gantt
-    // text does not shrink with the window (see AGENTS.md, Mermaid Gantt
+    // text does not shrink with the window (see .agents/guides/math-mermaid.md, Mermaid Gantt
     // Width). If Mermaid drops the config knob, that pin is dead code and
     // the tiny-gantt bug returns.
     const mermaid = (await import("mermaid")).default;
@@ -177,7 +177,7 @@ describe("mermaid upgrade contract (real output)", () => {
     expect(
       svg,
       "gantt: Mermaid no longer honors gantt.useWidth — re-verify how the " +
-        "app can keep gantt charts at display width (see AGENTS.md, " +
+        "app can keep gantt charts at display width (see .agents/guides/math-mermaid.md, " +
         "Mermaid Gantt Width)",
     ).toMatch(/viewBox="0 0 777 /);
   });
@@ -234,7 +234,7 @@ describe("mermaid upgrade contract (label math paint)", () => {
       rendered.mathLabel,
       "Mermaid no longer paints label KaTeX paths with a hard-coded fill — " +
         "re-verify whether pinLabelMathPaint in label-paint.ts is still " +
-        "needed (see AGENTS.md, Mermaid Label Math Paint)",
+        "needed (see .agents/guides/math-mermaid.md, Mermaid Label Math Paint)",
     ).toMatch(KATEX_PATH_PAINT);
   });
 

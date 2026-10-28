@@ -49,7 +49,7 @@ describe("katex upgrade contract (real output)", () => {
       /\.katex \.vlist-s\s*\{[^}]*font-size:\s*1px/.test(katexCss),
       "KaTeX's generated CSS no longer pins .vlist-s at font-size: 1px — the " +
         "2px override in extensions/katex/styles.ts has lost its target; " +
-        "re-verify the WebKit zoom fix (AGENTS.md 'Math (KaTeX) Integration')",
+        "re-verify the WebKit zoom fix (.agents/guides/math-mermaid.md 'Math (KaTeX) Integration')",
     ).toBe(true);
   });
 

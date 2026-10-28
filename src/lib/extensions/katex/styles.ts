@@ -23,7 +23,7 @@ export async function injectKaTeXStyles(): Promise<void> {
   // WebKit zoom workaround: KaTeX anchors every vlist table's baseline on a
   // `.vlist-s` cell with `font-size: 1px` (its own CSS calls this a Safari
   // workaround). Under WebKit page zoom — which is the CSS `zoom` machinery
-  // (see AGENTS.md "App Zoom") — any zoom factor < 1 makes that font
+  // (see .agents/guides/zoom-theme-ui.md "App Zoom") — any zoom factor < 1 makes that font
   // sub-pixel and its metrics collapse: the cell loses its baseline, the
   // inline-table re-anchors, and every plain-baseline element in the formula
   // (relations like `=`, `\left(...\right)` delimiters, `\text{}`) drops by

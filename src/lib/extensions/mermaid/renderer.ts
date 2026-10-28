@@ -339,7 +339,7 @@ export function themeSnapshotFromEnv(
 
 /**
  * The engine-proof post-processing chain every cached SVG goes through. The
- * order is a contract (AGENTS.md "Mermaid Label Math Paint" / "Mermaid Edge
+ * order is a contract (.agents/guides/math-mermaid.md "Mermaid Label Math Paint" / "Mermaid Edge
  * Stroke Width"):
  *
  *   1. `normalizeSvgTextOffsets` — em-based dy/dx label offsets drift under

@@ -97,7 +97,10 @@ coverage/
 *.tar.gz
 
 # AI
-.agents/
+# .agents/ is local tooling (skills, node_modules, …); only the agent guides
+# are tracked. Pattern is .agents/* (not .agents/) so the negation can work.
+.agents/*
+!.agents/guides/
 .opencode/
 skills-lock.json
 

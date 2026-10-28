@@ -26,7 +26,7 @@ describe("injectKaTeXStyles", () => {
     // The bundled KaTeX stylesheet says font-size: 1px here; under WebKit
     // page zoom that sub-pixel font collapses and the formula's plain-baseline
     // content (relations, delimiters) drifts ~one font-size below the vlist
-    // content. Keep this rule in sync with the AGENTS.md KaTeX contract.
+    // content. Keep this rule in sync with the KaTeX contract in .agents/guides/math-mermaid.md.
     expect(el?.textContent).toContain(".katex .vlist-s");
     expect(el?.textContent).toContain("font-size: 2px");
     expect(el?.textContent).not.toContain("1px");

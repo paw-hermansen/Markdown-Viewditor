@@ -1,0 +1,145 @@
+# Conventions & Core Patterns
+
+Coding conventions and the core architectural patterns used throughout the app.
+
+## Coding Conventions
+
+### Svelte Components
+
+- Use `.svelte` extension, PascalCase names
+- Use `$state()` for reactive state
+- Use `$derived()` for computed values
+- Use `$effect()` for side effects
+- Use `$props()` for component props
+- Use `onclick` not `on:click`
+- Use snippets `{@render}` not `<slot>`
+
+### Rust Code
+
+- Use `snake_case` functions, `PascalCase` types
+- Use `#[tauri::command]` for IPC
+- Return `Result<T, E>` for error handling
+- Use `lib.rs` for all logic (mobile requirement)
+
+### CSS
+
+- CSS custom properties (variables)
+- 8px spacing grid
+- Support dark/light themes
+- Responsive design
+
+## Critical Patterns
+
+### Tauri v2 Entry Point
+
+```rust
+// src-tauri/src/lib.rs
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .invoke_handler(tauri::generate_handler![commands...])
+        .run(tauri::generate_context!())
+        .expect("error");
+}
+
+// src-tauri/src/main.rs
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+fn main() {
+    app_lib::run();
+}
+```
+
+### Svelte 5 Component
+
+```svelte
+<script>
+  let { name = $bindable('') } = $props();
+  let doubled = $derived(name.length * 2);
+
+  $effect(() => {
+    console.log('Name changed:', name);
+  });
+</script>
+
+<input bind:value={name} />
+<p>Length: {doubled}</p>
+```
+
+### Calling Rust from Svelte
+
+```svelte
+<script>
+  import { invoke } from '@tauri-apps/api/core';
+
+  async function readFile(path) {
+    return await invoke('read_file', { path });
+  }
+</script>
+```
+
+### Live Preview Pattern
+
+```svelte
+<script>
+  import MarkdownIt from 'markdown-it';
+
+  let content = $state('# Hello World');
+  let html = $derived(md.render(content));
+
+  const md = new MarkdownIt();
+</script>
+
+<textarea bind:value={content}></textarea>
+<div>{@html html}</div>
+```
+
+### Markdown Syntax Levels
+
+`src/lib/utils/markdown-levels.ts` defines a **feature-detector registry**:
+each toggleable syntax feature registers a `FeatureDetector` that walks the
+markdown-it token stream and returns occurrence line numbers. Named presets
+(basic / github / advanced) derive their `enabledFeatures` from the registry,
+so Plan 2's math detectors extend the presets automatically without touching
+the engine.
+
+- `registerFeatureDetectors(...)` — register a detector (idempotent on `id`).
+- `analyzeContent(content)` (in `markdown.ts`) — parse-only analysis reusing
+  the existing markdown-it singleton; no rendering.
+- `findViolations(used, enabledFeatures)` — used features not in the enabled set.
+- The store (`stores/markdown-levels.svelte.ts`) debounces analysis (~200 ms)
+  via `$effect.root` started from `AppLayout`, so it works in all view modes
+  (the Viewer is unmounted in editor-only mode).
+
+### CodeMirror Lint Pattern
+
+```ts
+import { linter, forceLinting, type Diagnostic } from "@codemirror/lint";
+
+const levelLinter = linter((view): readonly Diagnostic[] => {
+  // Read reactive state inside the closure (levelState is a $state proxy).
+  return diagnostics;
+});
+
+// Re-run when the underlying state changes:
+$effect(() => {
+  void levelState.violations;
+  if (!editorView) return;
+  forceLinting(editorView);
+});
+```
+
+`basicSetup` already pulls in `@codemirror/lint`'s gutter/tooltip support; we
+list it as an explicit dependency for stability.
+
+## Common Mistakes to Avoid
+
+| Mistake                  | Solution                           |
+| ------------------------ | ---------------------------------- |
+| `let` without `$state()` | Use `$state()` for reactive vars   |
+| `on:click` syntax        | Use `onclick` (Svelte 5)           |
+| `<slot>`                 | Use `{@render children()}`         |
+| `&str` in async commands | Use `String` (owned type)          |
+| Missing capabilities     | Add to `capabilities/default.json` |
+| Commands not registered  | Add to `generate_handler![]`       |
+

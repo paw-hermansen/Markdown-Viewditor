@@ -1,6 +1,6 @@
 /**
  * Post-chain parity: every render pipeline must run the engine-proof passes
- * in the pinned order (AGENTS.md "Mermaid Label Math Paint" /
+ * in the pinned order (.agents/guides/math-mermaid.md "Mermaid Label Math Paint" /
  * "Mermaid Edge Stroke Width") — normalizeSvgTextOffsets, then
  * clampNegativeStrokeWidths, then pinLabelMathPaint — with the label pass
  * LAST, so whatever paint is in effect gets baked into its output. The

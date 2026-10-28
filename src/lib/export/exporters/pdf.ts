@@ -30,7 +30,7 @@ import { VIEWER_CONTENT_MAX_WIDTH_PX } from "$lib/constants/layout";
  *     pagination: one page per capture rect (see `PrintLayout` and the A4
  *     geometry notes below). Kept only as the legacy fallback; the WKWebView
  *     print operation used to deadlock/blank-page on older macOS (see the
- *     Print/PDF Fidelity Contract in AGENTS.md).
+ *     Print/PDF Fidelity Contract in .agents/guides/export-print.md).
  *
  * Fidelity contract (see also the export section in app.css): the print
  * container carries the `.viewer-content` class — and in theme mode the

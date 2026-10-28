@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { syncViewerBackground } from "../markdown";
+import { syncViewerBackground } from "../theme-css";
 
 describe("syncViewerBackground", () => {
   beforeEach(() => {

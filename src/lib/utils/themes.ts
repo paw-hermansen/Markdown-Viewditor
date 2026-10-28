@@ -1,4 +1,4 @@
-import { setTheme } from "$lib/utils/markdown";
+import { injectThemeCss } from "$lib/utils/theme-css";
 
 export interface ThemeInfo {
   id: string;
@@ -75,10 +75,10 @@ export async function applyTheme(themeId: string): Promise<void> {
     const loader = builtinCssModules[themeId];
     if (loader) {
       const mod = await loader();
-      setTheme(themeId, mod.default);
+      injectThemeCss(themeId, mod.default);
     }
   } else if (theme.css) {
-    setTheme(themeId, theme.css);
+    injectThemeCss(themeId, theme.css);
   }
 }
 

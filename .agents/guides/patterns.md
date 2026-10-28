@@ -104,7 +104,7 @@ so Plan 2's math detectors extend the presets automatically without touching
 the engine.
 
 - `registerFeatureDetectors(...)` — register a detector (idempotent on `id`).
-- `analyzeContent(content)` (in `markdown.ts`) — parse-only analysis reusing
+- `analyzeContent(content)` (in `markdown-render.ts`) — parse-only analysis reusing
   the existing markdown-it singleton; no rendering.
 - `findViolations(used, enabledFeatures)` — used features not in the enabled set.
 - The store (`stores/markdown-levels.svelte.ts`) debounces analysis (~200 ms)

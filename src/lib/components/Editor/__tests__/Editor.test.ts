@@ -58,7 +58,7 @@ vi.mock("$lib/utils/markdown-levels", () => ({
   violationMessage: (v: { label: string }) => `${v.label} (warning)`,
 }));
 
-vi.mock("$lib/utils/markdown", () => ({
+vi.mock("$lib/utils/theme-css", () => ({
   setTheme: vi.fn(),
 }));
 

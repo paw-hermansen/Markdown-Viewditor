@@ -167,6 +167,9 @@ vi.mock("$lib/utils/themes", () => ({
 
 vi.mock("$lib/utils/markdown", () => ({
   renderMarkdown: vi.fn().mockResolvedValue({ html: "", frontmatter: null }),
+}));
+
+vi.mock("$lib/utils/theme-css", () => ({
   setTheme: vi.fn(),
 }));
 

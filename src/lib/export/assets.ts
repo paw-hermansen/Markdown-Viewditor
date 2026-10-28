@@ -71,7 +71,7 @@ export async function inlineCssAssets(
 const IMG_SRC_RE = /(<img\s[^>]*?src=)(['"])([^'"]+)\2/gi;
 
 /** Tauri `invoke` call signature. */
-type InvokeImpl = (
+export type InvokeImpl = (
   cmd: string,
   args?: Record<string, unknown>,
 ) => Promise<unknown>;

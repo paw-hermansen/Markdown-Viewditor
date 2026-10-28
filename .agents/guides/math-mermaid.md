@@ -406,7 +406,7 @@ host box displays the diagram at and pins it as `gantt.useWidth` in every
   renders 1:1 at its display width, text stays 11px.
 - `fitToWidth: false` → `maxWidth` — a gantt has no intrinsic width, so its
   "natural size" is the requested width and the host scrolls when that
-  exceeds the column. Mirrors `computeMermaidFrameDims` in `exporters/odt.ts`.
+  exceeds the column. Mirrors `computeMermaidFrameDims` in `export/odt/dimensions.ts`.
 
 The width is part of the SVG cache key for gantt **only**
 (`isContainerSizedDiagram` mirrors Mermaid's `detectType` preprocessing —

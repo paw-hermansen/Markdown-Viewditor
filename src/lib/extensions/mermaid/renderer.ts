@@ -133,7 +133,7 @@ function viewerColumnWidth(): number {
  * With `fitToWidth: false` ("natural size, scrollable") the natural size of a
  * gantt is the requested `maxWidth` — the diagram has no intrinsic width — so
  * it is built for that and the host scrolls when it exceeds the column. This
- * mirrors `computeMermaidFrameDims` in `exporters/odt.ts`, which models the
+ * mirrors `computeMermaidFrameDims` in `export/odt/dimensions.ts`, which models the
  * same host sizing for ODT frames.
  *
  * @param options - Resolved host options (`maxWidth`, `fitToWidth`), i.e.

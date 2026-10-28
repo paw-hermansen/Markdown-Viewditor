@@ -121,10 +121,7 @@ const CSS_URL_RE = /url\((['"]?)([^'")]+)\1\)/g;
 /** Match `src="..."` and `src='...'` in <img> tags. */
 const IMG_SRC_RE = /(<img\s[^>]*?src=)(['"])([^'"]+)\2/gi;
 
-type InvokeImpl = (
-  cmd: string,
-  args?: Record<string, unknown>,
-) => Promise<unknown>;
+import type { InvokeImpl } from "../assets";
 
 /** Return the basename of a URL path or href (last segment). */
 function basename(href: string): string {

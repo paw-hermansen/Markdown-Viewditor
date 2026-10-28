@@ -28,7 +28,7 @@
  *
  * Regression: `__tests__/svg-css.test.ts`; the upgrade-contract suite pins
  * that Mermaid still emits the negative values (if that stops, this pass
- * may be removable). See AGENTS.md, "Mermaid Edge Stroke Width".
+ * may be removable). See .agents/guides/math-mermaid.md, "Mermaid Edge Stroke Width".
  */
 
 /** Deep edges taper to this width once clamped (SVG user units == px). */

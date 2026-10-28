@@ -4,7 +4,7 @@
  *
  * Mermaid positions label text with em-based offsets (e.g. sequence diagram
  * message labels use `dy="1em"`, label rows use `y="-0.1em"`). Under WebKit
- * page zoom — which is the CSS `zoom` machinery (see AGENTS.md "App Zoom") —
+ * page zoom — which is the CSS `zoom` machinery (see .agents/guides/zoom-theme-ui.md "App Zoom") —
  * an em value resolves against the *zoom-divided* computed font size (the
  * same value `getComputedStyle().fontSize` reports), while the diagram
  * geometry scales normally. The label therefore slides up as zoom grows: at

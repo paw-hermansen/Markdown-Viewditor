@@ -10,7 +10,7 @@ import { invoke } from "@tauri-apps/api/core";
  * - `"capture"` — the legacy macOS path: a save dialog followed by
  *   `invoke('create_pdf')`, WKWebView's `createPDFWithConfiguration` capture.
  *   Kept for macOS < 15 only, where the WKWebView print operation was
- *   unusable (see the Print/PDF Fidelity Contract in AGENTS.md).
+ *   unusable (see the Print/PDF Fidelity Contract in .agents/guides/export-print.md).
  */
 export type PdfMode = "dialog" | "capture";
 

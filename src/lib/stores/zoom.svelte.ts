@@ -9,7 +9,7 @@ import { settingsState, updateSetting } from "./settings.svelte";
  *
  * Deliberately NOT CSS `zoom`: WebKit mis-scales inline SVG under it
  * (`<foreignObject>` font sizes and SVG geometry — the reason the macOS PDF
- * path refuses CSS zoom; see AGENTS.md). Page zoom is engine-native and
+ * path refuses CSS zoom; see .agents/guides/zoom-theme-ui.md). Page zoom is engine-native and
  * scales Mermaid/KaTeX/tables uniformly.
  *
  * The `zoomLevel` setting (1 = 100%) is the single source of truth and is
@@ -24,7 +24,7 @@ import { settingsState, updateSetting } from "./settings.svelte";
  * below ~85% KaTeX script-size text (11.9px) clamps to 10px and renders
  * nearly as large as the formula's base text. 70% keeps a useful overview
  * range with only mild sub/superscript oversizing as the known artifact
- * (see AGENTS.md "Math (KaTeX) Integration").
+ * (see .agents/guides/math-mermaid.md "Math (KaTeX) Integration").
  */
 export const ZOOM_STEPS = [0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -166,7 +166,7 @@ export async function applySavedZoom(): Promise<void> {
 // run at zoom 1.0 regardless of the on-screen zoom — otherwise the macOS
 // `create_pdf` capture rect and `window.print()` output scale with the zoom,
 // and the wide-math fit measurement (scaleWideMathForPrint) would measure a
-// zoomed layout. See the "Print/PDF Fidelity Contract" in AGENTS.md.
+// zoomed layout. See the "Print/PDF Fidelity Contract" in .agents/guides/export-print.md.
 
 let guardDepth = 0;
 let guardedLevel = 1;

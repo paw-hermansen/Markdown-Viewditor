@@ -20,7 +20,7 @@ function cssPixels(value: string): number {
  * The visible text width of the editor's content column, in CSS px.
  * Page-zoom-invariant: `scaleX` (the rect/`offsetWidth` ratio) divides out
  * any zoom/device-pixel scaling on both sides of the comparison, so the
- * returned width is layout units either way (AGENTS.md "App Zoom").
+ * returned width is layout units either way (.agents/guides/zoom-theme-ui.md "App Zoom").
  */
 export function getVisibleTextWidth(view: EditorView): number {
   const scroll = view.scrollDOM;

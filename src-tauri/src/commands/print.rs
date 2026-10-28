@@ -87,7 +87,7 @@ mod platform {
     /// `-[WKWebView printOperationWithPrintInfo:]` (macOS 11+) run with
     /// `runOperationModalForWindow:delegate:didRunSelector:contextInfo:`.
     /// Two rules keep it working — both learned the hard way (see the
-    /// spike notes in AGENTS.md):
+    /// spike notes in .agents/guides/export-print.md):
     ///
     /// - The operation must run through the *asynchronous*
     ///   `runOperationModalForWindow…`. The synchronous `runOperation` never

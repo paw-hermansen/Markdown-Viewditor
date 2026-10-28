@@ -46,7 +46,7 @@
  *
  * Regression: `__tests__/label-paint.test.ts`; the upgrade-contract suite
  * pins that Mermaid still emits the black `.node .katex path` rule (if that
- * stops, this pass may be obsolete). See AGENTS.md, "Mermaid Label Math
+ * stops, this pass may be obsolete). See .agents/guides/math-mermaid.md, "Mermaid Label Math
  * Paint".
  */
 

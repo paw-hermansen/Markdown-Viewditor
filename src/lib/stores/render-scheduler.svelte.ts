@@ -7,7 +7,7 @@
  * task bodies) so the debounce/supersede/busy-ownership matrix is unit
  * testable without mounting a component — see
  * `__tests__/render-scheduler.test.ts`. The contracts below are pinned by
- * Viewer.test.ts and AGENTS.md "Render busy overlay":
+ * Viewer.test.ts and .agents/guides/zoom-theme-ui.md "Render busy overlay":
  *
  *   - The overlay shows for **major** renders only (first render of a
  *     document, theme change, forceRender/Reload). Routine typing

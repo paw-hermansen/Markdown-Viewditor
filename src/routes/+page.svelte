@@ -405,7 +405,7 @@
         htmlForPdf = clone.innerHTML;
       }
       // Exports always run at zoom 1.0 (physical print scale must not follow
-      // the on-screen zoom) — see withNominalZoom and the AGENTS.md contract.
+      // the on-screen zoom) — see withNominalZoom and the .agents/guides/export-print.md contract.
       const result = await withNominalZoom(() =>
         exportPdf(htmlForPdf, fileName, viewerContent),
       );

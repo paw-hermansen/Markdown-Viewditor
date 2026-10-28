@@ -190,4 +190,3 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   (`scopeSyntaxCssForPrint()`), which outranks the active theme's global
   hljs rules. Custom themes are assumed to scope rules to `#viewer-content`
   (like the built-ins); bare global selectors would leak into the app shell.
-

@@ -139,4 +139,3 @@ speed; the lever for faster theme changes is avoiding re-renders (e.g.
 patching Mermaid SVGs in place), not parallelizing them. Error cleanup is
 scoped to the failing render's temp nodes
 (`removeMermaidTempElements(renderId)`).
-

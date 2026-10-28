@@ -142,4 +142,3 @@ list it as an explicit dependency for stability.
 | `&str` in async commands | Use `String` (owned type)          |
 | Missing capabilities     | Add to `capabilities/default.json` |
 | Commands not registered  | Add to `generate_handler![]`       |
-

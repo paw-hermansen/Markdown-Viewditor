@@ -35,5 +35,6 @@ Upload it manually to [Partner Center](https://partner.microsoft.com/) for Store
 Microsoft re-signs MSIX packages for free — no code signing certificate needed.
 
 Store identity values (from Partner Center):
+
 - `Package/Identity/Name`: `PawHermansen.MarkdownViewditor`
 - `Package/Identity/Publisher`: `CN=15E8FDBE-19B2-435E-B9C3-FF697C5E3B1B`

@@ -146,6 +146,7 @@ place to eyeball foreignObject labels and SVG markers under zoom
 (webkit.org/show_bug.cgi?id=279041). Diagrams with Mermaid's `useMaxWidth`
 (default) shrink to fit the container, so at high zoom they stay the same
 physical size while the rest of the UI grows — by design, not a bug.
+
 ## Mermaid Label Measurement (page zoom)
 
 Mermaid sizes every HTML label at render time from `getBoundingClientRect()`
@@ -459,6 +460,7 @@ Upgrade checklist:
 4. On Linux: `python3 testing/tools/zoom-sweep/mermaid-zoom-sweep.py`.
 5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
    plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.
+
 ## Scroll-Sync Anchor Contract for Math
 
 `createLineNumbersPlugin` can't tag math output (its fence wrapper only
@@ -470,4 +472,3 @@ into the first opening tag of the returned HTML (idempotent — skips if
 order and covers `$$…$$`, `\[…\]`, bare `\begin{}`, and ` ```math `
 fences. If you touch this, the monotonicity test in
 `__tests__/markdown-math.test.ts` must stay green.
-

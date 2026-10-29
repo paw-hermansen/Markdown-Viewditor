@@ -301,6 +301,7 @@
               </thead>
               <tbody>
                 <tr><td>Cycle View Mode</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">V</kbd></td></tr>
+                <tr><td>Format Document</td><td><kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">{modLabel('Alt')}</kbd> + <kbd class="shortcut-key">F</kbd></td></tr>
                 <tr><td>Zoom In</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">+</kbd> (or <kbd class="shortcut-key">=</kbd>)</td></tr>
                 <tr><td>Zoom Out</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">-</kbd></td></tr>
                 <tr><td>Reset Zoom</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">0</kbd></td></tr>

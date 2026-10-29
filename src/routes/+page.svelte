@@ -68,10 +68,15 @@
   import { createScrollSync } from "$lib/utils/scroll-sync";
   import { onMount, onDestroy } from "svelte";
   import { renderMarkdown } from "$lib/utils/markdown";
+import {
+  registerCommands,
+  handleGlobalKeydown as registryHandleGlobalKeydown,
+} from "$lib/commands/registry.svelte";
   import {
     runExporter,
     registerBuiltinExporters,
     getExporter,
+    listExporters,
   } from "$lib/export/registry.svelte";
   import { exportPdf } from "$lib/export/exporters/pdf";
   import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
@@ -79,7 +84,7 @@
   import { usesCapturePdf } from "$lib/export/pdf-mode";
   import { getThemeLabel } from "$lib/utils/themes";
   import { showExportConfirmDialog } from "$lib/stores/export-confirm-dialog.svelte";
-  import { updateStatus, checkForUpdates, updaterState, initUpdaterEnabled } from "$lib/stores/update.svelte";
+  import { checkForUpdates, updaterState, initUpdaterEnabled } from "$lib/stores/update.svelte";
 
   // Capture-only platforms (macOS < 15) export PDFs via the save dialog +
   // create_pdf capture and have no print dialog; everything else prints.
@@ -542,99 +547,10 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
-    if (fileState.isLoading || exportingState.active) return;
-
-    const isMod = e.metaKey || e.ctrlKey;
-    const code = e.code;
-
-    if (code === "F1") {
-      e.preventDefault();
-      showAbout = !showAbout;
-      return;
-    }
-
-    if (isMod && e.shiftKey && code === "KeyS") {
-      e.preventDefault();
-      handleSaveAs();
-      return;
-    }
-
-    if (isMod && !e.shiftKey && code === "KeyS") {
-      e.preventDefault();
-      handleSave();
-      return;
-    }
-
-    if (isMod && e.shiftKey && code === "KeyP") {
-      e.preventDefault();
-      showCommandPalette = !showCommandPalette;
-      return;
-    }
-
-    if (isMod && !e.shiftKey && code === "KeyP") {
-      e.preventDefault();
-      handlePrint();
-      return;
-    }
-
-    if (isMod && code === "KeyN") {
-      e.preventDefault();
-      handleNew();
-      return;
-    }
-
-    if (isMod && code === "KeyO") {
-      e.preventDefault();
-      handleOpen();
-      return;
-    }
-
-    if (isMod && code === "KeyR") {
-      e.preventDefault();
-      handleReload();
-      return;
-    }
-
-    if (isMod && !e.shiftKey && code === "KeyQ") {
-      e.preventDefault();
-      handleExit();
-      return;
-    }
-
-    if (isMod && e.shiftKey && code === "KeyV") {
-      e.preventDefault();
-      cycleViewMode();
-      return;
-    }
-
-    // Zoom: match the *produced character* (e.key), not the physical key, so
-    // every keyboard layout works — `+` is Shift+= on US, a dedicated key on
-    // German QWERTZ, `=` is Shift+0 there. `+`/`=` and `-`/`_` cover the
-    // shifted variants; numpad keys report the same characters (Numpad0 is
-    // matched by code for the NumLock-off case where it reports "Insert").
-    if (isMod && (e.key === "=" || e.key === "+")) {
-      e.preventDefault();
-      void zoomIn();
-      return;
-    }
-
-    if (isMod && (e.key === "-" || e.key === "_")) {
-      e.preventDefault();
-      void zoomOut();
-      return;
-    }
-
-    if (isMod && (e.key === "0" || code === "Numpad0")) {
-      e.preventDefault();
-      void resetZoom();
-      return;
-    }
-
-    if (e.shiftKey && e.altKey && code === "KeyF") {
-      e.preventDefault();
-      handleFormatDocument();
-      return;
-    }
+    registryHandleGlobalKeydown(e, {
+      isLoading: fileState.isLoading,
+      exporting: exportingState.active,
+    });
   }
 
   function initScrollSync() {
@@ -658,6 +574,36 @@
       initScrollSync();
     }
   });
+
+  // Register app commands once.
+  registerCommands([
+    { id: "file.new", title: "New File", category: "File", shortcut: { code: "KeyN", mod: true, shift: "any" }, run: () => { void handleNew(); } },
+    { id: "file.open", title: "Open File", category: "File", shortcut: { code: "KeyO", mod: true, shift: "any" }, run: () => { void handleOpen(); } },
+    { id: "file.save", title: "Save", category: "File", shortcut: { code: "KeyS", mod: true, shift: false }, run: () => { void handleSave(); } },
+    { id: "file.save-as", title: "Save As", category: "File", shortcut: { code: "KeyS", mod: true, shift: true }, run: () => { void handleSaveAs(); } },
+    { id: "file.reload", title: "Reload from Disk", category: "File", shortcut: { code: "KeyR", mod: true, shift: "any" }, run: () => { void handleReload(); } },
+    { id: "file.quit", title: "Quit", category: "File", shortcut: { code: "KeyQ", mod: true, shift: false }, run: () => { void handleExit(); } },
+    { id: "file.print", title: exportOnly ? "Create PDF" : "Print Preview", category: "File", shortcut: { code: "KeyP", mod: true, shift: false }, run: () => { void handlePrint(); } },
+    { id: "palette.toggle", title: "Command Palette", category: "File", shortcut: { code: "KeyP", mod: true, shift: true }, run: () => { showCommandPalette = !showCommandPalette; } },
+    { id: "view.cycle", title: "Cycle View Mode", category: "View", shortcut: { code: "KeyV", mod: true, shift: true }, run: () => { cycleViewMode(); } },
+    { id: "view.zoom-in", title: "Zoom In", category: "View", shortcut: { keys: ["=", "+"], mod: true, shift: "any" }, run: () => void zoomIn() },
+    { id: "view.zoom-out", title: "Zoom Out", category: "View", shortcut: { keys: ["-", "_"], mod: true, shift: "any" }, run: () => void zoomOut() },
+    { id: "view.zoom-reset", title: "Reset Zoom", category: "View", shortcut: { keys: ["0"], code: "Numpad0", mod: true, shift: "any" }, run: () => void resetZoom() },
+    { id: "format.document", title: "Format Document", category: "Format", shortcut: { code: "KeyF", shift: true, alt: true }, run: () => { void handleFormatDocument(); } },
+    { id: "help.about", title: "About", category: "Help", shortcut: { code: "F1", mod: false, shift: false }, run: () => { void handleAbout(); } },
+  ]);
+
+  // Export commands derived from registry.
+  for (const e of listExporters()) {
+    registerCommands([
+      {
+        id: `export-${e.id}`,
+        title: e.label,
+        category: "Export",
+        run: () => handleExport(e.id),
+      },
+    ]);
+  }
 
   onMount(async () => {
     // Ctrl/Cmd+wheel (and macOS trackpad pinch) zoom. The listener must be
@@ -796,18 +742,6 @@
 <AppLayout
   {viewMode}
   onViewModeChange={handleViewModeChange}
-  onSave={handleSave}
-  onSaveAs={handleSaveAs}
-  onReload={handleReload}
-  onOpen={handleOpen}
-  onNew={handleNew}
-  onAbout={handleAbout}
-  onUpdateClick={handleAbout}
-  updateAvailable={updateStatus.available}
-  updateVersion={updateStatus.version}
-  isModified={hasUnsavedChanges()}
-  isLoading={fileState.isLoading}
-  {fileName}
 >
   {#if viewMode === "split" || viewMode === "editor"}
     <div class="editor-pane">
@@ -834,19 +768,6 @@
 <CommandPalette
   open={showCommandPalette}
   onClose={handleCloseCommandPalette}
-  onNew={handleNew}
-  onOpen={handleOpen}
-  onSave={handleSave}
-  onSaveAs={handleSaveAs}
-  onReload={handleReload}
-  onQuit={handleExit}
-  {viewMode}
-  onViewModeChange={handleViewModeChange}
-  onAbout={handleAbout}
-  onPrint={handlePrint}
-  onExport={handleExport}
-  onFormatDocument={handleFormatDocument}
-  printLabel={exportOnly ? "Create PDF" : "Print Preview"}
 />
 
 <ConfirmDialog />

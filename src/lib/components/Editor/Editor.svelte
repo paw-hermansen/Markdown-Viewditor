@@ -151,13 +151,6 @@
               return true;
             }
           },
-          {
-            key: 'Shift-Alt-f',
-            run: () => {
-              formatDocument();
-              return true;
-            }
-          },
         ])),
         Prec.high(EditorView.domEventHandlers({
           keydown: (e: KeyboardEvent) => {

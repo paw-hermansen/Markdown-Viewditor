@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { modLabel } from '$lib/utils/keyboard';
+  import { commandTitle } from '$lib/commands/registry.svelte';
 
   let { onFormat }: { onFormat: (format: string) => void } = $props();
 
   const formats = [
-    { id: 'bold', label: 'B', title: modLabel('Bold (Ctrl+B)'), cls: 'icon-bold' },
-    { id: 'italic', label: 'I', title: modLabel('Italic (Ctrl+I)'), cls: 'icon-italic' },
-    { id: 'strikethrough', label: 'S', title: modLabel('Strikethrough (Ctrl+Shift+X)'), cls: 'icon-strikethrough' },
-    { id: 'highlight', label: 'M', title: modLabel('Highlight (Ctrl+Shift+M)'), cls: 'icon-highlight' },
-    { id: 'heading', label: 'H', title: modLabel('Heading (Ctrl+Shift+H)'), cls: 'icon-heading' },
-    { id: 'link', label: '🔗', title: modLabel('Link (Ctrl+K)'), cls: '' },
-    { id: 'image', label: '🖼', title: modLabel('Image (Ctrl+Shift+I)'), cls: '' },
-    { id: 'code', label: '</>', title: modLabel('Code (Ctrl+E, toggles)'), cls: 'icon-code' },
-    { id: 'bullet', label: '•', title: modLabel('Bullet List (Ctrl+Shift+8)'), cls: '' },
-    { id: 'numbered', label: '1.', title: modLabel('Numbered List (Ctrl+Shift+7)'), cls: '' },
-    { id: 'task', label: '☑', title: 'Task List', cls: '' },
-    { id: 'quote', label: '❝', title: 'Blockquote', cls: '' },
-    { id: 'hr', label: '—', title: 'Horizontal Rule', cls: '' }
+    { id: 'bold', label: 'B', cls: 'icon-bold' },
+    { id: 'italic', label: 'I', cls: 'icon-italic' },
+    { id: 'strikethrough', label: 'S', cls: 'icon-strikethrough' },
+    { id: 'highlight', label: 'M', cls: 'icon-highlight' },
+    { id: 'heading', label: 'H', cls: 'icon-heading' },
+    { id: 'link', label: '🔗', cls: '' },
+    { id: 'image', label: '🖼', cls: '' },
+    { id: 'code', label: '</>', cls: 'icon-code' },
+    { id: 'bullet', label: '•', cls: '' },
+    { id: 'numbered', label: '1.', cls: '' },
+    { id: 'task', label: '☑', cls: '' },
+    { id: 'quote', label: '❝', cls: '' },
+    { id: 'hr', label: '—', cls: '' }
   ];
 
   function handleToolbarKeydown(e: KeyboardEvent) {
@@ -45,8 +45,8 @@
   {#each formats as format}
     <button
       class="toolbar-btn {format.cls}"
-      title={format.title}
-      aria-label={format.title}
+      title={commandTitle(`edit.${format.id}`)}
+      aria-label={commandTitle(`edit.${format.id}`)}
       onmousedown={(e) => { e.preventDefault(); }}
       onclick={() => onFormat(format.id)}
     >

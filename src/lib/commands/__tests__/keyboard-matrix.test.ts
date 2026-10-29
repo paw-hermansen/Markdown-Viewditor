@@ -52,11 +52,26 @@ describe("keyboard matrix", () => {
 
   it.each([
     ["file.new", "KeyN", { ctrlKey: true }, "handleNew"],
-    ["file.new (Shift quirk)", "KeyN", { ctrlKey: true, shiftKey: true }, "handleNew"],
+    [
+      "file.new (Shift quirk)",
+      "KeyN",
+      { ctrlKey: true, shiftKey: true },
+      "handleNew",
+    ],
     ["file.open", "KeyO", { ctrlKey: true }, "handleOpen"],
-    ["file.open (Shift quirk)", "KeyO", { ctrlKey: true, shiftKey: true }, "handleOpen"],
+    [
+      "file.open (Shift quirk)",
+      "KeyO",
+      { ctrlKey: true, shiftKey: true },
+      "handleOpen",
+    ],
     ["file.reload", "KeyR", { ctrlKey: true }, "handleReload"],
-    ["file.reload (Shift quirk)", "KeyR", { ctrlKey: true, shiftKey: true }, "handleReload"],
+    [
+      "file.reload (Shift quirk)",
+      "KeyR",
+      { ctrlKey: true, shiftKey: true },
+      "handleReload",
+    ],
     ["file.save-as", "KeyS", { ctrlKey: true, shiftKey: true }, "handleSaveAs"],
   ] as const)("%s fires", (_label, code, mods, handler) => {
     const h = setup();
@@ -140,12 +155,18 @@ describe("keyboard matrix", () => {
 
   it("guards block everything", () => {
     const h = setup();
-    handleGlobalKeydown(new KeyboardEvent("keydown", { code: "KeyN", ctrlKey: true }), {
-      isLoading: true,
-    });
-    handleGlobalKeydown(new KeyboardEvent("keydown", { code: "KeyN", ctrlKey: true }), {
-      exporting: true,
-    });
+    handleGlobalKeydown(
+      new KeyboardEvent("keydown", { code: "KeyN", ctrlKey: true }),
+      {
+        isLoading: true,
+      },
+    );
+    handleGlobalKeydown(
+      new KeyboardEvent("keydown", { code: "KeyN", ctrlKey: true }),
+      {
+        exporting: true,
+      },
+    );
     expect(h.handleNew).not.toHaveBeenCalled();
   });
 });

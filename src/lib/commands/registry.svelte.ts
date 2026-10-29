@@ -32,6 +32,8 @@ export interface Command {
    * firing twice.
    */
   matchable?: boolean;
+  /** Optional parenthetical note in the tooltip, e.g. "toggles". */
+  note?: string;
 }
 
 let commands: Command[] = [];
@@ -69,15 +71,17 @@ export function shortcutLabelFor(id: string): string | undefined {
   return formatShortcut(getCommand(id)?.shortcut);
 }
 
-/** "Title (Shortcut)" for a command id — the single-source tooltip text. */
+/** "Title (Shortcut, note)" for a command id — the single-source tooltip text. */
 export function commandTitle(id: string): string {
-  const title = titleFor(id);
-  const shortcut = shortcutLabelFor(id);
-  return shortcut ? `${title} (${shortcut})` : title;
+  const cmd = getCommand(id);
+  const title = cmd?.title ?? id;
+  const shortcut = formatShortcut(cmd?.shortcut);
+  const inner = [shortcut, cmd?.note].filter(Boolean).join(", ");
+  return inner ? `${title} (${inner})` : title;
 }
 
-export function formatShortcut(s?: CommandShortcut): string | undefined {
-  if (!s) return undefined;
+export function shortcutParts(s?: CommandShortcut): string[] {
+  if (!s) return [];
   const parts: string[] = [];
   if (s.mod) parts.push("Ctrl");
   if (s.alt) parts.push("Alt");
@@ -85,6 +89,7 @@ export function formatShortcut(s?: CommandShortcut): string | undefined {
   let key = "";
   if (s.code) {
     if (s.code.startsWith("Key")) key = s.code.slice(3);
+    else if (s.code.startsWith("Digit")) key = s.code.slice(5);
     else if (s.code === "F1") key = "F1";
     else if (s.code === "Numpad0") key = "0";
     else key = s.code;
@@ -92,8 +97,18 @@ export function formatShortcut(s?: CommandShortcut): string | undefined {
     key = s.keys[0];
   }
   if (key) parts.push(key);
-  const joined = parts.join("+");
-  return modLabel(joined);
+  return parts;
+}
+
+export function formatShortcut(s?: CommandShortcut): string | undefined {
+  const parts = shortcutParts(s);
+  if (parts.length === 0) return undefined;
+  return modLabel(parts.join("+"));
+}
+
+/** Modifier + key labels for a command id (for per-key `<kbd>` rendering). */
+export function shortcutKeys(id: string): string[] {
+  return shortcutParts(getCommand(id)?.shortcut);
 }
 
 export function handleGlobalKeydown(

@@ -68,12 +68,48 @@ describe("AppLayout", () => {
     vi.clearAllMocks();
     clearCommands();
     registerCommands([
-      { id: "file.new", title: "New File", category: "File", run: vi.fn() },
-      { id: "file.open", title: "Open File", category: "File", run: vi.fn() },
-      { id: "file.save", title: "Save", category: "File", run: vi.fn() },
-      { id: "file.save-as", title: "Save As", category: "File", run: vi.fn() },
-      { id: "file.reload", title: "Reload", category: "File", run: vi.fn() },
-      { id: "help.about", title: "About", category: "Help", run: vi.fn() },
+      {
+        id: "file.new",
+        title: "New File",
+        category: "File",
+        shortcut: { code: "KeyN", mod: true, shift: "any" },
+        run: vi.fn(),
+      },
+      {
+        id: "file.open",
+        title: "Open File",
+        category: "File",
+        shortcut: { code: "KeyO", mod: true, shift: "any" },
+        run: vi.fn(),
+      },
+      {
+        id: "file.save",
+        title: "Save",
+        category: "File",
+        shortcut: { code: "KeyS", mod: true, shift: false },
+        run: vi.fn(),
+      },
+      {
+        id: "file.save-as",
+        title: "Save As",
+        category: "File",
+        shortcut: { code: "KeyS", mod: true, shift: true },
+        run: vi.fn(),
+      },
+      {
+        id: "file.reload",
+        title: "Reload from Disk",
+        category: "File",
+        shortcut: { code: "KeyR", mod: true, shift: "any" },
+        run: vi.fn(),
+      },
+      {
+        id: "help.about",
+        title: "About",
+        category: "Help",
+        shortcut: { code: "F1", mod: false, shift: false },
+        run: vi.fn(),
+      },
     ]);
     mockSettingsState.splitRatio = 0.5;
   });
@@ -82,8 +118,8 @@ describe("AppLayout", () => {
     render(AppLayout, {
       props: { ...defaultProps, children: snippet("content") },
     });
-    expect(screen.getByTitle("New file (Ctrl+N)")).toBeInTheDocument();
-    expect(screen.getByTitle("Open file (Ctrl+O)")).toBeInTheDocument();
+    expect(screen.getByTitle("New File (Ctrl+N)")).toBeInTheDocument();
+    expect(screen.getByTitle("Open File (Ctrl+O)")).toBeInTheDocument();
     expect(screen.getByTitle("Save (Ctrl+S)")).toBeInTheDocument();
     expect(screen.getByTitle("About (F1)")).toBeInTheDocument();
   });
@@ -92,7 +128,7 @@ describe("AppLayout", () => {
     render(AppLayout, {
       props: { ...defaultProps, children: snippet() },
     });
-    await fireEvent.click(screen.getByTitle("New file (Ctrl+N)"));
+    await fireEvent.click(screen.getByTitle("New File (Ctrl+N)"));
     const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
       "file.new",
     );
@@ -103,7 +139,7 @@ describe("AppLayout", () => {
     render(AppLayout, {
       props: { ...defaultProps, children: snippet() },
     });
-    await fireEvent.click(screen.getByTitle("Open file (Ctrl+O)"));
+    await fireEvent.click(screen.getByTitle("Open File (Ctrl+O)"));
     const cmd = (await import("$lib/commands/registry.svelte")).getCommand(
       "file.open",
     );
@@ -128,8 +164,8 @@ describe("AppLayout", () => {
     render(AppLayout, {
       props: { ...defaultProps, children: snippet() },
     });
-    await fireEvent.click(screen.getByTitle("New file (Ctrl+N)"));
-    await fireEvent.click(screen.getByTitle("Open file (Ctrl+O)"));
+    await fireEvent.click(screen.getByTitle("New File (Ctrl+N)"));
+    await fireEvent.click(screen.getByTitle("Open File (Ctrl+O)"));
     await fireEvent.click(screen.getByTitle("Save (Ctrl+S)"));
     await fireEvent.click(screen.getByTitle("Save As (Ctrl+Shift+S)"));
     await fireEvent.click(screen.getByTitle("Reload from Disk (Ctrl+R)"));

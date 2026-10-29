@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi } from "vitest";
 import AboutDialog from "../AboutDialog.svelte";
 import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
+import { clearCommands, registerCommands } from "$lib/commands/registry.svelte";
+import { buildPageCommands } from "$lib/commands/page-commands";
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: vi.fn().mockResolvedValue(undefined),
@@ -68,6 +70,44 @@ describe("AboutDialog", () => {
       screen.getByRole("tab", { name: "Dependencies" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "License" })).toBeInTheDocument();
+  });
+
+  it("renders shortcuts from the registry (incl. Format Document)", async () => {
+    // The shortcuts table single-sources its key labels from the command
+    // registry — this pins that the once-missing Shift+Alt+F row is present
+    // and derives from metadata rather than a hand-copied string.
+    clearCommands();
+    registerCommands(
+      buildPageCommands(
+        {
+          handleNew: vi.fn(),
+          handleOpen: vi.fn(),
+          handleSave: vi.fn(),
+          handleSaveAs: vi.fn(),
+          handleReload: vi.fn(),
+          handleExit: vi.fn(),
+          handlePrint: vi.fn(),
+          togglePalette: vi.fn(),
+          cycleViewMode: vi.fn(),
+          zoomIn: vi.fn(),
+          zoomOut: vi.fn(),
+          resetZoom: vi.fn(),
+          handleFormatDocument: vi.fn(),
+          handleAbout: vi.fn(),
+          handleFormat: vi.fn(),
+        },
+        { exportOnly: false },
+      ),
+    );
+    render(AboutDialog, { props: { open: true, onClose: vi.fn() } });
+    await fireEvent.click(
+      screen.getByRole("tab", { name: "Keyboard Shortcuts" }),
+    );
+    // Format Document = Shift + Alt + F (rendered as one <kbd> per key).
+    const formatDoc = screen.getByText("Format Document").closest("tr")!;
+    expect(formatDoc.textContent).toContain("Shift");
+    expect(formatDoc.textContent).toContain("Alt");
+    expect(formatDoc.textContent).toContain("F");
   });
 
   it("switches to Dependencies tab on click", async () => {

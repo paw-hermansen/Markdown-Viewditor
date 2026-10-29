@@ -16,9 +16,9 @@ describe("theme-css module boundary", () => {
   });
 
   it("exports only injectThemeCss, setTheme and syncViewerBackground", () => {
-    const exports = [...src.matchAll(/export\s+(?:function|const|let|class)\s+(\w+)/g)].map(
-      (m) => m[1],
-    );
+    const exports = [
+      ...src.matchAll(/export\s+(?:function|const|let|class)\s+(\w+)/g),
+    ].map((m) => m[1]);
     expect(exports.sort()).toEqual([
       "injectThemeCss",
       "setTheme",

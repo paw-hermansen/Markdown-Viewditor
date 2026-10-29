@@ -82,15 +82,17 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
     // lifecycle, so it only exists while the dialog is open.
     document.addEventListener("keydown", handleKeydown);
 
-    // Set initial focus
+    // Set initial focus. `preventScroll` so opening a dialog never moves the
+    // document scroll — the dialog is already in view; focus must not drag
+    // the page to the focused element.
     if (initialFocus) {
-      initialFocus.focus();
+      initialFocus.focus({ preventScroll: true });
     } else {
       const focusable = getFocusableElements(node);
       if (focusable.length > 0) {
-        focusable[0].focus();
+        focusable[0].focus({ preventScroll: true });
       } else {
-        node.focus();
+        node.focus({ preventScroll: true });
       }
     }
   }
@@ -99,7 +101,9 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
     document.removeEventListener("keydown", handleKeydown);
 
     if (restoreFocus && previousFocus) {
-      previousFocus.focus();
+      // Restore focus without scrolling: closing a dialog must not yank the
+      // page back to wherever the previously focused element lives.
+      previousFocus.focus({ preventScroll: true });
       previousFocus = null;
     }
   }

@@ -67,7 +67,7 @@
     isOpen = false;
     onSelect?.(v);
     const trigger = rootRef?.querySelector('.main-button') as HTMLElement;
-    trigger?.focus();
+    trigger?.focus({ preventScroll: true });
   }
 
   function fire() {
@@ -97,7 +97,7 @@
           popupController.close();
           if (reason === 'escape') {
             const trigger = rootRef?.querySelector('.main-button') as HTMLElement;
-            trigger?.focus();
+            trigger?.focus({ preventScroll: true });
           }
         }
       },

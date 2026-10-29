@@ -51,7 +51,7 @@
     if (open) {
       searchQuery = "";
       selectedIndex = 0;
-      setTimeout(() => searchInput?.focus(), 0);
+      setTimeout(() => searchInput?.focus({ preventScroll: true }), 0);
     }
   });
 

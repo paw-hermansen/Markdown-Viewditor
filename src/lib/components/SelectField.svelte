@@ -77,7 +77,7 @@
 
   function close(restoreFocus: boolean) {
     open = false;
-    if (restoreFocus) triggerEl?.focus();
+    if (restoreFocus) triggerEl?.focus({ preventScroll: true });
   }
 
   function toggle() {

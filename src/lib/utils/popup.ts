@@ -17,12 +17,21 @@ export type DismissReason =
 export interface PopupControllerConfig {
   anchor?: "trigger" | "cursor";
   clip?: "ancestor" | "viewport";
-  align?: "left" | "right";
+  align?: "left" | "right" | (() => "left" | "right");
   openDirection?: "down" | "up" | "flip";
   gap?: number;
   capHeight?: boolean;
   onDismiss?: (reason: DismissReason) => void;
   focus?: { initial?: () => void; restore?: () => void };
+  /** What a window resize does. Default "re-place". */
+  onResize?: "re-place" | "dismiss";
+  /** What a scroll does. Default "dismiss". */
+  onScroll?: "dismiss" | "ignore";
+}
+
+export interface PopupControllerOptions {
+  /** Separate element to measure as the trigger (defaults to the anchor). */
+  getTrigger?: () => HTMLElement | null;
 }
 
 export interface PopupController {
@@ -58,6 +67,7 @@ export function createPopupController(
   getPopup: () => HTMLElement | null,
   getAnchor: () => HTMLElement | null,
   config: PopupControllerConfig = {},
+  options: PopupControllerOptions = {},
 ): PopupController {
   const {
     anchor = "trigger",
@@ -68,6 +78,8 @@ export function createPopupController(
     capHeight = true,
     onDismiss,
     focus,
+    onResize = "re-place",
+    onScroll = "dismiss",
   } = config;
 
   let raf = 0;
@@ -88,16 +100,18 @@ export function createPopupController(
           }
         : findClipRect(popup);
 
+    const triggerEl = options.getTrigger ? options.getTrigger() : anchorEl;
     const triggerRect: PopupRect =
-      anchor === "cursor" && anchorEl
-        ? anchorEl.getBoundingClientRect()
-        : (anchorEl?.getBoundingClientRect() ?? {
+      anchor === "cursor" && triggerEl
+        ? triggerEl.getBoundingClientRect()
+        : (triggerEl?.getBoundingClientRect() ?? {
             left: 0,
             top: 0,
             right: 0,
             bottom: 0,
           });
 
+    const alignVal = typeof align === "function" ? align() : align;
     const height = capHeight
       ? Math.min(naturalBoxHeight(popup), 400)
       : naturalBoxHeight(popup);
@@ -114,7 +128,7 @@ export function createPopupController(
         width: popup.getBoundingClientRect().width,
         height,
       },
-      align,
+      align: alignVal,
       openDirection: direction,
       gap,
     });
@@ -124,7 +138,7 @@ export function createPopupController(
       wrapper,
       placement,
       popup.getBoundingClientRect().width,
-      align,
+      alignVal,
     );
 
     popup.style.left = anch.left;
@@ -152,13 +166,16 @@ export function createPopupController(
     }
   }
 
-  function onScroll(): void {
-    onDismiss?.("scroll");
+  function handleScroll(): void {
+    if (onScroll === "dismiss") onDismiss?.("scroll");
   }
 
-  function onResize(): void {
-    place();
-    onDismiss?.("resize");
+  function handleResize(): void {
+    if (onResize === "dismiss") {
+      onDismiss?.("resize");
+    } else {
+      place();
+    }
   }
 
   function open(): void {
@@ -167,8 +184,8 @@ export function createPopupController(
     // Bubble-phase so the StatusBar's stopPropagation dance still runs first.
     document.addEventListener("click", onDocClick);
     document.addEventListener("keydown", onDocKeydown);
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
     raf = requestAnimationFrame(place);
   }
 
@@ -177,8 +194,8 @@ export function createPopupController(
     attached = false;
     document.removeEventListener("click", onDocClick);
     document.removeEventListener("keydown", onDocKeydown);
-    window.removeEventListener("scroll", onScroll, true);
-    window.removeEventListener("resize", onResize);
+    window.removeEventListener("scroll", handleScroll, true);
+    window.removeEventListener("resize", handleResize);
     cancelAnimationFrame(raf);
   }
 

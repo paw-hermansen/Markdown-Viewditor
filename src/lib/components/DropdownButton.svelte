@@ -8,7 +8,7 @@
 
 <script lang="ts" generics="T extends string">
   import type { Snippet } from 'svelte';
-  import { anchorPopup, computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
+  import { createPopupController, listNav } from '$lib/utils/popup';
 
   interface Props {
     choices: Choice<T>[];
@@ -81,117 +81,46 @@
     }
   }
 
-  function onDocClick(event: MouseEvent) {
-    if (rootRef && !rootRef.contains(event.target as Node)) {
-      isOpen = false;
-    }
-  }
-
-  function onDocKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape' && isOpen) {
-      isOpen = false;
-      const trigger = rootRef?.querySelector('.main-button') as HTMLElement;
-      trigger?.focus();
-    }
-  }
-
-  /**
-   * Keep the open menu inside the box it is clipped by. The CSS alignment
-   * only knows the trigger's edge: under zoom the clip box (the main content
-   * area, not the window) is much narrower/shorter, so edge-anchored menus
-   * were cut at the left edge and at the status bar line. Measured placement
-   * is exact at any zoom — see popup-placement.ts.
-   */
-  function placeMenu() {
-    const dropdown = dropdownRef;
-    const trigger = rootRef?.querySelector('.main-button') as HTMLElement | null;
-    if (!dropdown || !trigger || !rootRef) return;
-    const placement = computePopupPlacement({
-      trigger: trigger.getBoundingClientRect(),
-      clip: findClipRect(dropdown),
-      popup: {
-        width: dropdown.getBoundingClientRect().width,
-        height: Math.min(naturalBoxHeight(dropdown), 400),
+  // The controller owns placement, re-place-on-resize and dismissal
+  // (bubble-phase outside click + Escape). Escape restores focus to the
+  // main button.
+  const popupController = createPopupController(
+    () => dropdownRef ?? null,
+    () => rootRef ?? null,
+    {
+      align: () => align,
+      openDirection: 'down',
+      capHeight: true,
+      onDismiss: (reason) => {
+        if (reason === 'escape' || reason === 'outside') {
+          isOpen = false;
+          popupController.close();
+          if (reason === 'escape') {
+            const trigger = rootRef?.querySelector('.main-button') as HTMLElement;
+            trigger?.focus();
+          }
+        }
       },
-      align,
-    });
-    const anchor = anchorPopup(
-      rootRef.getBoundingClientRect(),
-      placement,
-      dropdown.getBoundingClientRect().width,
-      align,
-    );
-    const parts = [
-      `left:${anchor.left}`,
-      `right:${anchor.right}`,
-      `max-height:${placement.maxHeight}px`,
-    ];
-    if (placement.maxWidth !== undefined) {
-      parts.push(`max-width:${placement.maxWidth}px`);
-    }
-    dropdownStyle = parts.join(';');
-  }
+    },
+    { getTrigger: () => (rootRef?.querySelector('.main-button') as HTMLElement) ?? null },
+  );
 
   $effect(() => {
     if (!isOpen) return;
     // Measure after the menu is in the DOM (one settle frame).
-    const raf = requestAnimationFrame(placeMenu);
-    window.addEventListener('resize', placeMenu);
+    popupController.open();
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', placeMenu);
+      popupController.close();
       dropdownStyle = '';
     };
   });
 
   function handleMenuKeydown(e: KeyboardEvent) {
     if (!isOpen) return;
-
     const items = Array.from(rootRef?.querySelectorAll('.dropdown-item') ?? []) as HTMLElement[];
     const currentIndex = items.indexOf(document.activeElement as HTMLElement);
-
-    switch (e.key) {
-      case 'ArrowDown': {
-        e.preventDefault();
-        const next = (currentIndex + 1) % items.length;
-        items[next]?.focus();
-        break;
-      }
-      case 'ArrowUp': {
-        e.preventDefault();
-        const prev = (currentIndex - 1 + items.length) % items.length;
-        items[prev]?.focus();
-        break;
-      }
-      case 'Home': {
-        e.preventDefault();
-        items[0]?.focus();
-        break;
-      }
-      case 'End': {
-        e.preventDefault();
-        items[items.length - 1]?.focus();
-        break;
-      }
-      case 'Enter':
-      case ' ': {
-        e.preventDefault();
-        if (currentIndex >= 0) {
-          items[currentIndex]?.click();
-        }
-        break;
-      }
-    }
+    listNav(e, items, currentIndex);
   }
-
-  $effect(() => {
-    document.addEventListener('click', onDocClick);
-    document.addEventListener('keydown', onDocKeydown);
-    return () => {
-      document.removeEventListener('click', onDocClick);
-      document.removeEventListener('keydown', onDocKeydown);
-    };
-  });
 </script>
 
 <div class="dropdown-button" class:menu-mode={isMenuMode} bind:this={rootRef}>

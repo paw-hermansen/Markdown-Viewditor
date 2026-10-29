@@ -72,6 +72,7 @@ import {
   registerCommands,
   handleGlobalKeydown as registryHandleGlobalKeydown,
 } from "$lib/commands/registry.svelte";
+import { buildPageCommands } from "$lib/commands/page-commands";
   import {
     runExporter,
     registerBuiltinExporters,
@@ -576,22 +577,28 @@ import {
   });
 
   // Register app commands once.
-  registerCommands([
-    { id: "file.new", title: "New File", category: "File", shortcut: { code: "KeyN", mod: true, shift: "any" }, run: () => { void handleNew(); } },
-    { id: "file.open", title: "Open File", category: "File", shortcut: { code: "KeyO", mod: true, shift: "any" }, run: () => { void handleOpen(); } },
-    { id: "file.save", title: "Save", category: "File", shortcut: { code: "KeyS", mod: true, shift: false }, run: () => { void handleSave(); } },
-    { id: "file.save-as", title: "Save As", category: "File", shortcut: { code: "KeyS", mod: true, shift: true }, run: () => { void handleSaveAs(); } },
-    { id: "file.reload", title: "Reload from Disk", category: "File", shortcut: { code: "KeyR", mod: true, shift: "any" }, run: () => { void handleReload(); } },
-    { id: "file.quit", title: "Quit", category: "File", shortcut: { code: "KeyQ", mod: true, shift: false }, run: () => { void handleExit(); } },
-    { id: "file.print", title: exportOnly ? "Create PDF" : "Print Preview", category: "File", shortcut: { code: "KeyP", mod: true, shift: false }, run: () => { void handlePrint(); } },
-    { id: "palette.toggle", title: "Command Palette", category: "File", shortcut: { code: "KeyP", mod: true, shift: true }, run: () => { showCommandPalette = !showCommandPalette; } },
-    { id: "view.cycle", title: "Cycle View Mode", category: "View", shortcut: { code: "KeyV", mod: true, shift: true }, run: () => { cycleViewMode(); } },
-    { id: "view.zoom-in", title: "Zoom In", category: "View", shortcut: { keys: ["=", "+"], mod: true, shift: "any" }, run: () => void zoomIn() },
-    { id: "view.zoom-out", title: "Zoom Out", category: "View", shortcut: { keys: ["-", "_"], mod: true, shift: "any" }, run: () => void zoomOut() },
-    { id: "view.zoom-reset", title: "Reset Zoom", category: "View", shortcut: { keys: ["0"], code: "Numpad0", mod: true, shift: "any" }, run: () => void resetZoom() },
-    { id: "format.document", title: "Format Document", category: "Format", shortcut: { code: "KeyF", shift: true, alt: true }, run: () => { void handleFormatDocument(); } },
-    { id: "help.about", title: "About", category: "Help", shortcut: { code: "F1", mod: false, shift: false }, run: () => { void handleAbout(); } },
-  ]);
+  registerCommands(
+    buildPageCommands(
+      {
+        handleNew: () => { void handleNew(); },
+        handleOpen: () => { void handleOpen(); },
+        handleSave: () => { void handleSave(); },
+        handleSaveAs: () => { void handleSaveAs(); },
+        handleReload: () => { void handleReload(); },
+        handleExit: () => { void handleExit(); },
+        handlePrint: () => { void handlePrint(); },
+        togglePalette: () => { showCommandPalette = !showCommandPalette; },
+        cycleViewMode,
+        zoomIn: () => void zoomIn(),
+        zoomOut: () => void zoomOut(),
+        resetZoom: () => void resetZoom(),
+        handleFormatDocument: () => { void handleFormatDocument(); },
+        handleAbout: () => { void handleAbout(); },
+        handleFormat,
+      },
+      { exportOnly },
+    ),
+  );
 
   // Export commands derived from registry.
   for (const e of listExporters()) {

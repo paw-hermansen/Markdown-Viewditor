@@ -25,6 +25,13 @@ export interface Command {
   shortcut?: CommandShortcut;
   run: () => void | Promise<void>;
   enabled?: () => boolean;
+  /**
+   * Whether the global keydown matcher may fire this command. Set `false` for
+   * commands whose shortcut is handled elsewhere (e.g. CodeMirror editor
+   * formatting) so the registry can single-source labels without the binding
+   * firing twice.
+   */
+  matchable?: boolean;
 }
 
 let commands: Command[] = [];
@@ -50,6 +57,23 @@ export async function runCommand(id: string): Promise<void> {
   if (!cmd) return;
   if (cmd.enabled && !cmd.enabled()) return;
   await cmd.run();
+}
+
+/** Display title for a command id. */
+export function titleFor(id: string): string {
+  return getCommand(id)?.title ?? id;
+}
+
+/** Formatted shortcut label for a command id (via `modLabel`). */
+export function shortcutLabelFor(id: string): string | undefined {
+  return formatShortcut(getCommand(id)?.shortcut);
+}
+
+/** "Title (Shortcut)" for a command id — the single-source tooltip text. */
+export function commandTitle(id: string): string {
+  const title = titleFor(id);
+  const shortcut = shortcutLabelFor(id);
+  return shortcut ? `${title} (${shortcut})` : title;
 }
 
 export function formatShortcut(s?: CommandShortcut): string | undefined {
@@ -83,6 +107,7 @@ export function handleGlobalKeydown(
   for (const cmd of commands) {
     const s = cmd.shortcut;
     if (!s) continue;
+    if (cmd.matchable === false) continue;
 
     if (s.mod === true && !isMod) continue;
     if (s.mod === false && isMod) continue;

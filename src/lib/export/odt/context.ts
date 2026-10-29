@@ -35,19 +35,3 @@ export class InlineFormatState {
     return `Char_${flags}${position}`;
   }
 }
-
-export interface OdtBuildContext {
-  autoStyles: Map<string, string>;
-  images: Map<string, unknown>;
-  imageCounter: { n: number };
-  mathCounter: number;
-  mathObjects: unknown[];
-  footnoteBodies: Map<string, string>;
-  drawNameCount: Map<string, number>;
-  warnings: string[];
-  options: Record<string, unknown>;
-  directiveStateMap: Array<[number, Record<string, unknown>]>;
-  mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
-  inlineState: InlineFormatState;
-  contextStack: string[];
-}

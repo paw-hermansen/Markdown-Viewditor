@@ -25,6 +25,15 @@ export interface Command {
   shortcut?: CommandShortcut;
   run: () => void | Promise<void>;
   enabled?: () => boolean;
+  /**
+   * Whether the global keydown matcher may fire this command. Set `false` for
+   * commands whose shortcut is handled elsewhere (e.g. CodeMirror editor
+   * formatting) so the registry can single-source labels without the binding
+   * firing twice.
+   */
+  matchable?: boolean;
+  /** Optional parenthetical note in the tooltip, e.g. "toggles". */
+  note?: string;
 }
 
 let commands: Command[] = [];
@@ -52,8 +61,27 @@ export async function runCommand(id: string): Promise<void> {
   await cmd.run();
 }
 
-export function formatShortcut(s?: CommandShortcut): string | undefined {
-  if (!s) return undefined;
+/** Display title for a command id. */
+export function titleFor(id: string): string {
+  return getCommand(id)?.title ?? id;
+}
+
+/** Formatted shortcut label for a command id (via `modLabel`). */
+export function shortcutLabelFor(id: string): string | undefined {
+  return formatShortcut(getCommand(id)?.shortcut);
+}
+
+/** "Title (Shortcut, note)" for a command id — the single-source tooltip text. */
+export function commandTitle(id: string): string {
+  const cmd = getCommand(id);
+  const title = cmd?.title ?? id;
+  const shortcut = formatShortcut(cmd?.shortcut);
+  const inner = [shortcut, cmd?.note].filter(Boolean).join(", ");
+  return inner ? `${title} (${inner})` : title;
+}
+
+export function shortcutParts(s?: CommandShortcut): string[] {
+  if (!s) return [];
   const parts: string[] = [];
   if (s.mod) parts.push("Ctrl");
   if (s.alt) parts.push("Alt");
@@ -61,6 +89,7 @@ export function formatShortcut(s?: CommandShortcut): string | undefined {
   let key = "";
   if (s.code) {
     if (s.code.startsWith("Key")) key = s.code.slice(3);
+    else if (s.code.startsWith("Digit")) key = s.code.slice(5);
     else if (s.code === "F1") key = "F1";
     else if (s.code === "Numpad0") key = "0";
     else key = s.code;
@@ -68,8 +97,18 @@ export function formatShortcut(s?: CommandShortcut): string | undefined {
     key = s.keys[0];
   }
   if (key) parts.push(key);
-  const joined = parts.join("+");
-  return modLabel(joined);
+  return parts;
+}
+
+export function formatShortcut(s?: CommandShortcut): string | undefined {
+  const parts = shortcutParts(s);
+  if (parts.length === 0) return undefined;
+  return modLabel(parts.join("+"));
+}
+
+/** Modifier + key labels for a command id (for per-key `<kbd>` rendering). */
+export function shortcutKeys(id: string): string[] {
+  return shortcutParts(getCommand(id)?.shortcut);
 }
 
 export function handleGlobalKeydown(
@@ -83,6 +122,7 @@ export function handleGlobalKeydown(
   for (const cmd of commands) {
     const s = cmd.shortcut;
     if (!s) continue;
+    if (cmd.matchable === false) continue;
 
     if (s.mod === true && !isMod) continue;
     if (s.mod === false && isMod) continue;

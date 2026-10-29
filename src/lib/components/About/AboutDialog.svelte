@@ -3,6 +3,7 @@
   import { relaunch } from '@tauri-apps/plugin-process';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { modLabel } from '$lib/utils/keyboard';
+  import { shortcutKeys } from '$lib/commands/registry.svelte';
   import { updateStatus, checkForUpdates, updaterState } from '$lib/stores/update.svelte';
   import { settingsState, updateSetting } from '$lib/stores/settings.svelte';
   import { focusTrap } from '$lib/utils/focus-trap';
@@ -249,6 +250,9 @@
 
         {#if activeTab === 'shortcuts'}
           <div role="tabpanel" id="panel-shortcuts" aria-labelledby="tab-shortcuts">
+          {#snippet keys(id: string)}
+            {#each shortcutKeys(id) as k, i}{#if i > 0}&nbsp;+&nbsp;{/if}<kbd class="shortcut-key">{modLabel(k)}</kbd>{/each}
+          {/snippet}
           <section>
             <h2>Command Palette</h2>
             <p>Press <kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">P</kbd> to open the Command Palette for quick access to all commands.</p>
@@ -257,17 +261,15 @@
           <section>
             <h2>File</h2>
             <table class="ref-table">
-              <thead>
-                <tr><th>Action</th><th>Shortcut</th></tr>
-              </thead>
+              <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
               <tbody>
-                <tr><td>New File</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">N</kbd></td></tr>
-                <tr><td>Open File</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">O</kbd></td></tr>
-                <tr><td>Save</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
-                <tr><td>Save As</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">S</kbd></td></tr>
-                <tr><td>Reload from Disk</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">R</kbd></td></tr>
-                <tr><td>Quit</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">Q</kbd></td></tr>
-                <tr><td>Print / Create PDF</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">P</kbd></td></tr>
+                <tr><td>New File</td><td>{@render keys('file.new')}</td></tr>
+                <tr><td>Open File</td><td>{@render keys('file.open')}</td></tr>
+                <tr><td>Save</td><td>{@render keys('file.save')}</td></tr>
+                <tr><td>Save As</td><td>{@render keys('file.save-as')}</td></tr>
+                <tr><td>Reload from Disk</td><td>{@render keys('file.reload')}</td></tr>
+                <tr><td>Quit</td><td>{@render keys('file.quit')}</td></tr>
+                <tr><td>Print / Create PDF</td><td>{@render keys('file.print')}</td></tr>
               </tbody>
             </table>
           </section>
@@ -275,20 +277,18 @@
           <section>
             <h2>Editor</h2>
             <table class="ref-table">
-              <thead>
-                <tr><th>Action</th><th>Shortcut</th></tr>
-              </thead>
+              <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
               <tbody>
-                <tr><td>Bold</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">B</kbd></td></tr>
-                <tr><td>Italic</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
-                <tr><td>Strikethrough</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">X</kbd></td></tr>
-                <tr><td>Highlight</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">M</kbd></td></tr>
-                <tr><td>Heading</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">H</kbd></td></tr>
-                <tr><td>Insert Link</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">K</kbd></td></tr>
-                <tr><td>Insert Image</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">I</kbd></td></tr>
-                <tr><td>Inline Code / Code Block</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">E</kbd> (toggles)</td></tr>
-                <tr><td>Bullet List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">8</kbd></td></tr>
-                <tr><td>Numbered List</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">7</kbd></td></tr>
+                <tr><td>Bold</td><td>{@render keys('edit.bold')}</td></tr>
+                <tr><td>Italic</td><td>{@render keys('edit.italic')}</td></tr>
+                <tr><td>Strikethrough</td><td>{@render keys('edit.strikethrough')}</td></tr>
+                <tr><td>Highlight</td><td>{@render keys('edit.highlight')}</td></tr>
+                <tr><td>Heading</td><td>{@render keys('edit.heading')}</td></tr>
+                <tr><td>Insert Link</td><td>{@render keys('edit.link')}</td></tr>
+                <tr><td>Insert Image</td><td>{@render keys('edit.image')}</td></tr>
+                <tr><td>Inline Code / Code Block</td><td>{@render keys('edit.code')} (toggles)</td></tr>
+                <tr><td>Bullet List</td><td>{@render keys('edit.bullet')}</td></tr>
+                <tr><td>Numbered List</td><td>{@render keys('edit.numbered')}</td></tr>
               </tbody>
             </table>
           </section>
@@ -296,15 +296,13 @@
           <section>
             <h2>View</h2>
             <table class="ref-table">
-              <thead>
-                <tr><th>Action</th><th>Shortcut</th></tr>
-              </thead>
+              <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
               <tbody>
-                <tr><td>Cycle View Mode</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">V</kbd></td></tr>
-                <tr><td>Format Document</td><td><kbd class="shortcut-key">{modLabel('Shift')}</kbd> + <kbd class="shortcut-key">{modLabel('Alt')}</kbd> + <kbd class="shortcut-key">F</kbd></td></tr>
-                <tr><td>Zoom In</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">+</kbd> (or <kbd class="shortcut-key">=</kbd>)</td></tr>
-                <tr><td>Zoom Out</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">-</kbd></td></tr>
-                <tr><td>Reset Zoom</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + <kbd class="shortcut-key">0</kbd></td></tr>
+                <tr><td>Cycle View Mode</td><td>{@render keys('view.cycle')}</td></tr>
+                <tr><td>Format Document</td><td>{@render keys('format.document')}</td></tr>
+                <tr><td>Zoom In</td><td>{@render keys('view.zoom-in')} (or <kbd class="shortcut-key">=</kbd>)</td></tr>
+                <tr><td>Zoom Out</td><td>{@render keys('view.zoom-out')}</td></tr>
+                <tr><td>Reset Zoom</td><td>{@render keys('view.zoom-reset')}</td></tr>
                 <tr><td>Zoom with Mouse Wheel</td><td><kbd class="shortcut-key">{modLabel('Ctrl')}</kbd> + scroll (pinch on a macOS trackpad)</td></tr>
               </tbody>
             </table>
@@ -313,11 +311,9 @@
           <section>
             <h2>Help</h2>
             <table class="ref-table">
-              <thead>
-                <tr><th>Action</th><th>Shortcut</th></tr>
-              </thead>
+              <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
               <tbody>
-                <tr><td>About</td><td><kbd class="shortcut-key">F1</kbd></td></tr>
+                <tr><td>About</td><td>{@render keys('help.about')}</td></tr>
               </tbody>
             </table>
           </section>

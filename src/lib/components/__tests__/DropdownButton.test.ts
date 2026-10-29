@@ -56,4 +56,14 @@ describe("DropdownButton", () => {
     expect(onSelect).toHaveBeenCalledWith("b");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
+
+  it("restores focus to the main button on Escape", async () => {
+    render(DropdownButton, {
+      props: { choices, value: "a", onAction: () => {} },
+    });
+    const mainButton = screen.getAllByRole("button")[0];
+    await fireEvent.click(screen.getByLabelText("More options"));
+    await fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.activeElement).toBe(mainButton);
+  });
 });

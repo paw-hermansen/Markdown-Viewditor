@@ -1,10 +1,40 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent } from "@testing-library/svelte";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import EditorToolbar from "../EditorToolbar.svelte";
 import { checkA11y } from "$lib/utils/__tests__/a11y-helper";
+import { clearCommands, registerCommands } from "$lib/commands/registry.svelte";
+import { buildPageCommands } from "$lib/commands/page-commands";
 
 describe("EditorToolbar", () => {
+  beforeEach(() => {
+    // Titles are single-sourced from the command registry; register the real
+    // table so `commandTitle('edit.…')` resolves to the pinned tooltips.
+    clearCommands();
+    registerCommands(
+      buildPageCommands(
+        {
+          handleNew: vi.fn(),
+          handleOpen: vi.fn(),
+          handleSave: vi.fn(),
+          handleSaveAs: vi.fn(),
+          handleReload: vi.fn(),
+          handleExit: vi.fn(),
+          handlePrint: vi.fn(),
+          togglePalette: vi.fn(),
+          cycleViewMode: vi.fn(),
+          zoomIn: vi.fn(),
+          zoomOut: vi.fn(),
+          resetZoom: vi.fn(),
+          handleFormatDocument: vi.fn(),
+          handleAbout: vi.fn(),
+          handleFormat: vi.fn(),
+        },
+        { exportOnly: false },
+      ),
+    );
+  });
+
   it("renders all 13 format buttons", () => {
     render(EditorToolbar, { props: { onFormat: vi.fn() } });
     const buttons = screen.getAllByRole("button");

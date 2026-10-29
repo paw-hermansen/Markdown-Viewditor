@@ -4,7 +4,7 @@
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { zoomIn, zoomOut, resetZoom, zoomLabel } from '$lib/stores/zoom.svelte';
   import { modLabel } from '$lib/utils/keyboard';
-  import { createPopupController } from '$lib/utils/popup';
+  import { createPopupController, exclusiveGroup } from '$lib/utils/popup';
   import {
     listFeatureToggles,
     compareFeatureToggles,
@@ -40,21 +40,24 @@
 
   let enabledSet = $derived(new Set(settingsState.enabledFeatures));
 
-  let showLevel = $state(false);
-  let showViolations = $state(false);
-  let showZoom = $state(false);
+  let openId = $state<string | null>(null);
+  const group = exclusiveGroup(
+    ["level", "violations", "zoom"],
+    { get: () => openId, set: (id) => (openId = id) },
+  );
 
   let levelPopRef: HTMLDivElement | undefined = $state(undefined);
   let violationsPopRef: HTMLDivElement | undefined = $state(undefined);
   let zoomPopRef: HTMLDivElement | undefined = $state(undefined);
 
   /**
-   * Placement for each popover is owned by the popup controller: measured
-   * into the clipping ancestor, right-anchored (so a relabeling trigger keeps
-   * the popover glued), opening upward from the status bar. `capHeight` is
-   * false for fixed-content popovers that must never scroll (the zoom popup).
-   * Dismissal stays here (window click + Escape, bubble-phase, with the
-   * button stopPropagation dance) so the pinned placement output is preserved.
+   * Placement + dismissal for each popover is owned by the popup controller:
+   * measured into the clipping ancestor, right-anchored (so a relabeling
+   * trigger keeps the popover glued), opening upward from the status bar.
+   * `capHeight` is false for fixed-content popovers that must never scroll
+   * (the zoom popup). Dismissal (bubble-phase outside click + Escape) closes
+   * the whole group; the trigger buttons call `stopPropagation` so a click
+   * that opens a popover doesn't immediately dismiss it.
    */
   function makeController(
     getPop: () => HTMLElement | undefined,
@@ -70,6 +73,7 @@
         gap: 4,
         onScroll: 'ignore',
         onResize: 're-place',
+        onDismiss: () => group.close(),
       },
       {
         getTrigger: () =>
@@ -78,25 +82,18 @@
     );
   }
 
-  const levelController = makeController(() => levelPopRef, true);
-  const violationsController = makeController(() => violationsPopRef, true);
-  const zoomController = makeController(() => zoomPopRef, false);
+  const controllers = {
+    level: makeController(() => levelPopRef, true),
+    violations: makeController(() => violationsPopRef, true),
+    zoom: makeController(() => zoomPopRef, false),
+  };
 
-  function placePopovers() {
-    levelController.place();
-    violationsController.place();
-    zoomController.place();
-  }
-
+  // Open the active popover's controller (placement + dismissal) and close the
+  // rest, driven by the mutually-exclusive `openId`.
   $effect(() => {
-    if (!showLevel && !showViolations && !showZoom) return;
-    // Measure after the popover is in the DOM (one settle frame).
-    const raf = requestAnimationFrame(placePopovers);
-    window.addEventListener('resize', placePopovers);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', placePopovers);
-    };
+    const id = openId;
+    for (const c of Object.values(controllers)) c.close();
+    if (id) controllers[id as keyof typeof controllers].open();
   });
 
   let violations = $derived([...levelState.violations].sort(compareFeatureToggles));
@@ -127,47 +124,23 @@
     return violationMessage(v, settingsState.markdownLevel);
   }
 
-  function handlePopoverKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      showLevel = false;
-      showViolations = false;
-      showZoom = false;
-    }
-  }
-
-  function closePopovers(e: MouseEvent) {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    if (!target.closest('.level-popover-area')) {
-      showLevel = false;
-      showViolations = false;
-      showZoom = false;
-    }
-  }
-
   function onLevelButtonClick(e: MouseEvent) {
     e.stopPropagation();
-    showLevel = !showLevel;
-    showViolations = false;
-    showZoom = false;
+    group.toggle("level");
   }
 
   function onZoomButtonClick(e: MouseEvent) {
     e.stopPropagation();
-    showZoom = !showZoom;
-    showLevel = false;
-    showViolations = false;
+    group.toggle("zoom");
   }
 
   function onViolationBadgeClick(e: MouseEvent) {
     e.stopPropagation();
-    showViolations = !showViolations;
-    showLevel = false;
-    showZoom = false;
+    group.toggle("violations");
   }
 </script>
 
-<svelte:window onclick={closePopovers} />
+
 
 <footer class="statusbar" aria-label="Document status">
   <div class="statusbar-left"></div>
@@ -185,12 +158,12 @@
         onclick={onLevelButtonClick}
         title="Markdown compatibility level"
         aria-label="Markdown compatibility level"
-        aria-expanded={showLevel}
+        aria-expanded={openId === 'level'}
       >
         {levelLabel} <span class="caret">&#x25BE;</span>
       </button>
-      {#if showLevel}
-        <div bind:this={levelPopRef} class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onkeydown={handlePopoverKeydown}>
+      {#if openId === 'level'}
+        <div bind:this={levelPopRef} class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0">
           <div class="level-options">
             {#each LEVELS as lvl}
               <button
@@ -227,12 +200,12 @@
         onclick={onViolationBadgeClick}
         title={`${violations.length} feature violation${violations.length === 1 ? '' : 's'}`}
         aria-label={`${violations.length} markdown feature violations`}
-        aria-expanded={showViolations}
+        aria-expanded={openId === 'violations'}
       >
         &#x26A0; {violations.length}
       </button>
-      {#if showViolations && violations.length > 0}
-        <div bind:this={violationsPopRef} class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onkeydown={handlePopoverKeydown}>
+      {#if openId === 'violations' && violations.length > 0}
+        <div bind:this={violationsPopRef} class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0">
           {#each violations as v}
             <div class="violation-row">
               <div class="violation-msg">{violationMessageFor(v)}</div>
@@ -259,12 +232,12 @@
         onclick={onZoomButtonClick}
         title={modLabel('Zoom level (Ctrl++ / Ctrl+- / Ctrl+0)')}
         aria-label="Zoom level"
-        aria-expanded={showZoom}
+        aria-expanded={openId === 'zoom'}
       >
         {zoomLabel()} <span class="caret">&#x25BE;</span>
       </button>
-      {#if showZoom}
-        <div bind:this={zoomPopRef} class="popover zoom-popover" role="dialog" aria-label="Zoom" tabindex="0" onkeydown={handlePopoverKeydown}>
+      {#if openId === 'zoom'}
+        <div bind:this={zoomPopRef} class="popover zoom-popover" role="dialog" aria-label="Zoom" tabindex="0">
           <div class="zoom-row">
             <button
               class="zoom-step-btn"

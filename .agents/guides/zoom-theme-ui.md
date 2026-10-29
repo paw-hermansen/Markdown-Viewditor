@@ -40,7 +40,12 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   window) so entries scroll into reach instead of being cut at the status
   bar line or the pane edge at high zoom. Never place popups with fixed
   offsets or bare `right: 0` edge alignment; measure the trigger and clip
-  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`). Apply
+  boxes after render (`DropdownButton`, `StatusBar`, `SelectField`). The
+  reusable placement + settle + dismissal contract is the `popup.ts` scaffold
+  (`createPopupController` / `use:popup`) — one controller owns rAF settle →
+  `naturalBoxHeight` + `findClipRect` → `computePopupPlacement` → `anchorPopup`
+  → inline styles, resize re-place, bubble-phase outside-click and Escape.
+  Apply
   the measured position with `anchorPopup()`, anchored on the _alignment_
   side (a right-aligned popup gets a `right` offset from its wrapper's edge):
   a `left` offset bakes the trigger's current width into a constant, so a

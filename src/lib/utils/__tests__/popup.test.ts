@@ -76,6 +76,56 @@ describe("createPopupController", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(onDismiss).not.toHaveBeenCalled();
   });
+
+  function rect(left: number, right: number, top: number, bottom: number) {
+    return () =>
+      ({
+        left,
+        right,
+        top,
+        bottom,
+        width: right - left,
+        height: bottom - top,
+        x: left,
+        y: top,
+        toJSON: () => ({}),
+      }) as DOMRect;
+  }
+
+  it("capHeight:false leaves max-height unset", () => {
+    anchor.getBoundingClientRect = rect(320, 400, 740, 780);
+    popup.getBoundingClientRect = rect(180, 400, 600, 740);
+    const ctl = createPopupController(
+      () => popup,
+      () => anchor,
+      {
+        align: "right",
+        openDirection: "up",
+        capHeight: false,
+      },
+    );
+    ctl.place();
+    expect(popup.style.maxHeight).toBe("");
+  });
+
+  it("fixed position writes viewport top/left", () => {
+    anchor.getBoundingClientRect = rect(320, 400, 740, 780);
+    popup.getBoundingClientRect = rect(180, 400, 600, 740);
+    const ctl = createPopupController(
+      () => popup,
+      () => anchor,
+      {
+        position: "fixed",
+        clip: "viewport",
+        align: "left",
+        openDirection: "down",
+      },
+      { getTrigger: () => anchor },
+    );
+    ctl.place();
+    expect(popup.style.top).not.toBe("");
+    expect(popup.style.left).not.toBe("");
+  });
 });
 
 describe("listNav", () => {

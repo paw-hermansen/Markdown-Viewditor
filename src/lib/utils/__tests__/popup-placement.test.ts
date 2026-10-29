@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   anchorPopup,
   computePopupPlacement,
   naturalBoxHeight,
+  findClipRect,
   type PopupRect,
 } from "../popup-placement";
 
@@ -184,5 +185,71 @@ describe("anchorPopup", () => {
     });
     expect(placement.left).toBe(8); // clamped
     expect(anchorPopup(trigger, placement, 240, "right").right).toBe("-148px");
+  });
+});
+
+describe("findClipRect", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = "";
+  });
+
+  function el(overflow: string | null, rect: PopupRect): HTMLElement {
+    const node = document.createElement("div");
+    node.getBoundingClientRect = () =>
+      ({
+        ...rect,
+        x: rect.left,
+        y: rect.top,
+        width: rect.right - rect.left,
+        height: rect.bottom - rect.top,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    if (overflow !== null) {
+      node.dataset.overflow = overflow;
+    }
+    return node;
+  }
+
+  it("returns the nearest clipping ancestor's rect", () => {
+    vi.spyOn(window, "getComputedStyle").mockImplementation((node: Element) => {
+      const overflow = (node as HTMLElement).dataset.overflow;
+      return {
+        overflow: overflow ?? "visible",
+        overflowX: overflow ?? "visible",
+        overflowY: overflow ?? "visible",
+      } as CSSStyleDeclaration;
+    });
+    const clipRect: PopupRect = { left: 0, right: 800, top: 0, bottom: 572 };
+    const clipper = el("hidden", clipRect);
+    const inner = el(null, clipRect);
+    clipper.appendChild(inner);
+    document.body.appendChild(clipper);
+    const found = findClipRect(inner);
+    expect([found.left, found.right, found.top, found.bottom]).toEqual([
+      clipRect.left,
+      clipRect.right,
+      clipRect.top,
+      clipRect.bottom,
+    ]);
+  });
+
+  it("falls back to the viewport when no ancestor clips", () => {
+    vi.spyOn(window, "getComputedStyle").mockImplementation(
+      () =>
+        ({
+          overflow: "visible",
+          overflowX: "visible",
+          overflowY: "visible",
+        }) as CSSStyleDeclaration,
+    );
+    const node = el(null, { left: 0, right: 10, top: 0, bottom: 10 });
+    document.body.appendChild(node);
+    expect(findClipRect(node)).toEqual({
+      left: 0,
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+    });
   });
 });

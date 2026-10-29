@@ -327,6 +327,35 @@ describe("StatusBar", () => {
     await checkA11y(container);
   });
 
+  it("closes the level popover on outside click", async () => {
+    render(StatusBar);
+    const levelBtn = screen.getByLabelText("Markdown compatibility level");
+    await fireEvent.click(levelBtn);
+    expect(document.querySelector(".level-popover")).toBeInTheDocument();
+    await fireEvent.click(document.body);
+    expect(document.querySelector(".level-popover")).not.toBeInTheDocument();
+  });
+
+  it("closes the level popover on Escape", async () => {
+    render(StatusBar);
+    const levelBtn = screen.getByLabelText("Markdown compatibility level");
+    await fireEvent.click(levelBtn);
+    const pop = document.querySelector(".level-popover") as HTMLElement;
+    await fireEvent.keyDown(pop, { key: "Escape" });
+    expect(document.querySelector(".level-popover")).not.toBeInTheDocument();
+  });
+
+  it("opening one popover closes the others (mutual exclusion)", async () => {
+    render(StatusBar);
+    await fireEvent.click(
+      screen.getByLabelText("Markdown compatibility level"),
+    );
+    expect(document.querySelector(".level-popover")).toBeInTheDocument();
+    // Open the zoom popover — the level popover must close.
+    await fireEvent.click(screen.getByLabelText("Zoom level"));
+    expect(document.querySelector(".level-popover")).not.toBeInTheDocument();
+  });
+
   it("glues the open popover to the trigger's right edge (no slide on relabel)", async () => {
     render(StatusBar);
     const levelBtn = screen.getByLabelText("Markdown compatibility level");

@@ -4,7 +4,7 @@
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { zoomIn, zoomOut, resetZoom, zoomLabel } from '$lib/stores/zoom.svelte';
   import { modLabel } from '$lib/utils/keyboard';
-  import { anchorPopup, computePopupPlacement, findClipRect, naturalBoxHeight } from '$lib/utils/popup-placement';
+  import { createPopupController } from '$lib/utils/popup';
   import {
     listFeatureToggles,
     compareFeatureToggles,
@@ -49,44 +49,43 @@
   let zoomPopRef: HTMLDivElement | undefined = $state(undefined);
 
   /**
-   * Keep an open popover inside the box it is clipped by (the viewport here,
-   * but measured, not guessed — see popup-placement.ts). Opens upward from
-   * the status bar, so the cap is the space above the trigger. `capHeight`
-   * is false for fixed-content popovers that must never scroll (the zoom
-   * popup: a scrollbar there overlays its +/- buttons on Linux).
+   * Placement for each popover is owned by the popup controller: measured
+   * into the clipping ancestor, right-anchored (so a relabeling trigger keeps
+   * the popover glued), opening upward from the status bar. `capHeight` is
+   * false for fixed-content popovers that must never scroll (the zoom popup).
+   * Dismissal stays here (window click + Escape, bubble-phase, with the
+   * button stopPropagation dance) so the pinned placement output is preserved.
    */
-  function placePopover(pop: HTMLElement | undefined, capHeight = true) {
-    const wrapper = pop?.parentElement;
-    const trigger = wrapper?.querySelector('button') as HTMLElement | null;
-    if (!pop || !wrapper || !trigger) return;
-    const placement = computePopupPlacement({
-      trigger: trigger.getBoundingClientRect(),
-      clip: findClipRect(pop),
-      popup: { width: pop.getBoundingClientRect().width, height: naturalBoxHeight(pop) },
-      align: 'right',
-      openDirection: 'up',
-    });
-    // Anchor on the right edge (the aligned edge): the trigger's label
-    // changes width when the preset switches ("Advanced" -> "Basic"), and a
-    // left offset would slide the popover off the button by the delta.
-    const anchor = anchorPopup(
-      wrapper.getBoundingClientRect(),
-      placement,
-      pop.getBoundingClientRect().width,
-      'right',
+  function makeController(
+    getPop: () => HTMLElement | undefined,
+    capHeight: boolean,
+  ) {
+    return createPopupController(
+      () => getPop() ?? null,
+      () => getPop()?.parentElement ?? null,
+      {
+        align: 'right',
+        openDirection: 'up',
+        capHeight,
+        gap: 4,
+        onScroll: 'ignore',
+        onResize: 're-place',
+      },
+      {
+        getTrigger: () =>
+          (getPop()?.parentElement?.querySelector('button') as HTMLElement) ?? null,
+      },
     );
-    pop.style.left = anchor.left;
-    pop.style.right = anchor.right;
-    if (capHeight) {
-      pop.style.maxHeight = `${placement.maxHeight}px`;
-    }
-    if (placement.maxWidth !== undefined) pop.style.maxWidth = `${placement.maxWidth}px`;
   }
 
+  const levelController = makeController(() => levelPopRef, true);
+  const violationsController = makeController(() => violationsPopRef, true);
+  const zoomController = makeController(() => zoomPopRef, false);
+
   function placePopovers() {
-    placePopover(levelPopRef);
-    placePopover(violationsPopRef);
-    placePopover(zoomPopRef, false);
+    levelController.place();
+    violationsController.place();
+    zoomController.place();
   }
 
   $effect(() => {

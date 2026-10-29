@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { computePopupPlacement, naturalBoxHeight } from '$lib/utils/popup-placement';
+  import { createPopupController } from '$lib/utils/popup';
 
   interface Choice {
     value: string;
@@ -43,39 +43,30 @@
     optionEls()[index]?.focus();
   }
 
-  function placePopup() {
-    const rect = triggerEl?.getBoundingClientRect();
-    const popup = popupEl;
-    if (!rect || !popup) return;
-    const gap = 4;
-    const naturalHeight = naturalBoxHeight(popup);
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-    const flip = spaceBelow < naturalHeight && spaceAbove > spaceBelow;
-    const placement = computePopupPlacement({
-      trigger: rect,
-      // Fixed-position popup: only the viewport clips it.
-      clip: { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight },
-      popup: {
-        width: Math.max(popup.getBoundingClientRect().width, rect.width, 120),
-        height: naturalHeight,
-      },
+  // Fixed-position popup: viewport-clipped, top-based, hand-rolled flip.
+  const popupController = createPopupController(
+    () => popupEl ?? null,
+    () => rootEl ?? null,
+    {
+      position: 'fixed',
+      clip: 'viewport',
       align: 'left',
-      openDirection: flip ? 'up' : 'down',
-      gap,
-    });
-    const top = flip ? rect.top - gap - placement.maxHeight : rect.bottom + gap;
-    const parts = [
-      `left:${placement.left}px`,
-      `top:${top}px`,
-      `min-width:${Math.max(rect.width, 120)}px`,
-      `max-height:${placement.maxHeight}px`,
-    ];
-    if (placement.maxWidth !== undefined) {
-      parts.push(`max-width:${placement.maxWidth}px`);
-    }
-    popupStyle = parts.join(';');
-  }
+      openDirection: 'flip',
+      gap: 4,
+      capHeight: true,
+      minWidth: 120,
+      onScroll: 'dismiss',
+      onResize: 'dismiss',
+      onDismiss: (reason) => {
+        if (reason === 'escape') {
+          close(true);
+        } else {
+          close(false);
+        }
+      },
+    },
+    { getTrigger: () => triggerEl ?? null },
+  );
 
   function openMenu() {
     if (disabled) return;
@@ -153,26 +144,12 @@
   $effect(() => {
     if (!open) return;
     untrack(() => {
-      placePopup();
+      popupController.open();
+      popupController.place();
       focusOption(activeIndex);
     });
-
-    function onDocClick(event: MouseEvent) {
-      if (rootEl && !rootEl.contains(event.target as Node)) {
-        close(false);
-      }
-    }
-    function onViewportChange() {
-      close(false);
-    }
-
-    document.addEventListener('click', onDocClick);
-    window.addEventListener('scroll', onViewportChange, true);
-    window.addEventListener('resize', onViewportChange);
     return () => {
-      document.removeEventListener('click', onDocClick);
-      window.removeEventListener('scroll', onViewportChange, true);
-      window.removeEventListener('resize', onViewportChange);
+      popupController.close();
     };
   });
 </script>

@@ -27,6 +27,14 @@ export interface PopupControllerConfig {
   onResize?: "re-place" | "dismiss";
   /** What a scroll does. Default "dismiss". */
   onScroll?: "dismiss" | "ignore";
+  /**
+   * "absolute" (default) writes `left`/`right` offsets for a popup inside a
+   * positioned ancestor (anchorPopup). "fixed" writes viewport `left`/`top`
+   * for a `position: fixed` popup (SelectField).
+   */
+  position?: "absolute" | "fixed";
+  /** Minimum popup width in px (fixed mode). */
+  minWidth?: number;
 }
 
 export interface PopupControllerOptions {
@@ -80,6 +88,8 @@ export function createPopupController(
     focus,
     onResize = "re-place",
     onScroll = "dismiss",
+    position = "absolute",
+    minWidth = 120,
   } = config;
 
   let raf = 0;
@@ -121,25 +131,38 @@ export function createPopupController(
         ? clampFlip(triggerRect, clipRect, height, gap)
         : openDirection;
 
+    const rawWidth = popup.getBoundingClientRect().width;
+    const popupWidth =
+      position === "fixed"
+        ? Math.max(rawWidth, triggerRect.right - triggerRect.left, minWidth)
+        : rawWidth;
+
     const placement = computePopupPlacement({
       trigger: triggerRect,
       clip: clipRect,
-      popup: {
-        width: popup.getBoundingClientRect().width,
-        height,
-      },
+      popup: { width: popupWidth, height },
       align: alignVal,
       openDirection: direction,
       gap,
     });
 
+    if (position === "fixed") {
+      const top =
+        direction === "up"
+          ? triggerRect.top - gap - placement.maxHeight
+          : triggerRect.bottom + gap;
+      popup.style.left = `${placement.left}px`;
+      popup.style.top = `${top}px`;
+      popup.style.minWidth = `${popupWidth}px`;
+      popup.style.maxHeight = `${placement.maxHeight}px`;
+      if (placement.maxWidth !== undefined) {
+        popup.style.maxWidth = `${placement.maxWidth}px`;
+      }
+      return;
+    }
+
     const wrapper = anchorEl?.getBoundingClientRect() ?? triggerRect;
-    const anch = anchorPopup(
-      wrapper,
-      placement,
-      popup.getBoundingClientRect().width,
-      alignVal,
-    );
+    const anch = anchorPopup(wrapper, placement, rawWidth, alignVal);
 
     popup.style.left = anch.left;
     popup.style.right = anch.right;

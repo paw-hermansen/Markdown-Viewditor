@@ -27,6 +27,9 @@ export interface PopupControllerConfig {
   onResize?: "re-place" | "dismiss";
   /** What a scroll does. Default "dismiss". */
   onScroll?: "dismiss" | "ignore";
+  /** Whether to measure and write placement styles. Default true (CSS-modal
+   * popups like the CommandPalette set this false and keep their own CSS). */
+  place?: boolean;
   /**
    * "absolute" (default) writes `left`/`right` offsets for a popup inside a
    * positioned ancestor (anchorPopup). "fixed" writes viewport `left`/`top`
@@ -89,6 +92,7 @@ export function createPopupController(
     onResize = "re-place",
     onScroll = "dismiss",
     position = "absolute",
+    place: shouldPlace = true,
     minWidth = 120,
   } = config;
 
@@ -96,6 +100,7 @@ export function createPopupController(
   let attached = false;
 
   function place(): void {
+    if (!shouldPlace) return;
     const popup = getPopup();
     const anchorEl = getAnchor();
     if (!popup) return;
@@ -285,6 +290,43 @@ export function exclusiveGroup(
     },
     close() {
       state.set(null);
+    },
+  };
+}
+
+/**
+ * `use:popup` Svelte action: the one-line contract over
+ * {@link createPopupController}. Attach to the popup element; the anchor
+ * defaults to the popup itself (dismissal-only) and can be overridden via
+ * `getAnchor`/`getTrigger`.
+ */
+export type PopupActionConfig = PopupControllerConfig & {
+  getAnchor?: () => HTMLElement | null;
+  getTrigger?: () => HTMLElement | null;
+};
+
+export function popup(node: HTMLElement, config: PopupActionConfig = {}) {
+  let ctl = make(node, config);
+  ctl.open();
+
+  function make(el: HTMLElement, cfg: PopupActionConfig): PopupController {
+    const { getAnchor, getTrigger, ...controllerConfig } = cfg;
+    return createPopupController(
+      () => el,
+      getAnchor ?? (() => el),
+      controllerConfig,
+      { getTrigger },
+    );
+  }
+
+  return {
+    update(newConfig: PopupActionConfig = {}) {
+      ctl.destroy();
+      ctl = make(node, newConfig);
+      ctl.open();
+    },
+    destroy() {
+      ctl.destroy();
     },
   };
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { listCommands, formatShortcut, runCommand } from "$lib/commands/registry.svelte";
   import { focusTrap } from "$lib/utils/focus-trap";
-  import { createPopupController } from "$lib/utils/popup";
+  import { popup } from "$lib/utils/popup";
 
   interface Props {
     open: boolean;
@@ -14,19 +14,6 @@
   let selectedIndex = $state(0);
   let searchInput = $state<HTMLInputElement | undefined>();
   let commandsList = $state<HTMLDivElement | undefined>();
-  let paletteRef = $state<HTMLDivElement | undefined>();
-
-  // Dismissal (overlay click + Escape) is owned by the popup controller;
-  // placement stays a CSS-centered modal and `focusTrap` stays as-is.
-  const popupController = createPopupController(
-    () => paletteRef ?? null,
-    () => paletteRef ?? null,
-    {
-      onDismiss: (reason) => {
-        if (reason === "outside" || reason === "escape") onClose();
-      },
-    },
-  );
 
   const commands = $derived(listCommands());
 
@@ -102,17 +89,11 @@
     }
   }
 
-  $effect(() => {
-    if (open) {
-      popupController.open();
-      return () => popupController.close();
-    }
-  });
 </script>
 
 {#if open}
   <div class="overlay">
-    <div class="palette" role="dialog" aria-label="Command palette" aria-modal="true" use:focusTrap={{ onEscape: onClose, initialFocus: searchInput }} bind:this={paletteRef}>
+    <div class="palette" role="dialog" aria-label="Command palette" aria-modal="true" use:focusTrap={{ onEscape: onClose, initialFocus: searchInput }} use:popup={{ place: false, onDismiss: (reason) => { if (reason === "outside" || reason === "escape") onClose(); } }}>
       <div class="search-container">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/>

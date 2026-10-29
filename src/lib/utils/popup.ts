@@ -267,25 +267,24 @@ export function listNav(
 
 /**
  * Mutual-exclusion toggle group (StatusBar's popover trio): opening one
- * closes the others.
+ * closes the others. State lives outside (a `$state` cell in the caller) so it
+ * can drive reactive templates — this helper only owns the toggle logic.
  */
-export function exclusiveGroup(ids: string[]): {
-  openId: string | null;
+export function exclusiveGroup(
+  ids: string[],
+  state: { get: () => string | null; set: (id: string | null) => void },
+): {
   toggle: (id: string) => void;
   close: () => void;
 } {
   const known = new Set(ids);
-  let openId: string | null = null;
   return {
-    get openId() {
-      return openId;
-    },
     toggle(id: string) {
       if (!known.has(id)) return;
-      openId = openId === id ? null : id;
+      state.set(state.get() === id ? null : id);
     },
     close() {
-      openId = null;
+      state.set(null);
     },
   };
 }

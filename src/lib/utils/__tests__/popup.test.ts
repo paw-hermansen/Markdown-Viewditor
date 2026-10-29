@@ -153,12 +153,26 @@ describe("listNav", () => {
 
 describe("exclusiveGroup", () => {
   it("toggles and closes", () => {
-    const g = exclusiveGroup(["x", "y"]);
+    let openId: string | null = null;
+    const g = exclusiveGroup(["x", "y"], {
+      get: () => openId,
+      set: (id) => (openId = id),
+    });
     g.toggle("x");
-    expect(g.openId).toBe("x");
+    expect(openId).toBe("x");
     g.toggle("y");
-    expect(g.openId).toBe("y");
+    expect(openId).toBe("y");
     g.close();
-    expect(g.openId).toBeNull();
+    expect(openId).toBeNull();
+  });
+
+  it("ignores unknown ids", () => {
+    let openId: string | null = null;
+    const g = exclusiveGroup(["x"], {
+      get: () => openId,
+      set: (id) => (openId = id),
+    });
+    g.toggle("z");
+    expect(openId).toBeNull();
   });
 });

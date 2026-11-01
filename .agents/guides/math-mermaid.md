@@ -248,6 +248,12 @@ standalone SVG **measured from that layout**:
   `forceLegacyMathML`, so Mermaid emits KaTeX _HTML_, not bare MathML) is
   captured via `captureElementToPng` (math-render.ts) and embedded as
   `<image>` at its measured box; failure degrades the formula to plain text.
+  The `<image>` carries both `href` and a namespaced `xlink:href`, and the
+  conversion output is normalized by `ensureXlinkNamespace`: the conversion
+  serializes through `innerHTML`, which never emits namespace declarations,
+  and an unbound `xlink` prefix is invalid XML — silently disabling the
+  export paint flattening (svg-paint.ts) and choking strict consumers. The
+  output is pinned as well-formed XML in `__tests__/fo-labels.test.ts`.
   The measuring host carries `LABEL_HOST_CLASS` (and injects
   `LABEL_HOST_RULES`), so the label HTML re-lays out under the same rules
   the viewer paints with — see the `.katex-display` margin-reset contract in
@@ -262,6 +268,59 @@ The measurable path and the degradation path are covered in
 (real Mermaid, one diagram per broken family). Keep the conversion when
 touching the export pipeline; if a Mermaid upgrade changes how labels are
 emitted, the integration suite is the tripwire.
+
+## Mermaid Export Paint Materialization (`<style>` → presentation attributes)
+
+The vector ODT ships Mermaid's paint as presentation attributes, never as
+CSS. LibreOffice's svgio applies `<style>` rules unreliably: a selector
+like `#id .class …` only matches when `.class` is a _direct child_ of
+`#id` (measured on LO 26.8; tdf#129356 has been open since 2019), and a
+`<style>` element placed after content is ignored entirely. Mermaid nests
+every styled group under `<g class="root">`, so effectively no rule
+matches and every shape falls back to the SVG defaults `fill: black` /
+`stroke: none` — solid node boxes with invisible label text, missing edge
+lines under visible (filled) arrowheads, black fill wedges along curved
+edges, and "mis-colored" families whose paint is half attributes, half CSS
+(the family split in bug reports follows exactly that ratio: xychart
+paints every shape explicitly and always rendered fine).
+
+`materializeSvgPaint()` (`src/lib/extensions/mermaid/svg-paint.ts`)
+resolves each element's effective paint the way a browser would — rule
+matching with specificity + source order, presentation attributes as the
+lowest cascade layer, inline `style` highest, inheritance through
+ancestors, `var()` / `currentColor` / CSS-wide keywords resolved — and
+writes it onto the element as SVG 1.1 presentation attributes, then
+removes the `<style>` block. The removal is load-bearing: presentation
+attributes sit lowest in the cascade, so any rule a consumer _does_
+partially parse would override them. Contracts:
+
+- DOM-free and deterministic across the app's three engines (own selector
+  matcher over Mermaid's generated dialect: compounds of
+  tag/`#id`/`.class`/`[attr]`/`:root`, descendant and `>` combinators,
+  comma groups; dynamic pseudo-classes never match a static export).
+- `rgba()`/`hsla()` normalize to `#rrggbb` plus a `-opacity` companion
+  (SVG 1.1 paint attributes accept no functional colors; same contract as
+  fo-labels' `applyFill`), and the alpha multiplies onto an
+  already-resolved `-opacity`.
+- All-or-nothing: any selector or property outside the understood dialect
+  no-ops the whole pass — a diagram styled by an un-understood rule is
+  never half-rewritten. The same fail-safe applies to markup that is not
+  well-formed XML (the pass must parse the SVG to resolve the cascade);
+  fo-labels' well-formedness pin keeps the label conversion from ever
+  producing that silently.
+- Skipped on purpose: CSS `transform`/`scale`/`filter` (the sequence
+  crosshead's `rotate(45deg)`, neo-look drop shadows) — SVG 1.1
+  presentation attributes cannot express them, and svgio ignores those
+  rules today anyway (not a regression).
+- Runs in the export render tail only (renderer.ts `renderMermaidSvgForVariant`,
+  before `namespaceSvgIds` so `url(#…)` values follow the renamed ids),
+  covering both the vector ODT and the resvg PNG rasterization. The PDF
+  print clone keeps its `<style>`: browsers apply CSS correctly.
+
+Regression: `__tests__/svg-paint.test.ts`,
+`__tests__/svg-paint-integration.test.ts` (real Mermaid, per family), the
+upgrade-contract pin "diagram paint still rides on combinator CSS" (if
+that stops, the pass may be obsolete), and TEST-PLAN 10.51.
 
 ## Mermaid Label Math (KaTeX rasterization)
 

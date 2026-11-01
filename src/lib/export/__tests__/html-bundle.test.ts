@@ -210,6 +210,18 @@ describe("buildBundleHtml", () => {
     expect(result.imageEntries).toHaveLength(1);
   });
 
+  it("mirrors alt text into a title tooltip on exported images", async () => {
+    const htmlBody =
+      '<img src="https://example.com/photo.jpg" alt="a photo">' +
+      '<img src="https://example.com/other.jpg" alt="">';
+    const result = await buildBundleHtml(htmlBody, null, "doc", {
+      cssText: "",
+    });
+    expect(result.html).toContain('alt="a photo" title="a photo"');
+    // Empty alt gets no title, matching the standalone HTML export.
+    expect(result.html).not.toContain('alt="" title');
+  });
+
   it("derives <title> from frontmatter.name", async () => {
     const result = await buildBundleHtml(
       "<p>x</p>",

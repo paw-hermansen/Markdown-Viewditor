@@ -113,6 +113,23 @@ describe("buildStandaloneHtml", () => {
     });
   });
 
+  it("mirrors alt text into a title tooltip on exported images", async () => {
+    const htmlBody =
+      '<img src="https://example.com/a.png" alt="a flower">' +
+      '<img src="https://example.com/b.png" alt="">' +
+      '<img src="https://example.com/c.png" alt="c" title="custom">';
+    const { html } = await buildStandaloneHtml(htmlBody, null, "d", {
+      cssText: "",
+    });
+    expect(html).toContain('alt="a flower" title="a flower"');
+    expect(html).toContain('alt="c" title="custom"');
+    // Empty alt gets no title: the viewer's src fallback would be a huge
+    // inlined data URI here.
+    expect(html).not.toContain('alt="" title');
+    // The pre-existing title is not duplicated.
+    expect(html.match(/title="custom"/g)).toHaveLength(1);
+  });
+
   it("wraps the body in a .viewer-content container", async () => {
     const { html } = await buildStandaloneHtml("<p>hi</p>", null, "d", {
       cssText: "",

@@ -28,6 +28,7 @@ import { fileState } from "$lib/stores/file.svelte";
 import { getThemeType } from "$lib/stores/viewer.svelte";
 import { escapeHtml } from "$lib/utils/escape";
 import { base64ToBytes } from "$lib/utils/base64";
+import { addImageTitles } from "../image-title";
 import { extractLocalImgPath, mimeFromHref } from "../image-src";
 import {
   generateFrontmatterCardHtml,
@@ -340,7 +341,11 @@ export async function buildBundleHtml(
   const imgResult = await extractImages(htmlBody, options.invokeImpl);
   warnings.push(...imgResult.warnings);
 
-  // 4. Resolve viewer-content background.
+  // 4. Mirror alt text into title so exported images keep their hover
+  //    tooltip (the app's tooltip is custom JS, which isn't exported).
+  const titledHtml = addImageTitles(imgResult.html);
+
+  // 5. Resolve viewer-content background.
   const viewerBg = resolveViewerBackground();
   const bodyBgCss = viewerBg
     ? `\nhtml, body { height: auto; background: ${viewerBg}; }`
@@ -362,7 +367,7 @@ ${fontResult.css}${bodyBgCss}
 </head>
 <body>
 <div class="viewer-content" id="viewer-content">
-${cardHtml}${imgResult.html}
+${cardHtml}${titledHtml}
 </div>
 </body>
 </html>

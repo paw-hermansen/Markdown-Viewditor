@@ -1,6 +1,7 @@
 import type { Frontmatter } from "$lib/types";
 import { deriveTitle } from "./frontmatter-card";
 import { inlineCssAssets, inlineImages } from "./assets";
+import { addImageTitles } from "./image-title";
 import { escapeHtml } from "$lib/utils/escape";
 
 /**
@@ -109,7 +110,11 @@ export async function buildStandaloneHtml(
   );
   warnings.push(...imgWarnings);
 
-  // 4. Resolve viewer-content background for edge-to-edge bleed.
+  // 4. Mirror alt text into title so exported images keep their hover
+  //    tooltip (the app's tooltip is custom JS, which isn't exported).
+  const titledHtml = addImageTitles(inlinedHtml);
+
+  // 5. Resolve viewer-content background for edge-to-edge bleed.
   const viewerBg = resolveViewerBackground();
   const bodyBgCss = viewerBg
     ? `\nhtml, body { height: auto; background: ${viewerBg}; }`
@@ -132,7 +137,7 @@ ${inlinedCss}${bodyBgCss}
 </head>
 <body>
 <div class="viewer-content" id="viewer-content">
-${cardHtml}${inlinedHtml}
+${cardHtml}${titledHtml}
 </div>
 </body>
 </html>

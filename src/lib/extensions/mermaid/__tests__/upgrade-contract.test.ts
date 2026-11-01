@@ -109,6 +109,44 @@ describe("mermaid upgrade contract (real output)", () => {
     ).toBe(true);
   });
 
+  it("diagram paint still rides on combinator CSS, not presentation attributes", () => {
+    // materializeSvgPaint (svg-paint.ts) exists because Mermaid paints via
+    // `#id .class descendant` rules that LibreOffice's svgio never applies
+    // (tdf#129356), leaving shapes at the SVG defaults fill=black /
+    // stroke=none. If upstream starts emitting presentation attributes (or
+    // combinator-free CSS) the flattener may become unnecessary.
+    const COMBINATOR_RULE = /[^{}]+[ >][^{}]*\{[^}]*(?:fill|stroke)\s*:/;
+    const cssOnlyFamilies: string[] = [];
+    for (const [name, svg] of Object.entries(rendered)) {
+      expect(
+        COMBINATOR_RULE.test(svg),
+        `${name}: Mermaid no longer styles paint through combinator CSS — ` +
+          "re-verify whether materializeSvgPaint in svg-paint.ts is still " +
+          "needed (see .agents/guides/math-mermaid.md, Mermaid Export Paint " +
+          "Materialization)",
+      ).toBe(true);
+      const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+      const cssOnlyShape = [
+        ...doc.querySelectorAll("rect, path, circle, ellipse, line, polygon"),
+      ].some((el) => {
+        const style = el.getAttribute("style") ?? "";
+        return (
+          !el.hasAttribute("fill") &&
+          !el.hasAttribute("stroke") &&
+          !/(?:^|;)\s*(?:fill|stroke)\s*:/.test(style)
+        );
+      });
+      if (cssOnlyShape) cssOnlyFamilies.push(name);
+    }
+    // At least one family must still rely on CSS-only shape paint (some
+    // families, e.g. xychart, paint every shape explicitly already).
+    expect(
+      cssOnlyFamilies.length,
+      "no family emits CSS-only shape paint any more — " +
+        "re-verify whether materializeSvgPaint in svg-paint.ts is still needed",
+    ).toBeGreaterThan(0);
+  });
+
   it("clampNegativeStrokeWidths removes every negative stroke width", () => {
     for (const [name, svg] of Object.entries(rendered)) {
       const out = clampNegativeStrokeWidths(svg);

@@ -14,6 +14,7 @@ import { VIEWER_CONTENT_MAX_WIDTH_PX } from "$lib/constants/layout";
 import { MERMAID_FONT_SIZE } from "./styles";
 import { normalizeSvgTextOffsets } from "./text-offsets";
 import { clampNegativeStrokeWidths } from "./svg-css";
+import { materializeSvgPaint } from "./svg-paint";
 import { pinLabelMathPaint } from "./label-paint";
 import { convertForeignObjectLabels } from "./fo-labels";
 import { rasterizeMermaidLabelMath } from "./math-labels";
@@ -558,6 +559,12 @@ export function clearMermaidCache(): void {
  *   - `materializeSvgFonts` then copies the font stack onto every
  *     `<text>/<tspan>` as a presentation attribute, which LibreOffice
  *     honors more reliably than Mermaid's class/descendant CSS.
+ *   - `materializeSvgPaint` flattens Mermaid's `<style>` paint (fills,
+ *     strokes, fonts) into presentation attributes and drops the
+ *     `<style>` block: LibreOffice's svgio does not support CSS
+ *     combinators (tdf#129356) and would otherwise paint every shape
+ *     with the SVG defaults (`fill: black`, `stroke: none`) — black node
+ *     boxes, missing edge lines, black fill wedges on curved edges.
  *
  * Always uses Mermaid's light ("default") theme so exports stay neutral /
  * printer-friendly regardless of the app theme. The raw SVG (with labels
@@ -584,6 +591,7 @@ export async function renderMermaidSvgForExport(
     renderIdPrefix: "mmd-export-",
     namespacePrefix: "mmd-exp-",
     materializeFonts: true,
+    materializePaint: true,
   });
 }
 
@@ -617,16 +625,18 @@ export async function renderMermaidSvgForPrint(
     renderIdPrefix: "mmd-print-",
     namespacePrefix: "mmd-print-",
     materializeFonts: false,
+    materializePaint: false,
   });
 }
 
 /**
  * The shared pipeline behind {@link renderMermaidSvgForExport} and
  * {@link renderMermaidSvgForPrint}: cache-fill for one diagram plus the
- * per-call tail (id namespacing, explicit width/height, and for export the
- * concrete font stack). The two families differ only in config family /
- * theme (see {@link ensureInitialized}), the render-id and id-namespace
- * prefixes, and whether fonts are materialized.
+ * per-call tail (paint flattening for export, id namespacing, explicit
+ * width/height, and for export the concrete font stack). The two families
+ * differ only in config family / theme (see {@link ensureInitialized}),
+ * the render-id and id-namespace prefixes, and whether fonts and paint are
+ * materialized.
  *
  * The raw SVG (labels already converted) is cached under the variant's key
  * so it is never mixed up with the viewer's foreignObject output. A cached
@@ -653,6 +663,12 @@ async function renderMermaidSvgForVariant(
     namespacePrefix: string;
     /** Export only: copy the concrete font stack onto the text shapes. */
     materializeFonts: boolean;
+    /**
+     * Export only: flatten the `<style>` CSS into presentation attributes
+     * (`materializeSvgPaint`) so consumers with partial CSS support
+     * (LibreOffice svgio, usvg/resvg) still paint the diagram correctly.
+     */
+    materializePaint: boolean;
   },
 ): Promise<string> {
   const renderWidth = diagramRenderWidth(options);
@@ -677,8 +693,12 @@ async function renderMermaidSvgForVariant(
     }
   }
 
+  // Paint flattening (export only) must see the un-namespaced ids the
+  // `<style>` selectors reference; the `url(#…)` values it writes are
+  // rewritten by the namespacing pass like any other attribute.
+  const painted = cfg.materializePaint ? materializeSvgPaint(raw) : raw;
   const svg = normalizeSvgForNaturalSize(
-    namespaceSvgIds(raw, `${cfg.namespacePrefix}${nextWrapperId++}`),
+    namespaceSvgIds(painted, `${cfg.namespacePrefix}${nextWrapperId++}`),
   );
   return cfg.materializeFonts ? materializeSvgFonts(svg) : svg;
 }

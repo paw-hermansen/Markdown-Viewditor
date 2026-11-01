@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+- fix(export): flatten Mermaid paint into SVG presentation attributes so LibreOffice renders ODT diagrams with correct colors, complete arrow lines, and no black fill wedges
+- fix(mermaid): bind the `xlink` namespace on captured math-label images — the unbound prefix made export SVGs invalid XML and silently kept the LibreOffice black-box symptoms on `$$…$$` math diagrams
+
 ## [1.6.1] - 2026-10-19
 
 - fix(mermaid): correct KaTeX math in diagram labels (#150) (22a8140)

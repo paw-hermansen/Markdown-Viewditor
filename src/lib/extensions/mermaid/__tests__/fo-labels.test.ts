@@ -249,6 +249,13 @@ describe("convertForeignObjectLabels", () => {
     );
     expect(out).toContain("data:image/png;base64,QUJD");
     expect(out).not.toContain("katex");
+    // The image hrefs use the xlink prefix — it must be bound, or the SVG
+    // is not well-formed XML and every strict consumer (DOMParser → the
+    // paint flattening, usvg, XML importers) rejects the whole document.
+    expect(out).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
+    expect(out).toContain('xlink:href="data:image/png;base64,QUJD"');
+    const doc = new DOMParser().parseFromString(out, "image/svg+xml");
+    expect(doc.getElementsByTagName("parsererror")).toHaveLength(0);
   });
 
   it("measures labels in a label-host container carrying the shared label rules", async () => {

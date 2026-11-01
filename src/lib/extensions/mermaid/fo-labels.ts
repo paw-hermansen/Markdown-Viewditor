@@ -114,6 +114,7 @@ export interface ConvertOptions {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const XLINK_NS = "http://www.w3.org/1999/xlink";
 
 type TextItem = {
   kind: "text";
@@ -139,17 +140,17 @@ export async function convertForeignObjectLabels(
   svg: string,
   options: ConvertOptions = {},
 ): Promise<string> {
-  if (!/foreignObject/i.test(svg)) return svg;
+  if (!/foreignObject/i.test(svg)) return ensureXlinkNamespace(svg);
   if (
     typeof document === "undefined" ||
     typeof document.createElement !== "function"
   ) {
-    return svg;
+    return ensureXlinkNamespace(svg);
   }
 
   // The host (off-screen, natural width, label rules, font gate) is the
   // shared label-host harness — see its module docstring for the contract.
-  return withLabelHost(svg, async (svgEl) => {
+  const out = await withLabelHost(svg, async (svgEl) => {
     // Font readiness is handled by the host; measurement starts here so it
     // sees the loaded font metrics.
     const metrics =
@@ -170,6 +171,24 @@ export async function convertForeignObjectLabels(
     }
     return changed;
   });
+  return ensureXlinkNamespace(out);
+}
+
+/**
+ * Declare the `xlink` prefix when the SVG uses it.
+ *
+ * The conversion serializes through `innerHTML`, which preserves attribute
+ * *names* like `xlink:href` but never emits namespace declarations — and
+ * several passes (id namespacing) and consumers (DOMParser, usvg, strict
+ * XML importers) reject an unbound prefix outright. That rejection is
+ * silent downstream: `materializeSvgPaint` no-ops on XML it cannot parse
+ * and the diagram reverts to the CSS-paint fallback that LibreOffice
+ * renders as black boxes (see svg-paint.ts). Declaring the prefix keeps
+ * the whole export chain — and every other ODT consumer — happy.
+ */
+function ensureXlinkNamespace(svg: string): string {
+  if (!/\bxlink:/.test(svg) || /\bxmlns:xlink\s*=/.test(svg)) return svg;
+  return svg.replace(/<svg\b/, `<svg xmlns:xlink="${XLINK_NS}"`);
 }
 
 /* ──────────────────── label construction ─────────────────────────────── */
@@ -478,7 +497,9 @@ async function buildMedia(
       image.setAttribute("height", String(user.height));
       image.setAttribute("preserveAspectRatio", "none");
       image.setAttribute("href", raster.dataUri);
-      image.setAttribute("xlink:href", raster.dataUri);
+      // Namespace-aware on purpose: a literal `xlink:href` attribute name
+      // would serialize without a bound prefix (see ensureXlinkNamespace).
+      image.setAttributeNS(XLINK_NS, "xlink:href", raster.dataUri);
       return image;
     }
   }

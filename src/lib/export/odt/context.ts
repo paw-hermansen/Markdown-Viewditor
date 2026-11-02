@@ -69,6 +69,7 @@ export interface OdtBuildContext {
   invokeImpl: InvokeImpl;
   directiveStateMap: Array<[number, Record<string, unknown>]>;
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
+  smilesDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   inlineState: InlineFormatState;
   contextStack: ContextType[];
 
@@ -85,6 +86,7 @@ export function createBuildContext(input: {
   options: ExportOptions;
   directiveStateMap: Array<[number, Record<string, unknown>]>;
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
+  smilesDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
 }): OdtBuildContext {
   const { options } = input;
   return {
@@ -100,6 +102,7 @@ export function createBuildContext(input: {
     invokeImpl: input.invokeImpl,
     directiveStateMap: input.directiveStateMap,
     mermaidDirectiveStateMap: input.mermaidDirectiveStateMap,
+    smilesDirectiveStateMap: input.smilesDirectiveStateMap ?? [],
     inlineState: new InlineFormatState(),
     contextStack: [],
     rasterizeMath: !!options[OPTION_RASTERIZE_MATH],

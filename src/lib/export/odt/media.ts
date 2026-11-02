@@ -8,6 +8,11 @@ import { mergeOptions } from "$lib/extensions/directive-merge";
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { rasterizeSvg } from "../svg-rasterize";
 import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
+import { SMILES_OPTIONS_SCHEMA } from "$lib/extensions/smiles/schema";
+import {
+  resolveSmilesOptions,
+  type SmilesRenderOptions,
+} from "$lib/extensions/smiles/renderer";
 import { escapeXml } from "$lib/utils/escape";
 import { S } from "./odf-styles";
 import { fitFrameToPage } from "./dimensions";
@@ -50,6 +55,19 @@ export function buildMermaidOptions(
     fitToWidth:
       typeof merged.fitToWidth === "boolean" ? merged.fitToWidth : true,
   };
+}
+
+export function buildSmilesOptions(
+  ctx: OdtBuildContext,
+  sourceLine: number,
+  fenceOpts: Record<string, unknown> = {},
+): SmilesRenderOptions {
+  const dirState = lookupDirectiveState(
+    ctx.smilesDirectiveStateMap,
+    sourceLine,
+  );
+  const merged = mergeOptions(SMILES_OPTIONS_SCHEMA, dirState, fenceOpts);
+  return resolveSmilesOptions(merged);
 }
 
 export function ensureAutoStyle(

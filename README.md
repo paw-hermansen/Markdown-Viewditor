@@ -15,6 +15,7 @@ An advanced extended markdown viewer and editor with live preview and scroll syn
 - **Zoom** — Scale the app (70%–300%) with `Ctrl +` / `Ctrl -` / `Ctrl 0`, `Ctrl`+mouse wheel, or the status bar control
 - **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts and more, rendered with [Mermaid](https://mermaid.ai)
+- **Molecular Structures** — Organic chemistry structures from SMILES, rendered with [smiles-drawer](https://github.com/reymond-group/smilesDrawer)
 - **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
 - **Dark/light Themes** — 8 built-in themes + custom CSS themes
 - **Markdown Compatibility Levels** — Set target level and get soft editor warnings
@@ -118,6 +119,7 @@ new internet browser.
 | [Math Formulas](docs/Math.md)                  | KaTeX math rendering and delimiter syntax            |
 | [Chemical Formulas](docs/Chemistry.md)         | mhchem equations and physical units                  |
 | [Mermaid Diagrams](docs/Mermaid.md)            | Diagram types, host options and export behavior      |
+| [Molecular Structures](docs/Smiles.md)         | SMILES input, display options and export behavior    |
 
 ## Markdown Compatibility Levels
 
@@ -196,6 +198,27 @@ Diagram themes follow the app's dark/light theme unless overridden with Mermaid
 YAML frontmatter, and layout options (alignment, maximum width, width fitting)
 can be set per block with fence attributes or document-wide with HTML comment
 directives. Diagrams export to HTML and PDF as inline/vector SVG.
+
+## Molecular Structures
+
+See [Molecular Structures](docs/Smiles.md) for input syntax, display options,
+and export behavior.
+
+Markdown Viewditor renders organic chemistry structures from SMILES strings
+using [smiles-drawer](https://github.com/reymond-group/smilesDrawer), from
+fenced code blocks with the `smiles` (or `smi`) language identifier. Rendering
+is lazy — it only activates when your document contains a `smiles` code block:
+
+```smiles
+CC(=O)Oc1ccccc1C(=O)O
+```
+
+Structures follow the app's dark/light theme, and display options (alignment,
+size scaling, color theme, atom and hydrogen visibility, stereochemistry) can
+be set per block with fence attributes or document-wide with HTML comment
+directives — for example `{scale=1.5 align=center}`. Structures export to
+HTML and PDF as inline/vector SVG, and to ODT as vector SVG images (or PNG
+with the shared rasterize option).
 
 ## Themes
 

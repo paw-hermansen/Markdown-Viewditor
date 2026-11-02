@@ -4,7 +4,7 @@ import { S, listStyleName, type ListKind } from "./odf-styles";
 import { findClosing } from "../token-walker";
 import { escWithSpaces } from "./utils";
 import { hljsToSpans, renderHighlightedLine } from "./highlight";
-import { computeMermaidFrameDims } from "./dimensions";
+import { computeMermaidFrameDims, fitFrameToPage } from "./dimensions";
 import {
   extractBraceAttrs,
   parseAttrString,
@@ -13,12 +13,18 @@ import {
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
 import { renderMermaidSvgForExport } from "$lib/extensions/mermaid/renderer";
+import { SMILES_OPTIONS_SCHEMA } from "$lib/extensions/smiles/schema";
+import {
+  ensureSmilesLoaded,
+  renderSmilesSvg,
+} from "$lib/extensions/smiles/renderer";
 import { sniffSvgDimensions } from "./images";
 import type { OdtBuildContext } from "./context";
 import {
   renderMathObject,
   buildMermaidOptions,
   buildMathRenderOpts,
+  buildSmilesOptions,
   tryRasterizeSvg,
   addSvgImage,
 } from "./media";
@@ -526,6 +532,68 @@ export async function renderTokens(
           } catch (err) {
             ctx.warnings.push(
               `Mermaid rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
+            );
+          }
+        }
+        // SMILES structures embed as an image like Mermaid diagrams (vector
+        // SVG, or PNG when the shared SVG/diagram rasterize option is on).
+        // The frame sits in a paragraph whose text-align mirrors the
+        // viewer's horizontal alignment (align option, default center), and
+        // its size is the viewer's scaled size (the renderer's width/height
+        // attributes include the `scale` multiplier), clamped to the page.
+        // On render failure we fall through and keep the source as a
+        // preformatted code block.
+        if (fenceLang === "smiles" || fenceLang === "smi") {
+          const label = `smiles(token@${i})`;
+          // Parse fence attributes {key=val} from info string and merge
+          // with HTML comment directives (fence attrs override).
+          let smilesFenceOpts: Record<string, unknown> = {};
+          const smilesRawAttrs = extractBraceAttrs(language);
+          if (smilesRawAttrs) {
+            const parsed = parseAttrString(smilesRawAttrs);
+            smilesFenceOpts = validateExplicitFenceOptions(
+              parsed,
+              SMILES_OPTIONS_SCHEMA,
+            );
+          }
+          const smilesOpts = buildSmilesOptions(
+            ctx,
+            token.map?.[0] ?? 0,
+            smilesFenceOpts,
+          );
+          try {
+            // Lazy-load the smiles-drawer chunk outside the render so a
+            // load failure propagates to the fallthrough below.
+            await ensureSmilesLoaded();
+            const svgXml = renderSmilesSvg(token.content, smilesOpts);
+            const dims = sniffSvgDimensions(
+              new TextEncoder().encode(svgXml),
+              label,
+              ctx.warnings,
+            ) ?? { width: 0, height: 0 };
+            const { frameWidthPx, frameHeightPx } = fitFrameToPage(
+              dims.width,
+              dims.height,
+            );
+            const frameDims = {
+              width: Math.round(frameWidthPx),
+              height: Math.round(frameHeightPx),
+            };
+            const rasterized = await tryRasterizeSvg(
+              ctx,
+              svgXml,
+              frameDims,
+              label,
+            );
+            const inner = rasterized ?? addSvgImage(ctx, svgXml, frameDims);
+            parts.push(
+              `      <text:p text:style-name="${S.diagramDisplay(smilesOpts.align)}">${inner}</text:p>`,
+            );
+            i++;
+            break;
+          } catch (err) {
+            ctx.warnings.push(
+              `SMILES rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
             );
           }
         }

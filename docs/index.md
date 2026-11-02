@@ -8,6 +8,7 @@
 | [Custom Themes](CustomThemes.html)   | Creating and installing custom CSS themes            |
 | [Math Formulas](Math.html)           | KaTeX math rendering and delimiter syntax            |
 | [Mermaid Diagrams](Mermaid.html)     | Diagram types, host options and export behavior      |
+| [Molecular Structures](Smiles.html)  | SMILES input, display options and export behavior    |
 
 
 ## Examples

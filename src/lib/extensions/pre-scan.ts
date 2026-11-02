@@ -18,4 +18,7 @@ export const MERMAID_PATTERNS = [
 
 export const ABC_PATTERNS = [/```abc\b/];
 
-export const SMILES_PATTERNS = [/```smiles\b/, /```smi\b/];
+export const SMILES_PATTERNS = [
+  /^ {0,3}(?:`{3,}|~{3,})[ \t]*smiles(?=$|[ \t{])[^\r\n]*$/im,
+  /^ {0,3}(?:`{3,}|~{3,})[ \t]*smi(?=$|[ \t{])[^\r\n]*$/im,
+];

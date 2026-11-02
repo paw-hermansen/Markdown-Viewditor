@@ -106,6 +106,8 @@
     { name: 'markdown-it-highlightjs', license: 'Unlicense', copyright: 'Valérian Galliat', url: 'https://github.com/valeriangalliat/markdown-it-highlightjs' },
     { name: 'markdown-it-task-lists', license: 'ISC', copyright: 'Revin Guillen', url: 'https://github.com/revin/markdown-it-task-lists' },
     { name: 'mermaid', license: 'MIT', copyright: 'Knut Sveidqvist', url: 'https://github.com/mermaid-js/mermaid' },
+    { name: 'smiles-drawer', license: 'MIT', copyright: 'GDB / Reymond Research Group', url: 'https://github.com/reymond-group/smilesDrawer' },
+    { name: 'chroma-js', license: 'BSD 3-Clause', copyright: 'Gregor Aisch', url: 'https://github.com/gka/chroma.js' },
     { name: 'markdown-it-footnote', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it-footnote' },
     { name: 'markdown-it-mark', license: 'MIT', copyright: 'Vitaly Puzrin, Alex Kocharin', url: 'https://github.com/markdown-it/markdown-it-mark' },
     { name: 'markdown-it-anchor', license: 'Unlicense', copyright: 'Valérian Galliat', url: 'https://github.com/valeriangalliat/markdown-it-anchor' },
@@ -243,6 +245,7 @@
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md')}>Math Formulas</button> &mdash; KaTeX math rendering and delimiter syntax</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md')}>Chemical Formulas</button> &mdash; mhchem equations and physical units</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Mermaid.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Mermaid.md')}>Mermaid Diagrams</button> &mdash; flowcharts, sequence diagrams, and more</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Smiles.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Smiles.md')}>Molecular Structures</button> &mdash; SMILES input, display options and export behavior</li>
             </ul>
           </section>
           </div>

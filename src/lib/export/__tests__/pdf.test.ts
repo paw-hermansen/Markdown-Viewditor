@@ -93,6 +93,35 @@ describe("buildPrintContainer", () => {
     expect(live.querySelector("#mmd-1")).not.toBeNull();
   });
 
+  it("converts SMILES mask knockouts to painted discs in the page color", () => {
+    // The mask-based label knockout degrades under the clone's CSS zoom in
+    // print output (bonds print through the letters); the staged clone must
+    // carry painted knockout shapes instead. See
+    // $lib/extensions/smiles/print-knockout.ts.
+    const smilesHtml =
+      '<div class="smiles-block" data-align="center"><svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">' +
+      '<mask id="u1-text-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">' +
+      '<rect x="0" y="0" width="200" height="200" fill="white"/>' +
+      '<circle cx="50" cy="50" r="8.25" fill="black"/></mask>' +
+      '<g mask="url(#u1-text-mask)"><line x1="0" y1="0" x2="200" y2="200"/></g>' +
+      '<g><text x="50" y="50">O</text></g></svg></div>';
+
+    const handle = buildPrintContainer(smilesHtml, layout);
+    const clone = handle.printDiv;
+
+    expect(clone.querySelector("mask")).toBeNull();
+    expect(clone.querySelector("g[mask]")).toBeNull();
+    const disc = clone.querySelector("circle")!;
+    expect(disc).not.toBeNull();
+    // Filled with the resolved page background (jsdom default: white).
+    expect(disc.getAttribute("fill")).toMatch(
+      /#ffffff|rgb\(\s*255,\s*255,\s*255\s*\)/,
+    );
+    expect(disc.getAttribute("r")).toBe("8.25");
+
+    handle.cleanup();
+  });
+
   it("does not add html/body exporting classes until beginPrint() is called", () => {
     const handle = buildPrintContainer("<p>hi</p>", layout);
     expect(document.documentElement.classList.contains("exporting")).toBe(

@@ -535,6 +535,17 @@ covered by `smiles/__tests__/renderer.test.ts`:
    translate folds into `x`/`y` (explicit tspan coordinates shift by it;
    flowing tspans keep flowing). The rewrites are exact at zoom 1 and
    idempotent.
+5. **Label knockout vs print** (`print-knockout.ts`) — the knockout that
+   erases bond segments under labels is an SVG `<mask>` (white rect + black
+   circles, `mask="url(#…-text-mask)"` on the bond group). Screen, HTML and
+   ODT paint it correctly; the PDF/print clone cannot rely on that (its
+   CSS-`zoom`/transform scaling mis-scales inline SVG resources — the same
+   family as items in the Print/PDF Fidelity Contract). The print clone
+   therefore swaps the mask for painted knockout shapes in the resolved
+   page background color (`prepareSmilesForPrint`, hooked in
+   `buildPrintContainer`); everything else keeps the mask and its
+   transparency. Contract details in
+   [Export & Print](export-print.md).
 
 ODT frames carry the scaled pixel size (attributes already include `scale`),
 clamped to the page by `fitFrameToPage` — there is no viewer→page rescale as

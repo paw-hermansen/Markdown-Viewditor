@@ -131,12 +131,12 @@ this is a portability indicator, not a hard limit.
 
 ![Compatibility Levels](images/CompatibilityLevels.png)
 
-| Level    | Enabled features                                                           |
-| -------- | -------------------------------------------------------------------------- |
-| Basic    | CommonMark core only (untoggleable)                                        |
-| GitHub   | Tables, strikethrough, task lists, bare-URL autolinks, footnotes, raw HTML |
-| Advanced | All of GitHub + YAML frontmatter                                           |
-| Custom   | Whatever you toggle on                                                     |
+| Level    | Enabled features                                                                                                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Basic    | CommonMark core only (untoggleable)                                                                                                               |
+| GitHub   | Tables, strikethrough, task lists, bare-URL autolinks, footnotes, raw HTML, `$…$` math, Mermaid diagrams                                          |
+| Advanced | All of GitHub + YAML frontmatter, LaTeX delimiters (`\(…\)`, `\[…\]`), `\ce{…}` chemistry, `==highlight==`, extension settings, SMILES structures |
+| Custom   | Whatever you toggle on                                                                                                                            |
 
 **Why is raw HTML a toggle if it's CommonMark core?** It's the most practically
 relevant portability knob: GitHub sanitizes a subset, many renderers strip it,

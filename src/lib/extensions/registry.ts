@@ -160,6 +160,25 @@ export function getExtensionSchema(id: string): FenceOptionSchema | undefined {
   return schemas.get(id);
 }
 
+/**
+ * Get the fence options schema for a fence *language*. Unlike
+ * {@link getExtensionSchema}, this also resolves trigger-language aliases
+ * (`smi` → the extension declaring `["smiles", "smi"]`), so consumers keyed
+ * on the fence info string see the same schema the fence renderer uses.
+ * Direct schema registrations (namespace aliases like "math") are the
+ * fallback.
+ */
+export function getExtensionSchemaForLanguage(
+  lang: string,
+): FenceOptionSchema | undefined {
+  for (const ext of extensions.values()) {
+    if (ext.id === lang || ext.triggerLanguages?.includes(lang)) {
+      return ext.fenceOptionsSchema;
+    }
+  }
+  return schemas.get(lang);
+}
+
 /** Reset all state (for tests). */
 export function resetExtensions(): void {
   extensions.clear();

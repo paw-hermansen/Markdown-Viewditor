@@ -1,5 +1,8 @@
 import type MarkdownIt from "markdown-it";
-import { getExtensionSchema } from "$lib/extensions/registry";
+import {
+  getExtensionSchema,
+  getExtensionSchemaForLanguage,
+} from "$lib/extensions/registry";
 import { extractBraceAttrs } from "$lib/extensions/fence-options";
 
 /**
@@ -360,7 +363,9 @@ registerFeatureDetectors(
           const info = t.info.trim();
           const lang = info.split(/\s+/)[0].toLowerCase();
           if (lang && info.includes("{")) {
-            const schema = getExtensionSchema(lang);
+            // Resolve through trigger-language aliases too (```smi is the
+            // alias of ```smiles and carries the same schema).
+            const schema = getExtensionSchemaForLanguage(lang);
             if (schema) {
               const rawAttrs = extractBraceAttrs(info);
               if (rawAttrs && rawAttrs.length > 0) {

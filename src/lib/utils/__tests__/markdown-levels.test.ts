@@ -371,6 +371,20 @@ describe("markdown-levels detection", () => {
     expect(settings).toBeDefined();
     expect(settings!.lines).toEqual([1]);
   });
+
+  it("detects extension settings on the ```smi fence alias too", async () => {
+    // ```smi is an alias of ```smiles and carries the same schema; the
+    // settings check must not silently skip it.
+    const used = await analyzeContent("```smi {scale=1.5}\nCCO\n```");
+    const settings = used.find((u) => u.id === "extension-settings");
+    expect(settings).toBeDefined();
+    expect(settings!.lines).toEqual([1]);
+  });
+
+  it("does NOT detect extension settings on a bare ```smi fence", async () => {
+    const used = await analyzeContent("```smi\nCCO\n```");
+    expect(used.find((u) => u.id === "extension-settings")).toBeUndefined();
+  });
 });
 
 describe("findViolations", () => {

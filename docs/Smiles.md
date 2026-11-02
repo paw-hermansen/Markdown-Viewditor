@@ -171,13 +171,13 @@ by `fitToWidth` — the same option and semantics as Mermaid's host options:
   exceeds the column. Alignment still positions narrower structures.
 
 ````
-```smiles {fitToWidth=false scale=2.5}
-CC(=O)Oc1ccccc1C(=O)O
+```smiles {fitToWidth=false scale=1.5}
+CC(=CCC/C(=C/C=C/C(=C/C=C/C(=C/C=C/C=C(/C=C/C=C(/C=C/C=C(/CCC=C(C)C)\C)\C)\C)/C)/C)/C)C
 ```
 ````
 
-```smiles {fitToWidth=false scale=2.5}
-CC(=O)Oc1ccccc1C(=O)O
+```smiles {fitToWidth=false scale=1.5}
+CC(=CCC/C(=C/C=C/C(=C/C=C/C(=C/C=C/C=C(/C=C/C=C(/C=C/C=C(/CCC=C(C)C)\C)\C)\C)/C)/C)/C)C
 ```
 
 Print and PDF export have no scrolling: every structure wider than the page

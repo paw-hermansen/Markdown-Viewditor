@@ -84,13 +84,18 @@ its default.
 | `theme`              | string  | `auto`    | `auto`, `light`, `dark`, `oldschool`, `solarized`, `solarized-dark`, `matrix`, `github`, `carbon`, `cyberpunk`, `gruvbox`, `gruvbox-dark` | Color theme (`auto` follows the app theme)     |
 | `atomVisualization`  | string  | `default` | `default`, `balls`, `none`                                        | Atom rendering style                           |
 | `showCarbons`        | string  | `default` | `none`, `default`, `terminal`, `acyclic`, `all`                   | Carbon label visibility                        |
-| `explicitHydrogens`  | boolean | `true`    | `true`, `false`                                                   | Show hydrogen atoms                            |
-| `compactDrawing`     | boolean | `true`    | `true`, `false`                                                   | Abbreviate terminal groups (t-Bu, etc.)        |
+| `explicitHydrogens`  | boolean | `true`    | `true`, `false`                                                   | Show explicit hydrogen atoms                   |
+| `compactDrawing`     | boolean | `true`    | `true`, `false`                                                   | Abbreviate terminal groups (COOH, CF₃)         |
 | `isomeric`           | boolean | `true`    | `true`, `false`                                                   | Draw stereochemistry                           |
 
 Fine-grained drawing internals (bond length and thickness, fonts, padding,
 overlap tuning) are deliberately not settable — they stay at the library's
 tested defaults so structures look consistent across documents and exports.
+
+Every option is demonstrated below: the drawing options in
+[Display Options](#display-options), the layout options in
+[Scaling](#scaling), [Scaling vs Scrolling](#scaling-vs-scrolling),
+[Alignment](#alignment), and [Theme Behavior](#theme-behavior).
 
 ### Fence Attributes (per-block)
 
@@ -107,16 +112,6 @@ CC(=O)Oc1ccccc1C(=O)O
 CC(=O)Oc1ccccc1C(=O)O
 ```
 
-````
-```smiles {atomVisualization=balls showCarbons=all}
-CCO
-```
-````
-
-```smiles {atomVisualization=balls showCarbons=all}
-CCO
-```
-
 ### HTML Comment Directives (document-level)
 
 Directives are standalone HTML comments placed on their own line. Their
@@ -131,6 +126,183 @@ names; omitted keys keep their previous values.
 
 The second directive resets `scale` to its default; `align=left` remains in
 effect.
+
+## Display Options
+
+The drawing options control how atoms and bonds are depicted. The layout
+options (`scale`, `fitToWidth`, `align`, `theme`) have their own sections
+below.
+
+### Atom Visualization (`atomVisualization`)
+
+- `default` (default) — skeletal structure with text labels for heteroatoms
+  (and any labeled carbons).
+- `balls` — ball-and-stick style: labeled atoms are drawn as colored balls
+  instead of text (hydrogen counts are not shown).
+- `none` — bare skeleton: bonds only, no atom labels or balls.
+
+Paracetamol in all three styles:
+
+````
+```smiles
+CC(=O)Nc1ccc(O)cc1
+```
+````
+
+```smiles
+CC(=O)Nc1ccc(O)cc1
+```
+
+````
+```smiles {atomVisualization=balls}
+CC(=O)Nc1ccc(O)cc1
+```
+````
+
+```smiles {atomVisualization=balls}
+CC(=O)Nc1ccc(O)cc1
+```
+
+````
+```smiles {atomVisualization=none}
+CC(=O)Nc1ccc(O)cc1
+```
+````
+
+```smiles {atomVisualization=none}
+CC(=O)Nc1ccc(O)cc1
+```
+
+### Carbon Labels (`showCarbons`)
+
+Carbons are skeletal by default. The five values:
+
+- `default` (default) — skeletal; only special groups label their carbon (see
+  [Compact Drawing](#compact-drawing)).
+- `none` — never label carbons.
+- `terminal` — also label terminal carbons (CH₃ ends).
+- `acyclic` — also label chain carbons (ring carbons stay skeletal).
+- `all` — label every carbon.
+
+Ethylbenzene shows the difference between the labeling modes — the ring stays
+skeletal until `all`:
+
+````
+```smiles {showCarbons=terminal}
+CCc1ccccc1
+```
+````
+
+```smiles {showCarbons=terminal}
+CCc1ccccc1
+```
+
+````
+```smiles {showCarbons=acyclic}
+CCc1ccccc1
+```
+````
+
+```smiles {showCarbons=acyclic}
+CCc1ccccc1
+```
+
+````
+```smiles {showCarbons=all}
+CCc1ccccc1
+```
+````
+
+```smiles {showCarbons=all}
+CCc1ccccc1
+```
+
+### Hydrogens and Stereochemistry (`explicitHydrogens`, `isomeric`)
+
+Glucose shows both options and how they interact — the same
+`C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O` in all four combinations.
+
+**Defaults (`explicitHydrogens` and `isomeric` both `true`)** — explicit
+hydrogens are drawn on the ring carbons and the stereochemistry appears as
+wedge bonds:
+
+````
+```smiles
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+````
+
+```smiles
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+
+**`isomeric=false`** — the stereochemistry is dropped: the wedge bonds
+disappear and every ring bond becomes plain. The hydrogens stay:
+
+````
+```smiles {isomeric=false}
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+````
+
+```smiles {isomeric=false}
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+
+**`explicitHydrogens=false`** — the explicit hydrogen atoms disappear (the
+standalone H labels on the ring). Hydrogen counts that are part of a label,
+like the `H` in `OH`, stay. The stereochemistry stays:
+
+````
+```smiles {explicitHydrogens=false}
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+````
+
+```smiles {explicitHydrogens=false}
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+
+**Both off** — the bare stereochemistry-free skeleton with heteroatom labels
+only:
+
+````
+```smiles {explicitHydrogens=false isomeric=false}
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+````
+
+```smiles {explicitHydrogens=false isomeric=false}
+C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O
+```
+
+### Compact Drawing (`compactDrawing`)
+
+With `compactDrawing` (default `true`), terminal groups whose central atom
+carries two or more terminal heteroatoms are drawn as one text label instead
+of atoms and bonds — carboxyl groups as `COOH` (like the aspirin in
+[Quick Start](#quick-start)) and trifluoromethyl as `CF₃`.
+`compactDrawing=false` draws every atom and bond of the group:
+
+````
+```smiles
+FC(F)(F)c1ccccc1
+```
+````
+
+```smiles
+FC(F)(F)c1ccccc1
+```
+
+````
+```smiles {compactDrawing=false}
+FC(F)(F)c1ccccc1
+```
+````
+
+```smiles {compactDrawing=false}
+FC(F)(F)c1ccccc1
+```
 
 ## Scaling
 

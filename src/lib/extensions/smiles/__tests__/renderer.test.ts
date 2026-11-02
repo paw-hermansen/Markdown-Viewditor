@@ -119,6 +119,25 @@ describe("renderSmilesFence", () => {
     expect(html).not.toContain("smiles-error");
   });
 
+  it("emits no fit marker or scroll wrapper by default (fitToWidth=true)", () => {
+    const html = renderSmilesFence(ASPIRIN, defaults());
+    expect(html).not.toContain("data-fit-to-width");
+    expect(html).not.toContain("smiles-scroll-content");
+  });
+
+  it("adds the scroll wrapper and fit marker with fitToWidth=false", () => {
+    const html = renderSmilesFence(
+      ASPIRIN,
+      defaults({ fitToWidth: false, align: "right" }),
+    );
+    expect(html).toMatch(
+      /^<div class="smiles-block" data-align="right" data-fit-to-width="false">/,
+    );
+    expect(html).toMatch(/<div class="smiles-scroll-content"><svg/);
+    // The svg must stay inside the scroll wrapper.
+    expect(html).toMatch(/<\/svg><\/div><\/div>$/);
+  });
+
   it("bakes the label font as presentation attributes (SVG CSS insurance)", () => {
     const html = renderSmilesFence(ASPIRIN, defaults());
     expect(html).toContain('font-family="Arial, Helvetica, sans-serif"');

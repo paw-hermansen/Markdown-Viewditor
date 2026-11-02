@@ -79,6 +79,7 @@ const SMILES_SRC = "CC(=O)Oc1ccccc1C(=O)O";
 const DEFAULT_OPTS = {
   align: "center",
   scale: 1,
+  fitToWidth: true,
   theme: "auto",
   atomVisualization: "default",
   showCarbons: "default",
@@ -156,6 +157,22 @@ describe("ODT SMILES export", () => {
     });
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain('svg:width="4.5000in"');
+  });
+
+  it("passes fitToWidth through and still clamps wide structures to the page", async () => {
+    // fitToWidth=false keeps the scaled size in the viewer (with a
+    // scrollbar); ODT has no scroll container, so the frame is clamped to
+    // the page content width either way (same as Mermaid).
+    mockRenderSmilesSvg.mockReturnValue(WIDE_SMILES_SVG);
+    const zip = await exportBaseZip(
+      `\`\`\`smiles {fitToWidth=false}\n${SMILES_SRC}\n\`\`\``,
+    );
+    expect(mockRenderSmilesSvg).toHaveBeenCalledWith(`${SMILES_SRC}\n`, {
+      ...DEFAULT_OPTS,
+      fitToWidth: false,
+    });
+    const xml = await zip.file("content.xml")!.async("text");
+    expect(xml).toContain('svg:width="6.2500in"');
   });
 
   it("clamps structures wider than the page to the page content width", async () => {

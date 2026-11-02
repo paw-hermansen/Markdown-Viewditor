@@ -505,9 +505,15 @@ covered by `smiles/__tests__/renderer.test.ts`:
    `scale` multiplier is applied by overriding the SVG's `width`/`height`
    attributes only. The library's own `scale>0` path (inline `style` width on
    a hugged, non-square box) is deliberately unused: the squared box keeps
-   `align` and cross-block spacing identical at every scale. Responsive
-   overflow is CSS (`max-width: 100%; height: auto`) — never `width: auto`
-   (same WebKitGTK object-sizing trap as the Mermaid contract above).
+   `align` and cross-block spacing identical at every scale. Width fitting
+   is the two-mode `fitToWidth` CSS (pinned by `smiles/__tests__/styles.test.ts`):
+   `true` (default) scales down to the column (`max-width: 100%;
+height: auto`), `false` keeps the scaled size and scrolls horizontally —
+   with alignment carried by auto margins on the `.smiles-scroll-content`
+   wrapper (justify-content centering would make the left overflow
+   unreachable in the scroll container). Print clamps both modes to the
+   content column. Never `width: auto` (same WebKitGTK object-sizing trap
+   as the Mermaid contract above).
 2. **XML well-formedness** — smiles-drawer sets `xmlns`/`xmlns:xlink` as
    plain attributes on the target it creates; `XMLSerializer` re-emits its
    own namespace declarations next to those, so the serialized SVG carries

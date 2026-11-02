@@ -44,6 +44,7 @@ interface SmilesDrawerOpts {
 export interface SmilesRenderOptions {
   align: "left" | "center" | "right";
   scale: number;
+  fitToWidth: boolean;
   theme: string;
   atomVisualization: string;
   showCarbons: string;
@@ -93,6 +94,7 @@ export function resolveSmilesOptions(
   return {
     align,
     scale: typeof merged.scale === "number" ? merged.scale : 1,
+    fitToWidth: merged.fitToWidth !== false,
     theme: typeof merged.theme === "string" ? merged.theme : "auto",
     atomVisualization:
       typeof merged.atomVisualization === "string"
@@ -225,6 +227,13 @@ export function renderSmilesSvg(
  * Render a SMILES fence to viewer HTML: a `.smiles-block` wrapper whose
  * `data-align` drives alignment (same mechanism as Mermaid), or a
  * `.smiles-error-block` fallback on parse/render failure.
+ *
+ * With `fitToWidth=false` the wrapper carries `data-fit-to-width="false"`
+ * and the SVG is nested in a `.smiles-scroll-content` inner wrapper (the
+ * Mermaid pattern: WebKitGTK does not reliably shrink-to-content an SVG
+ * flex item, so the scroll host needs a plain-block child). The CSS keeps
+ * the scaled size and adds a horizontal scrollbar; print rules clamp it
+ * back to the page width. See styles.ts.
  */
 export function renderSmilesFence(
   content: string,
@@ -232,7 +241,11 @@ export function renderSmilesFence(
 ): string {
   try {
     const svg = renderSmilesSvg(content, options);
-    return `<div class="smiles-block" data-align="${options.align}">${svg}</div>`;
+    const fitAttribute = options.fitToWidth ? "" : ' data-fit-to-width="false"';
+    const body = options.fitToWidth
+      ? svg
+      : `<div class="smiles-scroll-content">${svg}</div>`;
+    return `<div class="smiles-block" data-align="${options.align}"${fitAttribute}>${body}</div>`;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return (

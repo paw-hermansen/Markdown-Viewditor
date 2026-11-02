@@ -214,11 +214,13 @@ CC(=O)Oc1ccccc1C(=O)O
 ```
 
 Structures follow the app's dark/light theme, and display options (alignment,
-size scaling, color theme, atom and hydrogen visibility, stereochemistry) can
-be set per block with fence attributes or document-wide with HTML comment
-directives — for example `{scale=1.5 align=center}`. Structures export to
-HTML and PDF as inline/vector SVG, and to ODT as vector SVG images (or PNG
-with the shared rasterize option).
+size scaling, width fitting, color theme, atom and hydrogen visibility,
+stereochemistry) can be set per block with fence attributes or document-wide
+with HTML comment directives — for example `{scale=1.5 align=center}` or
+`{fitToWidth=false}` to keep large structures at full size with a horizontal
+scrollbar. Structures export to HTML and PDF as inline/vector SVG, and to ODT
+as vector SVG images (or PNG with the shared rasterize option); structures
+too wide for a page are scaled down to fit it.
 
 ## Themes
 

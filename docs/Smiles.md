@@ -80,6 +80,7 @@ its default.
 | -------------------- | ------- | --------- | ----------------------------------------------------------------- | ---------------------------------------------- |
 | `align`              | string  | `center`  | `left`, `center`, `right`                                         | Horizontal alignment of the structure          |
 | `scale`              | number  | `1`       | 0.25-4                                                            | Display-size multiplier (`1.5` = 150%)         |
+| `fitToWidth`         | boolean | `true`    | `true`, `false`                                                   | Scale down to the viewer width (`false` keeps the scaled size, scrollable) |
 | `theme`              | string  | `auto`    | `auto`, `light`, `dark`, `oldschool`, `solarized`, `solarized-dark`, `matrix`, `github`, `carbon`, `cyberpunk`, `gruvbox`, `gruvbox-dark` | Color theme (`auto` follows the app theme)     |
 | `atomVisualization`  | string  | `default` | `default`, `balls`, `none`                                        | Atom rendering style                           |
 | `showCarbons`        | string  | `default` | `none`, `default`, `terminal`, `acyclic`, `all`                   | Carbon label visibility                        |
@@ -135,9 +136,7 @@ effect.
 
 `scale` is a pure size multiplier on the structure's natural drawing size:
 `scale=1` (default) draws at 100%, `scale=1.5` at 150%. Scaling is vector —
-the structure stays crisp at every size in the viewer and in every export. A
-structure larger than the available width shrinks responsively instead of
-overflowing.
+the structure stays crisp at every size in the viewer and in every export.
 
 ````
 ```smiles {scale=0.75}
@@ -158,6 +157,33 @@ c1ccccc1
 ```smiles {scale=1.5}
 c1ccccc1
 ```
+
+## Scaling vs Scrolling
+
+What happens when a structure is wider than the viewer column is controlled
+by `fitToWidth` — the same option and semantics as Mermaid's host options:
+
+- **`fitToWidth=true`** (default) - the structure scales down to fit the
+  column width. Nothing is clipped, but very large structures may become
+  small — and a `scale` larger than what fits is effectively overridden.
+- **`fitToWidth=false`** - the structure renders at its scaled size
+  (`scale` says exactly what it says) and uses horizontal scrolling when it
+  exceeds the column. Alignment still positions narrower structures.
+
+````
+```smiles {fitToWidth=false scale=2.5}
+CC(=O)Oc1ccccc1C(=O)O
+```
+````
+
+```smiles {fitToWidth=false scale=2.5}
+CC(=O)Oc1ccccc1C(=O)O
+```
+
+Print and PDF export have no scrolling: every structure wider than the page
+content width is scaled down to fit it (even with `fitToWidth=false`), while
+structures that already fit print as they are. Structures are never split
+across pages.
 
 ## Alignment
 
@@ -223,9 +249,9 @@ this is not a smiles
 
 | Format | Behavior                                                                                                                     |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| HTML   | Structures are inline SVG — fully self-contained                                                                              |
-| PDF    | Vector SVG — prints cleanly at any resolution. Structures are never split across pages                                        |
-| ODT    | Structures embedded as vector SVG; the shared "SVG images & Mermaid diagrams" → "Rasterize as PNG images" option converts them to PNG. On render failure the source is kept as a code block |
+| HTML   | Structures are inline SVG — fully self-contained; `fitToWidth=false` keeps the scrollable natural size                        |
+| PDF    | Vector SVG — prints cleanly at any resolution. Structures wider than the page content width are scaled down to fit it (even with `fitToWidth=false`); structures are never split across pages |
+| ODT    | Structures embedded as vector SVG; the shared "SVG images & Mermaid diagrams" → "Rasterize as PNG images" option converts them to PNG. Wide structures are clamped to the page content width (no scroll container in ODF). On render failure the source is kept as a code block |
 
 In ODT export, the `scale` multiplier and `align` carry over: the embedded
 frame is sized at the scaled dimensions (clamped to the page content width)

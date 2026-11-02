@@ -24,6 +24,12 @@ export const SMILES_OPTIONS_SCHEMA: FenceOptionSchema = {
     max: 4,
     description: "Display-size multiplier (1.5 = 150% of natural size)",
   },
+  fitToWidth: {
+    type: "boolean",
+    default: true,
+    description:
+      "Scale the structure down to fit the viewer width (false = keep scaled size with horizontal scrollbar)",
+  },
   theme: {
     type: "string",
     default: "auto",

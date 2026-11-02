@@ -67,7 +67,18 @@ export function buildSmilesOptions(
     sourceLine,
   );
   const merged = mergeOptions(SMILES_OPTIONS_SCHEMA, dirState, fenceOpts);
-  return resolveSmilesOptions(merged);
+  const opts = resolveSmilesOptions(merged);
+  // ODT is a neutral document — white page, black text, no theme background
+  // (the same contract as the hardcoded light hljs palette in highlight.ts,
+  // the forced #000 text in math-render.ts, and Mermaid's export variant
+  // pinning its default/light theme). The dark SMILES palettes paint
+  // white strokes and labels on transparency, which would be invisible
+  // there. `theme=auto` means "match the context" and the ODT context is
+  // the neutral document; an explicitly pinned theme is the writer's
+  // deliberate choice and is honored (Mermaid honors frontmatter
+  // `config.theme` pins the same way).
+  if (opts.theme === "auto") opts.theme = "light";
+  return opts;
 }
 
 export function ensureAutoStyle(

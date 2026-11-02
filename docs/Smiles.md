@@ -230,6 +230,12 @@ The available palettes are the smiles-drawer color themes: `light`, `dark`,
 `oldschool`, `solarized`, `solarized-dark`, `matrix`, `github`, `carbon`,
 `cyberpunk`, `gruvbox`, and `gruvbox-dark`.
 
+Export note: ODT is a neutral document (white page, no theme background), so
+ODT export renders `theme=auto` structures with the `light` palette — the
+dark palettes draw white lines on transparency and would be invisible there.
+Explicitly pinned themes are honored in every export. PDF and HTML carry the
+theme background, so `theme=auto` keeps following the app there.
+
 ## Invalid SMILES
 
 Unparseable SMILES renders as the source with an error message instead of
@@ -255,4 +261,6 @@ this is not a smiles
 
 In ODT export, the `scale` multiplier and `align` carry over: the embedded
 frame is sized at the scaled dimensions (clamped to the page content width)
-and positioned with the same alignment as in the Viewer.
+and positioned with the same alignment as in the Viewer. Structures whose
+theme is `auto` render with the `light` palette (see Theme Behavior) so they
+read on the ODT page.

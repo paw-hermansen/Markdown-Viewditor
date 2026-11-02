@@ -80,7 +80,10 @@ const DEFAULT_OPTS = {
   align: "center",
   scale: 1,
   fitToWidth: true,
-  theme: "auto",
+  // theme=auto resolves to the light palette: ODT is a neutral document
+  // (white page, no theme background), and the dark palettes draw white
+  // strokes on transparency — invisible there. Explicit pins are honored.
+  theme: "light",
   atomVisualization: "default",
   showCarbons: "default",
   explicitHydrogens: true,
@@ -181,6 +184,34 @@ describe("ODT SMILES export", () => {
     const xml = await zip.file("content.xml")!.async("text");
     // 600px page content width (MATH_HOST_WIDTH_PX mock) = 6.25in.
     expect(xml).toContain('svg:width="6.2500in"');
+  });
+
+  it("renders theme=auto structures with the light palette (neutral ODT page)", async () => {
+    // The default expectation (DEFAULT_OPTS.theme) is "light"; this pins
+    // the policy name and the reason.
+    await exportBaseZip(`\`\`\`smiles\n${SMILES_SRC}\n\`\`\``);
+    expect(mockRenderSmilesSvg).toHaveBeenCalledWith(`${SMILES_SRC}\n`, {
+      ...DEFAULT_OPTS,
+      theme: "light",
+    });
+  });
+
+  it("honors an explicitly pinned theme from fence attributes", async () => {
+    await exportBaseZip(`\`\`\`smiles {theme=dark}\n${SMILES_SRC}\n\`\`\``);
+    expect(mockRenderSmilesSvg).toHaveBeenCalledWith(`${SMILES_SRC}\n`, {
+      ...DEFAULT_OPTS,
+      theme: "dark",
+    });
+  });
+
+  it("honors an explicitly pinned theme from a directive", async () => {
+    await exportBaseZip(
+      `<!-- smiles: theme=matrix -->\n\n\`\`\`smiles\n${SMILES_SRC}\n\`\`\``,
+    );
+    expect(mockRenderSmilesSvg).toHaveBeenCalledWith(`${SMILES_SRC}\n`, {
+      ...DEFAULT_OPTS,
+      theme: "matrix",
+    });
   });
 
   it("centers structures by default", async () => {

@@ -497,8 +497,8 @@ an over-wide diagram.
 
 ## SMILES SVG Contract (smiles-drawer)
 
-The SMILES renderer (`smiles/renderer.ts`) pins four library behaviors, all
-covered by `smiles/__tests__/renderer.test.ts`:
+The SMILES renderer (`smiles/renderer.ts`) pins six library behaviors, covered
+by the `smiles/__tests__/` suites and `export/__tests__/odt-smiles.test.ts`:
 
 1. **Size/box contract** — every structure is drawn with the library's
    `scale: 0`, then the box is cut back to the drawing's tight padded bounds
@@ -560,6 +560,16 @@ height: auto`), `false` keeps the scaled size and scrolls horizontally —
    `buildPrintContainer`); everything else keeps the mask and its
    transparency. Contract details in
    [Export & Print](export-print.md).
+6. **Theme vs the neutral ODT document** — the dark palettes paint white
+   strokes/labels on transparency, invisible on ODT's white, background-less
+   page. ODT export resolves `theme=auto` to the `light` palette
+   (`buildSmilesOptions` in `export/odt/media.ts`) — the same
+   neutral-document contract as Mermaid's export variant (its
+   `themeId: "export"` pins the default/light Mermaid theme), the hardcoded
+   light hljs palette in `odt/highlight.ts`, and math-render's forced `#000`
+   raster text. Explicitly pinned themes are honored in every export (Mermaid
+   honors frontmatter `config.theme` pins the same way). PDF/print and HTML
+   keep the app theme — both carry the theme background.
 
 ODT frames carry the scaled pixel size (attributes already include `scale`),
 clamped to the page by `fitFrameToPage` — there is no viewer→page rescale as

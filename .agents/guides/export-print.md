@@ -200,7 +200,11 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   rules clamp scroll-mode structures (`max-width: 100%` on the
   `.smiles-scroll-content` wrapper and the SVG) to the clone's content
   column — the page width — so wide structures scale down instead of
-  scrolling.
+  scrolling. ODT export is theme-neutral like the rest of the ODT document:
+  `theme=auto` structures render with the `light` palette (the dark palettes
+  would be invisible on the white page — see "SMILES SVG Contract" item 6 in
+  [Math & Mermaid Contracts](math-mermaid.md)); explicitly pinned themes are
+  honored.
 - Printer-friendly mode is fully theme-independent: a small CSS-variable
   override palette in app.css plus GitHub Light `.hljs` token rules re-scoped
   to `body.print-friendly .print-content` at export time

@@ -66,6 +66,21 @@ describe("renderSmilesSvg size contract", () => {
     expect(doc.querySelector("parsererror")).toBeNull();
   });
 
+  it("leaves no zoom-fragile label placement behind (WebKit page zoom)", () => {
+    // smiles-drawer positions letters with em offsets and CSS-px translate
+    // groups; both drift under WebKit page zoom and must be rewritten to
+    // absolute user units (text-offsets.ts).
+    const svg = renderSmilesSvg(ASPIRIN, defaults());
+    expect(svg).not.toMatch(/transform:\s*translate/);
+    expect(svg).not.toMatch(/(?:^|[\s"])(?:x|y|dx|dy)="[^"]*em"/);
+    // The label anchors are present as absolute coordinates.
+    const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    const text = doc.querySelector("text");
+    expect(text).not.toBeNull();
+    expect(text!.hasAttribute("x")).toBe(true);
+    expect(text!.hasAttribute("y")).toBe(true);
+  });
+
   it("clamps out-of-range scales through the schema merge", () => {
     const opts = resolveSmilesOptions({ scale: 10 });
     expect(opts.scale).toBe(4);

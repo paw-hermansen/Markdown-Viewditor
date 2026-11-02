@@ -1,6 +1,7 @@
 import { escapeHtml } from "$lib/utils/escape";
 import { mergeOptions } from "../directive-merge";
 import { SMILES_OPTIONS_SCHEMA } from "./schema";
+import { normalizeSmilesTextPlacement } from "./text-offsets";
 
 /**
  * SMILES structure renderer (smiles-drawer SvgDrawer).
@@ -23,6 +24,11 @@ import { SMILES_OPTIONS_SCHEMA } from "./schema";
  * parse API wraps a synchronous parser, so no pre-render cache is needed.
  * `ensureSmilesLoaded()` (called from `preRenderBlocks` and the ODT exporter)
  * only exists to lazy-load the smiles-drawer chunk.
+ *
+ * Label placement is normalized after drawing (see text-offsets.ts):
+ * smiles-drawer positions letters with em offsets and CSS-px translate
+ * groups, both of which drift under WebKit page zoom. The normalizer folds
+ * them into absolute user units so labels sit correctly at every zoom.
  */
 
 /** The smiles-drawer module namespace (`import SmilesDrawer from "smiles-drawer"`). */
@@ -201,6 +207,10 @@ export function renderSmilesSvg(
   ) as SVGSVGElement;
   applyScale(svg, options.scale);
   bakeSvgFonts(svg, drawer.opts as unknown as SmilesDrawerOpts);
+  // Zoom-proof label placement (WebKit page zoom drifts em offsets and
+  // CSS-px translates) — must run after bakeSvgFonts so the font-size
+  // attributes it reads are in place.
+  normalizeSmilesTextPlacement(svg);
   // smiles-drawer sets xmlns/xmlns:xlink as plain attributes on the target
   // it creates; XMLSerializer emits its own namespace declarations next to
   // those, so the serialized SVG carries them twice and strict consumers

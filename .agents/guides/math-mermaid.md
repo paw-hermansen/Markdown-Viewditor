@@ -497,7 +497,7 @@ an over-wide diagram.
 
 ## SMILES SVG Contract (smiles-drawer)
 
-The SMILES renderer (`smiles/renderer.ts`) pins three library behaviors, all
+The SMILES renderer (`smiles/renderer.ts`) pins four library behaviors, all
 covered by `smiles/__tests__/renderer.test.ts`:
 
 1. **Size/box contract** — every structure is drawn with the library's
@@ -522,6 +522,19 @@ covered by `smiles/__tests__/renderer.test.ts`:
    `font-family`/`font-size` onto those text elements as presentation
    attributes — lowest cascade layer, so a consumer that DOES honor the
    `<style>` block still resolves the same value.
+4. **Label placement vs page zoom** (`text-offsets.ts`) — smiles-drawer
+   places every atom label with em offsets (`y="0.36em"`, stacked
+   `y="±0.9em"`) inside a CSS-px translate group
+   (`<g style="transform: translateX(..px) translateY(..px)">`). Both drift
+   under WebKit page zoom (the pinned Mermaid bugs: em offsets resolve
+   against the zoom-divided font size; translate-based text placement
+   collapses at high zoom), so only the letters move while bonds stay put.
+   `normalizeSmilesTextPlacement` folds both into absolute user units at
+   render time: em offsets resolve against the baked `font-size`
+   attributes (deterministic — no calibration probe needed), the group
+   translate folds into `x`/`y` (explicit tspan coordinates shift by it;
+   flowing tspans keep flowing). The rewrites are exact at zoom 1 and
+   idempotent.
 
 ODT frames carry the scaled pixel size (attributes already include `scale`),
 clamped to the page by `fitFrameToPage` — there is no viewer→page rescale as

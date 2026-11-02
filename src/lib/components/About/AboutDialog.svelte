@@ -238,7 +238,7 @@
             <h2>Documentation</h2>
             <p>Detailed guides and references are available on GitHub:</p>
             <ul>
-              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Examples.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Examples.md')}>Markdown Examples</button> &mdash; syntax reference for all supported markdown features</li>
+              <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Examples.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Examples/Examples.md')}>Markdown Examples</button> &mdash; syntax reference for all supported markdown features</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/CustomThemes.md')}>Custom Themes</button> &mdash; creating and installing custom CSS themes</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Math.md')}>Math Formulas</button> &mdash; KaTeX math rendering and delimiter syntax</li>
               <li><button class="link" data-href="https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md" onclick={() => handleLink('https://github.com/paw-hermansen/Markdown-Viewditor/tree/main/docs/Chemistry.md')}>Chemical Formulas</button> &mdash; mhchem equations and physical units</li>

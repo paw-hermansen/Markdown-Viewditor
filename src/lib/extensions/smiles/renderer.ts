@@ -9,16 +9,21 @@ import { normalizeSmilesTextPlacement } from "./text-offsets";
  * Size/box contract (pinned by tests — see __tests__/renderer.test.ts and
  * .opencode/plans/smiles-extension.md §4):
  *
- *   1. Every structure is drawn with the library's `scale: 0`, which produces
- *      a squared, centered viewBox at natural size (1 unit = 1 px).
+ *   1. Every structure is drawn with the library's `scale: 0`, then the box
+ *      is cut back to the drawing's tight padded bounds (the library's
+ *      pre-square bounds, read from the `<mask>` region — see applyScale).
+ *      The box hugs the drawing at every scale — no square filler
+ *      whitespace on elongated molecules — while staying
+ *      scale-proportional, so `align` and inter-block spacing behave
+ *      identically at any multiplier. The library's own `scale>0` path
+ *      (inline style width) is deliberately unused: it fights the
+ *      responsive CSS and the export dimension sniffer.
  *   2. The user-facing `scale` multiplier is applied by overriding the SVG's
- *      `width`/`height` attributes (viewBox untouched). The box therefore
- *      stays square and centered at every scale, so `align` behaves
- *      identically at `scale=1` and `scale=1.5`, and the vector is lossless
- *      in HTML/PDF/ODT exports. The library's own `scale>0` path (inline
- *      style width on a hugged, non-square box) is deliberately unused.
- *   3. Responsive safety is CSS (`max-width: 100%; height: auto` in
- *      styles.ts) — a large `scale` can never overflow the viewer column.
+ *      `width`/`height` attributes (viewBox untouched) — a pure vector
+ *      resize, lossless in HTML/PDF/ODT exports.
+ *   3. Width fitting is the `fitToWidth` two-mode CSS (styles.ts): scale
+ *      down to the column, or keep the scaled size with a horizontal
+ *      scrollbar. Print clamps both modes to the page width.
  *
  * Unlike Mermaid, rendering is fully synchronous: smiles-drawer's callback
  * parse API wraps a synchronous parser, so no pre-render cache is needed.
@@ -118,19 +123,58 @@ function resolveThemeName(theme: string): string {
 }
 
 /**
- * Apply the user-facing `scale` multiplier by overriding the SVG's
- * `width`/`height` attributes. The viewBox stays untouched (drawn squared at
- * natural size), so scaling is a pure vector resize.
+ * Apply the user-facing `scale` multiplier and pin the box contract: the
+ * viewBox is set to the drawing's tight padded bounds and the SVG's
+ * `width`/`height` attributes become bounds × scale.
+ *
+ * The library draws at `scale: 0`, which squares the viewBox (side =
+ * max(w, h), content centered). For elongated molecules that inflates the
+ * box into a square full of whitespace — a long chain ends up with half a
+ * screen of empty space above and below, and the scroll host's scrollbar
+ * sits below it. The pre-square bounds survive in the `<mask>` region
+ * (`constructSvg` writes its `x`/`y`/`width`/`height` from the same
+ * min/max the squaring uses), so the square filler is cut back out here:
+ * the box hugs the drawing at every scale. The box is scale-proportional,
+ * so `align` and inter-block spacing behave identically at any multiplier —
+ * the property the squared box was chosen for — and scaling stays a pure
+ * vector resize (attributes only, viewBox untouched).
  */
 function applyScale(svg: SVGSVGElement, scale: number): void {
-  const vb = (svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/);
-  const w = parseFloat(vb[2] ?? "");
-  const h = parseFloat(vb[3] ?? "");
-  const side = Math.max(w, h);
-  if (!Number.isFinite(side) || side <= 0) return;
-  const size = String(Math.max(1, Math.round(side * scale)));
-  svg.setAttribute("width", size);
-  svg.setAttribute("height", size);
+  let bounds: { x: number; y: number; w: number; h: number } | null = null;
+
+  const mask = svg.querySelector("mask");
+  if (mask) {
+    const x = parseFloat(mask.getAttribute("x") ?? "");
+    const y = parseFloat(mask.getAttribute("y") ?? "");
+    const w = parseFloat(mask.getAttribute("width") ?? "");
+    const h = parseFloat(mask.getAttribute("height") ?? "");
+    if (Number.isFinite(x) && Number.isFinite(y) && w > 0 && h > 0) {
+      bounds = { x, y, w, h };
+    }
+  }
+
+  if (!bounds) {
+    // Defensive fallback (mask shape changed upstream): keep the library's
+    // squared box rather than failing the render.
+    const vb = (svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/);
+    const w = parseFloat(vb[2] ?? "");
+    const h = parseFloat(vb[3] ?? "");
+    const side = Math.max(w, h);
+    if (!Number.isFinite(side) || side <= 0) return;
+    bounds = {
+      x: parseFloat(vb[0] ?? "0"),
+      y: parseFloat(vb[1] ?? "0"),
+      w: side,
+      h: side,
+    };
+  }
+
+  svg.setAttribute(
+    "viewBox",
+    `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`,
+  );
+  svg.setAttribute("width", String(Math.max(1, Math.round(bounds.w * scale))));
+  svg.setAttribute("height", String(Math.max(1, Math.round(bounds.h * scale))));
 }
 
 /**
@@ -156,7 +200,7 @@ function bakeSvgFonts(svg: SVGSVGElement, opts: SmilesDrawerOpts): void {
 
 /**
  * Render one SMILES string to a standalone `<svg>` string. The returned SVG
- * carries squared viewBox + explicit `width`/`height` attributes (the size
+ * carries a tight-box viewBox + explicit `width`/`height` attributes (the size
  * contract above), so export dimension sniffing works directly on it.
  *
  * Throws on unparseable SMILES (or when the chunk is not loaded yet) —

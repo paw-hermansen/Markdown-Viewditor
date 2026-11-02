@@ -11,23 +11,47 @@ import {
 /** Aspirin — enough structure to give the drawing non-trivial bounds. */
 const ASPIRIN = "CC(=O)Oc1ccccc1C(=O)O";
 
+/** A long chain — several times wider than tall (the whitespace repro). */
+const CHAIN = "Cc(C)cCCc(C)cccc(C)cccc(C)ccccc(C)cccc(C)cccc(C)CCcc(C)C";
+
 const defaults = (
   over: Partial<SmilesRenderOptions> = {},
 ): SmilesRenderOptions => resolveSmilesOptions(over);
 
-function svgAttrs(svg: string): { width: number; height: number; box: number } {
+type Box = { x: number; y: number; w: number; h: number };
+
+function svgAttrs(svg: string): {
+  width: number;
+  height: number;
+  vb: Box;
+  mask: Box;
+} {
   const width = parseFloat(
     svg.match(/<svg[^>]*\bwidth="([\d.]+)"/)?.[1] ?? "0",
   );
   const height = parseFloat(
     svg.match(/<svg[^>]*\bheight="([\d.]+)"/)?.[1] ?? "0",
   );
-  const vb = svg.match(/<svg[^>]*\bviewBox="([^"]+)"/)?.[1] ?? "";
-  const parts = vb
+  const parts = (svg.match(/<svg[^>]*\bviewBox="([^"]+)"/)?.[1] ?? "")
     .trim()
     .split(/[\s,]+/)
     .map(parseFloat);
-  return { width, height, box: Math.max(parts[2] ?? 0, parts[3] ?? 0) };
+  const maskTag = svg.match(/<mask\b[^>]*>/)?.[0] ?? "";
+  const maskAttr = (name: string): number =>
+    parseFloat(
+      maskTag.match(new RegExp(`\\b${name}="([\\d.eE+-]+)"`))?.[1] ?? "NaN",
+    );
+  return {
+    width,
+    height,
+    vb: { x: parts[0], y: parts[1], w: parts[2], h: parts[3] },
+    mask: {
+      x: maskAttr("x"),
+      y: maskAttr("y"),
+      w: maskAttr("width"),
+      h: maskAttr("height"),
+    },
+  };
 }
 
 beforeAll(async () => {
@@ -39,22 +63,34 @@ beforeEach(() => {
 });
 
 describe("renderSmilesSvg size contract", () => {
-  it("squares the viewBox at natural size and reports it as the box side", () => {
+  it("hugs the drawing's padded bounds (no square filler)", () => {
     const svg = renderSmilesSvg(ASPIRIN, defaults());
-    const { width, height, box } = svgAttrs(svg);
-    // Contract: squared viewBox (drawn at library scale 0) with width/height
-    // attributes = box × scale. At scale=1 the attributes equal the box side.
-    expect(box).toBeGreaterThan(0);
-    expect(width).toBe(height);
-    expect(width).toBe(Math.round(box * 1));
+    const { width, height, vb, mask } = svgAttrs(svg);
+    // Contract: the viewBox is the library's pre-square drawing bounds —
+    // exactly the <mask> region — and the display attributes follow it.
+    expect(vb.w).toBeGreaterThan(0);
+    expect(vb.x).toBeCloseTo(mask.x, 6);
+    expect(vb.y).toBeCloseTo(mask.y, 6);
+    expect(vb.w).toBeCloseTo(mask.w, 6);
+    expect(vb.h).toBeCloseTo(mask.h, 6);
+    expect(width).toBe(Math.round(vb.w * 1));
+    expect(height).toBe(Math.round(vb.h * 1));
+  });
+
+  it("keeps elongated molecules elongated (regression: square-box whitespace)", () => {
+    // The library's scale-0 draw squares the viewBox, which used to inflate
+    // long chains into huge square boxes: half a screen of empty space above
+    // and below the drawing, with the scroll host's scrollbar below that.
+    const { vb } = svgAttrs(renderSmilesSvg(CHAIN, defaults()));
+    expect(vb.w).toBeGreaterThan(vb.h * 2);
   });
 
   it("scale=1.5 renders at 150% (width/height attributes only, viewBox untouched)", () => {
     const natural = svgAttrs(renderSmilesSvg(ASPIRIN, defaults()));
     const scaled = svgAttrs(renderSmilesSvg(ASPIRIN, defaults({ scale: 1.5 })));
-    expect(scaled.box).toBe(natural.box);
-    expect(scaled.width).toBe(Math.round(natural.box * 1.5));
-    expect(scaled.width).toBe(scaled.height);
+    expect(scaled.vb).toEqual(natural.vb);
+    expect(scaled.width).toBe(Math.round(natural.vb.w * 1.5));
+    expect(scaled.height).toBe(Math.round(natural.vb.h * 1.5));
   });
 
   it("produces well-formed XML (no duplicate namespace declarations)", () => {

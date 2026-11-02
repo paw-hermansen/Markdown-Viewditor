@@ -501,11 +501,19 @@ The SMILES renderer (`smiles/renderer.ts`) pins four library behaviors, all
 covered by `smiles/__tests__/renderer.test.ts`:
 
 1. **Size/box contract** — every structure is drawn with the library's
-   `scale: 0` (squared, centered viewBox at natural size), and the user's
-   `scale` multiplier is applied by overriding the SVG's `width`/`height`
-   attributes only. The library's own `scale>0` path (inline `style` width on
-   a hugged, non-square box) is deliberately unused: the squared box keeps
-   `align` and cross-block spacing identical at every scale. Width fitting
+   `scale: 0`, then the box is cut back to the drawing's tight padded bounds
+   (the library's pre-square bounds, read from the `<mask>` region its
+   `constructSvg` writes from the same min/max the viewBox squaring uses —
+   `applyScale` in `renderer.ts`). The box hugs the drawing at every scale:
+   no square filler whitespace on elongated molecules (the reason the
+   squared box was dropped — a long chain used to inflate into a square with
+   half a screen of air and the scrollbar below it), while staying
+   scale-proportional, so `align` and inter-block spacing behave identically
+   at any multiplier (the property the squared box was chosen for). The
+   user's `scale` multiplier is applied by overriding the SVG's
+   `width`/`height` attributes only. The library's own `scale>0` path
+   (inline `style` width) is deliberately unused: it fights the responsive
+   CSS and the export dimension sniffer. Width fitting
    is the two-mode `fitToWidth` CSS (pinned by `smiles/__tests__/styles.test.ts`):
    `true` (default) scales down to the column (`max-width: 100%;
 height: auto`), `false` keeps the scaled size and scrolls horizontally —

@@ -333,7 +333,7 @@ c1ccccc1
 ## Scaling vs Scrolling
 
 What happens when a structure is wider than the viewer column is controlled
-by `fitToWidth` — the same option and semantics as Mermaid's host options:
+by `fitToWidth`:
 
 - **`fitToWidth=true`** (default) - the structure scales down to fit the
   column width. Nothing is clipped, but very large structures may become
@@ -389,12 +389,32 @@ atom colors and bonds switch palette with the rest of the viewer. An explicit
 theme pins the palette regardless of the app theme:
 
 ````
+```smiles
+CC(=O)Oc1ccccc1C(=O)O
+```
+````
+
+```smiles
+CC(=O)Oc1ccccc1C(=O)O
+```
+
+````
 ```smiles {theme=oldschool}
 CC(=O)Oc1ccccc1C(=O)O
 ```
 ````
 
 ```smiles {theme=oldschool}
+CC(=O)Oc1ccccc1C(=O)O
+```
+
+````
+```smiles {theme=matrix}
+CC(=O)Oc1ccccc1C(=O)O
+```
+````
+
+```smiles {theme=matrix}
 CC(=O)Oc1ccccc1C(=O)O
 ```
 

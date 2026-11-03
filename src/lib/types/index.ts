@@ -5,6 +5,9 @@ export type MarkdownLevel = "basic" | "github" | "advanced" | "custom";
 /** Image resolution multiplier for rasterized ODT outputs (1×/96, 2×/192, 3×/288 DPI). */
 export type OdtRasterResolution = 1 | 2 | 3 | 4;
 
+/** Image resolution multiplier for rasterized DOCX outputs (math/diagrams/SVG fallbacks). */
+export type DocxRasterResolution = 1 | 2 | 3 | 4;
+
 export interface FileInfo {
   path: string;
   name: string;
@@ -41,6 +44,18 @@ export interface Settings {
   pdfIncludeFrontmatter: boolean;
   /** Include frontmatter/skill card in ODT exports. */
   odtIncludeFrontmatter: boolean;
+  /** Render math formulas as PNG images instead of native OMML equations. */
+  docxRasterizeMath: boolean;
+  /**
+   * Render diagrams/SVG images as PNG-only. Default true — the
+   * compatibility-safe default. Off = SVG + PNG fallback (svgBlip dual
+   * embed) for sharper zoom in Word 2016+.
+   */
+  docxRasterizeSvg: boolean;
+  /** Pixel-scale multiplier for rasterized DOCX images. */
+  docxRasterResolution: DocxRasterResolution;
+  /** Include frontmatter/skill card in DOCX exports. */
+  docxIncludeFrontmatter: boolean;
   /** App-wide zoom level (1 = 100%), applied via the webview's page zoom. */
   zoomLevel: number;
 }

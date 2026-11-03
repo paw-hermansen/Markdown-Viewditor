@@ -62,4 +62,6 @@ export async function registerBuiltinExporters(): Promise<void> {
   registerExporter(pdfExporter);
   const { odtExporter } = await import("./exporters/odt");
   registerExporter(odtExporter);
+  const { docxExporter } = await import("./exporters/docx");
+  registerExporter(docxExporter);
 }

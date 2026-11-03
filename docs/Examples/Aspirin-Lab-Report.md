@@ -152,6 +152,12 @@ The recrystallized sample melted over the range \(132\) -
 shows the plateau where the crystals actually melt:
 
 ```mermaid
+---
+config:
+    themeVariables:
+        xyChart:
+            plotColorPalette: "#666666"
+---
 xychart-beta
     title "Heating curve of the recrystallized sample"
     x-axis "Time (min)" [0, 1, 2, 3, 4, 5, 6, 7, 8]

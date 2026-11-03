@@ -63,18 +63,69 @@ beforeEach(() => {
 });
 
 describe("renderSmilesSvg size contract", () => {
-  it("hugs the drawing's padded bounds (no square filler)", () => {
+  it("fits the box to the drawing's ink (never below the geometric bounds)", () => {
     const svg = renderSmilesSvg(ASPIRIN, defaults());
     const { width, height, vb, mask } = svgAttrs(svg);
-    // Contract: the viewBox is the library's pre-square drawing bounds —
-    // exactly the <mask> region — and the display attributes follow it.
+    // Contract: the viewBox covers the library's pre-square drawing bounds
+    // (the <mask> region) and grows only by the bounded safety pad — it
+    // hugs the drawing without clipping. The display attributes follow it.
     expect(vb.w).toBeGreaterThan(0);
-    expect(vb.x).toBeCloseTo(mask.x, 6);
-    expect(vb.y).toBeCloseTo(mask.y, 6);
-    expect(vb.w).toBeCloseTo(mask.w, 6);
-    expect(vb.h).toBeCloseTo(mask.h, 6);
+    expect(vb.x).toBeLessThanOrEqual(mask.x);
+    expect(vb.y).toBeLessThanOrEqual(mask.y);
+    expect(vb.x + vb.w).toBeGreaterThanOrEqual(mask.x + mask.w);
+    expect(vb.y + vb.h).toBeGreaterThanOrEqual(mask.y + mask.h);
+    expect(vb.w).toBeLessThan(mask.w * 2);
+    expect(vb.h).toBeLessThan(mask.h * 2);
     expect(width).toBe(Math.round(vb.w * 1));
     expect(height).toBe(Math.round(vb.h * 1));
+  });
+
+  it("expands the box to cover real ink (regression: clipped labels)", () => {
+    // Real glyph ink extends past the library's estimates by a font- and
+    // engine-dependent amount (the Windows/Linux clipping). Mock getBBox
+    // to report ink overshooting the geometric bounds; the fitted box
+    // must cover it.
+    const proto = SVGSVGElement.prototype as unknown as {
+      getBBox?: () => DOMRect;
+    };
+    const original = proto.getBBox;
+    proto.getBBox = function (this: SVGSVGElement) {
+      const m = this.querySelector("mask")!;
+      const x = parseFloat(m.getAttribute("x")!);
+      const y = parseFloat(m.getAttribute("y")!);
+      const w = parseFloat(m.getAttribute("width")!);
+      const h = parseFloat(m.getAttribute("height")!);
+      // Ink overshooting the top edge by 10 user units.
+      return { x, y: y - 10, width: w, height: h + 10 } as DOMRect;
+    };
+    try {
+      const svg = renderSmilesSvg(ASPIRIN, defaults());
+      const { vb, mask } = svgAttrs(svg);
+      expect(vb.y).toBeLessThanOrEqual(mask.y - 10);
+      expect(vb.y + vb.h).toBeGreaterThanOrEqual(mask.y + mask.h);
+    } finally {
+      if (original) proto.getBBox = original;
+      else delete proto.getBBox;
+    }
+  });
+
+  it("falls back to the padded geometric box when ink is unmeasurable", () => {
+    const proto = SVGSVGElement.prototype as unknown as {
+      getBBox?: () => DOMRect;
+    };
+    const original = proto.getBBox;
+    proto.getBBox = () => ({ x: 0, y: 0, width: 0, height: 0 }) as DOMRect;
+    try {
+      const svg = renderSmilesSvg(ASPIRIN, defaults());
+      const { vb, mask } = svgAttrs(svg);
+      expect(vb.x).toBeLessThan(mask.x);
+      expect(vb.y).toBeLessThan(mask.y);
+      expect(vb.x + vb.w).toBeGreaterThan(mask.x + mask.w);
+      expect(vb.y + vb.h).toBeGreaterThan(mask.y + mask.h);
+    } finally {
+      if (original) proto.getBBox = original;
+      else delete proto.getBBox;
+    }
   });
 
   it("keeps elongated molecules elongated (regression: square-box whitespace)", () => {

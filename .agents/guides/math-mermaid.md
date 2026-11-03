@@ -501,19 +501,25 @@ The SMILES renderer (`smiles/renderer.ts`) pins six library behaviors, covered
 by the `smiles/__tests__/` suites and `export/__tests__/odt-smiles.test.ts`:
 
 1. **Size/box contract** — every structure is drawn with the library's
-   `scale: 0`, then the box is cut back to the drawing's tight padded bounds
-   (the library's pre-square bounds, read from the `<mask>` region its
-   `constructSvg` writes from the same min/max the viewBox squaring uses —
-   `applyScale` in `renderer.ts`). The box hugs the drawing at every scale:
-   no square filler whitespace on elongated molecules (the reason the
-   squared box was dropped — a long chain used to inflate into a square with
-   half a screen of air and the scrollbar below it), while staying
+   `scale: 0`, then the box is fitted to the drawing's real painted ink
+   (`applyScale`/`measureInk` in `renderer.ts`): the union of the library's
+   geometric bounds (the `<mask>` region its `constructSvg` writes from the
+   pre-square min/max) and the measured `getBBox()` ink, plus a safety pad.
+   This is the `fo-measure.ts` lesson applied to SMILES: the library only
+   _estimates_ text extents (`write()`: anchor ± measured height), and real
+   glyph ink exceeds those estimates by a font- and engine-dependent amount
+   (subscripts, the 0.36em baseline shift, `dominant-baseline` placement;
+   Arial vs its Linux fontconfig substitutes; Blink vs WebKit baseline
+   resolution) — which clipped labels differently on Windows and Linux.
+   Measuring the painted ink is exact everywhere; the jsdom fallback (no
+   `getBBox`) pads the geometric box by a label size instead. The box hugs
+   the drawing at every scale: no square filler whitespace on elongated
+   molecules (the reason the squared box was dropped), while staying
    scale-proportional, so `align` and inter-block spacing behave identically
-   at any multiplier (the property the squared box was chosen for). The
-   user's `scale` multiplier is applied by overriding the SVG's
-   `width`/`height` attributes only. The library's own `scale>0` path
-   (inline `style` width) is deliberately unused: it fights the responsive
-   CSS and the export dimension sniffer. Width fitting
+   at any multiplier. The user's `scale` multiplier is applied by overriding
+   the SVG's `width`/`height` attributes only. The library's own `scale>0`
+   path (inline `style` width) is deliberately unused: it fights the
+   responsive CSS and the export dimension sniffer. Width fitting
    is the two-mode `fitToWidth` CSS (pinned by `smiles/__tests__/styles.test.ts`):
    `true` (default) scales down to the column (`max-width: 100%;
 height: auto`), `false` keeps the scaled size and scrolls horizontally —

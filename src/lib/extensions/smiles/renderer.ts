@@ -10,10 +10,13 @@ import { normalizeSmilesTextPlacement } from "./text-offsets";
  * .opencode/plans/smiles-extension.md §4):
  *
  *   1. Every structure is drawn with the library's `scale: 0`, then the box
- *      is cut back to the drawing's tight padded bounds (the library's
- *      pre-square bounds, read from the `<mask>` region — see applyScale).
- *      The box hugs the drawing at every scale — no square filler
- *      whitespace on elongated molecules — while staying
+ *      is fitted to the drawing's real painted ink: the union of the
+ *      library's geometric bounds (the `<mask>` region — the pre-square
+ *      bounds) and the measured `getBBox()` ink, plus a safety pad (see
+ *      applyScale/measureInk). The library's text-bounds estimates are
+ *      font- and engine-dependent and clip labels; measuring the painted
+ *      ink is exact everywhere. The box hugs the drawing at every scale —
+ *      no square filler whitespace on elongated molecules — while staying
  *      scale-proportional, so `align` and inter-block spacing behave
  *      identically at any multiplier. The library's own `scale>0` path
  *      (inline style width) is deliberately unused: it fights the
@@ -122,39 +125,98 @@ function resolveThemeName(theme: string): string {
     : "light";
 }
 
+/** Safety pad around the ink-fitted box (stroke overshoot, antialiasing). */
+const INK_PAD = 2;
+
+/** Text pad when ink measurement is unavailable (jsdom) — 1x the label size. */
+const FALLBACK_TEXT_PAD = 11 * (96 / 72);
+
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The drawing's geometric bounds: the library's pre-square min/max, which
+ * survive verbatim in the `<mask>` region (`constructSvg` writes its
+ * `x`/`y`/`width`/`height` from the same min/max the `scale: 0` squaring
+ * uses). Includes the label-anchor padding but only *estimated* label ink.
+ */
+function maskBounds(svg: SVGSVGElement): Box | null {
+  const mask = svg.querySelector("mask");
+  if (!mask) return null;
+  const x = parseFloat(mask.getAttribute("x") ?? "");
+  const y = parseFloat(mask.getAttribute("y") ?? "");
+  const w = parseFloat(mask.getAttribute("width") ?? "");
+  const h = parseFloat(mask.getAttribute("height") ?? "");
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !(w > 0) || !(h > 0)) {
+    return null;
+  }
+  return { x, y, w, h };
+}
+
+/**
+ * Real painted ink bounds via `getBBox()` — the engine measuring the glyphs
+ * it actually laid out (the fo-measure.ts lesson: measurement and paint
+ * must agree). smiles-drawer only *estimates* text extents (`write()`:
+ * anchor ± measured height), and real glyph ink extends past those
+ * estimates — subscripts (CH₃), the 0.36em baseline shift,
+ * `dominant-baseline` placement — by a font- and engine-dependent amount
+ * (Arial vs its Linux fontconfig substitutes; Blink vs WebKit baseline
+ * resolution). That variance clipped labels differently on Windows and
+ * Linux; fitting to measured ink is exact on every font and engine.
+ *
+ * Measured through a hidden host: engines refuse (or mis-measure) detached
+ * and `display: none` subtrees — same pattern as
+ * normalizeSvgTextOffsets. Returns null when measurement is unavailable
+ * (jsdom) or degenerate; the caller then falls back to the geometric box
+ * plus a text pad.
+ */
+function measureInk(svg: SVGSVGElement): Box | null {
+  if (typeof document === "undefined") return null;
+  if (typeof svg.getBBox !== "function") return null;
+  const host = document.createElement("div");
+  host.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden";
+  host.appendChild(svg);
+  document.body.appendChild(host);
+  try {
+    const b = svg.getBBox();
+    if (!b || !(b.width > 0) || !(b.height > 0)) return null;
+    return { x: b.x, y: b.y, w: b.width, h: b.height };
+  } catch {
+    return null;
+  } finally {
+    host.remove();
+  }
+}
+
+function unionBox(a: Box, b: Box): Box {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  const right = Math.max(a.x + a.w, b.x + b.w);
+  const bottom = Math.max(a.y + a.h, b.y + b.h);
+  return { x, y, w: right - x, h: bottom - y };
+}
+
 /**
  * Apply the user-facing `scale` multiplier and pin the box contract: the
- * viewBox is set to the drawing's tight padded bounds and the SVG's
- * `width`/`height` attributes become bounds × scale.
+ * viewBox is fitted to the drawing's real ink and the SVG's
+ * `width`/`height` attributes become box × scale.
  *
- * The library draws at `scale: 0`, which squares the viewBox (side =
- * max(w, h), content centered). For elongated molecules that inflates the
- * box into a square full of whitespace — a long chain ends up with half a
- * screen of empty space above and below, and the scroll host's scrollbar
- * sits below it. The pre-square bounds survive in the `<mask>` region
- * (`constructSvg` writes its `x`/`y`/`width`/`height` from the same
- * min/max the squaring uses), so the square filler is cut back out here:
- * the box hugs the drawing at every scale. The box is scale-proportional,
- * so `align` and inter-block spacing behave identically at any multiplier —
- * the property the squared box was chosen for — and scaling stays a pure
- * vector resize (attributes only, viewBox untouched).
+ * The box = union(library geometric bounds, measured ink bounds) + a
+ * safety pad. The library's squared `scale: 0` box is deliberately unused:
+ * its square filler was huge whitespace on elongated molecules, and its
+ * bounds — while scale-proportional — underestimate label ink (see
+ * measureInk). The fitted box hugs the drawing at every scale and cannot
+ * clip labels on any font or engine. Scaling stays a pure vector resize
+ * (attributes only, viewBox untouched).
  */
 function applyScale(svg: SVGSVGElement, scale: number): void {
-  let bounds: { x: number; y: number; w: number; h: number } | null = null;
-
-  const mask = svg.querySelector("mask");
-  if (mask) {
-    const x = parseFloat(mask.getAttribute("x") ?? "");
-    const y = parseFloat(mask.getAttribute("y") ?? "");
-    const w = parseFloat(mask.getAttribute("width") ?? "");
-    const h = parseFloat(mask.getAttribute("height") ?? "");
-    if (Number.isFinite(x) && Number.isFinite(y) && w > 0 && h > 0) {
-      bounds = { x, y, w, h };
-    }
-  }
-
+  let bounds: Box | null = maskBounds(svg);
   if (!bounds) {
-    // Defensive fallback (mask shape changed upstream): keep the library's
+    // Defensive fallback (mask shape changed upstream): the library's
     // squared box rather than failing the render.
     const vb = (svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/);
     const w = parseFloat(vb[2] ?? "");
@@ -168,6 +230,16 @@ function applyScale(svg: SVGSVGElement, scale: number): void {
       h: side,
     };
   }
+
+  const ink = measureInk(svg);
+  if (ink) bounds = unionBox(bounds, ink);
+  const pad = ink ? INK_PAD : FALLBACK_TEXT_PAD;
+  bounds = {
+    x: bounds.x - pad,
+    y: bounds.y - pad,
+    w: bounds.w + 2 * pad,
+    h: bounds.h + 2 * pad,
+  };
 
   svg.setAttribute(
     "viewBox",
@@ -251,12 +323,15 @@ export function renderSmilesSvg(
     null,
     resolveThemeName(options.theme),
   ) as SVGSVGElement;
-  applyScale(svg, options.scale);
   bakeSvgFonts(svg, drawer.opts as unknown as SmilesDrawerOpts);
   // Zoom-proof label placement (WebKit page zoom drifts em offsets and
   // CSS-px translates) — must run after bakeSvgFonts so the font-size
   // attributes it reads are in place.
   normalizeSmilesTextPlacement(svg);
+  // Box fitting runs last, on the final text: it measures the real painted
+  // ink (getBBox) so the box cannot clip labels regardless of the font or
+  // engine's text metrics.
+  applyScale(svg, options.scale);
   // smiles-drawer sets xmlns/xmlns:xlink as plain attributes on the target
   // it creates; XMLSerializer emits its own namespace declarations next to
   // those, so the serialized SVG carries them twice and strict consumers

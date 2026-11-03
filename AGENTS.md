@@ -55,5 +55,6 @@ which pin engine-internal workarounds with dedicated regression tests.
 Design and implementation plans live in `.opencode/plans/`:
 
 - `extension-system.md` — Extension architecture (lazy-loading, fence attributes, KaTeX refactor, mermaid, ABC, SMILES)
+- `smiles-extension.md` — SMILES molecular structures extension (smiles-drawer, scale/align/theme options, ODT export)
 - `EXPORT-PLAN.md` — Export pipeline design
 - `PLAN-SEARCH.md` — Search implementation plan

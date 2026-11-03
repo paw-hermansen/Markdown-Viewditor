@@ -89,7 +89,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "Applies to inline <svg>, <img src=*.svg>, markdown ![…](.svg), and Mermaid diagrams. PNG: wider compatibility. SVG: vector, may not render in all viewers.",
+          hint: "Applies to inline <svg>, <img src=*.svg>, markdown ![…](.svg), Mermaid diagrams, and SMILES structures. PNG: wider compatibility. SVG: vector, may not render in all viewers.",
           kind: "toggle",
           value: false,
         },
@@ -203,12 +203,16 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
   const opts = readOptions(ctx.options);
 
   // Extract HTML comment directives from the markdown source as
-  // line-based state maps so each math/mermaid token can look up its
-  // own state.
+  // line-based state maps so each math/mermaid/SMILES token can look up
+  // its own state.
   const directiveStateMap = extractDirectiveStateMap(ctx.markdown, "math");
   const mermaidDirectiveStateMap = extractDirectiveStateMap(
     ctx.markdown,
     "mermaid",
+  );
+  const smilesDirectiveStateMap = extractDirectiveStateMap(
+    ctx.markdown,
+    "smiles",
   );
 
   const { bodyXml, autoStyles, images, mathObjects } = await buildDocument(
@@ -218,6 +222,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     opts,
     directiveStateMap,
     mermaidDirectiveStateMap,
+    smilesDirectiveStateMap,
   );
 
   // Prepend frontmatter/skill card if the option is enabled.

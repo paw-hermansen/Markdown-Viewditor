@@ -94,6 +94,39 @@
     const id = openId;
     for (const c of Object.values(controllers)) c.close();
     if (id) controllers[id as keyof typeof controllers].open();
+    updateAllScrollCues();
+  });
+
+  /**
+   * Scroll-cue classes for a scrolling popover: `scrollable` while the
+   * content overflows the capped height, `can-scroll-down` while more list
+   * lies below the visible region. The bottom fade (styles) keys off both —
+   * the cue is what tells the user the list continues, since WebKitGTK's
+   * overlay scrollbars show nothing until hover (and `scrollbar-gutter`
+   * reserves nothing there).
+   */
+  function updateScrollCue(pop: HTMLElement | null) {
+    if (!pop) return;
+    const overflow = pop.scrollHeight - pop.clientHeight > 1;
+    const atEnd = pop.scrollTop + pop.clientHeight >= pop.scrollHeight - 1;
+    pop.classList.toggle("scrollable", overflow);
+    pop.classList.toggle("can-scroll-down", overflow && !atEnd);
+  }
+
+  function updateAllScrollCues() {
+    updateScrollCue(levelPopRef ?? null);
+    updateScrollCue(violationsPopRef ?? null);
+  }
+
+  function onPopoverScroll(e: Event) {
+    updateScrollCue(e.currentTarget as HTMLElement);
+  }
+
+  // Re-measure the scroll cue when the window (and with it the popovers'
+  // capped height) changes — app zoom shrinks the CSS viewport too.
+  $effect(() => {
+    window.addEventListener("resize", updateAllScrollCues);
+    return () => window.removeEventListener("resize", updateAllScrollCues);
   });
 
   let violations = $derived([...levelState.violations].sort(compareFeatureToggles));
@@ -163,7 +196,7 @@
         {levelLabel} <span class="caret">&#x25BE;</span>
       </button>
       {#if openId === 'level'}
-        <div bind:this={levelPopRef} class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0">
+        <div bind:this={levelPopRef} class="popover level-popover" role="dialog" aria-label="Markdown level and feature toggles" tabindex="0" onscroll={onPopoverScroll}>
           <div class="level-options">
             {#each LEVELS as lvl}
               <button
@@ -205,7 +238,7 @@
         &#x26A0; {violations.length}
       </button>
       {#if openId === 'violations' && violations.length > 0}
-        <div bind:this={violationsPopRef} class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0">
+        <div bind:this={violationsPopRef} class="popover violations-popover" role="dialog" aria-label="Feature violations" tabindex="0" onscroll={onPopoverScroll}>
           {#each violations as v}
             <div class="violation-row">
               <div class="violation-msg">{violationMessageFor(v)}</div>
@@ -372,7 +405,7 @@
     min-width: 220px;
     /* Never taller than the space above the status bar (opens upward), so the
        popup scrolls instead of running off-screen at high zoom. */
-    max-height: min(60vh, calc(100vh - 44px));
+    max-height: min(75vh, calc(100vh - 44px));
     overflow-y: auto;
     /* Reserve the scrollbar's strip so scrolling never covers the controls. */
     scrollbar-gutter: stable;
@@ -381,9 +414,52 @@
     color: var(--text-primary);
   }
 
+  /* Always-visible scrollbars. WebKitGTK (and macOS) use overlay scrollbars
+     that show nothing until hover — `scrollbar-gutter` reserves nothing on
+     them — but styling ::-webkit-scrollbar replaces them with a persistent,
+     space-reserving one, which is the discoverability cue for scrollable
+     popovers (the feature checklist especially). Gecko takes the
+     scrollbar-width/color fallbacks. */
+  :global(.popover) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  :global(.popover::-webkit-scrollbar) {
+    width: 8px;
+  }
+  :global(.popover::-webkit-scrollbar-track) {
+    background: transparent;
+  }
+  :global(.popover::-webkit-scrollbar-thumb) {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  :global(.popover::-webkit-scrollbar-thumb:hover) {
+    background: var(--accent);
+  }
+
+  /* Scroll cue: while more list lies below the visible region, a fade
+     pinned to the scrollport's bottom edge hints that the list continues.
+     Sticky so it stays put while scrolling; hidden at the end (the class is
+     dropped when the popover is scrolled to the bottom or fits). Global like
+     the scrollbar rules — the class is toggled imperatively (updateScrollCue),
+     which Svelte's unused-CSS check cannot see. */
+  :global(.popover.can-scroll-down::after) {
+    content: '';
+    position: sticky;
+    bottom: 0;
+    display: block;
+    height: 1.25em;
+    margin-top: -1.25em;
+    background: linear-gradient(to bottom, transparent, var(--bg-secondary));
+    pointer-events: none;
+  }
+
   .level-options {
-    display: flex;
-    flex-direction: column;
+    /* 2x2 grid: the four level choices in two rows instead of four, so the
+       feature checklist below starts higher and scrolls less. */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 2px;
   }
 

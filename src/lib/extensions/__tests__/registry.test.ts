@@ -4,6 +4,7 @@ import {
   registerExtension,
   registerExtensionSchema,
   getExtensionSchema,
+  getExtensionSchemaForLanguage,
   detectExtensions,
   resetExtensions,
   listExtensions,
@@ -48,6 +49,30 @@ describe("registry", () => {
 
   it("getExtensionSchema returns undefined for unregistered id", () => {
     expect(getExtensionSchema("nonexistent")).toBeUndefined();
+  });
+
+  it("getExtensionSchemaForLanguage resolves trigger-language aliases", () => {
+    const smiles: MarkdownExtension = {
+      id: "smiles",
+      label: "SMILES Structures",
+      triggerLanguages: ["smiles", "smi"],
+      fenceOptionsSchema: katexSchema,
+      detect: () => false,
+    };
+    registerExtension(smiles);
+    // The direct id lookup does not know the alias — that is the gap the
+    // language-aware lookup closes (```smi {attrs} must carry the same
+    // schema as ```smiles {attrs}).
+    expect(getExtensionSchema("smi")).toBeUndefined();
+    expect(getExtensionSchemaForLanguage("smi")).toEqual(katexSchema);
+    expect(getExtensionSchemaForLanguage("smiles")).toEqual(katexSchema);
+    expect(getExtensionSchemaForLanguage("unknown-lang")).toBeUndefined();
+  });
+
+  it("getExtensionSchemaForLanguage falls back to registered schema aliases", () => {
+    registerExtension(dummyExtension);
+    registerExtensionSchema("math", katexSchema);
+    expect(getExtensionSchemaForLanguage("math")).toEqual(katexSchema);
   });
 
   it("detectExtensions finds math content", () => {

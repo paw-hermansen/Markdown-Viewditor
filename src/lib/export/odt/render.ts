@@ -21,6 +21,7 @@ export async function buildDocument(
   options: ExportOptions,
   directiveStateMap: Array<[number, Record<string, unknown>]> = [],
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
+  smilesDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
 ): Promise<BuildResult> {
   const ctx = createBuildContext({
     invokeImpl,
@@ -28,6 +29,7 @@ export async function buildDocument(
     options,
     directiveStateMap,
     mermaidDirectiveStateMap,
+    smilesDirectiveStateMap,
   });
 
   // ── pre-render footnote bodies ──

@@ -24,7 +24,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 13 toggles from plans 1, 2, mhchem, highlight, extension-settings, and mermaid", () => {
+  it("registers the 14 toggles from plans 1, 2, mhchem, highlight, extension-settings, mermaid, and SMILES", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -40,6 +40,7 @@ describe("markdown-levels registry & presets", () => {
       "math-latex",
       "chemical-formulas",
       "mermaid",
+      "smiles",
     ]);
   });
 
@@ -62,7 +63,7 @@ describe("markdown-levels registry & presets", () => {
     );
   });
 
-  it("advanced preset enables all 13 toggles", () => {
+  it("advanced preset enables all 14 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -78,6 +79,7 @@ describe("markdown-levels registry & presets", () => {
         "highlight",
         "extension-settings",
         "mermaid",
+        "smiles",
       ].sort(),
     );
   });
@@ -158,6 +160,7 @@ describe("compareFeatureToggles", () => {
       "extension-settings",
       "highlight",
       "math-latex",
+      "smiles",
       "frontmatter",
     ]);
   });
@@ -344,6 +347,42 @@ describe("markdown-levels detection", () => {
 
   it("does NOT detect math without settings", async () => {
     const used = await analyzeContent("$$x^2$$");
+    expect(used.find((u) => u.id === "extension-settings")).toBeUndefined();
+  });
+
+  it("detects SMILES structures", async () => {
+    const used = await analyzeContent("```smiles\nCCO\n```");
+    const t = used.find((u) => u.id === "smiles");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([1]);
+  });
+
+  it("detects ```smi fences as SMILES structures", async () => {
+    const used = await analyzeContent("text\n\n```smi\nCCO\n```");
+    const t = used.find((u) => u.id === "smiles");
+    expect(t).toBeDefined();
+    expect(t!.lines).toEqual([3]);
+  });
+
+  it("detects SMILES extension settings via fence attributes", async () => {
+    const used = await analyzeContent("```smiles {scale=1.5}\nCCO\n```");
+    expect(used.find((u) => u.id === "smiles")).toBeDefined();
+    const settings = used.find((u) => u.id === "extension-settings");
+    expect(settings).toBeDefined();
+    expect(settings!.lines).toEqual([1]);
+  });
+
+  it("detects extension settings on the ```smi fence alias too", async () => {
+    // ```smi is an alias of ```smiles and carries the same schema; the
+    // settings check must not silently skip it.
+    const used = await analyzeContent("```smi {scale=1.5}\nCCO\n```");
+    const settings = used.find((u) => u.id === "extension-settings");
+    expect(settings).toBeDefined();
+    expect(settings!.lines).toEqual([1]);
+  });
+
+  it("does NOT detect extension settings on a bare ```smi fence", async () => {
+    const used = await analyzeContent("```smi\nCCO\n```");
     expect(used.find((u) => u.id === "extension-settings")).toBeUndefined();
   });
 });

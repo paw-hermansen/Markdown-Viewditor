@@ -12,6 +12,7 @@ import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
 import { scaleWideMathForPrint } from "../math-fit";
 import { scopeSubtreeIds } from "../id-scope";
 import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
+import { prepareSmilesForPrint } from "$lib/extensions/smiles/print-knockout";
 import { VIEWER_CONTENT_MAX_WIDTH_PX } from "$lib/constants/layout";
 
 /**
@@ -276,6 +277,12 @@ export function buildPrintContainer(
   // container's CSS `zoom`, shrinking the label text inside correctly sized
   // boxes in Linux PDFs.
   scopeSubtreeIds(printDiv, `print-clone-${nextPrintScopeId++}-`);
+  // SVG `mask`-based knockout (SMILES label knockouts) degrades under the
+  // clone's CSS `zoom`/transform scaling in print output — the bond lines
+  // print through the letters. Convert it to painted knockout shapes in the
+  // page background color; plain filled shapes print reliably on every
+  // engine and route. See $lib/extensions/smiles/print-knockout.ts.
+  prepareSmilesForPrint(printDiv, pageBackground.color);
   printDiv.style.width = `${layout.layoutWidthPx}px`;
 
   let scalerDiv: HTMLDivElement | null = null;

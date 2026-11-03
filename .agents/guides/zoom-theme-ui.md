@@ -58,8 +58,17 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   controls. Fixed-content popovers (the zoom popup) disable scrolling
   entirely instead: `placePopover(..., capHeight = false)` plus
   `overflow-y: visible`. `scrollbar-gutter: stable` is kept for other
-  engines, but it reserves nothing on WebKitGTK's overlay scrollbars. The
-  top bar keeps a hard minimum gap between the filename and the
+  engines, but it reserves nothing on WebKitGTK's overlay scrollbars —
+  which is why popovers style `::-webkit-scrollbar` (`StatusBar.svelte`):
+  a styled scrollbar replaces the overlay with a persistent,
+  space-reserving one, so scrollable popovers visibly announce that more
+  content exists (Gecko falls back to `scrollbar-width`/`scrollbar-color`).
+  On top of that, scrollable popovers get a bottom fade cue pinned to the
+  scrollport edge (`sticky` `::after`, shown while not scrolled to the
+  end — the `scrollable`/`can-scroll-down` classes maintained on open,
+  scroll, and resize). The status-bar popovers cap at `75vh` so the
+  feature checklist (registry-driven; extensions add entries) usually
+  fits at 100% zoom. The top bar keeps a hard minimum gap between the filename and the
   Edit/Split/View toggle (`gap: 16px` on `.toolbar` — flex gaps hold even
   when the row overflows, where `space-between` collapses to zero) and the
   filename yields first (`max-width: clamp(0px, 30vw - 120px, 200px)`), so

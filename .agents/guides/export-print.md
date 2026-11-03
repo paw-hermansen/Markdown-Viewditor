@@ -184,6 +184,27 @@ The print clone reproduces the Viewer exactly, then scales to paper:
   aria / `for` / `<style>` references are rewritten to follow — including
   `#id` selectors inside Mermaid's per-SVG `<style>`, or the diagram loses
   its styles.
+- SMILES structures in the clone are rewritten from mask-based label
+  knockout to painted knockout shapes (`prepareSmilesForPrint` in
+  `src/lib/extensions/smiles/print-knockout.ts`, called from
+  `buildPrintContainer`): the `<mask>` knockout circles stop lining up with
+  the labels under the clone's CSS `zoom`/transform scaling (same WebKit
+  inline-SVG zoom family as the bugs above), so the bond lines print
+  through the letters while screen, HTML and ODT output are fine. The
+  conversion stacks the mask's black circles — filled with the resolved
+  `pageBackground.color`, i.e. invisible against the printed page — between
+  the bond group and the labels and drops the mask. Known deviation: a
+  theme with a background _image_ gets solid-color discs (the mask needed no
+  color). The viewer and the HTML/ODT exports keep the mask untouched.
+  Width fitting prints like Mermaid's `fitToWidth=false`: the `.print-content`
+  rules clamp scroll-mode structures (`max-width: 100%` on the
+  `.smiles-scroll-content` wrapper and the SVG) to the clone's content
+  column — the page width — so wide structures scale down instead of
+  scrolling. ODT export is theme-neutral like the rest of the ODT document:
+  `theme=auto` structures render with the `light` palette (the dark palettes
+  would be invisible on the white page — see "SMILES SVG Contract" item 6 in
+  [Math & Mermaid Contracts](math-mermaid.md)); explicitly pinned themes are
+  honored.
 - Printer-friendly mode is fully theme-independent: a small CSS-variable
   override palette in app.css plus GitHub Light `.hljs` token rules re-scoped
   to `body.print-friendly .print-content` at export time

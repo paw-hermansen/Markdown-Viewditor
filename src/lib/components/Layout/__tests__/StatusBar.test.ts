@@ -252,6 +252,52 @@ describe("StatusBar", () => {
     ]);
   });
 
+  it("marks the level popover scrollable and fades while more list lies below", async () => {
+    render(StatusBar);
+    await fireEvent.click(
+      screen.getByLabelText("Markdown compatibility level"),
+    );
+    const pop = document.querySelector(".popover") as HTMLElement;
+    // jsdom has no layout: fake the scroll metrics.
+    Object.defineProperty(pop, "scrollHeight", {
+      value: 300,
+      configurable: true,
+    });
+    Object.defineProperty(pop, "clientHeight", {
+      value: 100,
+      configurable: true,
+    });
+    Object.defineProperty(pop, "scrollTop", {
+      value: 0,
+      configurable: true,
+    });
+
+    await fireEvent.scroll(pop);
+    expect(pop.classList.contains("scrollable")).toBe(true);
+    expect(pop.classList.contains("can-scroll-down")).toBe(true);
+
+    // Scrolled to the bottom: still scrollable, but the fade is dropped.
+    Object.defineProperty(pop, "scrollTop", {
+      value: 200,
+      configurable: true,
+    });
+    await fireEvent.scroll(pop);
+    expect(pop.classList.contains("scrollable")).toBe(true);
+    expect(pop.classList.contains("can-scroll-down")).toBe(false);
+  });
+
+  it("adds no scroll cue when the list fits", async () => {
+    render(StatusBar);
+    await fireEvent.click(
+      screen.getByLabelText("Markdown compatibility level"),
+    );
+    const pop = document.querySelector(".popover") as HTMLElement;
+    // jsdom's zero metrics mean the content fits.
+    await fireEvent.scroll(pop);
+    expect(pop.classList.contains("scrollable")).toBe(false);
+    expect(pop.classList.contains("can-scroll-down")).toBe(false);
+  });
+
   it("hides the violation badge when there are no violations", () => {
     render(StatusBar);
     const badge = screen.queryByLabelText(/markdown feature violations/);

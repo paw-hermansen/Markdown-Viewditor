@@ -8,6 +8,11 @@ import { mergeOptions } from "$lib/extensions/directive-merge";
 import { KATEX_OPTIONS_SCHEMA } from "$lib/extensions/katex/renderer";
 import { rasterizeSvg } from "../svg-rasterize";
 import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
+import { SMILES_OPTIONS_SCHEMA } from "$lib/extensions/smiles/schema";
+import {
+  resolveSmilesOptions,
+  type SmilesRenderOptions,
+} from "$lib/extensions/smiles/renderer";
 import { escapeXml } from "$lib/utils/escape";
 import { S } from "./odf-styles";
 import { fitFrameToPage } from "./dimensions";
@@ -50,6 +55,30 @@ export function buildMermaidOptions(
     fitToWidth:
       typeof merged.fitToWidth === "boolean" ? merged.fitToWidth : true,
   };
+}
+
+export function buildSmilesOptions(
+  ctx: OdtBuildContext,
+  sourceLine: number,
+  fenceOpts: Record<string, unknown> = {},
+): SmilesRenderOptions {
+  const dirState = lookupDirectiveState(
+    ctx.smilesDirectiveStateMap,
+    sourceLine,
+  );
+  const merged = mergeOptions(SMILES_OPTIONS_SCHEMA, dirState, fenceOpts);
+  const opts = resolveSmilesOptions(merged);
+  // ODT is a neutral document — white page, black text, no theme background
+  // (the same contract as the hardcoded light hljs palette in highlight.ts,
+  // the forced #000 text in math-render.ts, and Mermaid's export variant
+  // pinning its default/light theme). The dark SMILES palettes paint
+  // white strokes and labels on transparency, which would be invisible
+  // there. `theme=auto` means "match the context" and the ODT context is
+  // the neutral document; an explicitly pinned theme is the writer's
+  // deliberate choice and is honored (Mermaid honors frontmatter
+  // `config.theme` pins the same way).
+  if (opts.theme === "auto") opts.theme = "light";
+  return opts;
 }
 
 export function ensureAutoStyle(

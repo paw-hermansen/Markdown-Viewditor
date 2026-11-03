@@ -495,7 +495,94 @@ natural size (measured: 360×64 → 400×71, container-independent;
 and keeps the aspect ratio when the print clamp (`max-width: 100%`) shrinks
 an over-wide diagram.
 
-## Upgrading KaTeX / Mermaid
+## SMILES SVG Contract (smiles-drawer)
+
+The SMILES renderer (`smiles/renderer.ts`) pins six library behaviors, covered
+by the `smiles/__tests__/` suites and `export/__tests__/odt-smiles.test.ts`:
+
+1. **Size/box contract** — every structure is drawn with the library's
+   `scale: 0`, then the box is fitted to the drawing's real painted ink
+   (`applyScale`/`measureInk` in `renderer.ts`): the union of the library's
+   geometric bounds (the `<mask>` region its `constructSvg` writes from the
+   pre-square min/max) and the measured `getBBox()` ink, plus a safety pad.
+   This is the `fo-measure.ts` lesson applied to SMILES: the library only
+   _estimates_ text extents (`write()`: anchor ± measured height), and real
+   glyph ink exceeds those estimates by a font- and engine-dependent amount
+   (subscripts, the 0.36em baseline shift, `dominant-baseline` placement;
+   Arial vs its Linux fontconfig substitutes; Blink vs WebKit baseline
+   resolution) — which clipped labels differently on Windows and Linux.
+   Measuring the painted ink is exact everywhere; the jsdom fallback (no
+   `getBBox`) pads the geometric box by a label size instead. The box hugs
+   the drawing at every scale: no square filler whitespace on elongated
+   molecules (the reason the squared box was dropped), while staying
+   scale-proportional, so `align` and inter-block spacing behave identically
+   at any multiplier. The user's `scale` multiplier is applied by overriding
+   the SVG's `width`/`height` attributes only. The library's own `scale>0`
+   path (inline `style` width) is deliberately unused: it fights the
+   responsive CSS and the export dimension sniffer. Width fitting
+   is the two-mode `fitToWidth` CSS (pinned by `smiles/__tests__/styles.test.ts`):
+   `true` (default) scales down to the column (`max-width: 100%;
+height: auto`), `false` keeps the scaled size and scrolls horizontally —
+   with alignment carried by auto margins on the `.smiles-scroll-content`
+   wrapper (justify-content centering would make the left overflow
+   unreachable in the scroll container). Print clamps both modes to the
+   content column. Never `width: auto` (same WebKitGTK object-sizing trap
+   as the Mermaid contract above).
+2. **XML well-formedness** — smiles-drawer sets `xmlns`/`xmlns:xlink` as
+   plain attributes on the target it creates; `XMLSerializer` re-emits its
+   own namespace declarations next to those, so the serialized SVG carries
+   them twice and strict consumers (LibreOffice svgio, usvg) reject it as
+   malformed XML. `renderSmilesSvg` drops the manual copies before
+   serializing (same failure class as the KaTeX label `xlink:href` fix in
+   the Mermaid export pipeline).
+3. **Label font baking** — shapes paint via presentation attributes
+   (LibreOffice-safe), but the label font lives only in the SVG's `<style>`
+   block (`.element`/`.sub`); consumers with partial CSS support can drop it
+   and degrade every label to the fallback font. `renderSmilesSvg` bakes
+   `font-family`/`font-size` onto those text elements as presentation
+   attributes — lowest cascade layer, so a consumer that DOES honor the
+   `<style>` block still resolves the same value.
+4. **Label placement vs page zoom** (`text-offsets.ts`) — smiles-drawer
+   places every atom label with em offsets (`y="0.36em"`, stacked
+   `y="±0.9em"`) inside a CSS-px translate group
+   (`<g style="transform: translateX(..px) translateY(..px)">`). Both drift
+   under WebKit page zoom (the pinned Mermaid bugs: em offsets resolve
+   against the zoom-divided font size; translate-based text placement
+   collapses at high zoom), so only the letters move while bonds stay put.
+   `normalizeSmilesTextPlacement` folds both into absolute user units at
+   render time: em offsets resolve against the baked `font-size`
+   attributes (deterministic — no calibration probe needed), the group
+   translate folds into `x`/`y` (explicit tspan coordinates shift by it;
+   flowing tspans keep flowing). The rewrites are exact at zoom 1 and
+   idempotent.
+5. **Label knockout vs print** (`print-knockout.ts`) — the knockout that
+   erases bond segments under labels is an SVG `<mask>` (white rect + black
+   circles, `mask="url(#…-text-mask)"` on the bond group). Screen, HTML and
+   ODT paint it correctly; the PDF/print clone cannot rely on that (its
+   CSS-`zoom`/transform scaling mis-scales inline SVG resources — the same
+   family as items in the Print/PDF Fidelity Contract). The print clone
+   therefore swaps the mask for painted knockout shapes in the resolved
+   page background color (`prepareSmilesForPrint`, hooked in
+   `buildPrintContainer`); everything else keeps the mask and its
+   transparency. Contract details in
+   [Export & Print](export-print.md).
+6. **Theme vs the neutral ODT document** — the dark palettes paint white
+   strokes/labels on transparency, invisible on ODT's white, background-less
+   page. ODT export resolves `theme=auto` to the `light` palette
+   (`buildSmilesOptions` in `export/odt/media.ts`) — the same
+   neutral-document contract as Mermaid's export variant (its
+   `themeId: "export"` pins the default/light Mermaid theme), the hardcoded
+   light hljs palette in `odt/highlight.ts`, and math-render's forced `#000`
+   raster text. Explicitly pinned themes are honored in every export (Mermaid
+   honors frontmatter `config.theme` pins the same way). PDF/print and HTML
+   keep the app theme — both carry the theme background.
+
+ODT frames carry the scaled pixel size (attributes already include `scale`),
+clamped to the page by `fitFrameToPage` — there is no viewer→page rescale as
+for Mermaid, because the drawing's labels are sized in pt and must match
+their PDF/print size.
+
+## Upgrading KaTeX / Mermaid / smiles-drawer
 
 The zoom fixes pin into library internals: KaTeX's `.vlist-s` anchor cell and
 its `font-size: 1px` CSS rule (the 2px pin), and Mermaid's em-based `dy`/`dx`
@@ -511,11 +598,13 @@ obsolete) — re-measure with the zoom-sweep harness before touching either.
 
 Upgrade checklist:
 
-1. `npm install katex@<ver>` / `npm install mermaid@<ver>` (the `^0.16` /
-   `^12` ranges keep majors out — KaTeX 0.18 renames CSS classes outright).
+1. `npm install katex@<ver>` / `npm install mermaid@<ver>` / `npm install smiles-drawer@<ver>` (the `^0.16` /
+   `^12` / `^2.4` ranges keep majors out — KaTeX 0.18 renames CSS classes outright).
 2. KaTeX: run `scripts/update-katex-css.sh` to regenerate the woff2
    stylesheet the pin targets.
-3. `npx vitest run` — the upgrade-contract suites are the tripwires.
+3. `npx vitest run` — the upgrade-contract suites are the tripwires, and the
+   SMILES renderer contract tests pin the smiles-drawer drawing API and size
+   behavior.
 4. On Linux: `python3 testing/tools/zoom-sweep/mermaid-zoom-sweep.py`.
 5. Manual (the zoom bugs only reproduce on WebKit): S6 and S15 of the test
    plan — especially 15.7–15.10 and 15.19–15.26 — on Linux and macOS.

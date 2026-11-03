@@ -1,10 +1,11 @@
 import { registerExtension, registerExtensionSchema } from "./registry";
 import { katexExtension } from "./katex/index";
 import { mermaidExtension } from "./mermaid/index";
+import { smilesExtension } from "./smiles/index";
 
 /**
  * Register all built-in extensions. Called once during initMarkdownIt().
- * Future extensions (ABC, SMILES) are added here.
+ * Future extensions (ABC) are added here.
  */
 export async function registerBuiltinExtensions(): Promise<void> {
   registerExtension(katexExtension);
@@ -19,5 +20,12 @@ export async function registerBuiltinExtensions(): Promise<void> {
   // <!-- mermaid: key=val --> directives are validated against the mermaid schema.
   if (mermaidExtension.fenceOptionsSchema) {
     registerExtensionSchema("mermaid", mermaidExtension.fenceOptionsSchema);
+  }
+
+  registerExtension(smilesExtension);
+  // Register the SMILES schema under the "smiles" namespace alias so that
+  // <!-- smiles: key=val --> directives are validated against the SMILES schema.
+  if (smilesExtension.fenceOptionsSchema) {
+    registerExtensionSchema("smiles", smilesExtension.fenceOptionsSchema);
   }
 }

@@ -585,3 +585,57 @@ graph LR
 graph LR
     A["$x^2$"] --> B
 ```
+
+## SMILES — Molecular Structures
+
+The structures below should render as clean skeletal formula diagrams
+(SVG) — no raw SMILES text visible, no layout breakage.
+
+### Basic Structure (caffeine)
+
+```smiles
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C
+```
+
+### Fence Attributes: Scale, Align, Theme
+
+```smiles {scale=1.5 align=left theme=matrix}
+CC(=O)OC1=CC=CC=C1C(=O)O
+```
+
+The aspirin structure above should be 150% size, left-aligned, in the
+"matrix" theme (independent of the app dark/light theme). The cyclohexane
+below keeps its scaled size and scrolls horizontally instead of shrinking
+to fit.
+
+```smiles {fitToWidth=false scale=2}
+C1CCCCC1
+```
+
+### HTML Comment Directive
+
+<!-- smiles: theme=cyberpunk -->
+
+```smiles {scale=0.75}
+C1CC1
+```
+
+The small cyclopropane above should use the "cyberpunk" theme from the
+directive comment (which itself must not be visible). After the reset
+directive below, the next structure uses the default ("auto") theme again.
+
+<!-- smiles: !theme -->
+
+```smiles {scale=0.75}
+C1CC1
+```
+
+### Invalid SMILES (styled error, no crash)
+
+```smiles
+this is not a smiles string
+```
+
+The block above should show a styled error block with the source text and
+a "SMILES rendering failed" message — the rest of the document must render
+normally.

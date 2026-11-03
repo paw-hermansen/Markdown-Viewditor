@@ -67,7 +67,7 @@ Exporter registry, standalone HTML builds, and the print/PDF fidelity contract.
     `measureText().fontBoundingBox*`, honoring KaTeX's italic style —
     the reason the old `patches/html2canvas+1.4.1.patch` existed (that
     patch is gone; don't reintroduce per-library patches here without
-    checking pro first). Regression: TEST-PLAN 10.49.
+    checking pro first). Regression: TEST-PLAN S7.5.
   - Inline SVGs are rasterized as images at an integer-rounded natural
     size, so any `preserveAspectRatio` scale/anchor error becomes a
     positional error: KaTeX's `xMinYMin` (uniform scale, top-left anchor)
@@ -78,7 +78,7 @@ Exporter registry, standalone HTML builds, and the print/PDF fidelity contract.
     (`\sqrt`, wide accents, 3-piece `\overbrace`) need `… slice` + CSS
     clipping, and forcing `none` on them flattens the curves — keep the
     exact-match gate. Regression: `__tests__/math-render.test.ts`
-    ("stabilizeSvgForRaster"), TEST-PLAN 10.49.
+    ("stabilizeSvgForRaster"), TEST-PLAN S7.5.
 
 ## Print/PDF Fidelity Contract
 

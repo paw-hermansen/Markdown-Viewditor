@@ -204,8 +204,8 @@
     // Ctrl+B as native bold — see preventNativeFormat) that bypasses
     // CodeMirror's keymap entirely, so this handler intercepts the event on
     // the ancestor first, stops the native command, runs the toggle itself,
-    // and re-pins the selection the webview may move below JS. Manual
-    // regression: TEST-PLAN 4.20.
+    // and re-pins the selection the webview may move below JS. Regression:
+    // __tests__/EditorKeyboard.test.ts (Ctrl+I).
     handleKeydown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key !== 'i') return;
       e.stopImmediatePropagation();

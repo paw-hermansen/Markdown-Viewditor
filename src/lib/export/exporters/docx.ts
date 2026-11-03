@@ -82,7 +82,7 @@ export function docxOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_DOCX_RASTERIZE_MATH,
           label: "Rasterize as PNG images",
-          hint: "Off (default): native Word equations, editable and scalable. On: PNG images, rendered identically in every viewer but not editable.",
+          hint: "On: PNG images, not editable. Off: native Word equations, editable and scalable.",
           kind: "toggle",
           value: false,
         },
@@ -90,12 +90,12 @@ export function docxOptionGroups(ctx: ExportContext): OptionGroup[] {
     },
     {
       id: "svg",
-      label: "SVG images & Mermaid diagrams",
+      label: "SVG images, Mermaid diagrams, SMILES",
       options: [
         {
           id: OPTION_DOCX_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "On (default): PNG only — identical rendering in every viewer. Off: embed SVG with a PNG fallback — sharper zoom in Word 2016+, older viewers show the PNG.",
+          hint: "On: PNG only. Off: SVG with a PNG fallback — sharper zoom in Word 2016+, older viewers show the PNG.",
           kind: "toggle",
           value: true,
         },

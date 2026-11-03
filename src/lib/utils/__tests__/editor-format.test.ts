@@ -1,7 +1,8 @@
 /**
  * Characterization tests for the editor's formatting engine (pure
  * transforms). These pin the user-visible toggle heuristics that were
- * previously only covered by the manual test plan (TEST-PLAN 4.20):
+ * previously only covered by the manual test plan (the keyboard wiring
+ * that drives them is now pinned by EditorKeyboard.test.ts):
  * wrap/unwrap symmetry, the italic ladder, the inline⇄fenced code
  * round-trip, the heading level cycle and cursor placement.
  */

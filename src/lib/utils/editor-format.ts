@@ -10,7 +10,8 @@
  * dispatches the result (plus `focus()`, which every command does).
  *
  * Behavior here is user-visible and pinned by
- * __tests__/editor-format.test.ts; the manual regression is TEST-PLAN 4.20.
+ * __tests__/editor-format.test.ts; the keyboard wiring is pinned by
+ * components/Editor/__tests__/EditorKeyboard.test.ts.
  */
 import type { EditorView } from "codemirror";
 

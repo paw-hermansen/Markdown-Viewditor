@@ -196,7 +196,7 @@ measure `<foreignObject>` content with raw `getBoundingClientRect` elsewhere
 in app code without dividing out the same factor (or using rect _ratios_, like
 `fo-labels.ts`/`math-fit.ts` do). Guarded by `__tests__/fo-measure.test.ts`
 and the upgrade-contract suite, which pins that Mermaid still measures labels
-this way. Regression: TEST-PLAN 15.29–15.31 (start the app zoomed).
+this way. Regression: TEST-PLAN S5.5 (start the app zoomed).
 
 ## Mermaid Label Export Conversion (`foreignObject` → SVG text)
 
@@ -320,7 +320,7 @@ partially parse would override them. Contracts:
 Regression: `__tests__/svg-paint.test.ts`,
 `__tests__/svg-paint-integration.test.ts` (real Mermaid, per family), the
 upgrade-contract pin "diagram paint still rides on combinator CSS" (if
-that stops, the pass may be obsolete), and TEST-PLAN 10.51.
+that stops, the pass may be obsolete), and TEST-PLAN S7.4.
 
 ## Mermaid Label Math (KaTeX rasterization)
 
@@ -376,7 +376,7 @@ text — the same ratio as math in prose (app.css), by KaTeX design.
 Export/print variants deliberately skip the rasterization: `fo-labels.ts`
 must see live KaTeX to convert labels to SVG text + `<image>`. Any new
 Mermaid render path that feeds the viewer has to go through the pass.
-Regression: `__tests__/math-labels*.test.ts`, TEST-PLAN 6.47–6.52.
+Regression: `__tests__/math-labels*.test.ts`, TEST-PLAN S2.3.
 
 ## Mermaid Label Math Paint (KaTeX glyph paths)
 
@@ -441,7 +441,8 @@ missing from PDFs made there).
 `stroke-width` (CSS declarations and presentation attributes alike) to
 `2px` — the smallest width the ramp itself uses — at cache-fill time and in
 the export/print render paths, next to `normalizeSvgTextOffsets` in
-`renderer.ts`. Regression: `__tests__/svg-css.test.ts`, TEST-PLAN 6.44;
+`renderer.ts`. Regression: `__tests__/svg-css.test.ts`, TEST-PLAN S2.2
+(the Mindmap diagram);
 the upgrade-contract suite pins that Mermaid still emits the negative
 values (if that stops, the pass may be removable).
 
@@ -481,8 +482,8 @@ stashed next to the source in `mermaidSources`.
 
 Upgrade pins in `__tests__/upgrade-contract.test.ts`: Mermaid still honors
 `gantt.useWidth` (viewBox width follows it), and `isContainerSizedDiagram`
-still agrees with `mermaid.detectType`. Regression: TEST-PLAN 6.45–6.46,
-10.42, 14.22.
+still agrees with `mermaid.detectType`. Regression: TEST-PLAN S2.2
+(the Gantt chart), S7.4 (ODT), S7.7 (PDF).
 
 Related sizing contract for `fitToWidth=false` (all diagram families): the
 natural size comes from the explicit `width`/`height` attributes

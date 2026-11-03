@@ -249,4 +249,75 @@ describe("AppLayout", () => {
     });
     await checkA11y(container);
   });
+
+  describe("split resize handle", () => {
+    function setup(viewMode: "split" | "editor" | "viewer") {
+      const onViewModeChange = vi.fn();
+      render(AppLayout, {
+        props: { viewMode, onViewModeChange, children: snippet("content") },
+      });
+      const content = document.querySelector(".content")!;
+      vi.spyOn(content, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 1000,
+        height: 800,
+        top: 0,
+        right: 1000,
+        bottom: 800,
+        left: 0,
+        toJSON: () => ({}),
+      } as DOMRect);
+      const handle = document.querySelector(".resize-handle")!;
+      return { onViewModeChange, handle };
+    }
+
+    function drag(handle: Element, fromX: number, toX: number) {
+      fireEvent.mouseDown(handle, { clientX: fromX });
+      fireEvent.mouseMove(document, { clientX: toX });
+      fireEvent.mouseUp(document);
+    }
+
+    it("dragging to the left edge switches to viewer-only mode", () => {
+      const { onViewModeChange, handle } = setup("split");
+      drag(handle, 500, 5);
+      expect(onViewModeChange).toHaveBeenCalledWith("viewer");
+      expect(mockUpdateSplitRatio).not.toHaveBeenCalled();
+    });
+
+    it("dragging to the right edge switches to editor-only mode", () => {
+      const { onViewModeChange, handle } = setup("split");
+      drag(handle, 500, 995);
+      expect(onViewModeChange).toHaveBeenCalledWith("editor");
+      expect(mockUpdateSplitRatio).not.toHaveBeenCalled();
+    });
+
+    it("dragging in the middle keeps split mode and saves the ratio", () => {
+      const { onViewModeChange, handle } = setup("split");
+      drag(handle, 500, 300);
+      expect(onViewModeChange).not.toHaveBeenCalled();
+      expect(mockUpdateSplitRatio).toHaveBeenCalledWith(0.3);
+    });
+
+    it("dropping near the center snaps to a 50% split", () => {
+      const { onViewModeChange, handle } = setup("split");
+      drag(handle, 500, 490);
+      expect(onViewModeChange).not.toHaveBeenCalled();
+      expect(mockUpdateSplitRatio).toHaveBeenCalledWith(0.5);
+    });
+
+    it("starting a drag outside split mode switches to split first", () => {
+      const { onViewModeChange, handle } = setup("editor");
+      fireEvent.mouseDown(handle, { clientX: 500 });
+      expect(onViewModeChange).toHaveBeenCalledWith("split");
+      fireEvent.mouseUp(document);
+    });
+
+    it("double-clicking the handle resets to a 50% split", () => {
+      const { onViewModeChange, handle } = setup("editor");
+      fireEvent.doubleClick(handle);
+      expect(onViewModeChange).toHaveBeenCalledWith("split");
+      expect(mockUpdateSplitRatio).toHaveBeenCalledWith(0.5);
+    });
+  });
 });

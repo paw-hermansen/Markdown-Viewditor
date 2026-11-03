@@ -45,7 +45,7 @@
  * raw `getBoundingClientRect` elsewhere in app code without dividing out the
  * same factor (or using ratios of rects, like `fo-labels.ts` / `math-fit.ts`
  * do). The upgrade-contract suite pins that Mermaid still measures labels
- * this way. Regression: TEST-PLAN 15.29–15.31 (start the app zoomed).
+ * this way. Regression: TEST-PLAN S5.5 (start the app zoomed).
  */
 
 type RectFn = (this: Element) => DOMRect;

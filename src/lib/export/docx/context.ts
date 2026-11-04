@@ -96,6 +96,7 @@ export interface DocxBuildContext {
   directiveStateMap: Array<[number, Record<string, unknown>]>;
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   smilesDirectiveStateMap: Array<[number, Record<string, unknown>]>;
+  vegaLiteDirectiveStateMap: Array<[number, Record<string, unknown>]>;
 
   // Derived from `options`, hoisted for direct renderer access.
   rasterizeMath: boolean;
@@ -113,6 +114,7 @@ export function createBuildContext(input: {
   directiveStateMap: Array<[number, Record<string, unknown>]>;
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   smilesDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
+  vegaLiteDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
 }): DocxBuildContext {
   const { options } = input;
   const ctx: DocxBuildContext = {
@@ -136,6 +138,7 @@ export function createBuildContext(input: {
     directiveStateMap: input.directiveStateMap,
     mermaidDirectiveStateMap: input.mermaidDirectiveStateMap,
     smilesDirectiveStateMap: input.smilesDirectiveStateMap ?? [],
+    vegaLiteDirectiveStateMap: input.vegaLiteDirectiveStateMap ?? [],
     rasterizeMath: !!options[OPTION_DOCX_RASTERIZE_MATH],
     rasterizeSvgFlag: !!options[OPTION_DOCX_RASTERIZE_SVG],
     rasterScale: options[OPTION_DOCX_RASTER_RESOLUTION] ?? 2,

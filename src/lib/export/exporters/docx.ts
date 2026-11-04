@@ -210,6 +210,10 @@ async function exportDocx(ctx: ExportContext): Promise<ExportResult> {
     ctx.markdown,
     "smiles",
   );
+  const vegaLiteDirectiveStateMap = extractDirectiveStateMap(
+    ctx.markdown,
+    "vega-lite",
+  );
 
   const { bodyXml, images, rels, nums, footnoteDefs } = await buildDocument(
     ctx.tokens,
@@ -219,6 +223,7 @@ async function exportDocx(ctx: ExportContext): Promise<ExportResult> {
     directiveStateMap,
     mermaidDirectiveStateMap,
     smilesDirectiveStateMap,
+    vegaLiteDirectiveStateMap,
   );
 
   let finalBodyXml = bodyXml;

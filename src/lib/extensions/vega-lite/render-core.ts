@@ -143,8 +143,16 @@ export async function renderVegaLiteSpec(
   validateSpecInlineOnly(spec);
   const { vl, vega, expressionInterpreter } = await ensureVegaLoaded();
   const variant = context.variant ?? "viewer";
+  // Export/print are neutral documents (white page, no theme background):
+  // `theme=auto` resolves to light there, while an explicitly pinned theme
+  // is the writer's deliberate choice and is honored (the SMILES ODT
+  // contract). The export font stack is forced either way.
   const theme =
-    variant === "export" ? "light" : resolveThemeChoice(options.theme);
+    variant === "export"
+      ? options.theme === "auto"
+        ? "light"
+        : options.theme
+      : resolveThemeChoice(options.theme);
   const config = buildVegaConfig(
     theme,
     variant === "export" ? { font: EXPORT_FONT_STACK } : undefined,

@@ -214,6 +214,10 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     ctx.markdown,
     "smiles",
   );
+  const vegaLiteDirectiveStateMap = extractDirectiveStateMap(
+    ctx.markdown,
+    "vega-lite",
+  );
 
   const { bodyXml, autoStyles, images, mathObjects } = await buildDocument(
     ctx.tokens,
@@ -223,6 +227,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     directiveStateMap,
     mermaidDirectiveStateMap,
     smilesDirectiveStateMap,
+    vegaLiteDirectiveStateMap,
   );
 
   // Prepend frontmatter/skill card if the option is enabled.

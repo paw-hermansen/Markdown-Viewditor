@@ -281,3 +281,32 @@ describe("inlineImages", () => {
     expect(value).not.toContain("localimg://");
   });
 });
+
+describe("inlineImages: SVG <image> hrefs (vega image marks)", () => {
+  it("inlines localimg hrefs on SVG image elements", async () => {
+    const html =
+      '<svg><image xlink:href="localimg://localhost/%2Fa%2Fpic.png"></image></svg>';
+    const invokeImpl = vi.fn(async (cmd: string) =>
+      cmd === "read_file_as_base64" ? "QUJD" : undefined,
+    );
+    const { value } = await inlineImages(
+      html,
+      mockFetch({}),
+      invokeImpl as never,
+    );
+    expect(value).toContain("data:image/png;base64,QUJD");
+    expect(value).not.toContain("localimg://");
+  });
+
+  it("leaves remote hrefs on SVG image elements untouched", async () => {
+    const html = '<svg><image href="https://x/a.png"></image></svg>';
+    const invokeImpl = vi.fn();
+    const { value } = await inlineImages(
+      html,
+      mockFetch({}),
+      invokeImpl as never,
+    );
+    expect(value).toBe(html);
+    expect(invokeImpl).not.toHaveBeenCalled();
+  });
+});

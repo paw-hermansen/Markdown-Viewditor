@@ -7,10 +7,11 @@ import type { FenceOptionSchema } from "./types";
  * Pattern to match HTML comment directives:
  *   <!-- namespace: attrs -->
  *
- * Group 1: namespace (word characters)
+ * Group 1: namespace (word characters and hyphens — extension ids like
+ *   "vega-lite" are valid directive namespaces)
  * Group 2: attribute string (rest of line before -->)
  */
-const DIRECTIVE_RE = /^<!--\s*(\w+)\s*:\s*(.+?)\s*-->$/;
+const DIRECTIVE_RE = /^<!--\s*([\w-]+)\s*:\s*(.+?)\s*-->$/;
 
 /**
  * Preserve warnings for invalid explicit values without filling omitted keys.

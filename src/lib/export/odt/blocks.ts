@@ -4,7 +4,11 @@ import { S, listStyleName, type ListKind } from "./odf-styles";
 import { findClosing } from "../token-walker";
 import { escWithSpaces } from "./utils";
 import { hljsToSpans, renderHighlightedLine } from "./highlight";
-import { computeMermaidFrameDims, fitFrameToPage } from "./dimensions";
+import {
+  computeMermaidFrameDims,
+  computeVegaLiteFrameDims,
+  fitFrameToPage,
+} from "./dimensions";
 import {
   extractBraceAttrs,
   parseAttrString,
@@ -18,6 +22,12 @@ import {
   ensureSmilesLoaded,
   renderSmilesSvg,
 } from "$lib/extensions/smiles/renderer";
+import { VEGA_LITE_OPTIONS_SCHEMA } from "$lib/extensions/vega-lite/schema";
+import {
+  ensureVegaLoaded,
+  renderVegaLiteSvgForExport,
+} from "$lib/extensions/vega-lite/renderer";
+import { inlineSvgImageHrefs } from "../svg-images";
 import { sniffSvgDimensions } from "./images";
 import type { OdtBuildContext } from "./context";
 import {
@@ -25,6 +35,7 @@ import {
   buildMermaidOptions,
   buildMathRenderOpts,
   buildSmilesOptions,
+  buildVegaLiteOptions,
   tryRasterizeSvg,
   addSvgImage,
 } from "./media";
@@ -594,6 +605,71 @@ export async function renderTokens(
           } catch (err) {
             ctx.warnings.push(
               `SMILES rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
+            );
+          }
+        }
+        // Vega-Lite charts embed like Mermaid diagrams and SMILES structures
+        // (vector SVG, or PNG when the shared SVG/diagram rasterize option is
+        // on). The export render resolves `theme=auto` to the neutral light
+        // look, and localimg image hrefs are inlined to data: URIs so the
+        // vector embed stands alone outside the webview. On render failure we
+        // fall through and keep the source as a preformatted code block.
+        if (fenceLang === "vega-lite" || fenceLang === "vegalite") {
+          const label = `vega-lite(token@${i})`;
+          let vegaLiteFenceOpts: Record<string, unknown> = {};
+          const vegaLiteRawAttrs = extractBraceAttrs(language);
+          if (vegaLiteRawAttrs) {
+            const parsed = parseAttrString(vegaLiteRawAttrs);
+            vegaLiteFenceOpts = validateExplicitFenceOptions(
+              parsed,
+              VEGA_LITE_OPTIONS_SCHEMA,
+            );
+          }
+          const vegaLiteOpts = buildVegaLiteOptions(
+            ctx,
+            token.map?.[0] ?? 0,
+            vegaLiteFenceOpts,
+          );
+          try {
+            // Lazy-load the vega chunks outside the render so a load
+            // failure propagates to the fallthrough below.
+            await ensureVegaLoaded();
+            let svgXml = await renderVegaLiteSvgForExport(
+              token.content,
+              vegaLiteOpts,
+            );
+            const inlined = await inlineSvgImageHrefs(svgXml, ctx.invokeImpl);
+            svgXml = inlined.svg;
+            ctx.warnings.push(...inlined.warnings);
+            const dims = sniffSvgDimensions(
+              new TextEncoder().encode(svgXml),
+              label,
+              ctx.warnings,
+            ) ?? { width: 0, height: 0 };
+            const { frameWidthPx, frameHeightPx } = computeVegaLiteFrameDims(
+              dims.width,
+              dims.height,
+              vegaLiteOpts,
+            );
+            const frameDims = {
+              width: Math.round(frameWidthPx),
+              height: Math.round(frameHeightPx),
+            };
+            const rasterized = await tryRasterizeSvg(
+              ctx,
+              svgXml,
+              frameDims,
+              label,
+            );
+            const inner = rasterized ?? addSvgImage(ctx, svgXml, frameDims);
+            parts.push(
+              `      <text:p text:style-name="${S.diagramDisplay(vegaLiteOpts.align)}">${inner}</text:p>`,
+            );
+            i++;
+            break;
+          } catch (err) {
+            ctx.warnings.push(
+              `Vega-Lite rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
             );
           }
         }

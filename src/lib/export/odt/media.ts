@@ -10,6 +10,11 @@ import { rasterizeSvg } from "../svg-rasterize";
 import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
 import { SMILES_OPTIONS_SCHEMA } from "$lib/extensions/smiles/schema";
 import {
+  narrowVegaLiteOptions,
+  VEGA_LITE_OPTIONS_SCHEMA,
+  type VegaLiteRenderOptions,
+} from "$lib/extensions/vega-lite/schema";
+import {
   resolveSmilesOptions,
   type SmilesRenderOptions,
 } from "$lib/extensions/smiles/renderer";
@@ -77,6 +82,23 @@ export function buildSmilesOptions(
   // the neutral document; an explicitly pinned theme is the writer's
   // deliberate choice and is honored (Mermaid honors frontmatter
   // `config.theme` pins the same way).
+  if (opts.theme === "auto") opts.theme = "light";
+  return opts;
+}
+
+export function buildVegaLiteOptions(
+  ctx: OdtBuildContext,
+  sourceLine: number,
+  fenceOpts: Record<string, unknown> = {},
+): VegaLiteRenderOptions {
+  const dirState = lookupDirectiveState(
+    ctx.vegaLiteDirectiveStateMap,
+    sourceLine,
+  );
+  const merged = mergeOptions(VEGA_LITE_OPTIONS_SCHEMA, dirState, fenceOpts);
+  const opts = narrowVegaLiteOptions(merged);
+  // ODT is a neutral document (the SMILES `theme=auto` contract above):
+  // resolve auto to light; an explicitly pinned theme is honored.
   if (opts.theme === "auto") opts.theme = "light";
   return opts;
 }

@@ -39,3 +39,19 @@ export function computeMermaidFrameDims(
     ? fitFrameToPage(frameWidthPx, frameHeightPx)
     : { frameWidthPx, frameHeightPx };
 }
+
+/**
+ * Vega-Lite frames: the mermaid model minus `maxWidth` (charts size
+ * themselves from the spec; `fitToWidth` caps the viewer column the same
+ * way).
+ */
+export function computeVegaLiteFrameDims(
+  naturalWidthPx: number,
+  naturalHeightPx: number,
+  opts: { fitToWidth: boolean },
+): { frameWidthPx: number; frameHeightPx: number } {
+  return computeMermaidFrameDims(naturalWidthPx, naturalHeightPx, {
+    maxWidth: Number.POSITIVE_INFINITY,
+    fitToWidth: opts.fitToWidth,
+  });
+}

@@ -18,6 +18,11 @@ import { rasterizeSvg } from "../svg-rasterize";
 import { MERMAID_OPTIONS_SCHEMA } from "$lib/extensions/mermaid/schema";
 import { SMILES_OPTIONS_SCHEMA } from "$lib/extensions/smiles/schema";
 import {
+  narrowVegaLiteOptions,
+  VEGA_LITE_OPTIONS_SCHEMA,
+  type VegaLiteRenderOptions,
+} from "$lib/extensions/vega-lite/schema";
+import {
   resolveSmilesOptions,
   type SmilesRenderOptions,
 } from "$lib/extensions/smiles/renderer";
@@ -452,6 +457,23 @@ export function buildSmilesOptions(
   // DOCX is a neutral document — white page, black text (same contract as
   // ODT's forced-light SMILES theme). Dark palettes paint white strokes and
   // labels on transparency, which would be invisible there.
+  if (opts.theme === "auto") opts.theme = "light";
+  return opts;
+}
+
+export function buildVegaLiteOptions(
+  ctx: DocxBuildContext,
+  sourceLine: number,
+  fenceOpts: Record<string, unknown> = {},
+): VegaLiteRenderOptions {
+  const dirState = lookupDirectiveState(
+    ctx.vegaLiteDirectiveStateMap,
+    sourceLine,
+  );
+  const merged = mergeOptions(VEGA_LITE_OPTIONS_SCHEMA, dirState, fenceOpts);
+  const opts = narrowVegaLiteOptions(merged);
+  // DOCX is a neutral document (the SMILES `theme=auto` contract above):
+  // resolve auto to light; an explicitly pinned theme is honored.
   if (opts.theme === "auto") opts.theme = "light";
   return opts;
 }

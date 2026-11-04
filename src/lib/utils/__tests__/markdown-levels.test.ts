@@ -24,7 +24,7 @@ import {
 } from "../markdown-levels";
 
 describe("markdown-levels registry & presets", () => {
-  it("registers the 14 toggles from plans 1, 2, mhchem, highlight, extension-settings, mermaid, and SMILES", () => {
+  it("registers the 15 toggles from plans 1, 2, mhchem, highlight, extension-settings, mermaid, SMILES, and Vega-Lite", () => {
     const ids = listFeatureToggles().map((t) => t.id);
     expect(ids).toEqual([
       "tables",
@@ -41,6 +41,7 @@ describe("markdown-levels registry & presets", () => {
       "chemical-formulas",
       "mermaid",
       "smiles",
+      "vega-lite",
     ]);
   });
 
@@ -63,7 +64,7 @@ describe("markdown-levels registry & presets", () => {
     );
   });
 
-  it("advanced preset enables all 14 toggles", () => {
+  it("advanced preset enables all 15 toggles", () => {
     expect(presetFor("advanced").sort()).toEqual(
       [
         "tables",
@@ -80,6 +81,7 @@ describe("markdown-levels registry & presets", () => {
         "extension-settings",
         "mermaid",
         "smiles",
+        "vega-lite",
       ].sort(),
     );
   });
@@ -161,6 +163,7 @@ describe("compareFeatureToggles", () => {
       "highlight",
       "math-latex",
       "smiles",
+      "vega-lite",
       "frontmatter",
     ]);
   });

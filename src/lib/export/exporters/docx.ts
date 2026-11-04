@@ -224,6 +224,7 @@ async function exportDocx(ctx: ExportContext): Promise<ExportResult> {
     mermaidDirectiveStateMap,
     smilesDirectiveStateMap,
     vegaLiteDirectiveStateMap,
+    fileState.currentFile ?? null,
   );
 
   let finalBodyXml = bodyXml;

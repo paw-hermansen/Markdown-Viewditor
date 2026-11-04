@@ -637,6 +637,7 @@ export async function renderTokens(
             const rendered = await renderVegaLiteSvgForExport(
               token.content,
               vegaLiteOpts,
+              ctx.filePath,
             );
             ctx.warnings.push(...rendered.warnings);
             const inlined = await inlineSvgImageHrefs(

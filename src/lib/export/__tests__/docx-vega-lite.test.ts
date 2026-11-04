@@ -55,6 +55,7 @@ vi.mock("$lib/extensions/vega-lite/renderer", async (importOriginal) => {
 });
 
 import { exportToZip, runDocxExport, zipText } from "./docx-harness";
+import { fileState } from "$lib/stores/file.svelte";
 import {
   registerExtensionSchema,
   resetExtensions,
@@ -79,6 +80,7 @@ const DEFAULT_OPTS = {
 describe("DOCX Vega-Lite export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fileState.currentFile = null;
     mockRenderVegaLiteSvgForExport.mockResolvedValue({
       svg: VEGA_SVG,
       warnings: [],
@@ -99,6 +101,7 @@ describe("DOCX Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       DEFAULT_OPTS,
+      null,
     );
   });
 
@@ -117,11 +120,13 @@ describe("DOCX Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, theme: "light" },
+      null,
     );
     await exportToZip(`\`\`\`vega-lite {theme=dark}\n${SPEC_SRC}\n\`\`\``);
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenLastCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, theme: "dark" },
+      null,
     );
   });
 
@@ -131,6 +136,16 @@ describe("DOCX Vega-Lite export", () => {
     );
     const xml = await zipText(zip, "word/document.xml");
     expect(xml).toContain('<w:jc w:val="left"/>');
+  });
+
+  it("passes the open file path so relative image paths can resolve", async () => {
+    fileState.currentFile = "/tmp/doc.md";
+    await exportToZip(`\`\`\`vega-lite\n${SPEC_SRC}\n\`\`\``);
+    expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
+      `${SPEC_SRC}\n`,
+      DEFAULT_OPTS,
+      "/tmp/doc.md",
+    );
   });
 
   it("surfaces render warnings in the export warnings", async () => {

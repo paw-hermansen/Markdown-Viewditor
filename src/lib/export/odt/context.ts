@@ -71,6 +71,8 @@ export interface OdtBuildContext {
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   smilesDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   vegaLiteDirectiveStateMap: Array<[number, Record<string, unknown>]>;
+  /** The open markdown file, for resolving relative image paths (may be null). */
+  filePath: string | null;
   inlineState: InlineFormatState;
   contextStack: ContextType[];
 
@@ -89,6 +91,7 @@ export function createBuildContext(input: {
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   smilesDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
   vegaLiteDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
+  filePath?: string | null;
 }): OdtBuildContext {
   const { options } = input;
   return {
@@ -106,6 +109,7 @@ export function createBuildContext(input: {
     mermaidDirectiveStateMap: input.mermaidDirectiveStateMap,
     smilesDirectiveStateMap: input.smilesDirectiveStateMap ?? [],
     vegaLiteDirectiveStateMap: input.vegaLiteDirectiveStateMap ?? [],
+    filePath: input.filePath ?? null,
     inlineState: new InlineFormatState(),
     contextStack: [],
     rasterizeMath: !!options[OPTION_RASTERIZE_MATH],

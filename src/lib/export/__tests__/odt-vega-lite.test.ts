@@ -61,6 +61,7 @@ vi.mock("$lib/extensions/vega-lite/renderer", async (importOriginal) => {
 });
 
 import { exportToZip, runOdtExport } from "./odt-harness";
+import { fileState } from "$lib/stores/file.svelte";
 import {
   registerExtensionSchema,
   resetExtensions,
@@ -103,6 +104,7 @@ const exportBaseZip = (src: string, options?: Record<string, unknown>) =>
 describe("ODT Vega-Lite export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fileState.currentFile = null;
     mockRenderVegaLiteSvgForExport.mockResolvedValue({
       svg: VEGA_SVG,
       warnings: [],
@@ -125,6 +127,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       DEFAULT_OPTS,
+      null,
     );
     expect(mockEnsureVegaLoaded).toHaveBeenCalled();
     expect(mockRasterizeSvg).not.toHaveBeenCalled();
@@ -135,6 +138,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       DEFAULT_OPTS,
+      null,
     );
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain('draw:mime-type="image/svg+xml"');
@@ -188,6 +192,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, fitToWidth: false },
+      null,
     );
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toContain('svg:width="6.2500in"');
@@ -198,6 +203,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, theme: "light" },
+      null,
     );
   });
 
@@ -206,6 +212,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, theme: "dark" },
+      null,
     );
   });
 
@@ -216,6 +223,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, align: "left" },
+      null,
     );
     const xml = await zip.file("content.xml")!.async("text");
     expect(xml).toMatch(
@@ -228,6 +236,7 @@ describe("ODT Vega-Lite export", () => {
     expect(mockRenderVegaLiteSvgForExport).toHaveBeenLastCalledWith(
       `${SPEC_SRC}\n`,
       { ...DEFAULT_OPTS, align: "right" },
+      null,
     );
     const overrideXml = await overrideZip.file("content.xml")!.async("text");
     expect(overrideXml).toMatch(
@@ -250,6 +259,18 @@ describe("ODT Vega-Lite export", () => {
     const svgText = await zip.file(svgEntry!)!.async("text");
     expect(svgText).toContain("data:image/png;base64,QUJD");
     expect(svgText).not.toContain("localimg://");
+  });
+
+  it("passes the open file path so relative image paths can resolve", async () => {
+    // Without this, `square.png`-style image marks are unresolvable in
+    // ODT/DOCX (HTML/PDF reuse the viewer's already-resolved SVG).
+    fileState.currentFile = "/tmp/doc.md";
+    await exportBaseZip(`\`\`\`vega-lite\n${SPEC_SRC}\n\`\`\``);
+    expect(mockRenderVegaLiteSvgForExport).toHaveBeenCalledWith(
+      `${SPEC_SRC}\n`,
+      DEFAULT_OPTS,
+      "/tmp/doc.md",
+    );
   });
 
   it("surfaces render warnings (e.g. unreadable images) in the export warnings", async () => {

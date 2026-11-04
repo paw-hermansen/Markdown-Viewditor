@@ -228,6 +228,7 @@ async function exportOdt(ctx: ExportContext): Promise<ExportResult> {
     mermaidDirectiveStateMap,
     smilesDirectiveStateMap,
     vegaLiteDirectiveStateMap,
+    fileState.currentFile ?? null,
   );
 
   // Prepend frontmatter/skill card if the option is enabled.

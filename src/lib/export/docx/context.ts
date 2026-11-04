@@ -97,6 +97,8 @@ export interface DocxBuildContext {
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   smilesDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   vegaLiteDirectiveStateMap: Array<[number, Record<string, unknown>]>;
+  /** The open markdown file, for resolving relative image paths (may be null). */
+  filePath: string | null;
 
   // Derived from `options`, hoisted for direct renderer access.
   rasterizeMath: boolean;
@@ -115,6 +117,7 @@ export function createBuildContext(input: {
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]>;
   smilesDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
   vegaLiteDirectiveStateMap?: Array<[number, Record<string, unknown>]>;
+  filePath?: string | null;
 }): DocxBuildContext {
   const { options } = input;
   const ctx: DocxBuildContext = {
@@ -139,6 +142,7 @@ export function createBuildContext(input: {
     mermaidDirectiveStateMap: input.mermaidDirectiveStateMap,
     smilesDirectiveStateMap: input.smilesDirectiveStateMap ?? [],
     vegaLiteDirectiveStateMap: input.vegaLiteDirectiveStateMap ?? [],
+    filePath: input.filePath ?? null,
     rasterizeMath: !!options[OPTION_DOCX_RASTERIZE_MATH],
     rasterizeSvgFlag: !!options[OPTION_DOCX_RASTERIZE_SVG],
     rasterScale: options[OPTION_DOCX_RASTER_RESOLUTION] ?? 2,

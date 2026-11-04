@@ -6,7 +6,10 @@ import {
   inchesAttr,
   sniffSvgDimensions,
   resolveImage,
+  tryExtractInlineSvg,
+  tryExtractInlineHtmlSvg,
 } from "./images";
+export { tryExtractInlineSvg, tryExtractInlineHtmlSvg };
 import { isOpeningTag } from "./utils";
 import type { OdtBuildContext } from "./context";
 import {
@@ -20,74 +23,6 @@ import {
 
 export function wrapSpan(text: string, styleName: string): string {
   return `<text:span text:style-name="${escapeXml(styleName)}">${escapeXml(text)}</text:span>`;
-}
-
-export function tryExtractInlineSvg(
-  children: Token[],
-  start: number,
-): { svgXml: string; consumedCount: number } | null {
-  const first = children[start];
-  if (!first || first.type !== "text") return null;
-  const trimmed = first.content.trimStart();
-  if (!/^<svg\b/i.test(trimmed)) return null;
-
-  let svgXml = first.content;
-  let consumed = 1;
-
-  if (/<\/svg>\s*$/i.test(svgXml)) {
-    return { svgXml: svgXml.trim(), consumedCount: consumed };
-  }
-
-  for (let j = start + 1; j < children.length; j++) {
-    const t = children[j];
-    if (t.type === "softbreak") {
-      svgXml += "\n";
-    } else if (t.type === "text") {
-      svgXml += t.content;
-    } else {
-      return null;
-    }
-    consumed++;
-    if (/<\/svg>/i.test(t.content)) break;
-    if (consumed > 100) return null;
-  }
-
-  if (!/<\/svg>/i.test(svgXml)) return null;
-  return { svgXml: svgXml.trim(), consumedCount: consumed };
-}
-
-export function tryExtractInlineHtmlSvg(
-  children: Token[],
-  start: number,
-): { svgXml: string; consumedCount: number } | null {
-  const first = children[start];
-  if (!first || first.type !== "html_inline") return null;
-  const trimmed = first.content.trimStart();
-  if (!/^<svg\b/i.test(trimmed)) return null;
-
-  let svgXml = first.content;
-  let consumed = 1;
-
-  if (/<\/svg>\s*$/i.test(svgXml)) {
-    return { svgXml: svgXml.trim(), consumedCount: consumed };
-  }
-
-  for (let j = start + 1; j < children.length; j++) {
-    const t = children[j];
-    if (t.type === "html_inline") {
-      svgXml += t.content;
-    } else if (t.type === "softbreak") {
-      svgXml += "\n";
-    } else {
-      return null;
-    }
-    consumed++;
-    if (/<\/svg>/i.test(t.content)) break;
-    if (consumed > 100) return null;
-  }
-
-  if (!/<\/svg>/i.test(svgXml)) return null;
-  return { svgXml: svgXml.trim(), consumedCount: consumed };
 }
 
 export async function renderInline(

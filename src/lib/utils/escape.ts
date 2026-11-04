@@ -24,3 +24,24 @@ export function escapeHtml(s: string | null | undefined): string {
 export function escapeXml(s: string | null | undefined): string {
   return escapeHtml(s).replace(/'/g, "&apos;");
 }
+
+const HTML_ENTITIES: Record<string, string> = {
+  "&quot;": '"',
+  "&apos;": "'",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&#x27;": "'",
+  "&#39;": "'",
+  "&amp;": "&",
+};
+
+/**
+ * Decode the handful of entities that appear inside highlight.js output
+ * (and MathML text nodes), so downstream formatters see real characters.
+ */
+export function decodeHtmlEntities(s: string): string {
+  return s.replace(
+    /&quot;|&apos;|&lt;|&gt;|&#x27;|&#39;|&amp;/g,
+    (m) => HTML_ENTITIES[m] ?? m,
+  );
+}

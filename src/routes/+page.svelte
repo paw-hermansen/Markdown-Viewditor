@@ -486,8 +486,8 @@ import { buildPageCommands } from "$lib/commands/page-commands";
           currentOptions[opt.id] = OPTION_SETTING[opt.id]?.get() ?? opt.value;
         }
       }
-      const isNeutral = id === 'odt';
-      const titleMap: Record<string, string> = { html: 'Export HTML', 'html-bundle': 'Export HTML Bundle', odt: 'Export ODT' };
+      const isNeutral = id === 'odt' || id === 'docx';
+      const titleMap: Record<string, string> = { html: 'Export HTML', 'html-bundle': 'Export HTML Bundle', odt: 'Export ODT', docx: 'Export DOCX' };
       const result = await showExportConfirmDialog({
         title: titleMap[id] ?? (exportOnly ? 'Export' : 'Export / Print'),
         themeKind: isNeutral ? 'neutral' : 'viewer',

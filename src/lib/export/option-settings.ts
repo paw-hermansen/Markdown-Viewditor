@@ -21,6 +21,12 @@ import {
   OPTION_RASTER_RESOLUTION,
   OPTION_RASTERIZE_SVG,
 } from "./exporters/odt";
+import {
+  OPTION_DOCX_INCLUDE_FRONTMATTER,
+  OPTION_DOCX_RASTERIZE_MATH,
+  OPTION_DOCX_RASTERIZE_SVG,
+  OPTION_DOCX_RASTER_RESOLUTION,
+} from "./exporters/docx";
 import { OPTION_ID as HTML_OPTION_ID } from "./exporters/html";
 import { OPTION_ID as HTML_BUNDLE_OPTION_ID } from "./exporters/html-bundle";
 import { PDF_OPTION_ID } from "./exporters/pdf";
@@ -61,6 +67,19 @@ export const OPTION_SETTING: Record<string, OptionSetting> = {
     },
   },
   [OPTION_ODT_INCLUDE_FRONTMATTER]: booleanSetting("odtIncludeFrontmatter"),
+  [OPTION_DOCX_RASTERIZE_MATH]: booleanSetting("docxRasterizeMath"),
+  [OPTION_DOCX_RASTERIZE_SVG]: booleanSetting("docxRasterizeSvg"),
+  [OPTION_DOCX_RASTER_RESOLUTION]: {
+    get: () => settingsState.docxRasterResolution,
+    set: (value) => {
+      if (
+        RESOLUTION_VALUES.includes(value as (typeof RESOLUTION_VALUES)[number])
+      ) {
+        updateSetting("docxRasterResolution", value as 1 | 2 | 3 | 4);
+      }
+    },
+  },
+  [OPTION_DOCX_INCLUDE_FRONTMATTER]: booleanSetting("docxIncludeFrontmatter"),
   [HTML_OPTION_ID]: booleanSetting("htmlIncludeFrontmatter"),
   [HTML_BUNDLE_OPTION_ID]: booleanSetting("htmlBundleIncludeFrontmatter"),
   [PDF_OPTION_ID]: booleanSetting("pdfIncludeFrontmatter"),

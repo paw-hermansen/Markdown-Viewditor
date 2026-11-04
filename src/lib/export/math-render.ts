@@ -199,6 +199,13 @@ export interface MathPngOptions {
    * the target font size while the bitmap retains the full sharpness
    * of the larger host render (supersampling). */
   targetFontSize?: number;
+  /** Trim transparent rows above and below the ink after capture (a small
+   * edge guard is kept). The DOCX exporter sets this for raster math: an
+   * inline drawing sits with its bottom edge on the text baseline, so an
+   * ink-trimmed image degrades to a natural baseline placement in viewers
+   * that ignore `w:position` run shifts. Default: keep the captured line
+   * box (byte-identical output for the ODT exporter). */
+  trimToInk?: boolean;
 
   // Directive-based KaTeX options (affect rendering output).
   leqno?: boolean;
@@ -762,15 +769,20 @@ export async function renderMathToPng(
       "vertical",
     );
 
+    // ── Optional ink trim (DOCX inline-math alignment, see MathPngOptions) ──
+    const trimmedV = opts.trimToInk
+      ? trimVerticalToInk(croppedV, effectiveScale)
+      : croppedV;
+
     // ── Symmetric horizontal crop (inline math only) ──
     // Display math keeps its full page-width PNG so the formula centers
     // properly and equation tags land at the right page-edge.  Horizontal
     // cropping would strip the centering whitespace, making narrow display
     // formulas tiny in the ODT output.
     const croppedCanvas = opts.displayMode
-      ? croppedV
+      ? trimmedV
       : cropTransparentBounds(
-          croppedV,
+          trimmedV,
           HORIZONTAL_BUFFER_PX,
           effectiveScale,
           "horizontal",
@@ -1137,6 +1149,84 @@ export function cropTransparentBounds(
     return cropVertical(canvas, data, w, h, matchesBg, bufferCssPx, scale);
   }
   return cropHorizontal(canvas, data, w, h, matchesBg, bufferCssPx, scale);
+}
+
+/**
+ * Trim transparent/background rows from the top and bottom down to the ink,
+ * keeping only a small edge guard. Unlike {@link cropTransparentBounds},
+ * which strips just the symmetric capture buffer, this removes the retained
+ * line box entirely. Used by the DOCX exporter (`trimToInk`): an inline
+ * drawing sits with its bottom edge on the text baseline, so removing the
+ * padding below the ink puts the ink bottom on the baseline in viewers that
+ * cannot apply a `w:position` run shift.
+ */
+export function trimVerticalToInk(
+  canvas: HTMLCanvasElement,
+  scale: number,
+): HTMLCanvasElement {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const w = canvas.width;
+  const h = canvas.height;
+  let data: Uint8ClampedArray;
+  try {
+    data = ctx.getImageData(0, 0, w, h).data;
+  } catch {
+    return canvas;
+  }
+
+  // Sample the top-left pixel as the background reference (as
+  // cropTransparentBounds does).
+  const TOLERANCE = 4;
+  const bgR = data[0];
+  const bgG = data[1];
+  const bgB = data[2];
+  const bgA = data[3];
+  const matchesBg = (i: number): boolean =>
+    Math.abs(data[i] - bgR) <= TOLERANCE &&
+    Math.abs(data[i + 1] - bgG) <= TOLERANCE &&
+    Math.abs(data[i + 2] - bgB) <= TOLERANCE &&
+    Math.abs(data[i + 3] - bgA) <= TOLERANCE;
+  const rowHasContent = (y: number): boolean => {
+    const base = y * w * 4;
+    for (let x = 0; x < w; x++) {
+      if (!matchesBg(base + x * 4)) return true;
+    }
+    return false;
+  };
+
+  let first = -1;
+  for (let y = 0; y < h; y++) {
+    if (rowHasContent(y)) {
+      first = y;
+      break;
+    }
+  }
+  let last = -1;
+  for (let y = h - 1; y >= 0; y--) {
+    if (rowHasContent(y)) {
+      last = y;
+      break;
+    }
+  }
+  if (first < 0 || last < 0 || last < first) return canvas;
+
+  // Retain a small edge guard so near-background antialiased edges survive
+  // (same rationale as cropHorizontal's guard).
+  const edgeGuardPx = Math.max(1, Math.round(2 * scale));
+  const top = Math.max(0, first - edgeGuardPx);
+  const bottom = Math.min(h, last + 1 + edgeGuardPx);
+  if (top === 0 && bottom === h) return canvas;
+  const newH = bottom - top;
+  if (newH <= 0) return canvas;
+
+  const trimmed = document.createElement("canvas");
+  trimmed.width = w;
+  trimmed.height = newH;
+  const trimmedCtx = trimmed.getContext("2d");
+  if (!trimmedCtx) return canvas;
+  trimmedCtx.drawImage(canvas, 0, top, w, newH, 0, 0, w, newH);
+  return trimmed;
 }
 
 function cropVertical(

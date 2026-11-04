@@ -7,11 +7,14 @@ Exporter registry, standalone HTML builds, and the print/PDF fidelity contract.
 `src/lib/export/` hosts an extensible exporter registry:
 
 - `registry.svelte.ts` — `$state`-backed exporter list; `registerBuiltinExporters()`
-  lazily loads the HTML exporter. PDF is NOT in the registry — it's handled by
-  the existing Print button (`exportPdf` directly), so registering it would
-  duplicate the Print entry in the toolbar/palette. A future file format
-  (DOCX/EPUB) = one file + one `registerExporter` call; the toolbar shows a
-  single button when there's one exporter and a dropdown when there are 2+.
+  lazily loads the built-in exporters (HTML, HTML Bundle, PDF, ODT, DOCX).
+  PDF lives in the registry but `handleExport("pdf")` routes it through the
+  Print button flow (`exportPdf` directly) to avoid a duplicate toolbar
+  entry. A future file format (EPUB) = one file + one `registerExporter`
+  call; the toolbar shows a single button when there's one exporter and a
+  dropdown when there are 2+. New exporters must also touch the hardcoded
+  `titleMap` / `isNeutral` in `+page.svelte` and add `OPTION_SETTING`
+  entries (`option-settings.test.ts` enforces the latter).
 - `document.ts` — `buildStandaloneHtml()` collects same-origin stylesheets,
   inlines `url()` fonts and `localimg://` images to data URIs (via
   `assets.ts`), and wraps the body in `.viewer-content`.
@@ -58,6 +61,9 @@ Exporter registry, standalone HTML builds, and the print/PDF fidelity contract.
     dimensions and break the `effectiveScale` math and canvas-size
     verification in `renderMathToPng` (guarded by a regression test in
     `__tests__/math-render.test.ts`).
+  - `MathPngOptions.trimToInk` (opt-in, set by the DOCX exporter) trims the
+    captured line box to the ink after the buffer crops; default off keeps
+    ODT output byte-identical. Guarded by `trimVerticalToInk` tests.
   - Stock html2canvas 1.4.1 mis-positions absolutely positioned inline
     `<svg>` elements (upstream niklasvh/html2canvas#3047 — never fixed
     there), which dropped KaTeX's tall-brace extenders from rasterized
@@ -79,6 +85,58 @@ Exporter registry, standalone HTML builds, and the print/PDF fidelity contract.
     clipping, and forcing `none` on them flattens the curves — keep the
     exact-match gate. Regression: `__tests__/math-render.test.ts`
     ("stabilizeSvgForRaster"), TEST-PLAN S7.5.
+
+## DOCX Export Contract
+
+`src/lib/export/docx/` + `exporters/docx.ts` produce OOXML (ECMA-376
+Transitional) hand-built and packaged with JSZip. Full design: EXPORT-PLAN
+Part 8. **Before changing any emitted markup, read its "DOCX Compatibility
+Contract" (8.3)** — each rule exists because a real viewer breaks otherwise.
+The load-bearing ones:
+
+- **Element order is schema-enforced** (e.g. `w:rPr`: rStyle, rFonts, b, i,
+  strike, color, sz, highlight, u, shd, vertAlign). Build properties through
+  the ordered builders in `runs.ts`/`styles.ts`, never string concatenation.
+- **DXA table widths only** (`w:tblW`/`w:gridCol`/`w:tcW` summing exactly to
+  the content width — `columnTwips()`), `w:tblLayout fixed`. PERCENTAGE
+  widths break in Google Docs.
+- **Shading is `w:val="clear"`** + `w:fill` — `solid` renders black in some
+  viewers. List markers come from `numbering.xml`, never literal glyphs.
+- **Inline drawings only** (`wp:inline`); images PNG/JPEG/GIF. SVG is
+  PNG-only by default (`docx.rasterizeSvg`, the safe default); its opt-in
+  vector mode embeds `asvg:svgBlip` **with a mandatory PNG fallback blip**
+  (the `|png` cache-key suffix in `media.ts` keeps that pairing from
+  evicting the vector part — see `docx-svg.test.ts`).
+- **Math**: OMML (`docx/omml.ts`, KaTeX MathML → OMML) or PNG per
+  `docx.rasterizeMath`; converter gaps degrade to escaped TeX + warning —
+  never a silent mode switch. OMML runs always carry `m:sty` (a run without
+  it renders italic in Word). Two rules keep raster math looking like the
+  ODT export (both born from an ODT/DOCX A-B comparison):
+  - **Size calibration:** `mathTargetFontSize = bodyPt × 4/3 ÷ 1.21`
+    (KaTeX's 1.21em factor) — `12` for the 11pt body. The bitmap is
+    supersampled and never affected by this; only the frame size is.
+  - **Vertical placement:** an inline drawing sits with its bottom edge on
+    the baseline, while the ODT `Formula` graphic style line-centers the
+    frame. `media.ts` reproduces that with a `w:position` run shift
+    (`inlineMathShiftPx` in `dimensions.ts`, `LINE_CENTER_ABOVE_BASELINE_PX`
+    is the tunable) plus `trimToInk` on the raster so viewers that ignore
+    character position fall back to a natural baseline placement. Inline
+    math only — display math, images, and OMML are unshifted.
+- **No `\n` inside `w:t`**; text is escaped and control-stripped
+  (`docx/utils.ts`). Part/relationship/media names are ASCII-generated.
+- **Integrity invariants are tested** (`docx.test.ts`): every `r:id`
+  resolves, every media part exists, every `w:pStyle`/`w:numId`/
+  `w:footnoteReference` resolves, all XML parts are well-formed. Keep those
+  tests green — they are what keeps Word from showing its repair prompt.
+
+**Schema QA gate (not in `npm run test`):** validate exported fixtures with
+the bundled ISO/IEC 29500-4 schemas before release (TEST-PLAN S7 note):
+`python3 .agents/skills/docx/scripts/office/validate.py file.docx` — zero
+errors. (This gate caught a valueless `w:auto` attribute in the frontmatter
+table during development.)
+
+DOCX always exports in the neutral/printer-friendly style (like ODT) —
+`themeCapable: true` only drives the options dialog.
 
 ## Print/PDF Fidelity Contract
 

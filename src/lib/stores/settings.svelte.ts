@@ -25,6 +25,10 @@ const DEFAULT_SETTINGS: Settings = {
   htmlBundleIncludeFrontmatter: true,
   pdfIncludeFrontmatter: true,
   odtIncludeFrontmatter: true,
+  docxRasterizeMath: false,
+  docxRasterizeSvg: true,
+  docxRasterResolution: 2,
+  docxIncludeFrontmatter: true,
   zoomLevel: 1,
 };
 

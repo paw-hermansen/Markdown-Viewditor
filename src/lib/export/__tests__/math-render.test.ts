@@ -8,6 +8,7 @@ import {
   captureElementToPng,
   cropTransparentRows,
   cropTransparentBounds,
+  trimVerticalToInk,
   measureMathVisualBounds,
   stabilizeSvgForRaster,
   MATH_HOST_WIDTH_PX,
@@ -1121,6 +1122,130 @@ describe("renderMathToPng", () => {
         "vertical",
       );
       expect(outputCanvas).toBe(inputCanvas);
+    } finally {
+      HTMLCanvasElement.prototype.getContext = origGetContext;
+    }
+  });
+
+  // ── trimVerticalToInk (DOCX inline-math alignment) ─────────────────────
+
+  /**
+   * Fake 2D context with content rows CONTENT_TOP..CONTENT_BOTTOM on a
+   * white background (same shape as the cropTransparentBounds fixtures).
+   */
+  function stubInkCanvas(opts: {
+    contentTop: number;
+    contentBottom: number;
+    scale: number;
+  }): {
+    inputCanvas: HTMLCanvasElement;
+    drawCalls: Array<unknown[]>;
+    restore: () => void;
+  } {
+    const W = 80;
+    const H = 40;
+    const drawCalls: Array<unknown[]> = [];
+    const fakeImageData = (w: number, h: number) => {
+      const data = new Uint8ClampedArray(w * h * 4);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          const isContent = y >= opts.contentTop && y <= opts.contentBottom;
+          data[i] = isContent ? 0 : 255;
+          data[i + 1] = isContent ? 0 : 255;
+          data[i + 2] = isContent ? 0 : 255;
+          data[i + 3] = 255;
+        }
+      }
+      return { data, width: w, height: h } as ImageData;
+    };
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (id: string) {
+      if (id !== "2d") return null;
+      return {
+        getImageData: (_x: number, _y: number, w: number, h: number) =>
+          fakeImageData(w, h),
+        drawImage: (...args: unknown[]) => {
+          drawCalls.push(args);
+        },
+      } as unknown as CanvasRenderingContext2D;
+    } as typeof HTMLCanvasElement.prototype.getContext;
+    const inputCanvas = document.createElement("canvas");
+    inputCanvas.width = W;
+    inputCanvas.height = H;
+    return {
+      inputCanvas,
+      drawCalls,
+      restore: () => {
+        HTMLCanvasElement.prototype.getContext = origGetContext;
+      },
+    };
+  }
+
+  it("trimVerticalToInk trims both edges to the ink plus the edge guard", () => {
+    // Content rows 22..29 in a 40-row canvas, scale 1 → guard = 2 rows.
+    // Trimmed region = rows 20..31 (height 12).
+    const stub = stubInkCanvas({
+      contentTop: 22,
+      contentBottom: 29,
+      scale: 1,
+    });
+    try {
+      const outputCanvas = trimVerticalToInk(stub.inputCanvas, 1);
+      expect(outputCanvas.height).toBe(12);
+      expect(outputCanvas.width).toBe(80);
+      expect(stub.drawCalls.length).toBe(1);
+      const args = stub.drawCalls[0];
+      expect(args[0]).toBe(stub.inputCanvas);
+      expect(args[2]).toBe(20); // sy
+      expect(args[4]).toBe(12); // sh
+      expect(args[6]).toBe(0); // dy
+      expect(args[8]).toBe(12); // dh
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("trimVerticalToInk scales the edge guard with the raster scale", () => {
+    // Scale 2 → guard = 4 rows. Trimmed region = rows 18..33 (height 16).
+    const stub = stubInkCanvas({
+      contentTop: 22,
+      contentBottom: 29,
+      scale: 2,
+    });
+    try {
+      const outputCanvas = trimVerticalToInk(stub.inputCanvas, 2);
+      expect(outputCanvas.height).toBe(16);
+      expect(stub.drawCalls[0][2]).toBe(18); // sy
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("trimVerticalToInk keeps the canvas when the ink fills it", () => {
+    const stub = stubInkCanvas({
+      contentTop: 0,
+      contentBottom: 39,
+      scale: 1,
+    });
+    try {
+      const outputCanvas = trimVerticalToInk(stub.inputCanvas, 1);
+      expect(outputCanvas).toBe(stub.inputCanvas);
+      expect(stub.drawCalls.length).toBe(0);
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("trimVerticalToInk returns the original canvas when getContext fails", () => {
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = (() =>
+      null) as typeof HTMLCanvasElement.prototype.getContext;
+    try {
+      const inputCanvas = document.createElement("canvas");
+      inputCanvas.width = 40;
+      inputCanvas.height = 60;
+      expect(trimVerticalToInk(inputCanvas, 1)).toBe(inputCanvas);
     } finally {
       HTMLCanvasElement.prototype.getContext = origGetContext;
     }

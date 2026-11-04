@@ -73,7 +73,7 @@ describe("renderVegaLiteSpec (integration, real vega)", () => {
   const options = resolveVegaLiteOptions({});
 
   it("renders an inline spec to a standalone attribute-painted SVG", async () => {
-    const svg = await renderVegaLiteSpec(
+    const { svg } = await renderVegaLiteSpec(
       {
         data: {
           values: [
@@ -108,7 +108,7 @@ describe("renderVegaLiteSpec (integration, real vega)", () => {
   });
 
   it("renders regression and loess layers (the trend-line feature)", async () => {
-    const svg = await renderVegaLiteSpec(
+    const { svg } = await renderVegaLiteSpec(
       {
         data: {
           values: [

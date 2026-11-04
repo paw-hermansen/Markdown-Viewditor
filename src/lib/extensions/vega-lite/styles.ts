@@ -84,6 +84,17 @@ export const VEGA_LITE_STYLES = `
         font-size: 0.85em;
         margin-top: 0.25em;
       }
+      /* Non-fatal warnings (e.g. an image file that could not be read) on
+         their own row under the chart. */
+      .vega-lite-block {
+        flex-wrap: wrap;
+      }
+      .vega-lite-warn-msg {
+        flex-basis: 100%;
+        color: #b45309;
+        font-size: 0.85em;
+        margin: 0.25em 0 0;
+      }
       /* Print/PDF export (the .print-content clone in exporters/pdf.ts):
          there is no scrolling in print, so charts at natural size are
          scaled down to the content column instead of being cut off.

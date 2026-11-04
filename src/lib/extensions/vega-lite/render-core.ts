@@ -1,5 +1,5 @@
 import type { VegaLiteRenderOptions } from "./schema";
-import { inlineOnlyLoader, INLINE_ONLY_DATA_MESSAGE } from "./loader";
+import { createVegaLoader, INLINE_ONLY_DATA_MESSAGE } from "./loader";
 import {
   buildVegaConfig,
   EXPORT_FONT_STACK,
@@ -10,7 +10,8 @@ import { rewriteImageHrefs } from "./image-hrefs";
 /**
  * The render core — the reuse seam for a future `vega-down` fence
  * (plan §2): an already-parsed Vega-Lite spec in, a post-processed SVG
- * string out. No fence, JSON, or wrapper knowledge lives here.
+ * string (plus non-fatal warnings) out. No fence, JSON, or wrapper
+ * knowledge lives here.
  *
  * Rendering is CSP-safe end to end (plan §5, pinned by the
  * upgrade-contract test): `vega.parse(spec, undefined, { ast: true })` plus
@@ -94,6 +95,12 @@ export interface VegaRenderContext {
   baseFile?: string | null;
 }
 
+export interface VegaSvgResult {
+  svg: string;
+  /** Non-fatal issues (e.g. an image file that could not be read). */
+  warnings: string[];
+}
+
 function postProcessSvg(svg: string, baseFile: string | null): string {
   if (typeof DOMParser === "undefined") return svg;
   const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
@@ -134,40 +141,48 @@ export function pinSvgDimensions(root: SVGSVGElement): void {
  * root dimensions, attribute-painted, no `<style>` block — the export
  * contract, plan §10). Throws on invalid specs; callers wanting a graceful
  * HTML fallback go through `renderVegaLiteFence` in renderer.ts.
+ *
+ * Theme contract (the `testing/VegaLite-All.md` dark-export bug): only the
+ * viewer's `auto` mode reads live DOM tokens. Exports resolve `auto` to the
+ * fixed light look, and a pinned `theme=light|dark` is a self-contained
+ * look everywhere — fixed palette plus its own painted background — so it
+ * never changes with the app theme and stays legible on a white page.
  */
 export async function renderVegaLiteSpec(
   spec: object,
   options: VegaLiteRenderOptions,
   context: VegaRenderContext = {},
-): Promise<string> {
+): Promise<VegaSvgResult> {
   validateSpecInlineOnly(spec);
   const { vl, vega, expressionInterpreter } = await ensureVegaLoaded();
   const variant = context.variant ?? "viewer";
-  // Export/print are neutral documents (white page, no theme background):
-  // `theme=auto` resolves to light there, while an explicitly pinned theme
-  // is the writer's deliberate choice and is honored (the SMILES ODT
-  // contract). The export font stack is forced either way.
+  const pinned = options.theme === "light" || options.theme === "dark";
   const theme =
     variant === "export"
       ? options.theme === "auto"
         ? "light"
         : options.theme
       : resolveThemeChoice(options.theme);
-  const config = buildVegaConfig(
-    theme,
-    variant === "export" ? { font: EXPORT_FONT_STACK } : undefined,
-  );
+  const warnings: string[] = [];
+  const config = buildVegaConfig(theme, {
+    font: variant === "export" ? EXPORT_FONT_STACK : undefined,
+    useDomTokens: variant === "viewer" && !pinned,
+    paintBackground: pinned,
+  });
   const compiled = vl.compile(spec as never, { config });
   const runtime = vega.parse(compiled.spec, undefined, { ast: true });
   const view = new vega.View(runtime, {
     expr: expressionInterpreter,
     renderer: "svg",
-    loader: inlineOnlyLoader,
+    loader: createVegaLoader({
+      baseFile: context.baseFile ?? null,
+      warnings,
+    }),
   });
   try {
     await view.runAsync();
     const svg = await view.toSVG();
-    return postProcessSvg(svg, context.baseFile ?? null);
+    return { svg: postProcessSvg(svg, context.baseFile ?? null), warnings };
   } finally {
     view.finalize();
   }

@@ -103,7 +103,10 @@ const exportBaseZip = (src: string, options?: Record<string, unknown>) =>
 describe("ODT Vega-Lite export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRenderVegaLiteSvgForExport.mockResolvedValue(VEGA_SVG);
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: VEGA_SVG,
+      warnings: [],
+    });
   });
 
   beforeAll(() => {
@@ -163,7 +166,10 @@ describe("ODT Vega-Lite export", () => {
   });
 
   it("clamps wide charts to the page content width", async () => {
-    mockRenderVegaLiteSvgForExport.mockResolvedValue(WIDE_VEGA_SVG);
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: WIDE_VEGA_SVG,
+      warnings: [],
+    });
     const zip = await exportBaseZip(`\`\`\`vega-lite\n${SPEC_SRC}\n\`\`\``);
     const xml = await zip.file("content.xml")!.async("text");
     // 1200px natural → capped at the 800px viewer column → 0.75 scale →
@@ -172,7 +178,10 @@ describe("ODT Vega-Lite export", () => {
   });
 
   it("passes fitToWidth=false through and still clamps to the page", async () => {
-    mockRenderVegaLiteSvgForExport.mockResolvedValue(WIDE_VEGA_SVG);
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: WIDE_VEGA_SVG,
+      warnings: [],
+    });
     const zip = await exportBaseZip(
       `\`\`\`vega-lite {fitToWidth=false}\n${SPEC_SRC}\n\`\`\``,
     );
@@ -227,7 +236,10 @@ describe("ODT Vega-Lite export", () => {
   });
 
   it("inlines localimg image hrefs in the embedded SVG", async () => {
-    mockRenderVegaLiteSvgForExport.mockResolvedValue(IMG_VEGA_SVG);
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: IMG_VEGA_SVG,
+      warnings: [],
+    });
     const zip = await exportToZip(`\`\`\`vega-lite\n${SPEC_SRC}\n\`\`\``, {
       invokeStubs: { read_file_as_base64: "QUJD" },
     });
@@ -238,6 +250,17 @@ describe("ODT Vega-Lite export", () => {
     const svgText = await zip.file(svgEntry!)!.async("text");
     expect(svgText).toContain("data:image/png;base64,QUJD");
     expect(svgText).not.toContain("localimg://");
+  });
+
+  it("surfaces render warnings (e.g. unreadable images) in the export warnings", async () => {
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: VEGA_SVG,
+      warnings: ["Image /x/missing.png could not be loaded: no such file"],
+    });
+    const result = await runOdtExport(`\`\`\`vega-lite\n${SPEC_SRC}\n\`\`\``);
+    expect(result.warnings.some((w) => w.includes("could not be loaded"))).toBe(
+      true,
+    );
   });
 
   it("falls back to source code when Vega-Lite rendering fails", async () => {

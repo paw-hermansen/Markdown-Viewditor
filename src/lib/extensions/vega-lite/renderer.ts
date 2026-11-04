@@ -13,7 +13,11 @@ import {
   VEGA_LITE_OPTIONS_SCHEMA,
   type VegaLiteRenderOptions,
 } from "./schema";
-import { ensureVegaLoaded, renderVegaLiteSpec } from "./render-core";
+import {
+  ensureVegaLoaded,
+  renderVegaLiteSpec,
+  type VegaSvgResult,
+} from "./render-core";
 import { getVegaAppTheme, type VegaAppThemeInfo } from "./theme-config";
 
 /**
@@ -31,7 +35,6 @@ import { getVegaAppTheme, type VegaAppThemeInfo } from "./theme-config";
  */
 
 const THEME_SNAPSHOT_ENV_KEY = "vegaLiteAppTheme";
-const ERROR_PREFIX = "error:";
 
 interface VegaLiteFenceToken {
   type?: string;
@@ -39,8 +42,10 @@ interface VegaLiteFenceToken {
   content?: string;
 }
 
-/** svg string, or `error:<message>` for a fence that failed to render. */
-const svgCache = new Map<string, string>();
+/** Rendered svg + warnings, or an error entry for a fence that failed. */
+type CacheEntry = { svg: string; warnings: string[] } | { error: string };
+
+const svgCache = new Map<string, CacheEntry>();
 let renderQueue: Promise<void> = Promise.resolve();
 
 export function themeSnapshotFromEnv(
@@ -178,7 +183,7 @@ async function preRenderPass(
     if (svgCache.has(key)) continue;
 
     if (loadFailed) {
-      svgCache.set(key, `${ERROR_PREFIX}vega-lite failed to load`);
+      svgCache.set(key, { error: "vega-lite failed to load" });
       continue;
     }
     try {
@@ -202,7 +207,7 @@ async function preRenderPass(
         console.error("[vega-lite] Load error:", err);
       }
       const message = err instanceof Error ? err.message : String(err);
-      svgCache.set(key, `${ERROR_PREFIX}${message}`);
+      svgCache.set(key, { error: message });
     }
   }
 }
@@ -236,14 +241,19 @@ export function renderVegaLiteFence(
       "block was not pre-rendered (cache miss)",
     );
   }
-  if (entry.startsWith(ERROR_PREFIX)) {
-    return errorBlock(content, typed.align, entry.slice(ERROR_PREFIX.length));
+  if ("error" in entry) {
+    return errorBlock(content, typed.align, entry.error);
   }
   const fitAttribute = typed.fitToWidth ? "" : ' data-fit-to-width="false"';
   const body = typed.fitToWidth
-    ? entry
-    : `<div class="vega-lite-scroll-content">${entry}</div>`;
-  return `<div class="vega-lite-block" data-align="${typed.align}"${fitAttribute}>${body}</div>`;
+    ? entry.svg
+    : `<div class="vega-lite-scroll-content">${entry.svg}</div>`;
+  const warnHtml =
+    entry.warnings.length > 0
+      ? `<p class="vega-lite-warn-msg">${escapeHtml(entry.warnings.join("; "))}</p>`
+      : "";
+  const warnClass = warnHtml ? " vega-lite-has-warn" : "";
+  return `<div class="vega-lite-block${warnClass}" data-align="${typed.align}"${fitAttribute}>${body}${warnHtml}</div>`;
 }
 
 function errorBlock(content: string, align: string, message: string): string {
@@ -256,27 +266,27 @@ function errorBlock(content: string, align: string, message: string): string {
 }
 
 /**
- * Render fence content to a bare SVG string for export/print pipelines
- * (ODT/DOCX call this). Not cached — exports render fresh so the neutral
- * document theme and export font apply regardless of the viewer cache.
+ * Render fence content for export/print pipelines (ODT/DOCX call this).
+ * Not cached — exports render fresh so the neutral document theme, export
+ * font, and current image bytes apply regardless of the viewer cache.
  */
 export async function renderVegaLiteSvg(
   content: string,
   options: VegaLiteRenderOptions,
   baseFile: string | null = null,
-): Promise<string> {
+): Promise<VegaSvgResult> {
   return renderVegaLiteSpec(parseVegaLiteSpec(content), options, {
     variant: "viewer",
     baseFile,
   });
 }
 
-/** Export variant: forced light theme + concrete font stack (plan §7/§10). */
+/** Export variant: neutral light look + concrete font stack (plan §7/§10). */
 export async function renderVegaLiteSvgForExport(
   content: string,
   options: VegaLiteRenderOptions,
   baseFile: string | null = null,
-): Promise<string> {
+): Promise<VegaSvgResult> {
   return renderVegaLiteSpec(parseVegaLiteSpec(content), options, {
     variant: "export",
     baseFile,

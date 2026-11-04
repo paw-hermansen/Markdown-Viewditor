@@ -106,9 +106,13 @@ describe("vega-lite upgrade contract", () => {
   });
 
   it("toSVG emits root width/height attributes and no <style> block", async () => {
-    const svg = await renderVegaLiteSpec(LAYERED, resolveVegaLiteOptions({}), {
-      variant: "export",
-    });
+    const { svg } = await renderVegaLiteSpec(
+      LAYERED,
+      resolveVegaLiteOptions({}),
+      {
+        variant: "export",
+      },
+    );
     expect(svg).toMatch(/<svg[^>]*\bwidth="[\d.]+"/);
     expect(svg).toMatch(/<svg[^>]*\bheight="[\d.]+"/);
     expect(svg).not.toContain("<style");
@@ -171,8 +175,71 @@ describe("vega-lite upgrade contract", () => {
   it("regression and loess transforms survive the interpreter runtime", async () => {
     // Both render real trend lines through the AST interpreter path; a
     // silent drop would render empty layers instead of throwing.
-    const svg = await renderVegaLiteSpec(LAYERED, resolveVegaLiteOptions({}));
+    const { svg } = await renderVegaLiteSpec(
+      LAYERED,
+      resolveVegaLiteOptions({}),
+    );
     expect(svg).toContain("<path");
     expect(svg).toContain("<svg");
+  });
+});
+
+describe("theme contract (dark-export and pinned-theme bugs)", () => {
+  const LABEL_SPEC = {
+    data: { values: [{ x: 1, y: 1, label: "hi" }] },
+    mark: { type: "text" },
+    encoding: {
+      x: { field: "x", type: "quantitative" },
+      y: { field: "y", type: "quantitative" },
+      text: { field: "label", type: "nominal" },
+    },
+    width: 100,
+    height: 100,
+  };
+
+  function setDomTheme(type: "light" | "dark", color: string): HTMLElement {
+    document.documentElement.setAttribute("data-theme", type);
+    const host = document.createElement("div");
+    host.id = "viewer-content";
+    host.style.color = color;
+    document.body.appendChild(host);
+    return host;
+  }
+
+  it("pinned theme=dark is self-contained: dark background + light fg", async () => {
+    const host = setDomTheme("light", "rgb(30, 30, 30)");
+    const { svg } = await renderVegaLiteSpec(
+      LABEL_SPEC,
+      resolveVegaLiteOptions({ theme: "dark" }),
+    );
+    host.remove();
+    expect(svg).toContain("#202124"); // painted background
+    expect(svg).toContain("#e6e6e6"); // fixed light fg (text marks)
+    expect(svg).not.toContain("rgb(30, 30, 30)"); // DOM tokens ignored
+  });
+
+  it("exports use the fixed light look even when the editor is dark-themed", async () => {
+    const host = setDomTheme("dark", "rgb(212, 212, 212)");
+    const { svg } = await renderVegaLiteSpec(
+      LABEL_SPEC,
+      resolveVegaLiteOptions({}),
+      { variant: "export" },
+    );
+    host.remove();
+    expect(svg).toContain("#333333"); // fixed very-dark-gray fg
+    expect(svg).not.toContain("212, 212, 212"); // no DOM leak into exports
+  });
+
+  it("viewer auto charts follow the DOM theme tokens", async () => {
+    const host = setDomTheme("dark", "rgb(212, 212, 212)");
+    const { svg } = await renderVegaLiteSpec(
+      LABEL_SPEC,
+      resolveVegaLiteOptions({}),
+    );
+    host.remove();
+    expect(svg).toContain("rgb(212, 212, 212)");
+    // auto stays see-through: no painted background rect.
+    expect(svg).not.toContain("#202124");
+    expect(svg).not.toContain("#ffffff");
   });
 });

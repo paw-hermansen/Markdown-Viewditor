@@ -827,12 +827,16 @@ export async function renderTokens(
             // Lazy-load the vega chunks outside the render so a load
             // failure propagates to the fallthrough below.
             await ensureVegaLoaded();
-            let svgXml = await renderVegaLiteSvgForExport(
+            const rendered = await renderVegaLiteSvgForExport(
               token.content,
               vegaLiteOpts,
             );
-            const inlined = await inlineSvgImageHrefs(svgXml, ctx.invokeImpl);
-            svgXml = inlined.svg;
+            ctx.warnings.push(...rendered.warnings);
+            const inlined = await inlineSvgImageHrefs(
+              rendered.svg,
+              ctx.invokeImpl,
+            );
+            const svgXml = inlined.svg;
             ctx.warnings.push(...inlined.warnings);
             const dims = sniffSvgDimensions(
               new TextEncoder().encode(svgXml),

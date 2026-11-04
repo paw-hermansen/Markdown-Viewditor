@@ -79,7 +79,10 @@ const DEFAULT_OPTS = {
 describe("DOCX Vega-Lite export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRenderVegaLiteSvgForExport.mockResolvedValue(VEGA_SVG);
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: VEGA_SVG,
+      warnings: [],
+    });
   });
 
   beforeAll(() => {
@@ -128,6 +131,17 @@ describe("DOCX Vega-Lite export", () => {
     );
     const xml = await zipText(zip, "word/document.xml");
     expect(xml).toContain('<w:jc w:val="left"/>');
+  });
+
+  it("surfaces render warnings in the export warnings", async () => {
+    mockRenderVegaLiteSvgForExport.mockResolvedValue({
+      svg: VEGA_SVG,
+      warnings: ["Image /x/missing.png could not be loaded: no such file"],
+    });
+    const result = await runDocxExport(`\`\`\`vega-lite\n${SPEC_SRC}\n\`\`\``);
+    expect(result.warnings.some((w) => w.includes("could not be loaded"))).toBe(
+      true,
+    );
   });
 
   it("falls back to source code when Vega-Lite rendering fails", async () => {

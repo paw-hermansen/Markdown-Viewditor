@@ -1,15 +1,24 @@
 /**
- * App theme → Vega config (plan §7). Tokens are read from the same sources
- * the other diagram extensions use: the `<html data-theme>` / `data-theme-id`
- * attributes that `setTheme` commits atomically, and computed styles on
- * `#viewer-content` where theme CSS is scoped. A chart always gets
- * `background: "transparent"` so the theme's document background shows
- * through. The spec's own `config` key wins per-key over this base (vega-lite
- * merge semantics — pinned by the upgrade-contract test).
+ * App theme → Vega config (plan §7).
  *
- * Custom themes can steer the categorical palette by declaring
- * `--vega-category-1` … `--vega-category-8` on `#viewer-content`; anything
- * unset falls back to the built-in palettes below.
+ * Two token sources (this split is a contract — bugs found by
+ * `testing/VegaLite-All.md`):
+ *
+ * - `auto` in the viewer reads live DOM tokens (computed styles on
+ *   `#viewer-content`, where the theme CSS is scoped) so charts follow the
+ *   app theme, and stays `background: transparent` so the document
+ *   background shows through.
+ * - **Pinned themes (`theme=light|dark`) and exports use the FIXED palettes
+ *   below, never the DOM.** A pinned theme is a self-contained look — it
+ *   must not change when the app theme changes — and exports are neutral
+ *   documents whose look must not depend on the editor's dark theme
+ *   (light-gray-on-white export bug). Pinned themes additionally paint
+ *   their own background so a dark chart is legible on a white page and
+ *   stable across app themes.
+ *
+ * Custom themes can steer the categorical palette of *auto* charts by
+ * declaring `--vega-category-1` … `--vega-category-8` on
+ * `#viewer-content`; anything unset falls back to the built-in palettes.
  */
 export interface VegaAppThemeInfo {
   type: "light" | "dark";
@@ -33,9 +42,10 @@ const FALLBACK_CATEGORY = [
   "#ff9da6",
 ];
 
-const FALLBACK_FG: Record<"light" | "dark", string> = {
-  light: "#000000",
-  dark: "#ffffff",
+/** Fixed look per theme: very dark gray on white / light gray on dark. */
+const FIXED_TOKENS: Record<"light" | "dark", { fg: string; bg: string }> = {
+  light: { fg: "#333333", bg: "#ffffff" },
+  dark: { fg: "#e6e6e6", bg: "#202124" },
 };
 
 /** Read the app theme from the DOM (setTheme's atomic attributes). */
@@ -93,12 +103,16 @@ interface ThemeTokens {
   category: string[];
 }
 
-function readThemeTokens(theme: "light" | "dark"): ThemeTokens {
-  const fallback: ThemeTokens = {
-    fg: FALLBACK_FG[theme],
+function fixedTokens(theme: "light" | "dark"): ThemeTokens {
+  return {
+    fg: FIXED_TOKENS[theme].fg,
     font: FALLBACK_FONT_STACK,
     category: FALLBACK_CATEGORY,
   };
+}
+
+function domTokens(theme: "light" | "dark"): ThemeTokens {
+  const fallback = fixedTokens(theme);
   if (
     typeof document === "undefined" ||
     typeof getComputedStyle !== "function"
@@ -120,18 +134,27 @@ function readThemeTokens(theme: "light" | "dark"): ThemeTokens {
   return { fg, font, category };
 }
 
+export interface VegaConfigOptions {
+  /** Force the font (exports pin the concrete neutral stack). */
+  font?: string;
+  /** Read live DOM tokens (viewer `auto`); false = fixed palette. */
+  useDomTokens?: boolean;
+  /** Paint the theme's own background (pinned themes); auto stays transparent. */
+  paintBackground?: boolean;
+}
+
 /**
  * The Vega config base for a theme. Passed as `opt.config` to
  * `vl.compile` — the spec's own `config` object overrides it per-key.
  */
 export function buildVegaConfig(
   theme: "light" | "dark",
-  opts?: { font?: string },
+  opts?: VegaConfigOptions,
 ): Record<string, unknown> {
-  const tokens = readThemeTokens(theme);
+  const tokens = opts?.useDomTokens ? domTokens(theme) : fixedTokens(theme);
   const fg = tokens.fg;
   return {
-    background: "transparent",
+    background: opts?.paintBackground ? FIXED_TOKENS[theme].bg : "transparent",
     font: opts?.font ?? tokens.font,
     range: { category: tokens.category },
     mark: { color: tokens.category[0] },

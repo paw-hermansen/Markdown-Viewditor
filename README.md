@@ -109,9 +109,8 @@ Store.
 **Note**: The rendered look of these files might not be correct if you view them in
 any other Markdown viewer than `Markdown Viewditor` because they use extensions to
 Markdown that not all Markdown viewers can render correct and beautiful.
-Instead you can view them on [our github pages web-site](https://paw-hermansen.github.io/Markdown-Viewditor/)
-to see how these files look inside `MarkDown Viewditor` - at least if you have a fairly
-new internet browser.
+
+> **[See docs](https://paw-hermansen.github.io/Markdown-Viewditor/) rendered in your browser**
 
 | Guide                                          | Description                                            |
 | ---------------------------------------------- | ------------------------------------------------------ |

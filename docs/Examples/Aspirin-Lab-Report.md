@@ -139,30 +139,41 @@ measured both our crude product (before recrystallization) and the
 recrystallized product. A melting range that is lower and wider than the
 literature value means the product is not completely pure.
 
-```mermaid
-xychart-beta
-    title "Melting point: crude vs. recrystallized vs. pure aspirin"
-    x-axis [Crude, Recrystallized, "Pure (literature)"]
-    y-axis "Melting point (°C)" 125 --> 140
-    bar [130, 133, 135]
-```
-
 The recrystallized sample melted over the range \(132\) -
 \(134\,^\circ\mathrm{C}\). The heating curve from the melting point apparatus
 shows the plateau where the crystals actually melt:
 
-```mermaid
----
-config:
-    themeVariables:
-        xyChart:
-            plotColorPalette: "#666666"
----
-xychart-beta
-    title "Heating curve of the recrystallized sample"
-    x-axis "Time (min)" [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    y-axis "Temperature (°C)" 118 --> 145
-    line [121, 125, 128, 131, 133, 134, 135, 137, 140]
+```vega-lite
+{
+  "title": "Heating curve of the recrystallized sample",
+  "data": {"values": [
+    {"x": 0, "y": 121}, {"x": 1, "y": 125}, {"x": 2, "y": 128}, 
+    {"x": 3, "y": 131}, {"x": 4, "y": 133}, {"x": 5, "y": 134},
+    {"x": 6, "y": 135}, {"x": 7, "y": 137}, {"x": 8, "y": 140}
+  ]},
+  "layer": [
+    {
+      "mark": { "type": "line", "strokeWidth": 1, "point": true
+      },
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative", "axis": {"title": "Time (min)"} },
+        "y": {"field": "y", "type": "quantitative", "axis": {"title": "Temperature (°C)"}, "scale": {"domain": [120, 145]} }
+      }
+    },
+    { "mark": { "type": "rule", "color": "#FF999933" }, "encoding": { "y": {"datum": 133} } },
+    {
+      "mark": { "type": "text", "align": "left", "baseline": "middle",
+                "dx": 4, "x": "width", "text": "Observed" },
+      "encoding": { "y": {"datum": 133} }
+    },
+    { "mark": { "type": "rule", "color": "#FF999933" }, "encoding": { "y": {"datum": 135} } },
+    {
+      "mark": { "type": "text", "align": "left", "baseline": "middle",
+                "dx": 4, "x": "width", "text": "Litterature" },
+      "encoding": { "y": {"datum": 135} }
+    }
+  ]
+}
 ```
 
 ## Discussion

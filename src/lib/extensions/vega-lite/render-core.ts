@@ -5,6 +5,7 @@ import {
   EXPORT_FONT_STACK,
   resolveThemeChoice,
 } from "./theme-config";
+import { rasterizeVegaLabelMath } from "./math-labels";
 import { rewriteImageHrefs } from "./image-hrefs";
 
 /**
@@ -182,7 +183,15 @@ export async function renderVegaLiteSpec(
   try {
     await view.runAsync();
     const svg = await view.toSVG();
-    return { svg: postProcessSvg(svg, context.baseFile ?? null), warnings };
+    const processed = postProcessSvg(svg, context.baseFile ?? null);
+    // Label math rasterizes last in the post-process chain (plan §8): the
+    // formula images are data: URIs and need no export-side handling. The
+    // math glyphs are painted in the theme foreground like their labels.
+    const mathColor = (config as { text?: { color?: string } }).text?.color;
+    const withMath = await rasterizeVegaLabelMath(processed, {
+      color: mathColor,
+    });
+    return { svg: withMath, warnings };
   } finally {
     view.finalize();
   }

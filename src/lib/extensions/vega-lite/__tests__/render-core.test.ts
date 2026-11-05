@@ -143,3 +143,26 @@ describe("renderVegaLiteSpec (integration, real vega)", () => {
     expect(svg).toContain("<svg");
   });
 });
+
+describe("label math integration (real math pipeline)", () => {
+  it("renders a chart with $...$ labels without crashing, degrading to text", async () => {
+    // In jsdom the html2canvas capture path is unavailable, which pins the
+    // degradation contract: the label is kept as plain text, never dropped.
+    const { svg } = await renderVegaLiteSpec(
+      {
+        data: { values: [{ x: 1, y: 1 }] },
+        mark: { type: "text" },
+        encoding: {
+          x: { field: "x", type: "quantitative" },
+          y: { field: "y", type: "quantitative" },
+          text: { value: "$x^2$" },
+        },
+        width: 100,
+        height: 100,
+      },
+      resolveVegaLiteOptions({}),
+    );
+    expect(svg).toContain("<svg");
+    expect(svg).toContain("x^2");
+  }, 30000);
+});

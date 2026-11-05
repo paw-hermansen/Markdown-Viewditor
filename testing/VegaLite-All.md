@@ -2,9 +2,8 @@
 
 This file exercises the `vega-lite` fence extension: raw Vega-Lite JSON
 specs, host fence attributes, HTML comment directives, image marks, and the
-error fallbacks. Charts are static SVG (no interactivity). Axis/legend labels
-are plain text today — KaTeX math inside chart labels arrives in a later
-phase; Unicode math-ish characters (π, x², √2) already work.
+error fallbacks. Charts are static SVG (no interactivity). Labels support
+KaTeX math via `$...$` / `$$...$$` and plain text / Unicode both work.
 
 Everything here uses inline data only — `data.url` sources are rejected by
 design ("inline data only" error block).
@@ -224,7 +223,7 @@ every renderer, not just this app.
 
 ## 6. Unicode Math-ish Labels
 
-KaTeX in labels is a later phase; plain text and Unicode already work.
+Plain text and Unicode math-ish characters work as-is.
 
 ```vega-lite
 {
@@ -264,6 +263,55 @@ KaTeX in labels is a later phase; plain text and Unicode already work.
   "width": 420,
   "height": 220,
   "title": "Unicode labels: π, √2, x², −1"
+}
+```
+
+---
+
+## 6b. Math Labels (KaTeX)
+
+`$...$` and `$$...$$` inside labels are rasterized to crisp math (whole
+labels and mixed text+math both work; prices like `$5` are never math).
+Eyeball that the formulas match the theme foreground and sit on the text
+baseline like the plain labels above. Toggle the theme: the math must
+recolor with the labels.
+
+```vega-lite
+{
+  "data": {
+    "values": [
+      {"t": "0", "v": 0, "label": "$\\sin(0) = 0$"},
+      {"t": "1", "v": 1, "label": "$\\sin(\\pi/2) = 1$"},
+      {"t": "2", "v": 0, "label": "$\\sin(\\pi) = 0$"}
+    ]
+  },
+  "layer": [
+    {
+      "mark": { "type": "line", "interpolate": "monotone", "stroke": "steelblue" },
+      "encoding": {
+        "x": { "field": "t", "type": "nominal", "title": "$x$ (radians)" },
+        "y": { "field": "v", "type": "quantitative", "title": "$f(x) = \\sin x$" }
+      }
+    },
+    {
+      "mark": { "type": "point", "filled": true, "size": 50 },
+      "encoding": {
+        "x": { "field": "t", "type": "nominal" },
+        "y": { "field": "v", "type": "quantitative" }
+      }
+    },
+    {
+      "mark": { "type": "text", "dy": -12, "fontSize": 10 },
+      "encoding": {
+        "x": { "field": "t", "type": "nominal" },
+        "y": { "field": "v", "type": "quantitative" },
+        "text": { "field": "label", "type": "nominal" }
+      }
+    }
+  ],
+  "width": 420,
+  "height": 220,
+  "title": "KaTeX labels: $\\sin$ values and mixed text + math"
 }
 ```
 
@@ -439,6 +487,7 @@ says "inline data only".
 
 - `"width": "container"` compiles but its wrapper-resize semantics are
   untested and unsupported — set explicit `width`/`height` instead.
-- Chart labels are plain text (no `$...$` math yet — planned).
+- Label math rasterizes single-line labels only: multi-line labels are kept
+  as plain text. Prices like `$5` are never treated as math.
 - Interactive charts (pan/zoom/selections) are out of scope; output is
   static SVG.

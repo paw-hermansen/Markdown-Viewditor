@@ -22,3 +22,8 @@ export const SMILES_PATTERNS = [
   /^ {0,3}(?:`{3,}|~{3,})[ \t]*smiles(?=$|[ \t{])[^\r\n]*$/im,
   /^ {0,3}(?:`{3,}|~{3,})[ \t]*smi(?=$|[ \t{])[^\r\n]*$/im,
 ];
+
+export const VEGA_LITE_PATTERNS = [
+  /^ {0,3}(?:`{3,}|~{3,})[ \t]*vega-lite(?=$|[ \t{])[^\r\n]*$/im,
+  /^ {0,3}(?:`{3,}|~{3,})[ \t]*vegalite(?=$|[ \t{])[^\r\n]*$/im,
+];

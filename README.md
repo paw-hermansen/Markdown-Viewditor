@@ -15,6 +15,7 @@ An advanced extended markdown viewer and editor with live preview and scroll syn
 - **Zoom** — Scale the app (70%–300%) with `Ctrl +` / `Ctrl -` / `Ctrl 0`, `Ctrl`+mouse wheel, or the status bar control
 - **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts and more, rendered with [Mermaid](https://mermaid.ai)
+- **Vega-Lite Charts** — Line, bar and scatter charts from raw [Vega-Lite](https://vega.github.io/vega-lite/) JSON, with layers, trend lines and KaTeX labels
 - **Molecular Structures** — Organic chemistry structures from SMILES, rendered with [smiles-drawer](https://github.com/reymond-group/smilesDrawer)
 - **Export** — Self-contained HTML, ODT (most wordprocessors) and PDF/Print
 - **Dark/light Themes** — 8 built-in themes + custom CSS themes
@@ -108,18 +109,18 @@ Store.
 **Note**: The rendered look of these files might not be correct if you view them in
 any other Markdown viewer than `Markdown Viewditor` because they use extensions to
 Markdown that not all Markdown viewers can render correct and beautiful.
-Instead you can view them on [our github pages web-site](https://paw-hermansen.github.io/Markdown-Viewditor/)
-to see how these files look inside `MarkDown Viewditor` - at least if you have a fairly
-new internet browser.
 
-| Guide                                          | Description                                          |
-| ---------------------------------------------- | ---------------------------------------------------- |
-| [Markdown Examples](docs/Examples/Examples.md) | Syntax reference for all supported markdown features |
-| [Custom Themes](docs/CustomThemes.md)          | Creating and installing custom CSS themes            |
-| [Math Formulas](docs/Math.md)                  | KaTeX math rendering and delimiter syntax            |
-| [Chemical Formulas](docs/Chemistry.md)         | mhchem equations and physical units                  |
-| [Mermaid Diagrams](docs/Mermaid.md)            | Diagram types, host options and export behavior      |
-| [Molecular Structures](docs/Smiles.md)         | SMILES input, display options and export behavior    |
+> **[See docs](https://paw-hermansen.github.io/Markdown-Viewditor/) rendered in your browser**
+
+| Guide                                          | Description                                            |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| [Markdown Examples](docs/Examples/Examples.md) | Syntax reference for all supported markdown features   |
+| [Custom Themes](docs/CustomThemes.md)          | Creating and installing custom CSS themes              |
+| [Math Formulas](docs/Math.md)                  | KaTeX math rendering and delimiter syntax              |
+| [Chemical Formulas](docs/Chemistry.md)         | mhchem equations and physical units                    |
+| [Mermaid Diagrams](docs/Mermaid.md)            | Diagram types, host options and export behavior        |
+| [Molecular Structures](docs/Smiles.md)         | SMILES input, display options and export behavior      |
+| [Vega-Lite Charts](docs/VegaLite.md)           | Charts from raw Vega-Lite JSON: layers, labels, themes |
 
 ## Markdown Compatibility Levels
 
@@ -221,6 +222,36 @@ with HTML comment directives — for example `{scale=1.5 align=center}` or
 scrollbar. Structures export to HTML and PDF as inline/vector SVG, and to ODT
 as vector SVG images (or PNG with the shared rasterize option); structures
 too wide for a page are scaled down to fit it.
+
+## Vega-Lite Charts
+
+See [Vega-Lite Charts](docs/VegaLite.md) for settings, labels, themes and
+export behavior.
+
+Markdown Viewditor renders charts from raw
+[Vega-Lite](https://vega.github.io/vega-lite/) JSON specifications in
+fenced code blocks with the `vega-lite` language identifier. The full
+grammar is supported — data sets, layers, transforms (including
+`regression` trend lines and `loess` smoothing), log/time scales and
+legends:
+
+```vega-lite
+{
+  "data": { "values": [{"x": 1, "y": 2}, {"x": 2, "y": 5}, {"x": 3, "y": 4}] },
+  "mark": { "type": "line", "point": true, "interpolate": "monotone" },
+  "encoding": {
+    "x": { "field": "x", "type": "quantitative" },
+    "y": { "field": "y", "type": "quantitative" }
+  },
+  "width": 320,
+  "height": 200
+}
+```
+
+Charts are self-contained (inline data only — a document never fetches
+from the network), labels support KaTeX math via `$…$`, and themes follow
+the app's dark/light theme unless pinned per block. Everything exports to
+HTML, PDF, ODT and DOCX as vector SVG.
 
 ## Themes
 

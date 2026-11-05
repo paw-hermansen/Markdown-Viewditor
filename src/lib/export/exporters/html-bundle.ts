@@ -120,7 +120,10 @@ function resolveViewerBackground(): string {
 const CSS_URL_RE = /url\((['"]?)([^'")]+)\1\)/g;
 
 /** Match `src="..."` and `src='...'` in <img> tags. */
-const IMG_SRC_RE = /(<img\s[^>]*?src=)(['"])([^'"]+)\2/gi;
+// Matches markdown `<img src>` and SVG `<image href>`/`<image xlink:href>`
+// (vega image marks), same (prefix, quote, src) group structure.
+const IMG_SRC_RE =
+  /(<img\s[^>]*?src=|<image\s[^>]*?(?:xlink:)?href=)(['"])([^'"]+)\2/gi;
 
 import type { InvokeImpl } from "../assets";
 

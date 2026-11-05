@@ -29,6 +29,8 @@ export async function buildDocument(
   directiveStateMap: Array<[number, Record<string, unknown>]> = [],
   mermaidDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
   smilesDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
+  vegaLiteDirectiveStateMap: Array<[number, Record<string, unknown>]> = [],
+  filePath: string | null = null,
 ): Promise<BuildResult> {
   const ctx = createBuildContext({
     invokeImpl,
@@ -37,6 +39,8 @@ export async function buildDocument(
     directiveStateMap,
     mermaidDirectiveStateMap,
     smilesDirectiveStateMap,
+    vegaLiteDirectiveStateMap,
+    filePath,
   });
 
   // ── pre-render footnote bodies (document order = w:id order) ──

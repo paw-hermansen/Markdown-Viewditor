@@ -68,7 +68,10 @@ export async function inlineCssAssets(
 }
 
 /** Match `src="..."` and `src='...'` in <img> tags. */
-const IMG_SRC_RE = /(<img\s[^>]*?src=)(['"])([^'"]+)\2/gi;
+// Matches markdown `<img src>` and SVG `<image href>`/`<image xlink:href>`
+// (vega image marks), same (prefix, quote, src) group structure.
+const IMG_SRC_RE =
+  /(<img\s[^>]*?src=|<image\s[^>]*?(?:xlink:)?href=)(['"])([^'"]+)\2/gi;
 
 /** Tauri `invoke` call signature. */
 export type InvokeImpl = (

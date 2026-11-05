@@ -207,6 +207,11 @@ export interface MathPngOptions {
    * box (byte-identical output for the ODT exporter). */
   trimToInk?: boolean;
 
+  /** Text color for the captured glyphs (KaTeX inherits it). Chart labels
+   * need theme-colored math; document math leaves this unset and gets the
+   * capture host's default (black — the neutral-document contract). */
+  color?: string;
+
   // Directive-based KaTeX options (affect rendering output).
   leqno?: boolean;
   fleqn?: boolean;
@@ -524,6 +529,7 @@ export async function renderMathToPng(
   const wrapperStyle = opts.displayMode
     ? `display:block;padding:${BUFFER_PX}px 0;`
     : "display:inline-block;";
+  const colorStyle = opts.color ? `color:${opts.color};` : "";
   const inlineBaselineProbe = opts.displayMode
     ? ""
     : '<span aria-hidden="true" style="display:inline-block;width:0;height:0;line-height:0;overflow:hidden;vertical-align:baseline;visibility:hidden;"></span>';
@@ -540,7 +546,7 @@ export async function renderMathToPng(
   // The zero-size inline participant gives the wrapper a stable baseline even
   // when KaTeX's positioned descendants have no useful line-box rectangle.
   // It is hidden and has no area, so it cannot affect visual-bounds scanning.
-  host.innerHTML = `<div style="${wrapperStyle}">${inlineBaselineProbe}${katexHtml}</div>`;
+  host.innerHTML = `<div style="${colorStyle}${wrapperStyle}">${inlineBaselineProbe}${katexHtml}</div>`;
 
   // Re-inject the --katex-font-scale CSS rule after innerHTML (which clears
   // all children including the style element created in ensureHost).

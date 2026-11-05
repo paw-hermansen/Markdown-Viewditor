@@ -2,6 +2,7 @@ import { registerExtension, registerExtensionSchema } from "./registry";
 import { katexExtension } from "./katex/index";
 import { mermaidExtension } from "./mermaid/index";
 import { smilesExtension } from "./smiles/index";
+import { vegaLiteExtension } from "./vega-lite/index";
 
 /**
  * Register all built-in extensions. Called once during initMarkdownIt().
@@ -27,5 +28,12 @@ export async function registerBuiltinExtensions(): Promise<void> {
   // <!-- smiles: key=val --> directives are validated against the SMILES schema.
   if (smilesExtension.fenceOptionsSchema) {
     registerExtensionSchema("smiles", smilesExtension.fenceOptionsSchema);
+  }
+
+  registerExtension(vegaLiteExtension);
+  // Register the Vega-Lite schema under the "vega-lite" namespace alias so
+  // that <!-- vega-lite: key=val --> directives are validated against it.
+  if (vegaLiteExtension.fenceOptionsSchema) {
+    registerExtensionSchema("vega-lite", vegaLiteExtension.fenceOptionsSchema);
   }
 }

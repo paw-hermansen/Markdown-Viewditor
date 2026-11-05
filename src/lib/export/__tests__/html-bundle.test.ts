@@ -395,3 +395,20 @@ describe("htmlBundleExporter", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 });
+
+describe("extractImages: SVG <image> hrefs (vega image marks)", () => {
+  it("extracts localimg hrefs on SVG image elements and rewrites to images/", async () => {
+    const html =
+      '<svg><image href="localimg://localhost/%2Ftmp%2Fpic.png"></image></svg>';
+    const invokeImpl = vi.fn(async (cmd: string) =>
+      cmd === "read_file_as_base64" ? "QUJD" : undefined,
+    );
+    const { entries, html: out } = await extractImages(
+      html,
+      invokeImpl as never,
+    );
+    expect(entries.length).toBe(1);
+    expect(out).not.toContain("localimg://");
+    expect(out).toContain("images/");
+  });
+});

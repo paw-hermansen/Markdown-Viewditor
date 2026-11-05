@@ -20,6 +20,12 @@ import {
   ensureSmilesLoaded,
   renderSmilesSvg,
 } from "$lib/extensions/smiles/renderer";
+import { VEGA_LITE_OPTIONS_SCHEMA } from "$lib/extensions/vega-lite/schema";
+import {
+  ensureVegaLoaded,
+  renderVegaLiteSvgForExport,
+} from "$lib/extensions/vega-lite/renderer";
+import { inlineSvgImageHrefs } from "../svg-images";
 import type { DocxBuildContext } from "./context";
 import { type Piece, textPiece, piecesToRunsXml } from "./runs";
 import { wText } from "./utils";
@@ -27,12 +33,14 @@ import {
   buildMathRenderOpts,
   buildMermaidOptions,
   buildSmilesOptions,
+  buildVegaLiteOptions,
   embedSvgGraphic,
   renderMath,
 } from "./media";
 import { renderInline } from "./inline";
 import {
   computeMermaidFrameDims,
+  computeVegaLiteFrameDims,
   fitDrawingToPage,
   CONTENT_WIDTH_TWIPS,
 } from "./dimensions";
@@ -791,6 +799,79 @@ export async function renderTokens(
           } catch (err) {
             ctx.warnings.push(
               `SMILES rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
+            );
+          }
+        }
+        // Vega-Lite charts embed like Mermaid diagrams and SMILES structures
+        // (dual-embed vector SVG with PNG fallback via embedSvgGraphic). The
+        // export render resolves `theme=auto` to the neutral light look, and
+        // localimg image hrefs are inlined to data: URIs so the vector blip
+        // stands alone outside the webview. On render failure we fall through
+        // and keep the source as a preformatted code block.
+        if (fenceLang === "vega-lite" || fenceLang === "vegalite") {
+          const label = `vega-lite(token@${i})`;
+          let vegaLiteFenceOpts: Record<string, unknown> = {};
+          const vegaLiteRawAttrs = extractBraceAttrs(language);
+          if (vegaLiteRawAttrs) {
+            vegaLiteFenceOpts = validateExplicitFenceOptions(
+              parseAttrString(vegaLiteRawAttrs),
+              VEGA_LITE_OPTIONS_SCHEMA,
+            );
+          }
+          const vegaLiteOpts = buildVegaLiteOptions(
+            ctx,
+            token.map?.[0] ?? 0,
+            vegaLiteFenceOpts,
+          );
+          try {
+            // Lazy-load the vega chunks outside the render so a load
+            // failure propagates to the fallthrough below.
+            await ensureVegaLoaded();
+            const rendered = await renderVegaLiteSvgForExport(
+              token.content,
+              vegaLiteOpts,
+              ctx.filePath,
+            );
+            ctx.warnings.push(...rendered.warnings);
+            const inlined = await inlineSvgImageHrefs(
+              rendered.svg,
+              ctx.invokeImpl,
+            );
+            const svgXml = inlined.svg;
+            ctx.warnings.push(...inlined.warnings);
+            const dims = sniffSvgDimensions(
+              new TextEncoder().encode(svgXml),
+              label,
+              ctx.warnings,
+            ) ?? { width: 0, height: 0 };
+            const { frameWidthPx, frameHeightPx } = computeVegaLiteFrameDims(
+              dims.width,
+              dims.height,
+              vegaLiteOpts,
+            );
+            const frameDims = {
+              width: Math.round(frameWidthPx),
+              height: Math.round(frameHeightPx),
+            };
+            const drawing = await embedSvgGraphic(
+              ctx,
+              svgXml,
+              frameDims,
+              label,
+              "Vega-Lite chart",
+            );
+            const jc =
+              vegaLiteOpts.align === "left"
+                ? '<w:jc w:val="left"/>'
+                : vegaLiteOpts.align === "right"
+                  ? '<w:jc w:val="right"/>'
+                  : '<w:jc w:val="center"/>';
+            parts.push(paragraphXml("", jc, drawing));
+            i++;
+            break;
+          } catch (err) {
+            ctx.warnings.push(
+              `Vega-Lite rendering failed (${err instanceof Error ? err.message : String(err)}); exported as source code.`,
             );
           }
         }

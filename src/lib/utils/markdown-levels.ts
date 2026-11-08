@@ -48,20 +48,53 @@ export const MAX_DISPLAY_LINES = 5;
 
 const detectors: FeatureDetector[] = [];
 
+const detectorsChangedListeners: (() => void)[] = [];
+
+/**
+ * Subscribe to detector registry changes (registration/unregistration).
+ * Returns an unsubscribe function.
+ *
+ * The registry is NOT complete when stores first initialize: extension
+ * detectors register lazily, when their extension module loads. Consumers
+ * that cache preset-derived data (the settings store's `enabledFeatures`)
+ * must re-derive it on these notifications instead of trusting an early
+ * snapshot. Fires at most once per `registerFeatureDetectors()` /
+ * `unregisterFeatureDetector()` call that actually changed the registry.
+ */
+export function onDetectorsChanged(listener: () => void): () => void {
+  detectorsChangedListeners.push(listener);
+  return () => {
+    const i = detectorsChangedListeners.indexOf(listener);
+    if (i >= 0) detectorsChangedListeners.splice(i, 1);
+  };
+}
+
+function notifyDetectorsChanged(): void {
+  for (const l of [...detectorsChangedListeners]) l();
+}
+
 /**
  * Register feature detectors. Plan 2 (math) registers its own detectors via
  * this same entry point so presets auto-extend without touching the engine.
  */
 export function registerFeatureDetectors(...dets: FeatureDetector[]): void {
+  let added = false;
   for (const d of dets) {
-    if (!detectors.some((x) => x.id === d.id)) detectors.push(d);
+    if (!detectors.some((x) => x.id === d.id)) {
+      detectors.push(d);
+      added = true;
+    }
   }
+  if (added) notifyDetectorsChanged();
 }
 
 /** Remove a registered detector by id (primarily for tests). */
 export function unregisterFeatureDetector(id: string): void {
   const i = detectors.findIndex((x) => x.id === id);
-  if (i >= 0) detectors.splice(i, 1);
+  if (i >= 0) {
+    detectors.splice(i, 1);
+    notifyDetectorsChanged();
+  }
 }
 
 /** List all registered toggles (presets derive from this). */

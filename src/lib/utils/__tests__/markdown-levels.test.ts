@@ -14,6 +14,7 @@ import {
   presetFor,
   registerFeatureDetectors,
   unregisterFeatureDetector,
+  onDetectorsChanged,
   analyzeTokens,
   findViolations,
   requiredPreset,
@@ -113,6 +114,48 @@ describe("markdown-levels registry & presets", () => {
   it("requiredPreset returns advanced for frontmatter", () => {
     const t = listFeatureToggles().find((x) => x.id === "frontmatter")!;
     expect(requiredPreset(t)).toBe("advanced");
+  });
+});
+
+describe("onDetectorsChanged", () => {
+  const fake = (id: string): FeatureDetector => ({
+    id,
+    label: `Fake ${id}`,
+    presets: { github: true, advanced: true },
+    detect: () => [],
+  });
+
+  it("fires on register and unregister, once per registry change", () => {
+    let events = 0;
+    const unsub = onDetectorsChanged(() => events++);
+    try {
+      registerFeatureDetectors(fake("fake-a"), fake("fake-b"));
+      expect(events).toBe(1);
+      // Idempotent re-registration: no change, no notification.
+      registerFeatureDetectors(fake("fake-a"));
+      expect(events).toBe(1);
+      unregisterFeatureDetector("fake-a");
+      expect(events).toBe(2);
+    } finally {
+      unsub();
+      unregisterFeatureDetector("fake-a");
+      unregisterFeatureDetector("fake-b");
+    }
+  });
+
+  it("stops notifying after unsubscribe", () => {
+    let events = 0;
+    const unsub = onDetectorsChanged(() => events++);
+    try {
+      registerFeatureDetectors(fake("fake-c"));
+      expect(events).toBe(1);
+      unsub();
+      registerFeatureDetectors(fake("fake-d"));
+      expect(events).toBe(1);
+    } finally {
+      unregisterFeatureDetector("fake-c");
+      unregisterFeatureDetector("fake-d");
+    }
   });
 });
 

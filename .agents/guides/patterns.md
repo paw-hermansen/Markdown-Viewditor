@@ -104,6 +104,13 @@ so Plan 2's math detectors extend the presets automatically without touching
 the engine.
 
 - `registerFeatureDetectors(...)` — register a detector (idempotent on `id`).
+- `onDetectorsChanged(cb)` — subscribe to registry changes (fires on register /
+  unregister; returns an unsubscribe fn). The registry is **not complete** when
+  stores first initialize: extension detectors register lazily when their
+  extension module loads. Never cache a preset-derived set at module load —
+  `stores/settings.svelte.ts` subscribes and re-derives `enabledFeatures` for
+  preset levels (`syncPresetFeatures`) as the registry grows, and heals stale
+  saved sets on load. Custom sets are user-authored and never touched.
 - `analyzeContent(content)` (in `markdown-render.ts`) — parse-only analysis reusing
   the existing markdown-it singleton; no rendering.
 - `findViolations(used, enabledFeatures)` — used features not in the enabled set.

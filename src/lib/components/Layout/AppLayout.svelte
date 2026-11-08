@@ -35,6 +35,11 @@ import { updateStatus } from '$lib/stores/update.svelte';
   let splitRatio = $state(settingsState.splitRatio);
   let nearEdge = $state<'left' | 'right' | 'center' | null>(null);
 
+  // Bookkeeping for the current press/drag (not rendered).
+  let dragStartX = 0;
+  let dragMoved = false;
+  let dragStartMode: ViewMode = 'split';
+
   let displayRatio = $derived(isDragging ? splitRatio : settingsState.splitRatio);
 
   let stopLevelAnalysis: (() => void) | undefined;
@@ -47,15 +52,26 @@ import { updateStatus } from '$lib/stores/update.svelte';
   }
 
   function handleDragStart(clientX: number) {
-    isDragging = true;
+    dragStartX = clientX;
+    dragMoved = false;
+    dragStartMode = viewMode;
 
     if (viewMode !== 'split') {
       splitRatio = getRatioFromClientX(clientX);
       onViewModeChange('split');
+    } else {
+      // Resync the drag copy with the saved ratio. It can be stale — left at
+      // the previous drag's raw position, or the saved ratio changed after
+      // this component mounted (settings load, double-click) — and the
+      // display flips to it the moment isDragging turns true, before the
+      // pointer has moved at all.
+      splitRatio = settingsState.splitRatio;
     }
+    isDragging = true;
   }
 
   function handleDragMove(clientX: number) {
+    if (Math.abs(clientX - dragStartX) > 1) dragMoved = true;
     splitRatio = getRatioFromClientX(clientX);
     if (splitRatio < EDGE_THRESHOLD) {
       nearEdge = 'left';
@@ -72,6 +88,15 @@ import { updateStatus } from '$lib/stores/update.svelte';
     isDragging = false;
     nearEdge = null;
 
+    if (!dragMoved) {
+      // A press without movement is a click, not a drag: leave the ratio and
+      // the edge logic alone. If the press switched us into split to prepare
+      // a drag, put the mode back the way it was.
+      if (dragStartMode !== 'split') onViewModeChange(dragStartMode);
+      splitRatio = settingsState.splitRatio;
+      return;
+    }
+
     if (splitRatio < EDGE_THRESHOLD) {
       onViewModeChange('viewer');
     } else if (splitRatio > 1 - EDGE_THRESHOLD) {
@@ -81,6 +106,8 @@ import { updateStatus } from '$lib/stores/update.svelte';
         splitRatio = 0.5;
       }
       updateSplitRatio(splitRatio);
+      // updateSplitRatio clamps; keep the drag copy in sync with the saved one.
+      splitRatio = settingsState.splitRatio;
     }
   }
 
@@ -121,6 +148,9 @@ import { updateStatus } from '$lib/stores/update.svelte';
     if (viewMode !== 'split') {
       onViewModeChange('split');
     }
+    // Update both copies: the drag copy would otherwise stay stale and the
+    // next press would jump the divider back to it.
+    splitRatio = 0.5;
     updateSplitRatio(0.5);
   }
 

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent } from "@testing-library/svelte";
+import { tick } from "svelte";
 import type { Snippet } from "svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AppLayout from "../AppLayout.svelte";
@@ -318,6 +319,69 @@ describe("AppLayout", () => {
       fireEvent.doubleClick(handle);
       expect(onViewModeChange).toHaveBeenCalledWith("split");
       expect(mockUpdateSplitRatio).toHaveBeenCalledWith(0.5);
+    });
+
+    it("pressing without moving is a click: no ratio commit, no mode change", () => {
+      const { onViewModeChange, handle } = setup("split");
+      drag(handle, 500, 900); // previous drag ended at 0.9
+      mockUpdateSplitRatio.mockClear();
+      fireEvent.mouseDown(handle, { clientX: 500 });
+      fireEvent.mouseUp(document);
+      expect(mockUpdateSplitRatio).not.toHaveBeenCalled();
+      expect(onViewModeChange).not.toHaveBeenCalled();
+    });
+
+    it("pressing the handle shows the saved ratio, not the previous drag position", async () => {
+      const { handle } = setup("split");
+      drag(handle, 500, 900); // previous drag's raw position: 0.9
+      const content = document.querySelector(".content")!;
+      fireEvent.mouseDown(handle, { clientX: 500 });
+      await tick();
+      expect(content.getAttribute("style")).toMatch(/--split-ratio:\s*0\.5\b/);
+      fireEvent.mouseUp(document);
+    });
+
+    it("pressing the handle picks up a saved ratio changed outside a drag", async () => {
+      const { handle } = setup("split");
+      // The saved ratio can change after mount (settings load, double-click).
+      mockSettingsState.splitRatio = 0.7;
+      const content = document.querySelector(".content")!;
+      fireEvent.mouseDown(handle, { clientX: 500 });
+      await tick();
+      expect(content.getAttribute("style")).toMatch(/--split-ratio:\s*0\.7\b/);
+      fireEvent.mouseUp(document);
+    });
+
+    it("a click without movement outside split mode is a no-op", () => {
+      const { onViewModeChange, handle } = setup("editor");
+      fireEvent.mouseDown(handle, { clientX: 500 });
+      expect(onViewModeChange).toHaveBeenLastCalledWith("split");
+      fireEvent.mouseUp(document);
+      expect(onViewModeChange).toHaveBeenLastCalledWith("editor");
+      expect(mockUpdateSplitRatio).not.toHaveBeenCalled();
+    });
+
+    it("double-click centers even after an edge drag left a stale ratio", async () => {
+      const { onViewModeChange, handle } = setup("split");
+      drag(handle, 500, 995); // edge: mode switches, ratio unsaved, drag copy = 0.995
+      mockUpdateSplitRatio.mockClear();
+      onViewModeChange.mockClear();
+      // A real double-click is two full click sequences followed by dblclick.
+      for (let i = 0; i < 2; i++) {
+        fireEvent.mouseDown(handle, { clientX: 500 });
+        fireEvent.mouseUp(document);
+        fireEvent.click(handle);
+        expect(mockUpdateSplitRatio).not.toHaveBeenCalled();
+        expect(onViewModeChange).not.toHaveBeenCalled();
+      }
+      fireEvent.doubleClick(handle);
+      expect(mockUpdateSplitRatio).toHaveBeenLastCalledWith(0.5);
+      // Both ratio copies are in sync now: the next press shows 0.5.
+      const content = document.querySelector(".content")!;
+      fireEvent.mouseDown(handle, { clientX: 500 });
+      await tick();
+      expect(content.getAttribute("style")).toMatch(/--split-ratio:\s*0\.5\b/);
+      fireEvent.mouseUp(document);
     });
   });
 });

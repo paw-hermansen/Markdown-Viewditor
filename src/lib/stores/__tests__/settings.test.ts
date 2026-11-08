@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockStore = {
   get: vi.fn(),
@@ -23,7 +23,12 @@ import {
   loadSettings,
   saveSettings,
 } from "../settings.svelte";
-import { presetFor } from "$lib/utils/markdown-levels";
+import {
+  presetFor,
+  registerFeatureDetectors,
+  unregisterFeatureDetector,
+  type FeatureDetector,
+} from "$lib/utils/markdown-levels";
 
 describe("settings store", () => {
   beforeEach(() => {
@@ -173,6 +178,71 @@ describe("settings store", () => {
       await loadSettings();
       expect(settingsState.markdownLevel).toBe("advanced");
       expect(settingsState.enabledFeatures).toEqual(presetFor("advanced"));
+    });
+
+    it("heals a stale preset feature set on load (toggles added since it was saved)", async () => {
+      mockStore.get.mockResolvedValue({
+        markdownLevel: "advanced",
+        enabledFeatures: ["tables"],
+      });
+      await loadSettings();
+      expect(settingsState.enabledFeatures).toEqual(presetFor("advanced"));
+    });
+
+    it("preserves a custom feature set on load", async () => {
+      mockStore.get.mockResolvedValue({
+        markdownLevel: "custom",
+        enabledFeatures: ["tables"],
+      });
+      await loadSettings();
+      expect(settingsState.markdownLevel).toBe("custom");
+      expect(settingsState.enabledFeatures).toEqual(["tables"]);
+    });
+  });
+
+  describe("preset sets track the detector registry", () => {
+    const fakeDetector: FeatureDetector = {
+      id: "fake-ext",
+      label: "Fake Ext",
+      presets: { github: true, advanced: true },
+      detect: () => [],
+    };
+
+    afterEach(() => {
+      unregisterFeatureDetector("fake-ext");
+    });
+
+    it("extends enabledFeatures when a detector registers after load (first start)", () => {
+      // Reproduces the first-start bug: the preset set is snapshotted before
+      // extension detectors register, leaving preset levels incomplete.
+      settingsState.markdownLevel = "advanced";
+      settingsState.enabledFeatures = presetFor("advanced");
+      expect(settingsState.enabledFeatures).not.toContain("fake-ext");
+
+      registerFeatureDetectors(fakeDetector);
+
+      expect(settingsState.enabledFeatures).toContain("fake-ext");
+      expect(settingsState.enabledFeatures).toEqual(presetFor("advanced"));
+    });
+
+    it("shrinks enabledFeatures when a detector is unregistered again", () => {
+      settingsState.markdownLevel = "advanced";
+      registerFeatureDetectors(fakeDetector);
+      expect(settingsState.enabledFeatures).toContain("fake-ext");
+
+      unregisterFeatureDetector("fake-ext");
+
+      expect(settingsState.enabledFeatures).not.toContain("fake-ext");
+      expect(settingsState.enabledFeatures).toEqual(presetFor("advanced"));
+    });
+
+    it("leaves custom feature sets untouched when detectors register", () => {
+      settingsState.markdownLevel = "custom";
+      settingsState.enabledFeatures = ["tables"];
+
+      registerFeatureDetectors(fakeDetector);
+
+      expect(settingsState.enabledFeatures).toEqual(["tables"]);
     });
   });
 

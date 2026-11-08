@@ -1,6 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import type { Settings, ViewMode } from "$lib/types";
-import { presetFor } from "$lib/utils/markdown-levels";
+import { onDetectorsChanged, presetFor } from "$lib/utils/markdown-levels";
 
 const STORE_FILE = "settings.json";
 
@@ -15,6 +15,9 @@ const DEFAULT_SETTINGS: Settings = {
   lastOpenedFile: null,
   recentFiles: [],
   markdownLevel: "advanced",
+  // Best-effort snapshot: the detector registry is incomplete at module load
+  // (extension detectors register lazily), so syncPresetFeatures() re-derives
+  // this preset set as the registry grows and on load.
   enabledFeatures: presetFor("advanced"),
   exportConfirmDismissed: false,
   odtRasterizeMath: false,
@@ -37,6 +40,31 @@ export const settingsState = $state<Settings>({ ...DEFAULT_SETTINGS });
 let store: Store | null = null;
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Named presets derive their `enabledFeatures` from the detector registry
+ * (patterns.md / PLAN-SYNTAX-LEVELS), but the registry is not complete when
+ * this module first evaluates: extension detectors register lazily, when
+ * their extension module loads. Saved sets can also predate newly added
+ * toggles. Re-derive the set for preset levels whenever it drifts; custom
+ * sets are user-authored and left untouched.
+ */
+function syncPresetFeatures(): void {
+  const level = settingsState.markdownLevel;
+  if (level === "custom") return;
+  const preset = presetFor(level);
+  const current = settingsState.enabledFeatures;
+  if (
+    preset.length === current.length &&
+    preset.every((id) => current.includes(id))
+  ) {
+    return;
+  }
+  settingsState.enabledFeatures = preset;
+  saveSettings();
+}
+
+onDetectorsChanged(syncPresetFeatures);
+
 export async function loadSettings(): Promise<void> {
   try {
     store = await Store.load(STORE_FILE);
@@ -44,6 +72,10 @@ export async function loadSettings(): Promise<void> {
     if (saved) {
       Object.assign(settingsState, { ...DEFAULT_SETTINGS, ...saved });
     }
+    // Heal a stale saved (or default) preset set now that saved settings
+    // have been applied — late detector registrations heal it via
+    // onDetectorsChanged above.
+    syncPresetFeatures();
   } catch (error) {
     console.error("Failed to load settings:", error);
   }

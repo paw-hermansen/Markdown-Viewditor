@@ -93,6 +93,7 @@ describe("AboutDialog", () => {
           zoomOut: vi.fn(),
           resetZoom: vi.fn(),
           handleFormatDocument: vi.fn(),
+          handleFormatParagraph: vi.fn(),
           handleAbout: vi.fn(),
           handleFormat: vi.fn(),
         },
@@ -108,6 +109,13 @@ describe("AboutDialog", () => {
     expect(formatDoc.textContent).toContain("Shift");
     expect(formatDoc.textContent).toContain("Alt");
     expect(formatDoc.textContent).toContain("F");
+    // Format Current Paragraph = Shift + Alt + P.
+    const formatPara = screen
+      .getByText("Format Current Paragraph")
+      .closest("tr")!;
+    expect(
+      Array.from(formatPara.querySelectorAll("kbd")).map((k) => k.textContent),
+    ).toEqual(["Alt", "Shift", "P"]);
   });
 
   it("switches to Dependencies tab on click", async () => {

@@ -92,8 +92,9 @@ checks).*
 | 3.2 | Select a word and work through the toolbar buttons: bold, italic (on bold text → bold-italic → bold), italic on plain text (wrap → unwrap), strikethrough, highlight, heading (repeat: H2…H6 → plain), link, image, code (inline → block → inline), bullet, numbered, task, blockquote, hr. | Each button edits the text as expected and the viewer shows the result; the editor keeps focus after every click. |
 | 3.3 | Repeat three of them by keyboard: `Ctrl+B`, `Ctrl+I`, `Ctrl+E`.                                                                    | Same effects as the buttons. (All shortcuts are pinned by `EditorKeyboard.test.ts`.)                          |
 | 3.4 | Select a long unwrapped paragraph, press `Shift+Alt+F`; do the same inside a blockquote.                                            | Lines re-wrap to the editor width; `> ` prefixes preserved.                                                   |
-| 3.5 | `Ctrl+F`, search a word that occurs several times; type a replacement; click "replace all"; Escape.                                 | Search bar opens and jumps to matches; every occurrence replaced; word count updates; bar closes.             |
-| 3.6 | Save As `/tmp/manual-test.md`; save again to the same name; edit; save again.                                                                                   | Save dialog offers Markdown/All Files filters; filename and `*` indicator behave; `.bak` backup created; saving over the existing file asks for OS confirmation; `Ctrl+R` reloads from disk. |
+| 3.5 | Put the cursor in a long unwrapped paragraph (no selection), press `Shift+Alt+P`; repeat with the cursor in a blockquote paragraph, then on a blank line and inside a code block. | Only the cursor's paragraph re-wraps (blockquote `> ` prefixes preserved); the rest of the document is unchanged; nothing happens on a blank line or in a code block. |
+| 3.6 | `Ctrl+F`, search a word that occurs several times; type a replacement; click "replace all"; Escape.                                 | Search bar opens and jumps to matches; every occurrence replaced; word count updates; bar closes.             |
+| 3.7 | Save As `/tmp/manual-test.md`; save again to the same name; edit; save again.                                                                                   | Save dialog offers Markdown/All Files filters; filename and `*` indicator behave; `.bak` backup created; saving over the existing file asks for OS confirmation; `Ctrl+R` reloads from disk. |
 
 ## S4 — Files, unsaved changes & external changes
 
@@ -200,7 +201,7 @@ before starting — step 8.5 verifies they persist.*
 | SMILES                                                         | S2     | `smiles/*`                                                        |
 | Editor typing, status bar                                      | S3     | `editor.test.ts`, `StatusBar.test.ts`                             |
 | Toolbar & keyboard formatting                                  | S3     | `editor-format.test.ts`, `EditorToolbar.test.ts`, `EditorKeyboard.test.ts` |
-| Format Document                                                | S3     | `markdown-formatter.test.ts`, `Editor.test.ts`                    |
+| Format Document / Current Paragraph                            | S3     | `markdown-formatter.test.ts`, `Editor.test.ts`, `keyboard-matrix.test.ts` |
 | Find / replace                                                 | S3     | `EditorSearch.test.ts`                                            |
 | File open/save, unsaved-changes dialogs, reload                | S4     | `file.test.ts`, `confirm.test.ts`, `page.test.ts`, `file.rs`      |
 | Encoding (BOM/CRLF/Latin-1), read-only, backups                | S4     | `cargo test` — `src-tauri/src/commands/file.rs`                   |

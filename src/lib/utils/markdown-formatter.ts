@@ -70,6 +70,36 @@ function wrapText(
 }
 
 /**
+ * Re-wrap a single paragraph block (its lines, including any blockquote
+ * prefix) to `targetWidth` measurement units. Returns the formatted lines.
+ */
+function formatParagraphLines(
+  blockLines: string[],
+  targetWidth: number,
+  measureText: TextMeasurer,
+): string[] {
+  // Detect the shared prefix (blockquote markers like "> " or ">> ").
+  const prefixes = blockLines.map((l) => BLOCKQUOTE_RE.exec(l)?.[1] ?? "");
+  const hasPrefix = prefixes.some((p) => p.length > 0);
+  const commonPrefix = hasPrefix
+    ? (prefixes.find((p) => p.length > 0) ?? "")
+    : "";
+
+  // Strip the common prefix from every line, then join.
+  const stripped = blockLines.map((l) =>
+    commonPrefix ? l.replace(commonPrefix, "") : l,
+  );
+  const joined = stripped.join(" ").trim();
+
+  if (!joined) return [...blockLines];
+
+  const wrapped = wrapText(joined, targetWidth, (text) =>
+    measureText(commonPrefix + text),
+  );
+  return wrapped.map((wl) => commonPrefix + wl);
+}
+
+/**
  * Format markdown prose by wrapping paragraphs to `targetWidth` measurement units.
  * Consecutive lines within a paragraph are joined before wrapping, so
  * both breaking and rejoining work correctly. Code blocks, fences,
@@ -101,33 +131,12 @@ export function formatMarkdown(
         result.push(lines[i]);
       }
     } else {
-      const blockLines = lines.slice(block.start, block.end);
-
-      // Detect the shared prefix (blockquote markers like "> " or ">> ").
-      const prefixes = blockLines.map((l) => BLOCKQUOTE_RE.exec(l)?.[1] ?? "");
-      const hasPrefix = prefixes.some((p) => p.length > 0);
-      const commonPrefix = hasPrefix
-        ? (prefixes.find((p) => p.length > 0) ?? "")
-        : "";
-
-      // Strip the common prefix from every line, then join.
-      const stripped = blockLines.map((l) =>
-        commonPrefix ? l.replace(commonPrefix, "") : l,
-      );
-      const joined = stripped.join(" ").trim();
-
-      if (!joined) {
-        for (let i = block.start; i < block.end; i++) {
-          result.push(lines[i]);
-        }
-      } else {
-        const wrapped = wrapText(joined, targetWidth, (text) =>
-          measureText(commonPrefix + text),
-        );
-
-        for (const wl of wrapped) {
-          result.push(commonPrefix + wl);
-        }
+      for (const l of formatParagraphLines(
+        lines.slice(block.start, block.end),
+        targetWidth,
+        measureText,
+      )) {
+        result.push(l);
       }
     }
 
@@ -139,4 +148,64 @@ export function formatMarkdown(
   }
 
   return result.join("\n");
+}
+
+export interface ParagraphFormatResult {
+  /** Char offset of the paragraph start in `content`. */
+  from: number;
+  /** Char offset just past the paragraph end (exclusive). */
+  to: number;
+  /** The formatted paragraph text (no trailing newline). */
+  text: string;
+}
+
+/**
+ * Find the prose paragraph block (markdown-it `paragraph_open`) whose line
+ * range contains `line` (0-based). Returns `null` when the line is not in a
+ * paragraph — blank lines, headings, code fences, tables, etc.
+ */
+export function findParagraphAtLine(
+  content: string,
+  line: number,
+): { start: number; end: number } | null {
+  const tokens = parseMd.parse(content, {});
+  for (const block of collectBlockRanges(tokens)) {
+    if (block.type === "paragraph" && line >= block.start && line < block.end) {
+      return { start: block.start, end: block.end };
+    }
+  }
+  return null;
+}
+
+/**
+ * Format only the paragraph containing `line` (0-based) the same way
+ * `formatMarkdown` formats paragraphs. Returns the replacement range and
+ * text, or `null` when the line is not in a prose paragraph (or nothing
+ * would change the caller's target width).
+ */
+export function formatParagraphAt(
+  content: string,
+  line: number,
+  targetWidth: number,
+  measureText: TextMeasurer = (text) => text.length,
+): ParagraphFormatResult | null {
+  if (targetWidth <= 0) return null;
+
+  const range = findParagraphAtLine(content, line);
+  if (!range) return null;
+
+  const lines = content.split("\n");
+  const formatted = formatParagraphLines(
+    lines.slice(range.start, range.end),
+    targetWidth,
+    measureText,
+  );
+
+  let from = 0;
+  for (let i = 0; i < range.start; i++) from += lines[i].length + 1;
+  let to = from;
+  for (let i = range.start; i < range.end; i++) to += lines[i].length + 1;
+  to -= 1; // drop the trailing newline of the block's last line
+
+  return { from, to, text: formatted.join("\n") };
 }

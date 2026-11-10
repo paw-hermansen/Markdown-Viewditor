@@ -306,6 +306,7 @@
               <tbody>
                 <tr><td>Cycle View Mode</td><td>{@render keys('view.cycle')}</td></tr>
                 <tr><td>Format Document</td><td>{@render keys('format.document')}</td></tr>
+                <tr><td>Format Current Paragraph</td><td>{@render keys('format.paragraph')}</td></tr>
                 <tr><td>Zoom In</td><td>{@render keys('view.zoom-in')} (or <kbd class="shortcut-key">=</kbd>)</td></tr>
                 <tr><td>Zoom Out</td><td>{@render keys('view.zoom-out')}</td></tr>
                 <tr><td>Reset Zoom</td><td>{@render keys('view.zoom-reset')}</td></tr>

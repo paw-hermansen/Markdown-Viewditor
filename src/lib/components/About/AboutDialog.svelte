@@ -281,7 +281,7 @@
           </section>
 
           <section>
-            <h2>Editor</h2>
+            <h2>Format</h2>
             <table class="ref-table">
               <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
               <tbody>
@@ -295,6 +295,8 @@
                 <tr><td>Inline Code / Code Block</td><td>{@render keys('edit.code')} (toggles)</td></tr>
                 <tr><td>Bullet List</td><td>{@render keys('edit.bullet')}</td></tr>
                 <tr><td>Numbered List</td><td>{@render keys('edit.numbered')}</td></tr>
+                <tr><td>Format Document</td><td>{@render keys('format.document')}</td></tr>
+                <tr><td>Format Current Paragraph</td><td>{@render keys('format.paragraph')}</td></tr>
               </tbody>
             </table>
           </section>
@@ -305,8 +307,6 @@
               <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
               <tbody>
                 <tr><td>Cycle View Mode</td><td>{@render keys('view.cycle')}</td></tr>
-                <tr><td>Format Document</td><td>{@render keys('format.document')}</td></tr>
-                <tr><td>Format Current Paragraph</td><td>{@render keys('format.paragraph')}</td></tr>
                 <tr><td>Zoom In</td><td>{@render keys('view.zoom-in')} (or <kbd class="shortcut-key">=</kbd>)</td></tr>
                 <tr><td>Zoom Out</td><td>{@render keys('view.zoom-out')}</td></tr>
                 <tr><td>Reset Zoom</td><td>{@render keys('view.zoom-reset')}</td></tr>

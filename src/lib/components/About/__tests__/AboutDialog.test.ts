@@ -116,6 +116,23 @@ describe("AboutDialog", () => {
     expect(
       Array.from(formatPara.querySelectorAll("kbd")).map((k) => k.textContent),
     ).toEqual(["Alt", "Shift", "P"]);
+    // Both format commands live under the "Format" section, not "View".
+    const sectionOf = (row: HTMLElement) =>
+      row.closest("section")!.querySelector("h2")!.textContent;
+    expect(sectionOf(formatDoc)).toBe("Format");
+    expect(sectionOf(formatPara)).toBe("Format");
+    // View section keeps cycle/zoom commands only.
+    const viewSection = screen.getByRole("heading", { name: "View" });
+    expect(viewSection.closest("section")!.textContent).toContain(
+      "Cycle View Mode",
+    );
+    expect(viewSection.closest("section")!.textContent).toContain("Zoom In");
+    expect(viewSection.closest("section")!.textContent).not.toContain(
+      "Format Document",
+    );
+    expect(viewSection.closest("section")!.textContent).not.toContain(
+      "Format Current Paragraph",
+    );
   });
 
   it("switches to Dependencies tab on click", async () => {

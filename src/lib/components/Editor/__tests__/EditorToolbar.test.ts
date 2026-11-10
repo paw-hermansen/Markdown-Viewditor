@@ -27,6 +27,7 @@ describe("EditorToolbar", () => {
           zoomOut: vi.fn(),
           resetZoom: vi.fn(),
           handleFormatDocument: vi.fn(),
+          handleFormatParagraph: vi.fn(),
           handleAbout: vi.fn(),
           handleFormat: vi.fn(),
         },

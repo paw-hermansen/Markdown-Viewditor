@@ -29,6 +29,7 @@ function makeHandlers() {
     zoomOut: vi.fn(),
     resetZoom: vi.fn(),
     handleFormatDocument: vi.fn(),
+    handleFormatParagraph: vi.fn(),
     handleAbout: vi.fn(),
     handleFormat: vi.fn(),
   } satisfies PageCommandHandlers;
@@ -136,6 +137,13 @@ describe("keyboard matrix", () => {
     const h = setup();
     press({ code: "KeyF", shiftKey: true, altKey: true });
     expect(h.handleFormatDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it("format.paragraph fires on Shift+Alt+P without mod", () => {
+    const h = setup();
+    press({ code: "KeyP", shiftKey: true, altKey: true });
+    expect(h.handleFormatParagraph).toHaveBeenCalledTimes(1);
+    expect(h.handleFormatDocument).not.toHaveBeenCalled();
   });
 
   it("help.about fires on F1, not with mod", () => {

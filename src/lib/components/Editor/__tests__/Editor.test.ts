@@ -2,6 +2,7 @@
 import { render } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setDiagnostics } from "@codemirror/lint";
+import type { EditorView } from "codemirror";
 import { updateContent } from "$lib/stores/editor.svelte";
 import Editor from "../Editor.svelte";
 const {
@@ -62,6 +63,77 @@ vi.mock("$lib/utils/theme-css", () => ({
   setTheme: vi.fn(),
 }));
 
+/**
+ * jsdom measures nothing, so fake the editor layout the formatter needs:
+ * a 260px visible text column and a probe measuring text at 10px/char.
+ * Returns a restore callback.
+ */
+function mockTextMeasurement(editorView: EditorView) {
+  const scrollRect = vi
+    .spyOn(editorView.scrollDOM, "getBoundingClientRect")
+    .mockReturnValue({
+      x: 100,
+      y: 0,
+      width: 300,
+      height: 20,
+      top: 0,
+      right: 400,
+      bottom: 20,
+      left: 100,
+      toJSON: () => ({}),
+    });
+  Object.defineProperty(editorView.scrollDOM, "clientWidth", {
+    configurable: true,
+    value: 300,
+  });
+  Object.defineProperty(editorView.scrollDOM, "offsetWidth", {
+    configurable: true,
+    value: 300,
+  });
+  const line = editorView.contentDOM.querySelector<HTMLElement>(".cm-line")!;
+  const lineRect = vi.spyOn(line, "getBoundingClientRect").mockReturnValue({
+    x: 140,
+    y: 0,
+    width: 2000,
+    height: 20,
+    top: 0,
+    right: 2140,
+    bottom: 20,
+    left: 140,
+    toJSON: () => ({}),
+  });
+  Object.defineProperty(line, "offsetWidth", {
+    configurable: true,
+    value: 2000,
+  });
+  const originalElementRect = HTMLElement.prototype.getBoundingClientRect;
+  const probeRect = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      if (this.dataset.markdownFormatProbe === "true") {
+        const width = (this.textContent ?? "").length * 10;
+        return {
+          x: 0,
+          y: 0,
+          width,
+          height: 20,
+          top: 0,
+          right: width,
+          bottom: 20,
+          left: 0,
+          toJSON: () => ({}),
+        };
+      }
+      return originalElementRect.call(this);
+    });
+
+  return () => {
+    scrollRect.mockRestore();
+    lineRect.mockRestore();
+    probeRect.mockRestore();
+  };
+}
+
 describe("Editor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -114,86 +186,73 @@ describe("Editor", () => {
       "one two three four five six seven eight nine ten eleven twelve thirteen";
     const { component } = render(Editor, { props: { content } });
     const editorView = component.getEditorView()!;
-    const contentRect = vi
-      .spyOn(editorView.contentDOM, "getBoundingClientRect")
-      .mockReturnValue({
-        x: 0,
-        y: 0,
-        width: 2000,
-        height: 20,
-        top: 0,
-        right: 2000,
-        bottom: 20,
-        left: 0,
-        toJSON: () => ({}),
-      });
-    Object.defineProperty(editorView.scrollDOM, "clientWidth", {
-      configurable: true,
-      value: 300,
-    });
-    Object.defineProperty(editorView.scrollDOM, "offsetWidth", {
-      configurable: true,
-      value: 300,
-    });
-    const scrollRect = vi
-      .spyOn(editorView.scrollDOM, "getBoundingClientRect")
-      .mockReturnValue({
-        x: 100,
-        y: 0,
-        width: 300,
-        height: 20,
-        top: 0,
-        right: 400,
-        bottom: 20,
-        left: 100,
-        toJSON: () => ({}),
-      });
-    const line = editorView.contentDOM.querySelector<HTMLElement>(".cm-line")!;
-    const lineRect = vi.spyOn(line, "getBoundingClientRect").mockReturnValue({
-      x: 140,
-      y: 0,
-      width: 2000,
-      height: 20,
-      top: 0,
-      right: 2140,
-      bottom: 20,
-      left: 140,
-      toJSON: () => ({}),
-    });
-    Object.defineProperty(line, "offsetWidth", {
-      configurable: true,
-      value: 2000,
-    });
-    const originalElementRect = HTMLElement.prototype.getBoundingClientRect;
-    const probeRect = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockImplementation(function (this: HTMLElement) {
-        if (this.dataset.markdownFormatProbe === "true") {
-          const width = (this.textContent ?? "").length * 10;
-          return {
-            x: 0,
-            y: 0,
-            width,
-            height: 20,
-            top: 0,
-            right: width,
-            bottom: 20,
-            left: 0,
-            toJSON: () => ({}),
-          };
-        }
-        return originalElementRect.call(this);
-      });
+    const restore = mockTextMeasurement(editorView);
 
     try {
       component.formatDocument();
 
       expect(editorView.state.doc.toString()).toContain("\n");
     } finally {
-      contentRect.mockRestore();
-      scrollRect.mockRestore();
-      lineRect.mockRestore();
-      probeRect.mockRestore();
+      restore();
+    }
+  });
+
+  it("formats only the paragraph at the cursor", () => {
+    const content = [
+      "one two three four five six seven eight nine ten",
+      "",
+      "alpha beta gamma delta epsilon zeta",
+      "",
+      "# Heading",
+    ].join("\n");
+    const { component } = render(Editor, { props: { content } });
+    const editorView = component.getEditorView()!;
+    const restore = mockTextMeasurement(editorView);
+
+    try {
+      // Cursor in the middle of the second paragraph.
+      const secondPara = editorView.state.doc.line(3);
+      editorView.dispatch({ selection: { anchor: secondPara.from + 2 } });
+
+      component.formatParagraph();
+
+      // Only the cursor's paragraph is re-wrapped (to ~25 measured chars);
+      // the long first paragraph and the heading stay untouched.
+      expect(editorView.state.doc.toString()).toBe(
+        [
+          "one two three four five six seven eight nine ten",
+          "",
+          "alpha beta gamma delta",
+          "epsilon zeta",
+          "",
+          "# Heading",
+        ].join("\n"),
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it("does nothing when the cursor is not in a paragraph", () => {
+    const content = [
+      "one two three four five six seven eight nine ten",
+      "",
+      "# Heading",
+    ].join("\n");
+    const { component } = render(Editor, { props: { content } });
+    const editorView = component.getEditorView()!;
+    const restore = mockTextMeasurement(editorView);
+
+    try {
+      // Cursor inside the heading (not a prose paragraph).
+      const heading = editorView.state.doc.line(3);
+      editorView.dispatch({ selection: { anchor: heading.from + 2 } });
+
+      component.formatParagraph();
+
+      expect(editorView.state.doc.toString()).toBe(content);
+    } finally {
+      restore();
     }
   });
 

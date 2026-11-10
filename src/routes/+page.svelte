@@ -120,6 +120,12 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     }
   }
 
+  function handleFormatParagraph() {
+    if (editorComponent) {
+      editorComponent.formatParagraph();
+    }
+  }
+
   /**
    * The unsaved-changes gate shared by New, Open and Exit: confirm, and on
    * "save" run the save and honour its outcome. Returns false when the user
@@ -593,6 +599,7 @@ import { buildPageCommands } from "$lib/commands/page-commands";
         zoomOut: () => void zoomOut(),
         resetZoom: () => void resetZoom(),
         handleFormatDocument: () => { void handleFormatDocument(); },
+        handleFormatParagraph: () => { void handleFormatParagraph(); },
         handleAbout: () => { void handleAbout(); },
         handleFormat,
       },

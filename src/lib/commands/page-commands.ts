@@ -21,6 +21,7 @@ export interface PageCommandHandlers {
   zoomOut: () => void;
   resetZoom: () => void;
   handleFormatDocument: () => void;
+  handleFormatParagraph: () => void;
   handleAbout: () => void;
   /** Editor formatting (CodeMirror handles the actual key). */
   handleFormat: (format: string) => void;
@@ -123,6 +124,13 @@ export function buildPageCommands(
       category: "Format",
       shortcut: { code: "KeyF", shift: true, alt: true },
       run: h.handleFormatDocument,
+    },
+    {
+      id: "format.paragraph",
+      title: "Format Current Paragraph",
+      category: "Format",
+      shortcut: { code: "KeyP", shift: true, alt: true },
+      run: h.handleFormatParagraph,
     },
     {
       id: "help.about",

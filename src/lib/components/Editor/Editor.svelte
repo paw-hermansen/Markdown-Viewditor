@@ -11,7 +11,7 @@
   import { viewerState } from '$lib/stores/viewer.svelte';
   import { levelState } from '$lib/stores/markdown-levels.svelte';
   import { violationMessage } from '$lib/utils/markdown-levels';
-  import { formatMarkdown } from '$lib/utils/markdown-formatter';
+  import { formatMarkdown, formatParagraphAt } from '$lib/utils/markdown-formatter';
   import {
     applyInsertFormatting,
     applyInsertLink,
@@ -388,6 +388,42 @@
 
       editorView.dispatch({
         changes: { from: targetFrom, to: targetTo, insert: formatted },
+      });
+      editorView.focus();
+    } finally {
+      textProbe.destroy();
+    }
+  }
+
+  /**
+   * Format only the prose paragraph containing the cursor (the selection
+   * head when a selection exists). Silent no-op when the cursor is not in a
+   * paragraph — blank line, heading, code fence, table, etc.
+   */
+  export function formatParagraph() {
+    if (!editorView) return;
+
+    const contentWidth = getVisibleTextWidth(editorView);
+    if (contentWidth <= 0) return;
+
+    const head = editorView.state.selection.main.head;
+    const line = editorView.state.doc.lineAt(head);
+    const content = editorView.state.doc.toString();
+
+    const textProbe = getTextMeasurer(editorView);
+    if (!textProbe) return;
+
+    try {
+      const result = formatParagraphAt(
+        content,
+        line.number - 1,
+        contentWidth - 1,
+        textProbe.measure,
+      );
+      if (!result || result.text === content.slice(result.from, result.to)) return;
+
+      editorView.dispatch({
+        changes: { from: result.from, to: result.to, insert: result.text },
       });
       editorView.focus();
     } finally {

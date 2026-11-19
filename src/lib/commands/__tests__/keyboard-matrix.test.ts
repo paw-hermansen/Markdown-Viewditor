@@ -25,6 +25,8 @@ function makeHandlers() {
     handlePrint: vi.fn(),
     togglePalette: vi.fn(),
     cycleViewMode: vi.fn(),
+    nextTab: vi.fn(),
+    prevTab: vi.fn(),
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
     resetZoom: vi.fn(),
@@ -105,6 +107,18 @@ describe("keyboard matrix", () => {
     press({ code: "KeyP", ctrlKey: true, shiftKey: true });
     expect(h.togglePalette).toHaveBeenCalledTimes(1);
     expect(h.handlePrint).toHaveBeenCalledTimes(1);
+  });
+
+  it("tab.next / tab.prev split on Shift (Ctrl+Tab, also Cmd on macOS)", () => {
+    const h = setup();
+    press({ code: "Tab", ctrlKey: true });
+    expect(h.nextTab).toHaveBeenCalledTimes(1);
+    expect(h.prevTab).not.toHaveBeenCalled();
+    press({ code: "Tab", ctrlKey: true, shiftKey: true });
+    expect(h.prevTab).toHaveBeenCalledTimes(1);
+    expect(h.nextTab).toHaveBeenCalledTimes(1);
+    press({ code: "Tab" });
+    expect(h.nextTab).toHaveBeenCalledTimes(1); // bare Tab is left alone
   });
 
   it("view.cycle requires Shift", () => {

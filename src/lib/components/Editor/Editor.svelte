@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
   import { markdown } from '@codemirror/lang-markdown';
-  import { EditorState, Compartment, Prec } from '@codemirror/state';
+  import { EditorState, Compartment, Prec, Transaction } from '@codemirror/state';
   import { keymap, lineNumbers, type ViewUpdate } from '@codemirror/view';
   import { linter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
   import { search } from '@codemirror/search';
@@ -31,6 +31,8 @@
 
   let editorElement: HTMLDivElement;
   let editorView: EditorView | undefined;
+  /** The history-free initial state; base for fresh documents in `swapState`. */
+  let blankState: EditorState;
   let isUpdatingFromProp = false;
   let preventNativeFormat: ((e: Event) => void) | undefined;
   let handleKeydown: ((e: KeyboardEvent) => void) | undefined;
@@ -186,6 +188,7 @@
       ]
     });
 
+    blankState = state;
     editorView = new EditorView({
       state,
       parent: editorElement
@@ -350,6 +353,34 @@
 
   export function setContent(newContent: string, preserveScroll = true) {
     applyContent(newContent, preserveScroll);
+  }
+
+  /**
+   * Swap documents on a tab switch: install `next` (or, when absent or stale,
+   * a fresh history-free state holding `doc`) and return the outgoing state,
+   * so each tab keeps its own undo history and selection.
+   */
+  export function swapState(doc: string, next?: EditorState): EditorState | undefined {
+    if (!editorView) return undefined;
+    const prev = editorView.state;
+    editorView.setState(
+      next && next.doc.toString() === doc
+        ? next
+        : blankState.update({
+            changes: { from: 0, to: blankState.doc.length, insert: doc },
+            annotations: Transaction.addToHistory.of(false)
+          }).state
+    );
+    // The compartments may have been reconfigured while the tab was parked.
+    editorView.dispatch({
+      effects: [
+        themeCompartment.reconfigure(getThemeExtension()),
+        lineNumbersCompartment.reconfigure(settingsState.editorLineNumbers ? [] : lineNumbers()),
+        wordWrapCompartment.reconfigure(settingsState.editorWordWrap ? EditorView.lineWrapping : []),
+        EditorView.scrollIntoView(editorView.state.selection.main.head, { y: 'center' })
+      ]
+    });
+    return prev;
   }
 
   export function formatDocument() {

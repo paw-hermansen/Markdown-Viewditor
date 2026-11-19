@@ -17,6 +17,8 @@ export interface PageCommandHandlers {
   handlePrint: () => void;
   togglePalette: () => void;
   cycleViewMode: () => void;
+  nextTab: () => void;
+  prevTab: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
@@ -95,6 +97,20 @@ export function buildPageCommands(
       category: "View",
       shortcut: { code: "KeyV", mod: true, shift: true },
       run: h.cycleViewMode,
+    },
+    {
+      id: "tab.next",
+      title: "Next Tab",
+      category: "View",
+      shortcut: { code: "Tab", mod: true, shift: false },
+      run: h.nextTab,
+    },
+    {
+      id: "tab.prev",
+      title: "Previous Tab",
+      category: "View",
+      shortcut: { code: "Tab", mod: true, shift: true },
+      run: h.prevTab,
     },
     {
       id: "view.zoom-in",

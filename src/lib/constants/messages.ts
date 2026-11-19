@@ -1,8 +1,8 @@
 export const APP_TITLE = "Markdown Viewditor";
 
 export const MSG = {
-  newUnsaved: "You have unsaved changes. Create a new file?",
-  openUnsaved: "You have unsaved changes. Open a different file?",
+  closeTabUnsaved:
+    "You have unsaved changes. Close this tab and discard your changes?",
   reloadUnsaved:
     "You have unsaved changes. Reload from disk and discard your changes?",
   exitUnsaved:

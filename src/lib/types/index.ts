@@ -15,6 +15,13 @@ export interface FileInfo {
   size: number;
 }
 
+/** A file tab restored on the next start (see `Settings.openTabs`). */
+export interface PersistedTab {
+  path: string;
+  viewMode: ViewMode;
+  splitRatio: number;
+}
+
 export interface Settings {
   viewMode: ViewMode;
   editorFontSize: number;
@@ -24,6 +31,10 @@ export interface Settings {
   viewerTheme: string;
   splitRatio: number;
   lastOpenedFile: string | null;
+  /** File tabs open at exit (untitled tabs are not persisted). */
+  openTabs: PersistedTab[];
+  /** Index into `openTabs` of the active tab. */
+  activeTab: number;
   recentFiles: string[];
   markdownLevel: MarkdownLevel;
   enabledFeatures: string[];

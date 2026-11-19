@@ -16,9 +16,11 @@ import { updateStatus } from '$lib/stores/update.svelte';
     viewMode: ViewMode;
     onViewModeChange: (mode: ViewMode) => void;
     children: Snippet;
+    /** Rendered full-width between the toolbar and the editor/viewer panes. */
+    tabBar?: Snippet;
   }
 
-  let { viewMode, onViewModeChange, children }: Props = $props();
+  let { viewMode, onViewModeChange, children, tabBar }: Props = $props();
 
   // State read directly from stores (StatusBar precedent).
   const isModified = $derived(hasUnsavedChanges());
@@ -228,6 +230,8 @@ import { updateStatus } from '$lib/stores/update.svelte';
       </button>
     </div>
   </header>
+
+  {@render tabBar?.()}
 
   <main id="main-content" class="content" class:split={viewMode === 'split'} class:editor-only={viewMode === 'editor'} class:viewer-only={viewMode === 'viewer'} style="--split-ratio: {displayRatio}">
     {@render children()}

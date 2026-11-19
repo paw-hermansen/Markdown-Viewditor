@@ -31,8 +31,12 @@ export function updateWordCount(content: string) {
   }
 }
 
-export function markSaved() {
-  savedContent = editorState.content;
+export function markSaved(content = editorState.content) {
+  savedContent = content;
+}
+
+export function getSavedContent(): string {
+  return savedContent;
 }
 
 export function hasUnsavedChanges(): boolean {

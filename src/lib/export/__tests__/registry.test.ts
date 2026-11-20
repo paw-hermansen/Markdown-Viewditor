@@ -16,7 +16,7 @@ import {
   listExporters,
   getExporter,
   runExporter,
-  registerBuiltinExporters,
+  ensureExporters,
 } from "../registry.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -51,11 +51,21 @@ describe("exporter registry", () => {
     ).rejects.toThrow("Unknown exporter: nope");
   });
 
-  it("registerBuiltinExporters registers html and pdf", async () => {
-    await registerBuiltinExporters();
+  it("ensureExporters registers html and pdf", async () => {
+    await ensureExporters();
     const ids = listExporters().map((e) => e.id);
     expect(ids).toContain("html");
     expect(ids).toContain("pdf");
+  }, 15000);
+
+  it("ensureExporters is safe to call concurrently and repeatedly", async () => {
+    await Promise.all([ensureExporters(), ensureExporters()]);
+    await ensureExporters();
+    const ids = listExporters().map((e) => e.id);
+    expect(ids).toEqual([...new Set(ids)]);
+    for (const id of ["html", "html-bundle", "pdf", "odt", "docx"]) {
+      expect(ids).toContain(id);
+    }
   }, 15000);
 });
 
@@ -65,7 +75,7 @@ describe("html exporter", () => {
   });
 
   it("calls save dialog and write_file with standalone HTML", async () => {
-    await registerBuiltinExporters();
+    await ensureExporters();
     const htmlExporter = getExporter("html")!;
 
     vi.mocked(save).mockResolvedValue("/tmp/out.html");

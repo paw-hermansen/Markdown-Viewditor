@@ -92,7 +92,7 @@ import {
 import { buildPageCommands } from "$lib/commands/page-commands";
   import {
     runExporter,
-    registerBuiltinExporters,
+    ensureExporters,
     getExporter,
     listExporters,
   } from "$lib/export/registry.svelte";
@@ -567,6 +567,11 @@ import { buildPageCommands } from "$lib/commands/page-commands";
       return;
     }
 
+    // The exporters load lazily on first use (keeps the export pipeline
+    // out of the startup bundle) — make sure they are there before the
+    // registry lookup. Idempotent and concurrency-safe.
+    await ensureExporters();
+
     const exporter = getExporter(id);
     if (!exporter) return;
 
@@ -799,9 +804,9 @@ import { buildPageCommands } from "$lib/commands/page-commands";
       },
     });
 
-    // Register the built-in exporters (HTML, PDF) so the toolbar dropdown
-    // and command palette can list them. Idempotent.
-    void registerBuiltinExporters();
+    // The built-in exporters (HTML, PDF, …) register lazily on the first
+    // export interaction — see ensureExporters() — so the export pipeline
+    // stays out of the startup bundle.
 
     // Check whether the in-app updater is available (disabled in Flatpak, Windows Store).
     void initUpdaterEnabled();

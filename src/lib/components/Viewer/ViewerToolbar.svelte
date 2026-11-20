@@ -6,7 +6,7 @@
   import { settingsState, updateSetting, exportConfirmSettingLabel } from '$lib/stores/settings.svelte';
   import { usesCapturePdf } from '$lib/export/pdf-mode';
   import { modLabel } from '$lib/utils/keyboard';
-  import { listExporters } from '$lib/export/registry.svelte';
+  import { listExporters, ensureExporters } from '$lib/export/registry.svelte';
 
   interface Props {
     onPrint?: () => void;
@@ -46,32 +46,38 @@
         </svg>
         <span>{exportChoices[0].label}</span>
       </button>
-    {:else if onExport && exportChoices.length > 1}
-      <DropdownButton
-        choices={exportChoices}
-        fixedLabel="Export as…"
-        onSelect={handleExportAction}
-        title="Export document"
-        header={themeLabel}
-      >
-        {#snippet leadingIcon()}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        {/snippet}
-        {#snippet footer()}
-          <label>
-            <input
-              type="checkbox"
-              checked={!settingsState.exportConfirmDismissed}
-              onchange={() => updateSetting('exportConfirmDismissed', !settingsState.exportConfirmDismissed)}
-            />
-            {confirmSettingLabel}
-          </label>
-        {/snippet}
-      </DropdownButton>
+    {:else if onExport}
+      <!-- The exporters load lazily on first use (ensureExporters), so the
+           trigger renders even while the list is still empty: hovering warms
+           the chunks, and opening the menu awaits the load. -->
+      <div role="presentation" onpointerenter={() => void ensureExporters()}>
+        <DropdownButton
+          choices={exportChoices}
+          fixedLabel="Export as…"
+          onBeforeOpen={ensureExporters}
+          onSelect={handleExportAction}
+          title="Export document"
+          header={themeLabel}
+        >
+          {#snippet leadingIcon()}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          {/snippet}
+          {#snippet footer()}
+            <label>
+              <input
+                type="checkbox"
+                checked={!settingsState.exportConfirmDismissed}
+                onchange={() => updateSetting('exportConfirmDismissed', !settingsState.exportConfirmDismissed)}
+              />
+              {confirmSettingLabel}
+            </label>
+          {/snippet}
+        </DropdownButton>
+      </div>
     {/if}
 
     {#if !exportOnly && onPrint}

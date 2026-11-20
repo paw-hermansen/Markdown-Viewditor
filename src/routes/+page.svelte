@@ -96,8 +96,7 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     getExporter,
     listExporters,
   } from "$lib/export/registry.svelte";
-  import { exportPdf } from "$lib/export/exporters/pdf";
-  import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
+  import { PDF_OPTION_ID } from "$lib/export/option-ids";
   import { OPTION_SETTING } from "$lib/export/option-settings";
   import { usesCapturePdf } from "$lib/export/pdf-mode";
   import { getThemeLabel } from "$lib/utils/themes";
@@ -526,6 +525,10 @@ import { buildPageCommands } from "$lib/commands/page-commands";
 
     startExporting();
     try {
+      // Lazy: pulls the print/export pipeline (mermaid print variant,
+      // math-fit) into its own chunk. The entry bundle must not statically
+      // import exporter implementations — see export/option-ids.ts.
+      const { exportPdf } = await import("$lib/export/exporters/pdf");
       let htmlForPdf = viewerContent.innerHTML;
       if (!resolvedIncludeFrontmatter) {
         const clone = viewerContent.cloneNode(true) as HTMLElement;

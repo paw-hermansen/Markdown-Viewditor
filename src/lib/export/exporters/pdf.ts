@@ -8,7 +8,7 @@ import type {
 } from "../types";
 import { initPdfMode, usesCapturePdf } from "../pdf-mode";
 import { fileState } from "$lib/stores/file.svelte";
-import { OPTION_INCLUDE_FRONTMATTER } from "../frontmatter-card";
+import { PDF_OPTION_ID } from "../option-ids";
 import { scaleWideMathForPrint } from "../math-fit";
 import { scopeSubtreeIds } from "../id-scope";
 import { prepareMermaidForPrint } from "$lib/extensions/mermaid/renderer";
@@ -591,7 +591,7 @@ export async function exportPdf(
   }
 }
 
-export const PDF_OPTION_ID = `pdf.${OPTION_INCLUDE_FRONTMATTER}`;
+export { PDF_OPTION_ID };
 
 export function pdfOptionGroups(ctx: ExportContext): OptionGroup[] {
   return [

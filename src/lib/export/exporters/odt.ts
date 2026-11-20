@@ -33,18 +33,8 @@ import {
   OPTION_RASTERIZE_SVG,
   OPTION_RASTER_RESOLUTION,
   OPTION_ODT_INCLUDE_FRONTMATTER,
-  type ExportOptions,
   readOptions,
 } from "../odt/options";
-
-// Re-export for backward compatibility (option-settings.ts, etc.).
-export {
-  OPTION_RASTERIZE_MATH,
-  OPTION_RASTERIZE_SVG,
-  OPTION_RASTER_RESOLUTION,
-  OPTION_ODT_INCLUDE_FRONTMATTER,
-};
-export type { ExportOptions };
 
 /**
  * Declare the per-export option groups the confirmation dialog renders.

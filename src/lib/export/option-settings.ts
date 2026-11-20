@@ -15,21 +15,23 @@
  */
 import type { Settings } from "$lib/types";
 import { settingsState, updateSetting } from "$lib/stores/settings.svelte";
+// Option ids only — never the exporter implementations. This module is
+// reachable from the entry bundle, and importing `exporters/*` statically
+// would pull the whole export pipeline into the startup chunk and defeat
+// the exporter registry's lazy `import()`s (see `option-ids.ts`).
 import {
-  OPTION_ODT_INCLUDE_FRONTMATTER,
-  OPTION_RASTERIZE_MATH,
-  OPTION_RASTER_RESOLUTION,
-  OPTION_RASTERIZE_SVG,
-} from "./exporters/odt";
-import {
+  HTML_BUNDLE_OPTION_ID,
+  HTML_OPTION_ID,
   OPTION_DOCX_INCLUDE_FRONTMATTER,
+  OPTION_DOCX_RASTER_RESOLUTION,
   OPTION_DOCX_RASTERIZE_MATH,
   OPTION_DOCX_RASTERIZE_SVG,
-  OPTION_DOCX_RASTER_RESOLUTION,
-} from "./exporters/docx";
-import { OPTION_ID as HTML_OPTION_ID } from "./exporters/html";
-import { OPTION_ID as HTML_BUNDLE_OPTION_ID } from "./exporters/html-bundle";
-import { PDF_OPTION_ID } from "./exporters/pdf";
+  OPTION_ODT_INCLUDE_FRONTMATTER,
+  OPTION_RASTER_RESOLUTION,
+  OPTION_RASTERIZE_MATH,
+  OPTION_RASTERIZE_SVG,
+  PDF_OPTION_ID,
+} from "./option-ids";
 
 export interface OptionSetting {
   /** The remembered value, or the option's declared default when unset. */

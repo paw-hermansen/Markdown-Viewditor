@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { ViewMode } from "$lib/types";
+  import type { PersistedTab, ViewMode } from "$lib/types";
   import AppLayout from "$lib/components/Layout/AppLayout.svelte";
+  import TabBar from "$lib/components/Layout/TabBar.svelte";
   import Editor from "$lib/components/Editor/Editor.svelte";
   import EditorToolbar from "$lib/components/Editor/EditorToolbar.svelte";
   import Viewer from "$lib/components/Viewer/Viewer.svelte";
@@ -16,7 +17,6 @@
   import {
     editorState,
     markSaved,
-    resetEditor,
     hasUnsavedChanges,
     updateWordCount,
     DEFAULT_CONTENT,
@@ -27,14 +27,31 @@
     saveFile,
     saveFileAs,
     showSaveDialog,
-    closeFile,
     readFile,
     getFileName,
     getFileInfo,
     checkExternalModification,
     markCurrentFileDeleted,
   } from "$lib/stores/file.svelte";
-  import { settingsState, updateViewMode } from "$lib/stores/settings.svelte";
+  import {
+    settingsState,
+    updateViewMode,
+    updateSetting,
+  } from "$lib/stores/settings.svelte";
+  import {
+    tabsState,
+    createTab,
+    insertTab,
+    tabById,
+    tabPath,
+    tabDirty,
+    findTabByPath,
+    neighborOf,
+    removeTab,
+    parkActive,
+    loadTab,
+    type DocTab,
+  } from "$lib/stores/tabs.svelte";
   import {
     zoomIn,
     zoomOut,
@@ -92,6 +109,12 @@ import { buildPageCommands } from "$lib/commands/page-commands";
   const exportOnly = usesCapturePdf();
 
   let viewMode = $state<ViewMode>(settingsState.viewMode);
+  // The first tab stands for the live (still empty) document; onMount
+  // restores the tabs saved at the last exit.
+  tabsState.tabs = [createTab(settingsState.viewMode, settingsState.splitRatio)];
+  tabsState.activeId = tabsState.tabs[0].id;
+  const savedTabs = settingsState.openTabs;
+  const savedActiveTab = settingsState.activeTab;
   let editorComponent = $state<Editor | undefined>(undefined);
   let viewerComponent = $state<Viewer | undefined>(undefined);
   let fileName = $derived(
@@ -150,7 +173,7 @@ import { buildPageCommands } from "$lib/commands/page-commands";
       if (content === null) return false;
       editorState.content = content;
       updateWordCount(content);
-      editorComponent?.setContent(content, false);
+      editorComponent?.swapState(content);
       viewerComponent?.scrollToTop();
       markSaved();
       await viewerComponent?.waitForRender();
@@ -164,29 +187,81 @@ import { buildPageCommands } from "$lib/commands/page-commands";
 
   async function handleNew() {
     if (fileState.isLoading) return;
-
-    if (!(await confirmUnsavedChanges(MSG.newUnsaved))) return;
-
-    resetEditor();
-    editorComponent?.setContent("");
-    closeFile();
+    await newTab();
   }
 
   /**
-   * Open a file. With `path` given it is opened directly; otherwise the
-   * picker runs first.
+   * Switch to `tab`: park the live document in the active tab and load
+   * `tab` into the live stores (see stores/tabs.svelte.ts). A tab restored
+   * from settings reads its file on first activation.
+   */
+  async function activateTab(tab: DocTab) {
+    // While a file loads, it must land in the tab that requested it.
+    if (tab.id === tabsState.activeId || fileState.isLoadingContent) return;
+    scrollSync?.pause();
+    try {
+      parkActive(viewMode, editorComponent?.swapState(tab.content, tab.cm));
+      loadTab(tab);
+      viewMode = tab.viewMode;
+      viewerComponent?.resetRenderState();
+      viewerComponent?.scrollToTop();
+    } finally {
+      scrollSync?.resume();
+    }
+    if (tab.pending && tab.file.currentFile) {
+      tab.pending = false;
+      if (!(await loadContentIntoEditor(tab.file.currentFile))) {
+        await closeTab(tab.id);
+      }
+    } else {
+      void checkActiveFileOnDisk();
+    }
+  }
+
+  async function newTab() {
+    await activateTab(insertTab(createTab(viewMode, settingsState.splitRatio)));
+  }
+
+  /** Close a tab, confirming unsaved changes. The last tab is replaced by an empty one. */
+  async function closeTab(id: number) {
+    const tab = tabById(id);
+    if (!tab) return;
+    if (tabDirty(tab)) {
+      await activateTab(tab);
+      if (!(await confirmUnsavedChanges(MSG.closeTabUnsaved))) return;
+    }
+    if (tabsState.tabs.length === 1) {
+      await newTab();
+    } else if (id === tabsState.activeId) {
+      const isLast = tabsState.tabs.at(-1)?.id === id;
+      await activateTab(neighborOf(id, isLast ? -1 : 1));
+    }
+    removeTab(id);
+  }
+
+  /**
+   * Open files in tabs. With `path` given it is opened directly; otherwise
+   * the picker runs first. An already open file is switched to; an
+   * untouched Untitled tab is reused.
    *
    * Not safe to bind to a button: a DOM handler is called with its event as
    * the first argument, which would be taken for a path and handed to
    * `read_file`. Use {@link handleOpen} for that.
    */
   async function openFile(path?: string) {
-    if (!(await confirmUnsavedChanges(MSG.openUnsaved))) return;
-
-    const target = path ?? (await showOpenDialog());
-    if (!target) return;
-
-    await loadContentIntoEditor(target);
+    const targets = path ? [path] : await showOpenDialog();
+    for (const target of targets ?? []) {
+      const existing = findTabByPath(target);
+      if (existing) {
+        await activateTab(existing);
+        continue;
+      }
+      const created = !!fileState.currentFile || hasUnsavedChanges();
+      if (created) await newTab();
+      if (!(await loadContentIntoEditor(target)) && created) {
+        await closeTab(tabsState.activeId);
+      }
+    }
   }
 
   /**
@@ -324,7 +399,11 @@ import { buildPageCommands } from "$lib/commands/page-commands";
 
   /** Shared exit flow used by both window-close and Ctrl+Q. Returns true if the app closed. */
   async function handleExit(): Promise<boolean> {
-    if (!(await confirmUnsavedChanges(MSG.exitUnsaved))) return false;
+    for (const tab of [...tabsState.tabs]) {
+      if (!tabDirty(tab)) continue;
+      await activateTab(tab);
+      if (!(await confirmUnsavedChanges(MSG.exitUnsaved))) return false;
+    }
     try {
       await invoke("save_window_state");
     } catch {
@@ -332,6 +411,43 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     }
     await invoke("force_close_window");
     return true;
+  }
+
+  /** Check the active file on disk (window focus, tab switch): offer reload or flag deletion. */
+  async function checkActiveFileOnDisk() {
+    if (!fileState.currentFile || isCheckingExternalChanges || isSaving) return;
+    isCheckingExternalChanges = true;
+    try {
+      const previousStatus = fileState.changeStatus;
+      const status = await checkExternalModification();
+      if (status === "modified") {
+        if (previousStatus === "modified") return;
+        const message = hasUnsavedChanges()
+          ? MSG.externalModifiedDirty
+          : MSG.externalModifiedClean;
+        const reload = await confirmReload(message, hasUnsavedChanges());
+        if (reload) {
+          const content = await readFile(fileState.currentFile);
+          if (content !== null) {
+            scrollSync?.pause();
+            try {
+              editorState.content = content;
+              updateWordCount(content);
+              editorComponent?.setContent(content);
+            } finally {
+              scrollSync?.resume();
+            }
+            markSaved();
+          }
+        }
+      } else if (status === "deleted") {
+        if (previousStatus === "deleted") return;
+        markCurrentFileDeleted();
+        await confirmOk(MSG.externalDeleted, "warning");
+      }
+    } finally {
+      isCheckingExternalChanges = false;
+    }
   }
 
   function handleViewModeChange(mode: ViewMode) {
@@ -582,6 +698,25 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     }
   });
 
+  // Persist the file tabs (untitled ones are skipped) for the next start.
+  $effect(() => {
+    const open: PersistedTab[] = [];
+    let active = 0;
+    for (const t of tabsState.tabs) {
+      const path = tabPath(t);
+      if (!path) continue;
+      const isActive = t.id === tabsState.activeId;
+      if (isActive) active = open.length;
+      open.push({
+        path,
+        viewMode: isActive ? viewMode : t.viewMode,
+        splitRatio: isActive ? settingsState.splitRatio : t.splitRatio,
+      });
+    }
+    updateSetting("openTabs", open);
+    updateSetting("activeTab", active);
+  });
+
   // Register app commands once.
   registerCommands(
     buildPageCommands(
@@ -595,6 +730,8 @@ import { buildPageCommands } from "$lib/commands/page-commands";
         handlePrint: () => { void handlePrint(); },
         togglePalette: () => { showCommandPalette = !showCommandPalette; },
         cycleViewMode,
+        nextTab: () => void activateTab(neighborOf(tabsState.activeId, 1)),
+        prevTab: () => void activateTab(neighborOf(tabsState.activeId, -1)),
         zoomIn: () => void zoomIn(),
         zoomOut: () => void zoomOut(),
         resetZoom: () => void resetZoom(),
@@ -667,45 +804,7 @@ import { buildPageCommands } from "$lib/commands/page-commands";
 
     unlistenFocusChanged = await getCurrentWindow().onFocusChanged(
       async ({ payload: focused }) => {
-        if (
-          !focused ||
-          !fileState.currentFile ||
-          isCheckingExternalChanges ||
-          isSaving
-        )
-          return;
-        isCheckingExternalChanges = true;
-        try {
-          const previousStatus = fileState.changeStatus;
-          const status = await checkExternalModification();
-          if (status === "modified") {
-            if (previousStatus === "modified") return;
-            const message = hasUnsavedChanges()
-              ? MSG.externalModifiedDirty
-              : MSG.externalModifiedClean;
-            const reload = await confirmReload(message, hasUnsavedChanges());
-            if (reload) {
-              const content = await readFile(fileState.currentFile);
-              if (content !== null) {
-                scrollSync?.pause();
-                try {
-                  editorState.content = content;
-                  updateWordCount(content);
-                  editorComponent?.setContent(content);
-                } finally {
-                  scrollSync?.resume();
-                }
-                markSaved();
-              }
-            }
-          } else if (status === "deleted") {
-            if (previousStatus === "deleted") return;
-            markCurrentFileDeleted();
-            await confirmOk(MSG.externalDeleted, "warning");
-          }
-        } finally {
-          isCheckingExternalChanges = false;
-        }
+        if (focused) await checkActiveFileOnDisk();
       },
     );
 
@@ -713,22 +812,30 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     // RunEvent::Opened delivery (macOS Apple Event) is lost between the drain
     // and listener registration.
     unlistenOpenFile = await listen<string[]>("open-file", async (event) => {
-      if (event.payload.length > 0) {
-        await loadContentIntoEditor(event.payload[0]);
-      }
+      for (const path of event.payload) await openFile(path);
     });
 
     const initialUrls = await invoke<string[]>("opened_urls");
-    if (initialUrls.length > 0) {
-      await loadContentIntoEditor(initialUrls[0]);
-    } else if (settingsState.lastOpenedFile) {
+    if (savedTabs.length > 0) {
+      // Restore lazily: only the active tab's file is read now.
+      const first = tabsState.tabs[0];
+      tabsState.tabs.push(
+        ...savedTabs.map((t) => createTab(t.viewMode, t.splitRatio, t.path, true)),
+      );
+      await activateTab(
+        tabsState.tabs[1 + Math.min(savedActiveTab, savedTabs.length - 1)],
+      );
+      // Unless a failed read fell back to it.
+      if (first.id !== tabsState.activeId) removeTab(first.id);
+    } else if (settingsState.lastOpenedFile && initialUrls.length === 0) {
       await loadContentIntoEditor(settingsState.lastOpenedFile);
-    } else {
+    } else if (initialUrls.length === 0) {
       editorState.content = DEFAULT_CONTENT;
       updateWordCount(DEFAULT_CONTENT);
       editorComponent?.setContent(DEFAULT_CONTENT);
       markSaved();
     }
+    for (const path of initialUrls) await openFile(path);
 
     if (updaterState.enabled && settingsState.autoCheckUpdates) {
       setTimeout(() => {
@@ -757,6 +864,12 @@ import { buildPageCommands } from "$lib/commands/page-commands";
   {viewMode}
   onViewModeChange={handleViewModeChange}
 >
+  {#snippet tabBar()}
+    <TabBar
+      onSelect={(id) => void activateTab(tabById(id))}
+      onClose={(id) => void closeTab(id)}
+    />
+  {/snippet}
   {#if viewMode === "split" || viewMode === "editor"}
     <div class="editor-pane">
       <EditorToolbar onFormat={handleFormat} />

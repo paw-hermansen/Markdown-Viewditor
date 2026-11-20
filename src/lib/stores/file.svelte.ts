@@ -170,12 +170,12 @@ export async function openFile(): Promise<string | null> {
 }
 
 /**
- * Show the OS file-open dialog and return the selected path, or null if
+ * Show the OS file-open dialog and return the selected paths, or null if
  * cancelled. Does NOT read the file — callers that need a loading overlay
  * (e.g. the Viewer spinner) should call readFile() separately after
  * setting their loading flag.
  */
-export async function showOpenDialog(): Promise<string | null> {
+export async function showOpenDialog(): Promise<string[] | null> {
   if (fileState.isLoading) return null;
 
   try {
@@ -184,16 +184,14 @@ export async function showOpenDialog(): Promise<string | null> {
 
     const selected = await open({
       defaultPath: getDefaultDir(),
-      multiple: false,
+      multiple: true,
       filters: [
         { name: "Markdown", extensions: ["md", "markdown", "txt"] },
         { name: "All Files", extensions: ["*"] },
       ],
     });
 
-    if (!selected) return null;
-
-    return typeof selected === "string" ? selected : selected;
+    return selected;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     fileState.error = msg;

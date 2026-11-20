@@ -2,8 +2,9 @@
 import { render, waitFor, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import Page from "../+page.svelte";
-import { hasUnsavedChanges } from "$lib/stores/editor.svelte";
+import { hasUnsavedChanges, getSavedContent } from "$lib/stores/editor.svelte";
 import { settingsState } from "$lib/stores/settings.svelte";
+import { tabsState } from "$lib/stores/tabs.svelte";
 
 const {
   mockInvoke,
@@ -123,6 +124,7 @@ vi.mock("$lib/stores/editor.svelte", () => ({
   updateContent: vi.fn(),
   updateCursorPosition: vi.fn(),
   markSaved: vi.fn(),
+  getSavedContent: vi.fn(() => ""),
   resetEditor: vi.fn(),
   hasUnsavedChanges: vi.fn(() => false),
   updateWordCount: vi.fn(),
@@ -138,6 +140,8 @@ vi.mock("$lib/stores/settings.svelte", () => ({
     viewerTheme: "github-dark",
     splitRatio: 0.5,
     lastOpenedFile: null,
+    openTabs: [] as { path: string; viewMode: string; splitRatio: number }[],
+    activeTab: 0,
     recentFiles: [],
     zoomLevel: 1,
   },
@@ -223,6 +227,8 @@ describe("+page.svelte", () => {
     mockConfirmReload.mockResolvedValue(true);
     mockConfirmOk.mockResolvedValue(true);
     mockCheckExternalModification.mockResolvedValue("unchanged");
+    settingsState.openTabs = [];
+    settingsState.activeTab = 0;
   });
 
   it("loads initial file from Tauri on mount", async () => {
@@ -330,6 +336,53 @@ describe("+page.svelte", () => {
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("save_window_state");
     });
+  });
+
+  it("opens a new tab on Ctrl+N without an unsaved-changes prompt", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(true);
+    render(Page);
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("opened_urls"));
+    await fireEvent.keyDown(window, { code: "KeyN", ctrlKey: true });
+
+    await waitFor(() => expect(tabsState.tabs).toHaveLength(2));
+    expect(mockConfirmSaveDiscardCancel).not.toHaveBeenCalled();
+  });
+
+  it("restores saved tabs, reading only the active tab's file", async () => {
+    settingsState.openTabs = [
+      { path: "/a/one.md", viewMode: "split", splitRatio: 0.5 },
+      { path: "/b/two.md", viewMode: "viewer", splitRatio: 0.3 },
+    ];
+    settingsState.activeTab = 1;
+    mockReadFile.mockResolvedValue("# two");
+    render(Page);
+
+    await waitFor(() => expect(mockReadFile).toHaveBeenCalledWith("/b/two.md"));
+    expect(mockReadFile).toHaveBeenCalledTimes(1);
+    expect(tabsState.tabs.map((t) => t.file.currentFile)).toEqual([
+      "/a/one.md",
+      "/b/two.md",
+    ]);
+    mockReadFile.mockResolvedValue(null);
+  });
+
+  it("asks about every tab with unsaved changes on Quit", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(true);
+    render(Page);
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("opened_urls"));
+    await fireEvent.keyDown(window, { code: "KeyN", ctrlKey: true });
+    await waitFor(() => expect(tabsState.tabs).toHaveLength(2));
+    // Parked tabs compare content "" against the saved baseline "x" → dirty.
+    tabsState.tabs[0].saved = "x";
+    vi.mocked(getSavedContent).mockReturnValue("x");
+
+    await fireEvent.keyDown(window, { code: "KeyQ", ctrlKey: true });
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith("save_window_state"),
+    );
+    expect(mockConfirmSaveDiscardCancel).toHaveBeenCalledTimes(2);
+    vi.mocked(getSavedContent).mockReturnValue("");
   });
 
   it("zooms in on Ctrl+= and Ctrl++ (character-based, layout-safe)", async () => {

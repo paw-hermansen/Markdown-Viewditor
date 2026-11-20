@@ -13,6 +13,8 @@ const DEFAULT_SETTINGS: Settings = {
   viewerTheme: "github-dark",
   splitRatio: 0.5,
   lastOpenedFile: null,
+  openTabs: [],
+  activeTab: 0,
   recentFiles: [],
   markdownLevel: "advanced",
   // Best-effort snapshot: the detector registry is incomplete at module load

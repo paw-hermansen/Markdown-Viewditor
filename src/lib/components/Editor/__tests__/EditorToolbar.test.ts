@@ -23,6 +23,8 @@ describe("EditorToolbar", () => {
           handlePrint: vi.fn(),
           togglePalette: vi.fn(),
           cycleViewMode: vi.fn(),
+          nextTab: vi.fn(),
+          prevTab: vi.fn(),
           zoomIn: vi.fn(),
           zoomOut: vi.fn(),
           resetZoom: vi.fn(),

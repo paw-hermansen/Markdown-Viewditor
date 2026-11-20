@@ -61,6 +61,22 @@ describe("CommandPalette", () => {
     expect(screen.getByText("About")).toBeInTheDocument();
   });
 
+  it("shows commands registered after render (lazy exporter registration)", async () => {
+    render(CommandPalette, { props: defaultProps });
+    registerCommands([
+      {
+        id: "export-html",
+        title: "Export as HTML",
+        category: "Export",
+        run: vi.fn(),
+      },
+    ]);
+    // The command registry is $state-backed: the palette must pick up a
+    // late registration without a re-mount — export commands arrive when
+    // the lazily loaded exporters register.
+    expect(await screen.findByText("Export as HTML")).toBeInTheDocument();
+  });
+
   it("filters commands by search query", async () => {
     render(CommandPalette, { props: defaultProps });
     const input = screen.getByPlaceholderText("Type a command...");

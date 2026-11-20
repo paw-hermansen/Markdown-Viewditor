@@ -747,17 +747,25 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     ),
   );
 
-  // Export commands derived from registry.
-  for (const e of listExporters()) {
-    registerCommands([
-      {
-        id: `export-${e.id}`,
-        title: e.label,
-        category: "Export",
-        run: () => handleExport(e.id),
-      },
-    ]);
-  }
+  // Export commands derived from the exporter registry. The exporters
+  // register lazily, so enumerate reactively: this used to be a one-shot
+  // `for` over `listExporters()` at init — which saw the still-empty
+  // registry — and the export commands never reached the CommandPalette.
+  const registeredExportCommands = new Set<string>();
+  $effect(() => {
+    for (const e of listExporters()) {
+      if (registeredExportCommands.has(e.id)) continue;
+      registeredExportCommands.add(e.id);
+      registerCommands([
+        {
+          id: `export-${e.id}`,
+          title: e.label,
+          category: "Export",
+          run: () => handleExport(e.id),
+        },
+      ]);
+    }
+  });
 
   onMount(async () => {
     // Ctrl/Cmd+wheel (and macOS trackpad pinch) zoom. The listener must be

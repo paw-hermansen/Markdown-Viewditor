@@ -36,7 +36,11 @@ export interface Command {
   note?: string;
 }
 
-let commands: Command[] = [];
+// `$state`-backed so late registrations propagate to readers: the export
+// commands only appear once the lazily loaded exporters register, and the
+// CommandPalette's `$derived(listCommands())` must see them without a
+// re-mount.
+let commands = $state<Command[]>([]);
 
 export function registerCommands(cmds: Command[]): void {
   commands = [...commands, ...cmds];

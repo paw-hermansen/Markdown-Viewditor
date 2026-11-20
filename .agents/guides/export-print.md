@@ -6,15 +6,26 @@ Exporter registry, standalone HTML builds, and the print/PDF fidelity contract.
 
 `src/lib/export/` hosts an extensible exporter registry:
 
-- `registry.svelte.ts` — `$state`-backed exporter list; `registerBuiltinExporters()`
-  lazily loads the built-in exporters (HTML, HTML Bundle, PDF, ODT, DOCX).
+- `registry.svelte.ts` — `$state`-backed exporter list; `ensureExporters()`
+  lazily loads the built-in exporters (HTML, HTML Bundle, PDF, ODT, DOCX)
+  on the first export interaction (toolbar menu, CommandPalette,
+  `handleExport`), so the export pipeline — jszip, the export math
+  pipeline, the diagram exporters — stays out of the startup bundle.
   PDF lives in the registry but `handleExport("pdf")` routes it through the
-  Print button flow (`exportPdf` directly) to avoid a duplicate toolbar
-  entry. A future file format (EPUB) = one file + one `registerExporter`
-  call; the toolbar shows a single button when there's one exporter and a
-  dropdown when there are 2+. New exporters must also touch the hardcoded
-  `titleMap` / `isNeutral` in `+page.svelte` and add `OPTION_SETTING`
-  entries (`option-settings.test.ts` enforces the latter).
+  Print button flow (`exportPdf`, dynamically imported there) to avoid a
+  duplicate toolbar entry. A future file format (EPUB) = one file + one
+  `registerExporter` call; the toolbar shows a single button when there's
+  one exporter and a dropdown when there are 2+. New exporters must also
+  touch the hardcoded `titleMap` / `isNeutral` in `+page.svelte` and add
+  `OPTION_SETTING` entries (`option-settings.test.ts` enforces the latter).
+- `option-ids.ts` — dependency-free leaf module owning the export-dialog
+  option ids. The ids must be importable without importing exporter
+  implementations: `option-settings.ts` and `+page.svelte` are entry-bundle
+  code, and a static import into `exporters/*` drags the whole export
+  pipeline into the startup chunk and defeats the registry's lazy
+  `import()`s (Vite reports it as "dynamic import will not move module
+  into another chunk"). An eslint `no-restricted-imports` rule guards this
+  boundary.
 - `document.ts` — `buildStandaloneHtml()` collects same-origin stylesheets,
   inlines `url()` fonts and `localimg://` images to data URIs (via
   `assets.ts`), and wraps the body in `.viewer-content`.

@@ -31,6 +31,10 @@
  *     the `medium` keyword where no viewer exists) — the B2 regression. The
  *     pin exists twice on purpose (inline on the host, CSS on the label
  *     roots): either alone defeats a context copy.
+ *   - The colour copy is replaced by `LabelHostOptions.color` when given
+ *     (the export variant pins the *theme's* ink instead of the app's — see
+ *     fo-labels.ts and .agents/guides/math-mermaid.md, "Mermaid Label Math
+ *     Ink").
  *   - The font gate (`ensureMathFontsLoaded`) runs before any measurement or
  *     capture: KaTeX's web faces load lazily, and measurements taken before
  *     the swap use fallback metrics while captures paint fallback glyphs in
@@ -60,6 +64,14 @@ export interface LabelHostContext {
 export interface LabelHostOptions {
   /** Overrides the font gate (tests). */
   loadFonts?: () => Promise<void>;
+  /**
+   * Ink pinned on the host, replacing the viewer font context's `color`.
+   * Label HTML that sets no colour of its own inherits this, so captures
+   * and converted text come out in the caller's ink instead of the app
+   * theme's text colour (which the export variant must not bake into its
+   * light-themed diagrams).
+   */
+  color?: string;
 }
 
 /**
@@ -96,6 +108,11 @@ export async function withLabelHost(
   } catch {
     // No getComputedStyle — the fallback paths do not need it.
   }
+  // Explicit ink wins over the viewer colour copy: the export variant pins
+  // its theme's text ink so label content that inherits its colour (Mermaid
+  // sequence/state label HTML carries no theme `color` rule) is captured in
+  // the exported diagram's ink, not the app theme's (see LabelHostOptions).
+  if (opts.color) host.style.color = opts.color;
   // The label font-size pin (LABEL_HOST_RULES sets it on
   // `foreignObject > div` label roots too): formulas must measure and
   // capture at the size they occupy in Mermaid's baked label slot, or the

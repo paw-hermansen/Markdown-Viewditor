@@ -416,6 +416,53 @@ inconsistency (agentflow got the theme-aware variant, flowchart did not) —
 worth an issue/PR, but keep the pin regardless: it also removes the stroke
 and follows custom theme colors Mermaid's theme variables don't know.
 
+## Mermaid Label Math Ink (export captures)
+
+Captured label math must be inked in the **render variant's theme ink**,
+never the app viewer's text colour. The export variant renders every
+diagram in Mermaid's light `default` theme (printer-friendly regardless of
+the app theme), so all its `<text>` labels paint with the theme's
+`textColor` (`#333`) — but label _math_ is a bitmap captured from KaTeX
+HTML (`fo-labels.ts`), and the capture paints the label's computed `color`.
+That colour is wrong in two independent ways:
+
+- Sequence (and loop/note) label HTML carries **no theme `color` rule at
+  all** — Mermaid styles those labels with SVG `fill`, which does not color
+  HTML text — so the KaTeX inherits the capture host's ink, which
+  `label-host.ts` copies from `#viewer-content`: the **app theme's** text
+  colour. On a dark theme that is a very light gray (`#c9d1d9`/`#eaeaea`),
+  baked into the light-themed export as washed-out formulas.
+- State's theme rule (`#id .label div .edgeLabel { color: … }`) resolves in
+  the engine (`getComputedStyle`) but gets **lost inside html2canvas's
+  clone** — its selector matching across the `foreignObject` boundary is
+  weaker than the engine's — so the capture falls back to inherited ink
+  there too. (Flowchart labels survive because its rule, `#id span { color }`,
+  is shaped the one way html2canvas does pick up.)
+
+Two pins fix it (`fo-labels.ts` / `label-host.ts` / `renderer.ts`):
+
+1. `ConvertOptions.labelColor` pins the label host's ink — the export
+   variant passes `themeTextColorFromSvg()` (the `fill` of the generated
+   root rule `#id { …; fill:… }`, i.e. the theme's `textColor`; falls back
+   to `EXPORT_LABEL_INK` = `#333`). Label HTML that sets no colour of its
+   own — and every html2canvas fallback — then inherits the theme ink.
+2. `pinCaptureColor()` writes the engine-computed `color` onto the captured
+   element as inline style right before the capture, so the bitmap paints
+   exactly what the engine resolves even where html2canvas loses rules
+   (this keeps legitimately colored labels — e.g. state's `#131300`
+   node labels with math — faithful).
+
+The viewer rasterization (`math-labels.ts`) and the print variant keep the
+viewer ink on purpose: both render in the app's own theme, where that ink
+is what the screen shows.
+
+Regression: `__tests__/label-ink.test.ts` (theme-ink extraction + export
+wiring), `__tests__/label-host.test.ts` (ink override), and
+`__tests__/fo-labels.test.ts` ("pins the captured formula's ink …"). The
+manual check is TEST-PLAN's ODT export of `testing/MathChemMermaid-All.md`:
+the formulas in "Math in Sequence and State Labels" must come out as dark
+as the flowchart math labels.
+
 ## Mermaid Edge Stroke Width (negative `edge-depth-N` ramp)
 
 Mermaid sizes mindmap/timeline/kanban edges from a per-depth ramp

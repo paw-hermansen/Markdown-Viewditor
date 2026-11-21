@@ -60,6 +60,25 @@ describe("withLabelHost", () => {
     });
   });
 
+  it("pins an explicit ink override over the viewer colour", async () => {
+    // The export variant must bake its theme's text ink into captured label
+    // math, not the app theme's viewer colour (the washed-out-formula
+    // regression: a dark theme's light gray ink inside a light export).
+    const viewer = document.createElement("div");
+    viewer.id = "viewer-content";
+    viewer.style.color = "rgb(1, 2, 3)";
+    document.body.appendChild(viewer);
+
+    await withLabelHost(
+      SVG,
+      async (svgEl) => {
+        expect(getComputedStyle(hostOf(svgEl)).color).toBe("rgb(9, 8, 7)");
+        return false;
+      },
+      { color: "rgb(9, 8, 7)" },
+    );
+  });
+
   it("carries the label-host class and rules during the body, and cleans up", async () => {
     await withLabelHost(SVG, async (svgEl) => {
       const host = document.querySelector(`.${LABEL_HOST_CLASS}`);

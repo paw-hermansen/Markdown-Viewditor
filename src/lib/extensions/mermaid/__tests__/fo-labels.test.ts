@@ -258,6 +258,39 @@ describe("convertForeignObjectLabels", () => {
     expect(doc.getElementsByTagName("parsererror")).toHaveLength(0);
   });
 
+  it("pins the captured formula's ink to the engine-resolved colour", async () => {
+    // html2canvas resolves Mermaid's id-scoped theme label rules more
+    // weakly than the engine (state's `#id .label div .edgeLabel { color: … }`
+    // computes fine but is lost inside the capture), so the capture bakes
+    // the engine's computed colour into the element as inline style —
+    // otherwise the bitmap falls back to inherited ink (the exported
+    // washed-out-formula regression).
+    let seen: string | null = null;
+    const svg = FO_SVG(
+      '<div xmlns="http://www.w3.org/1999/xhtml" class="label nodeLabel" style="color: rgb(9, 8, 7)">' +
+        '<span class="katex">x<sup>2</sup></span></div>',
+    );
+    await convertForeignObjectLabels(svg, {
+      metrics: fakeMetrics({
+        foRect: { x: 0, y: 0, width: 200, height: 40 },
+        elementRectOf: (el) =>
+          el.classList?.contains("katex")
+            ? { x: 10, y: 12, width: 60, height: 16 }
+            : null,
+      }),
+      rasterizeHtml: async (el) => {
+        seen = (el as HTMLElement).style.color;
+        return {
+          dataUri: "data:image/png;base64,QUJD",
+          widthPx: 60,
+          heightPx: 16,
+        };
+      },
+    });
+
+    expect(seen).toBe("rgb(9, 8, 7)");
+  });
+
   it("measures labels in a label-host container carrying the shared label rules", async () => {
     // The conversion re-lays out label HTML in its own host to measure it.
     // That host must be covered by the label-host rules (font-size pin +

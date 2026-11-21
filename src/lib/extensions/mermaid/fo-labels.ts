@@ -37,6 +37,10 @@
  *   - KaTeX in labels (`$$…$$`; the export config sets `forceLegacyMathML`
  *     so Mermaid emits KaTeX *HTML*, which html2canvas can paint) is
  *     captured as a PNG and embedded as an `<image>` at its measured box.
+ *     The capture's ink is pinned: the engine-resolved label colour on the
+ *     captured element (html2canvas loses Mermaid's id-scoped theme rules)
+ *     over the host ink, which the export variant sets to its theme's text
+ *     colour via {@link ConvertOptions.labelColor} — never the app theme's.
  *     If capture fails, the formula degrades to its plain text.
  *
  * Everything is measured in client px and mapped into SVG user units
@@ -111,6 +115,15 @@ export interface ConvertOptions {
   metrics?: FoLabelMetrics | null;
   /** Overrides the KaTeX rasterizer (tests). */
   rasterizeHtml?: HtmlRasterizer | null;
+  /**
+   * Ink for label content whose colour is inherited (Mermaid's sequence /
+   * state label HTML carries no theme `color` rule): pinned on the label
+   * host instead of the app viewer's text colour. The export variant passes
+   * its theme's text ink so captured formula bitmaps match the exported
+   * diagram's other labels; the viewer/print passes leave it unset and keep
+   * the viewer ink (which is what the app paints with).
+   */
+  labelColor?: string;
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -150,27 +163,31 @@ export async function convertForeignObjectLabels(
 
   // The host (off-screen, natural width, label rules, font gate) is the
   // shared label-host harness — see its module docstring for the contract.
-  const out = await withLabelHost(svg, async (svgEl) => {
-    // Font readiness is handled by the host; measurement starts here so it
-    // sees the loaded font metrics.
-    const metrics =
-      options.metrics !== undefined ? options.metrics : safeMetrics();
-    const rasterizeHtml = options.rasterizeHtml ?? defaultRasterizer;
-    let changed = false;
-    for (const fo of Array.from(svgEl.querySelectorAll("foreignObject"))) {
-      // Only top-level labels (a foreignObject inside a foreignObject is not
-      // a Mermaid label).
-      if (fo.querySelector("foreignObject")) continue;
-      const replacement = await buildReplacement(fo, metrics, rasterizeHtml);
-      const target =
-        fo.parentElement?.tagName.toLowerCase() === "switch"
-          ? fo.parentElement
-          : fo;
-      target.replaceWith(replacement);
-      changed = true;
-    }
-    return changed;
-  });
+  const out = await withLabelHost(
+    svg,
+    async (svgEl) => {
+      // Font readiness is handled by the host; measurement starts here so it
+      // sees the loaded font metrics.
+      const metrics =
+        options.metrics !== undefined ? options.metrics : safeMetrics();
+      const rasterizeHtml = options.rasterizeHtml ?? defaultRasterizer;
+      let changed = false;
+      for (const fo of Array.from(svgEl.querySelectorAll("foreignObject"))) {
+        // Only top-level labels (a foreignObject inside a foreignObject is not
+        // a Mermaid label).
+        if (fo.querySelector("foreignObject")) continue;
+        const replacement = await buildReplacement(fo, metrics, rasterizeHtml);
+        const target =
+          fo.parentElement?.tagName.toLowerCase() === "switch"
+            ? fo.parentElement
+            : fo;
+        target.replaceWith(replacement);
+        changed = true;
+      }
+      return changed;
+    },
+    { color: options.labelColor },
+  );
   return ensureXlinkNamespace(out);
 }
 
@@ -470,6 +487,12 @@ async function buildMedia(
   }
 
   if (item.kind === "math") {
+    // Bake the engine-resolved ink into the capture: html2canvas resolves
+    // label CSS more weakly than the engine (Mermaid's id-scoped theme rules
+    // across the foreignObject boundary — e.g. state's
+    // `#id .label div .edgeLabel { color: … }` — resolve in getComputedStyle
+    // but get lost in the capture), and the fallback would be inherited ink.
+    pinCaptureColor(item.el);
     let raster: {
       dataUri: string;
       widthPx?: number;
@@ -662,6 +685,24 @@ function groupLines(items: TextItem[]): TextItem[][] {
 }
 
 /* ──────────────────── styling helpers ────────────────────────────────── */
+
+/**
+ * Pin the element's engine-computed `color` as inline style before capture.
+ * Inline style beats every stylesheet rule in html2canvas's clone, so the
+ * captured bitmap paints exactly what the engine resolves — see the call
+ * site in {@link buildMedia} for why this matters. No-op without a usable
+ * computed colour (the host ink then remains the capture's fallback).
+ */
+function pinCaptureColor(el: Element): void {
+  try {
+    const color = getComputedStyle(el).color;
+    if (color && typeof (el as HTMLElement).style?.setProperty === "function") {
+      (el as HTMLElement).style.setProperty("color", color);
+    }
+  } catch {
+    // No engine resolution — the host ink is the fallback.
+  }
+}
 
 function applyRunStyle(el: Element, style: RunStyle): void {
   const css: string[] = [];

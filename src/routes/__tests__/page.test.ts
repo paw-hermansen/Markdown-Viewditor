@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import Page from "../+page.svelte";
 import { hasUnsavedChanges, getSavedContent } from "$lib/stores/editor.svelte";
 import { settingsState } from "$lib/stores/settings.svelte";
-import { tabsState } from "$lib/stores/tabs.svelte";
+import { tabPath, tabsState } from "$lib/stores/tabs.svelte";
+import { MSG } from "$lib/constants/messages";
 
 const {
   mockInvoke,
+  defaultInvoke,
   mockOpenFile,
   mockSaveFile,
   mockSaveFileAs,
@@ -24,26 +26,9 @@ const {
   mockConfirmOk,
   mockFileState,
   mockSetZoom,
-} = vi.hoisted(() => ({
-  mockInvoke: vi.fn().mockImplementation((cmd: string) => {
-    if (cmd === "opened_urls") return Promise.resolve([]);
-    return Promise.resolve(null);
-  }),
-  mockOpenFile: vi.fn().mockResolvedValue(null),
-  mockSaveFile: vi.fn().mockResolvedValue(true),
-  mockSaveFileAs: vi.fn().mockResolvedValue(null),
-  mockShowSaveDialog: vi.fn().mockResolvedValue(null),
-  mockReadFile: vi.fn().mockResolvedValue(null),
-  mockCloseFile: vi.fn(),
-  mockGetFileName: vi.fn((path: string) => path.split("/").pop() ?? path),
-  mockGetFileInfo: vi.fn().mockResolvedValue(null),
-  mockCheckExternalModification: vi.fn().mockResolvedValue("unchanged"),
-  mockMarkCurrentFileDeleted: vi.fn(),
-  mockConfirmSaveDiscardCancel: vi.fn().mockResolvedValue("discard"),
-  mockConfirmOverwrite: vi.fn().mockResolvedValue(true),
-  mockConfirmReload: vi.fn().mockResolvedValue(true),
-  mockConfirmOk: vi.fn().mockResolvedValue(true),
-  mockFileState: {
+  mockToastError,
+} = vi.hoisted(() => {
+  const mockFileState = {
     currentFile: null as string | null,
     recentFiles: [] as string[],
     isLoading: false,
@@ -55,9 +40,56 @@ const {
     externallyModified: false,
     isReadOnly: null as boolean | null,
     forceSaveAs: false,
-  },
-  mockSetZoom: vi.fn().mockResolvedValue(undefined),
-}));
+  };
+  // Mirrors the real `opened_urls` report and `canonicalize_paths` behavior
+  // (identity) so startup flows the same way it does in the app.
+  const defaultInvoke = (cmd: string, args?: { paths?: string[] }) => {
+    if (cmd === "opened_urls")
+      return Promise.resolve({ opened: [], missing: [] });
+    if (cmd === "canonicalize_paths") return Promise.resolve(args?.paths ?? []);
+    return Promise.resolve(null);
+  };
+  return {
+    mockInvoke: vi.fn().mockImplementation(defaultInvoke),
+    defaultInvoke,
+    mockOpenFile: vi.fn().mockResolvedValue(null),
+    mockSaveFile: vi.fn().mockResolvedValue(true),
+    mockSaveFileAs: vi.fn().mockResolvedValue(null),
+    mockShowSaveDialog: vi.fn().mockResolvedValue(null),
+    // Like the real readFile: connects the path to the (mocked) file state.
+    mockReadFile: vi.fn(),
+    mockCloseFile: vi.fn(() => {
+      mockFileState.currentFile = null;
+      mockFileState.currentFileMtime = null;
+      mockFileState.currentFileSize = null;
+      mockFileState.changeStatus = "unchanged";
+      mockFileState.externallyModified = false;
+      mockFileState.isReadOnly = null;
+      mockFileState.forceSaveAs = false;
+      mockFileState.error = null;
+    }),
+    mockGetFileName: vi.fn((path: string) => path.split("/").pop() ?? path),
+    mockGetFileInfo: vi.fn().mockResolvedValue(null),
+    mockCheckExternalModification: vi.fn().mockResolvedValue("unchanged"),
+    mockMarkCurrentFileDeleted: vi.fn(),
+    mockConfirmSaveDiscardCancel: vi.fn().mockResolvedValue("discard"),
+    mockConfirmOverwrite: vi.fn().mockResolvedValue(true),
+    mockConfirmReload: vi.fn().mockResolvedValue(true),
+    mockConfirmOk: vi.fn().mockResolvedValue(true),
+    mockFileState,
+    mockSetZoom: vi.fn().mockResolvedValue(undefined),
+    mockToastError: vi.fn(),
+  };
+});
+
+/** Invoke mock whose `opened_urls` report carries `opened`/`missing`. */
+function stubOpenedUrls(opened: string[], missing: string[] = []) {
+  mockInvoke.mockImplementation((cmd: string, args?: { paths?: string[] }) => {
+    if (cmd === "opened_urls") return Promise.resolve({ opened, missing });
+    if (cmd === "canonicalize_paths") return Promise.resolve(args?.paths ?? []);
+    return Promise.resolve(null);
+  });
+}
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }));
 vi.mock("@tauri-apps/api/event", () => ({
@@ -109,7 +141,7 @@ vi.mock("$lib/stores/confirm.svelte", () => ({
 
 vi.mock("$lib/stores/toast.svelte", () => ({
   toastState: { items: [] },
-  toast: { error: vi.fn(), info: vi.fn(), warning: vi.fn() },
+  toast: { error: mockToastError, info: vi.fn(), warning: vi.fn() },
   dismiss: vi.fn(),
 }));
 
@@ -215,6 +247,11 @@ vi.mock("$lib/components/Toaster.svelte", () => ({
 describe("+page.svelte", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockInvoke.mockImplementation(defaultInvoke);
+    mockReadFile.mockImplementation(async (path: string) => {
+      mockFileState.currentFile = path;
+      return "# doc";
+    });
     mockFileState.currentFile = null;
     mockFileState.externallyModified = false;
     mockFileState.changeStatus = "unchanged";
@@ -229,14 +266,18 @@ describe("+page.svelte", () => {
     mockCheckExternalModification.mockResolvedValue("unchanged");
     settingsState.openTabs = [];
     settingsState.activeTab = 0;
+    settingsState.lastOpenedFile = null;
+    vi.mocked(hasUnsavedChanges).mockReturnValue(false);
   });
 
-  it("loads initial file from Tauri on mount", async () => {
-    mockInvoke.mockResolvedValueOnce(["/home/user/initial.md"]);
+  it("opens the initial file reported by Tauri on mount", async () => {
+    stubOpenedUrls(["/home/user/initial.md"]);
     render(Page);
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("opened_urls");
     });
+    expect(mockReadFile).toHaveBeenCalledWith("/home/user/initial.md");
+    expect(tabsState.tabs.map(tabPath)).toEqual(["/home/user/initial.md"]);
   });
 
   it("renders without errors", async () => {
@@ -422,5 +463,166 @@ describe("+page.svelte", () => {
     await waitFor(() => {
       expect(mockSetZoom).toHaveBeenLastCalledWith(1);
     });
+  });
+
+  it("opens each command-line file in its own tab and activates the first", async () => {
+    stubOpenedUrls(["/a/one.md", "/b/two.md"]);
+    render(Page);
+
+    await waitFor(() =>
+      expect(tabsState.tabs.map(tabPath)).toEqual(["/a/one.md", "/b/two.md"]),
+    );
+    expect(mockReadFile).toHaveBeenCalledWith("/a/one.md");
+    expect(mockReadFile).toHaveBeenCalledWith("/b/two.md");
+    // The first command-line file is the primary document.
+    expect(tabsState.activeId).toBe(tabsState.tabs[0].id);
+  });
+
+  it("opens a file listed twice on the command line only once", async () => {
+    stubOpenedUrls(["/a/one.md", "/a/one.md"]);
+    render(Page);
+
+    await waitFor(() =>
+      expect(tabsState.tabs.map(tabPath)).toEqual(["/a/one.md"]),
+    );
+    expect(mockReadFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a command-line file only once when it is also restored from a previous session", async () => {
+    settingsState.openTabs = [
+      { path: "/a/one.md", viewMode: "split", splitRatio: 0.5 },
+      { path: "/b/two.md", viewMode: "split", splitRatio: 0.5 },
+    ];
+    settingsState.activeTab = 0;
+    stubOpenedUrls(["/a/one.md"]);
+    render(Page);
+
+    await waitFor(() =>
+      expect(tabsState.tabs.map(tabPath)).toEqual(["/a/one.md", "/b/two.md"]),
+    );
+    // The restored tab is reused: the file is read exactly once.
+    expect(mockReadFile).toHaveBeenCalledTimes(1);
+    expect(mockReadFile).toHaveBeenCalledWith("/a/one.md");
+    expect(tabsState.activeId).toBe(tabsState.tabs[0].id);
+  });
+
+  it("restores a file persisted twice as a single tab", async () => {
+    settingsState.openTabs = [
+      { path: "/a/one.md", viewMode: "split", splitRatio: 0.5 },
+      { path: "/a/one.md", viewMode: "viewer", splitRatio: 0.3 },
+    ];
+    settingsState.activeTab = 0;
+    render(Page);
+
+    await waitFor(() =>
+      expect(tabsState.tabs.map(tabPath)).toEqual(["/a/one.md"]),
+    );
+    expect(mockReadFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses the first tab for a command-line file instead of leaving a phantom tab", async () => {
+    // fileState starts with the stale lastOpenedFile handle (store init).
+    settingsState.lastOpenedFile = "/old.md";
+    mockFileState.currentFile = "/old.md";
+    stubOpenedUrls(["/new.md"]);
+    render(Page);
+
+    await waitFor(() => expect(mockReadFile).toHaveBeenCalledWith("/new.md"));
+    // Only the command-line file's tab exists; no phantom "/old.md" tab.
+    expect(tabsState.tabs.map(tabPath)).toEqual(["/new.md"]);
+    expect(tabsState.activeId).toBe(tabsState.tabs[0].id);
+  });
+
+  it("opens a command-line file that is also the persisted last file once", async () => {
+    settingsState.lastOpenedFile = "/a/one.md";
+    mockFileState.currentFile = "/a/one.md";
+    stubOpenedUrls(["/a/one.md"]);
+    render(Page);
+
+    // Without dropping the stale handle first, the empty first tab is
+    // mistaken for the open file and the read never happens.
+    await waitFor(() => expect(mockReadFile).toHaveBeenCalledWith("/a/one.md"));
+    expect(mockReadFile).toHaveBeenCalledTimes(1);
+    expect(tabsState.tabs.map(tabPath)).toEqual(["/a/one.md"]);
+    expect(tabsState.activeId).toBe(tabsState.tabs[0].id);
+  });
+
+  it("reports all missing command-line files in one error toast", async () => {
+    stubOpenedUrls(["/a/one.md"], ["/nope1.md", "/nope2.md"]);
+    render(Page);
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        MSG.filesNotFound,
+        "/nope1.md\n/nope2.md",
+        10_000,
+      ),
+    );
+    // The file that exists still opens.
+    expect(tabsState.tabs.map(tabPath)).toEqual(["/a/one.md"]);
+  });
+
+  it("reports a single missing command-line file with the singular message", async () => {
+    stubOpenedUrls([], ["/nope.md"]);
+    render(Page);
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        MSG.fileNotFound,
+        "/nope.md",
+        10_000,
+      ),
+    );
+    expect(mockReadFile).not.toHaveBeenCalled();
+  });
+
+  it("offers reload when the active file was genuinely modified on disk", async () => {
+    settingsState.openTabs = [
+      { path: "/r/Rendering-All.md", viewMode: "split", splitRatio: 0.5 },
+    ];
+    settingsState.activeTab = 0;
+    stubOpenedUrls(["/s/Simple.md", "/r/Rendering-All.md"]);
+    mockCheckExternalModification.mockResolvedValue("modified");
+    render(Page);
+
+    await waitFor(() =>
+      expect(mockConfirmReload).toHaveBeenCalledWith(
+        MSG.externalModifiedClean,
+        false,
+      ),
+    );
+  });
+
+  it("does not flag a freshly opened file when a tab switch races the disk check", async () => {
+    settingsState.openTabs = [
+      { path: "/r/Rendering-All.md", viewMode: "split", splitRatio: 0.5 },
+    ];
+    settingsState.activeTab = 0;
+    stubOpenedUrls(["/s/Simple.md", "/r/Rendering-All.md"]);
+    let resolveCheck: (status: string) => void = () => {};
+    mockCheckExternalModification.mockImplementation(
+      () => new Promise((r) => (resolveCheck = r)),
+    );
+    render(Page);
+
+    // Startup switches across loaded tabs: restore Rendering-All, open
+    // Simple, switch to the restored Rendering-All tab (dedupe) and back to
+    // Simple (primary file). The disk check starts on Rendering-All and its
+    // result is still in flight when the switch to Simple lands.
+    await waitFor(() =>
+      expect(mockCheckExternalModification).toHaveBeenCalled(),
+    );
+    await waitFor(() =>
+      expect(tabsState.activeId).toBe(
+        tabsState.tabs.find((t) => tabPath(t) === "/s/Simple.md")!.id,
+      ),
+    );
+
+    resolveCheck("modified");
+    await new Promise((r) => setTimeout(r, 20));
+    // The stale verdict must not surface against the newly opened file.
+    expect(mockConfirmReload).not.toHaveBeenCalled();
+    expect(mockFileState.changeStatus).toBe("unchanged");
+    expect(mockFileState.externallyModified).toBe(false);
   });
 });

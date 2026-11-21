@@ -6,13 +6,16 @@ mod state;
 use std::env;
 use tauri::Manager;
 
-use commands::file::{create_file, delete_file, get_file_info, get_file_mtime, opened_urls, is_file_writable, list_files, read_file, read_file_as_base64, write_file, write_file_binary};
+use commands::file::{
+    canonicalize_paths, create_file, delete_file, get_file_info, get_file_mtime, is_file_writable,
+    list_files, opened_urls, read_file, read_file_as_base64, write_file, write_file_binary,
+};
 use commands::print::{create_pdf, macos_major_version, print_webview};
 use commands::svg::rasterize_svg;
 use commands::window::{
     flush_window_state, force_close_window, save_window_state, save_window_state_debounced,
 };
-use state::{OpenedUrls, WindowState};
+use state::{MissingFiles, OpenedUrls, WindowState};
 
 #[cfg(target_os = "linux")]
 fn configure_platform() {
@@ -73,15 +76,35 @@ fn url_to_path(url: &tauri::Url) -> String {
     }
 }
 
+/// Partition raw command-line arguments into existing files (canonicalized,
+/// deduped, order preserved) and unresolvable names (original spelling,
+/// deduped). Deduping here guarantees a file given twice — or once via
+/// different spellings of the same path — is only ever opened once.
+fn resolve_cli_files(args: impl Iterator<Item = String>) -> (Vec<String>, Vec<String>) {
+    let mut opened: Vec<String> = Vec::new();
+    let mut missing: Vec<String> = Vec::new();
+    for arg in args {
+        match std::fs::canonicalize(&arg) {
+            Ok(p) => {
+                let p = p.to_string_lossy().into_owned();
+                if !opened.contains(&p) {
+                    opened.push(p);
+                }
+            }
+            Err(_) => {
+                if !missing.contains(&arg) {
+                    missing.push(arg);
+                }
+            }
+        }
+    }
+    (opened, missing)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     configure_platform();
-    let cli_file: Vec<String> = env::args()
-        .nth(1)
-        .and_then(|p| std::fs::canonicalize(&p).ok())
-        .map(|p| p.to_string_lossy().into_owned())
-        .into_iter()
-        .collect();
+    let (cli_file, cli_missing) = resolve_cli_files(env::args().skip(1));
 
     let mut builder = tauri::Builder::default()
         .register_asynchronous_uri_scheme_protocol(
@@ -101,6 +124,7 @@ pub fn run() {
 
     let app = builder
         .manage(OpenedUrls(std::sync::Mutex::new(cli_file)))
+        .manage(MissingFiles(std::sync::Mutex::new(cli_missing)))
         .invoke_handler(tauri::generate_handler![
             read_file,
             read_file_as_base64,
@@ -113,6 +137,7 @@ pub fn run() {
             get_file_info,
             is_file_writable,
             opened_urls,
+            canonicalize_paths,
             save_window_state,
             force_close_window,
             create_pdf,
@@ -172,7 +197,9 @@ pub fn run() {
         #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
         if let tauri::RunEvent::Opened { urls } = _event {
             use tauri::Emitter;
-            let paths: Vec<String> = urls.iter().map(url_to_path).collect();
+            // Canonicalized so a file already open under a different spelling
+            // is recognized and not opened a second time.
+            let paths: Vec<String> = canonicalize_paths(urls.iter().map(url_to_path).collect());
             _app.state::<OpenedUrls>()
                 .0
                 .lock()
@@ -186,4 +213,78 @@ pub fn run() {
             flush_window_state(_app);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn resolve_cli_files_partitions_and_dedupes() {
+        let dir = tempdir().unwrap();
+        let a = dir.path().join("a.md");
+        let b = dir.path().join("b.md");
+        std::fs::write(&a, "a").unwrap();
+        std::fs::write(&b, "b").unwrap();
+        let canonical_a = std::fs::canonicalize(&a)
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        let canonical_b = std::fs::canonicalize(&b)
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+
+        let (opened, missing) = resolve_cli_files(
+            vec![
+                a.to_string_lossy().into_owned(),
+                b.to_string_lossy().into_owned(),
+                // The same file again, spelled differently.
+                dir.path()
+                    .join(".")
+                    .join("a.md")
+                    .to_string_lossy()
+                    .into_owned(),
+                "/nonexistent/nope.md".to_string(),
+                // The same missing name again.
+                "/nonexistent/nope.md".to_string(),
+            ]
+            .into_iter(),
+        );
+
+        assert_eq!(opened, vec![canonical_a, canonical_b]);
+        assert_eq!(missing, vec!["/nonexistent/nope.md".to_string()]);
+    }
+
+    #[test]
+    fn resolve_cli_files_keeps_original_spelling_and_order() {
+        let dir = tempdir().unwrap();
+        let b = dir.path().join("b.md");
+        std::fs::write(&b, "b").unwrap();
+
+        let (opened, missing) = resolve_cli_files(
+            vec![
+                "relative-nope.md".to_string(),
+                b.to_string_lossy().into_owned(),
+            ]
+            .into_iter(),
+        );
+
+        assert_eq!(
+            opened,
+            vec![std::fs::canonicalize(&b)
+                .unwrap()
+                .to_string_lossy()
+                .into_owned()]
+        );
+        assert_eq!(missing, vec!["relative-nope.md".to_string()]);
+    }
+
+    #[test]
+    fn resolve_cli_files_handles_empty_input() {
+        let (opened, missing) = resolve_cli_files(std::iter::empty());
+        assert!(opened.is_empty());
+        assert!(missing.is_empty());
+    }
 }

@@ -68,6 +68,14 @@ const VIEWER_COLUMN_FALLBACK_PX = VIEWER_CONTENT_MAX_WIDTH_PX;
  */
 const EXPORT_FONT_FAMILY = "'trebuchet ms', verdana, arial, sans-serif";
 
+/**
+ * Fallback ink for captured label math in exported SVGs (see
+ * {@link themeTextColorFromSvg}): the export variant always renders with
+ * Mermaid's light "default" theme, whose `textColor` is `#333` — the ink
+ * every exported `<text>` label paints with.
+ */
+const EXPORT_LABEL_INK = "#333";
+
 // Cache only the raw SVG. Alignment is applied when the wrapper is rendered,
 // so changing it never duplicates Mermaid work. The *render width* is part of
 // the cache key for container-sized diagrams (gantt lays its geometry out for
@@ -361,13 +369,47 @@ export function themeSnapshotFromEnv(
 async function postProcessSvg(
   svg: string,
   labelPass: "rasterize" | "convert",
+  labelInk: "theme" | "viewer" = "viewer",
 ): Promise<string> {
   const engineProofed = pinLabelMathPaint(
     clampNegativeStrokeWidths(normalizeSvgTextOffsets(svg)),
   );
-  return labelPass === "rasterize"
-    ? rasterizeMermaidLabelMath(engineProofed)
-    : convertForeignObjectLabels(engineProofed);
+  if (labelPass === "rasterize")
+    return rasterizeMermaidLabelMath(engineProofed);
+  // Export (labelInk "theme"): pin the capture host's ink to the diagram
+  // theme's text colour. Label math is baked to bitmaps whose ink would
+  // otherwise be the app theme's viewer colour — a light gray from a dark
+  // theme, washed out inside the light-themed export (see
+  // .agents/guides/math-mermaid.md, "Mermaid Label Math Ink"). Print keeps
+  // the viewer ink: that variant renders in the viewer's own theme.
+  return convertForeignObjectLabels(
+    engineProofed,
+    labelInk === "theme"
+      ? { labelColor: themeTextColorFromSvg(engineProofed) ?? EXPORT_LABEL_INK }
+      : undefined,
+  );
+}
+
+/**
+ * The diagram theme's text ink: the `fill` of the root rule Mermaid emits
+ * in its generated stylesheet (`#id { font-family:…; font-size:…; fill:… }`,
+ * where `id` is the SVG root's id). That value is the theme's `textColor` —
+ * what every plain `<text>` label in the diagram paints with — so using it
+ * for captured label math keeps formulas on ink-parity with their exported
+ * surroundings. `null` when the stylesheet or root rule is not shaped as
+ * expected (callers fall back to {@link EXPORT_LABEL_INK}).
+ */
+export function themeTextColorFromSvg(svg: string): string | null {
+  const rootId = /<svg\b[^>]*\bid="([^"]*)"/i.exec(svg)?.[1];
+  const css = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(svg)?.[1];
+  if (!rootId || !css) return null;
+  for (const chunk of css.match(/[^{}]+\{[^{}]*\}/g) ?? []) {
+    const brace = chunk.indexOf("{");
+    if (chunk.slice(0, brace).trim() !== `#${rootId}`) continue;
+    const fill = /\bfill\s*:\s*([^;}]+)/i.exec(chunk.slice(brace))?.[1]?.trim();
+    if (fill) return fill;
+  }
+  return null;
 }
 
 /**
@@ -386,6 +428,8 @@ async function renderDiagramSvg(
     content: string;
     renderId: string;
     labelPass: "rasterize" | "convert";
+    /** Ink for converted label math — see postProcessSvg. */
+    labelInk?: "theme" | "viewer";
   },
 ): Promise<string> {
   await awaitLabelFonts(cfg.content);
@@ -396,7 +440,7 @@ async function renderDiagramSvg(
     () => mod.default.render(cfg.renderId, cfg.content),
     currentZoom(),
   );
-  return postProcessSvg(svg, cfg.labelPass);
+  return postProcessSvg(svg, cfg.labelPass, cfg.labelInk);
 }
 
 export function preRenderMermaidBlocks(
@@ -567,7 +611,10 @@ export function clearMermaidCache(): void {
  *     boxes, missing edge lines, black fill wedges on curved edges.
  *
  * Always uses Mermaid's light ("default") theme so exports stay neutral /
- * printer-friendly regardless of the app theme. The raw SVG (with labels
+ * printer-friendly regardless of the app theme. Captured label math follows
+ * that theme too: its bitmaps are inked with the theme's text colour, not
+ * the app viewer's (see `postProcessSvg` / .agents/guides/math-mermaid.md,
+ * "Mermaid Label Math Ink"). The raw SVG (with labels
  * already converted) is cached under an export-variant key so it is never
  * mixed up with the viewer's foreignObject output. IDs are namespaced per
  * call so several diagrams can coexist in one exported document, and the
@@ -643,7 +690,9 @@ export async function renderMermaidSvgForPrint(
  * ERROR is retried — each caller has its own per-diagram fallback (ODT
  * exports the source code; the print clone keeps the viewer SVG) — while a
  * failed render sweeps the temp containers, caches ERROR, and throws a
- * normalized Error.
+ * normalized Error. The variants also differ in the ink baked into captured
+ * label math: the theme's for export, the viewer's for print
+ * ({@link postProcessSvg}).
  *
  * Load and initialize deliberately run OUTSIDE the guarded region: a load or
  * init failure propagates to the caller uncached and is retried on the next
@@ -684,6 +733,9 @@ async function renderMermaidSvgForVariant(
         content,
         renderId: `${cfg.renderIdPrefix}${nextRenderId++}`,
         labelPass: "convert",
+        // Export bakes label math in the *theme's* ink (its diagrams are
+        // always light-themed); print stays in the viewer's theme and ink.
+        labelInk: cfg.variant === "export" ? "theme" : "viewer",
       });
       svgCache.set(key, raw);
     } catch (err) {

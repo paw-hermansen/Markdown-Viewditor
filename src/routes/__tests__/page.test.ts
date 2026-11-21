@@ -575,4 +575,54 @@ describe("+page.svelte", () => {
     );
     expect(mockReadFile).not.toHaveBeenCalled();
   });
+
+  it("offers reload when the active file was genuinely modified on disk", async () => {
+    settingsState.openTabs = [
+      { path: "/r/Rendering-All.md", viewMode: "split", splitRatio: 0.5 },
+    ];
+    settingsState.activeTab = 0;
+    stubOpenedUrls(["/s/Simple.md", "/r/Rendering-All.md"]);
+    mockCheckExternalModification.mockResolvedValue("modified");
+    render(Page);
+
+    await waitFor(() =>
+      expect(mockConfirmReload).toHaveBeenCalledWith(
+        MSG.externalModifiedClean,
+        false,
+      ),
+    );
+  });
+
+  it("does not flag a freshly opened file when a tab switch races the disk check", async () => {
+    settingsState.openTabs = [
+      { path: "/r/Rendering-All.md", viewMode: "split", splitRatio: 0.5 },
+    ];
+    settingsState.activeTab = 0;
+    stubOpenedUrls(["/s/Simple.md", "/r/Rendering-All.md"]);
+    let resolveCheck: (status: string) => void = () => {};
+    mockCheckExternalModification.mockImplementation(
+      () => new Promise((r) => (resolveCheck = r)),
+    );
+    render(Page);
+
+    // Startup switches across loaded tabs: restore Rendering-All, open
+    // Simple, switch to the restored Rendering-All tab (dedupe) and back to
+    // Simple (primary file). The disk check starts on Rendering-All and its
+    // result is still in flight when the switch to Simple lands.
+    await waitFor(() =>
+      expect(mockCheckExternalModification).toHaveBeenCalled(),
+    );
+    await waitFor(() =>
+      expect(tabsState.activeId).toBe(
+        tabsState.tabs.find((t) => tabPath(t) === "/s/Simple.md")!.id,
+      ),
+    );
+
+    resolveCheck("modified");
+    await new Promise((r) => setTimeout(r, 20));
+    // The stale verdict must not surface against the newly opened file.
+    expect(mockConfirmReload).not.toHaveBeenCalled();
+    expect(mockFileState.changeStatus).toBe("unchanged");
+    expect(mockFileState.externallyModified).toBe(false);
+  });
 });

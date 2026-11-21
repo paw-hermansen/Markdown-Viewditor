@@ -418,16 +418,20 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     if (!fileState.currentFile || isCheckingExternalChanges || isSaving) return;
     isCheckingExternalChanges = true;
     try {
+      const path = fileState.currentFile;
       const previousStatus = fileState.changeStatus;
       const status = await checkExternalModification();
+      // The active tab may have changed while the check was in flight; the
+      // verdict was discarded then and the new file gets its own check.
+      if (fileState.currentFile !== path) return;
       if (status === "modified") {
         if (previousStatus === "modified") return;
         const message = hasUnsavedChanges()
           ? MSG.externalModifiedDirty
           : MSG.externalModifiedClean;
         const reload = await confirmReload(message, hasUnsavedChanges());
-        if (reload) {
-          const content = await readFile(fileState.currentFile);
+        if (reload && fileState.currentFile === path) {
+          const content = await readFile(path);
           if (content !== null) {
             scrollSync?.pause();
             try {

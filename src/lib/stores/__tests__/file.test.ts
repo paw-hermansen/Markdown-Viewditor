@@ -37,6 +37,7 @@ import {
   getRecentFiles,
   removeRecentFile,
   markCurrentFileDeleted,
+  checkExternalModification,
 } from "../file.svelte";
 
 const mockInvoke = vi.mocked(invoke);
@@ -250,6 +251,72 @@ describe("file store", () => {
       fileState.recentFiles = [];
       expect(() => markCurrentFileDeleted()).not.toThrow();
       expect(fileState.forceSaveAs).toBe(true);
+    });
+  });
+
+  describe("checkExternalModification", () => {
+    it("reports modified when the on-disk file differs from the baseline", async () => {
+      mockInvoke.mockResolvedValue({
+        exists: true,
+        mtime_ms: 999,
+        size: 10,
+        readonly: false,
+      });
+      fileState.currentFile = "/a.md";
+      fileState.currentFileMtime = 1000;
+      fileState.currentFileSize = 10;
+
+      const status = await checkExternalModification();
+
+      expect(status).toBe("modified");
+      expect(fileState.changeStatus).toBe("modified");
+      expect(fileState.externallyModified).toBe(true);
+    });
+
+    it("reports unchanged when the on-disk file matches the baseline", async () => {
+      mockInvoke.mockResolvedValue({
+        exists: true,
+        mtime_ms: 1000,
+        size: 10,
+        readonly: false,
+      });
+      fileState.currentFile = "/a.md";
+      fileState.currentFileMtime = 1000;
+      fileState.currentFileSize = 10;
+
+      const status = await checkExternalModification();
+
+      expect(status).toBe("unchanged");
+      expect(fileState.changeStatus).toBe("unchanged");
+    });
+
+    it("discards the verdict when the active file changed while metadata was in flight", async () => {
+      let resolveInfo: (value: unknown) => void = () => {};
+      mockInvoke.mockImplementation(
+        () => new Promise((r) => (resolveInfo = r)),
+      );
+      fileState.currentFile = "/a.md";
+      fileState.currentFileMtime = 1000;
+      fileState.currentFileSize = 10;
+
+      const pending = checkExternalModification();
+      // A tab switch while getFileInfo is in flight: the live state now
+      // belongs to another file with a different baseline.
+      fileState.currentFile = "/b.md";
+      fileState.currentFileMtime = 2000;
+      fileState.currentFileSize = 20;
+      // /a.md's metadata would mismatch /b.md's baseline and, before the
+      // guard, was written into /b.md's state as "modified".
+      resolveInfo({ exists: true, mtime_ms: 1000, size: 10, readonly: false });
+      const status = await pending;
+
+      expect(status).toBe("unchanged");
+      expect(fileState.changeStatus).toBe("unchanged");
+      expect(fileState.externallyModified).toBe(false);
+      expect(fileState.isReadOnly).toBeNull();
+      // The new file's state is untouched.
+      expect(fileState.currentFile).toBe("/b.md");
+      expect(fileState.currentFileMtime).toBe(2000);
     });
   });
 });

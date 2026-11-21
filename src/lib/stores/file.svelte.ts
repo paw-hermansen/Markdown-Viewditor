@@ -99,21 +99,26 @@ async function refreshMeta(path: string): Promise<void> {
  * truth so callers no longer manage those flags separately.
  */
 export async function checkExternalModification(): Promise<ChangeStatus> {
-  if (!fileState.currentFile || fileState.currentFileMtime === null) {
+  // Pin the file and its baseline: the active tab can change while the
+  // metadata call below is in flight, and the verdict must then be discarded
+  // instead of being compared against — and written into — another file's
+  // state (which flagged the new tab as externally modified for no reason).
+  const path = fileState.currentFile;
+  const baseMtime = fileState.currentFileMtime;
+  const baseSize = fileState.currentFileSize;
+  if (!path || baseMtime === null) {
     setChangeStatus("unchanged");
     return "unchanged";
   }
-  const info = await getFileInfo(fileState.currentFile);
+  const info = await getFileInfo(path);
+  if (fileState.currentFile !== path) return "unchanged";
   if (!info || !info.exists) {
     fileState.isReadOnly = true;
     setChangeStatus("deleted");
     return "deleted";
   }
   fileState.isReadOnly = info.readonly;
-  if (
-    info.mtime_ms !== fileState.currentFileMtime ||
-    info.size !== fileState.currentFileSize
-  ) {
+  if (info.mtime_ms !== baseMtime || info.size !== baseSize) {
     setChangeStatus("modified");
     return "modified";
   }

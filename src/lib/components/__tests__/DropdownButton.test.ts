@@ -66,4 +66,42 @@ describe("DropdownButton", () => {
     await fireEvent.keyDown(document, { key: "Escape" });
     expect(document.activeElement).toBe(mainButton);
   });
+
+  it("awaits onBeforeOpen before opening the menu in menu mode", async () => {
+    let resolveLoad!: () => void;
+    const onBeforeOpen = vi.fn(
+      () => new Promise<void>((r) => (resolveLoad = r)),
+    );
+    render(DropdownButton, {
+      props: {
+        choices,
+        fixedLabel: "Export as…",
+        onSelect: () => {},
+        onBeforeOpen,
+      },
+    });
+    const click = fireEvent.click(screen.getByText("Export as…"));
+    await Promise.resolve();
+    expect(onBeforeOpen).toHaveBeenCalled();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    resolveLoad();
+    await click;
+    expect(await screen.findByRole("menu")).toBeInTheDocument();
+  });
+
+  it("opens the menu even when onBeforeOpen fails", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const onBeforeOpen = vi.fn(() => Promise.reject(new Error("boom")));
+    render(DropdownButton, {
+      props: {
+        choices,
+        fixedLabel: "Export as…",
+        onSelect: () => {},
+        onBeforeOpen,
+      },
+    });
+    await fireEvent.click(screen.getByText("Export as…"));
+    expect(await screen.findByRole("menu")).toBeInTheDocument();
+    err.mockRestore();
+  });
 });

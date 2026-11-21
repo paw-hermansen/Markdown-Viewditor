@@ -92,12 +92,11 @@ import {
 import { buildPageCommands } from "$lib/commands/page-commands";
   import {
     runExporter,
-    registerBuiltinExporters,
+    ensureExporters,
     getExporter,
     listExporters,
   } from "$lib/export/registry.svelte";
-  import { exportPdf } from "$lib/export/exporters/pdf";
-  import { PDF_OPTION_ID } from "$lib/export/exporters/pdf";
+  import { PDF_OPTION_ID } from "$lib/export/option-ids";
   import { OPTION_SETTING } from "$lib/export/option-settings";
   import { usesCapturePdf } from "$lib/export/pdf-mode";
   import { getThemeLabel } from "$lib/utils/themes";
@@ -526,6 +525,10 @@ import { buildPageCommands } from "$lib/commands/page-commands";
 
     startExporting();
     try {
+      // Lazy: pulls the print/export pipeline (mermaid print variant,
+      // math-fit) into its own chunk. The entry bundle must not statically
+      // import exporter implementations — see export/option-ids.ts.
+      const { exportPdf } = await import("$lib/export/exporters/pdf");
       let htmlForPdf = viewerContent.innerHTML;
       if (!resolvedIncludeFrontmatter) {
         const clone = viewerContent.cloneNode(true) as HTMLElement;
@@ -563,6 +566,11 @@ import { buildPageCommands } from "$lib/commands/page-commands";
       await handlePrint();
       return;
     }
+
+    // The exporters load lazily on first use (keeps the export pipeline
+    // out of the startup bundle) — make sure they are there before the
+    // registry lookup. Idempotent and concurrency-safe.
+    await ensureExporters();
 
     const exporter = getExporter(id);
     if (!exporter) return;
@@ -744,17 +752,25 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     ),
   );
 
-  // Export commands derived from registry.
-  for (const e of listExporters()) {
-    registerCommands([
-      {
-        id: `export-${e.id}`,
-        title: e.label,
-        category: "Export",
-        run: () => handleExport(e.id),
-      },
-    ]);
-  }
+  // Export commands derived from the exporter registry. The exporters
+  // register lazily, so enumerate reactively: this used to be a one-shot
+  // `for` over `listExporters()` at init — which saw the still-empty
+  // registry — and the export commands never reached the CommandPalette.
+  const registeredExportCommands = new Set<string>();
+  $effect(() => {
+    for (const e of listExporters()) {
+      if (registeredExportCommands.has(e.id)) continue;
+      registeredExportCommands.add(e.id);
+      registerCommands([
+        {
+          id: `export-${e.id}`,
+          title: e.label,
+          category: "Export",
+          run: () => handleExport(e.id),
+        },
+      ]);
+    }
+  });
 
   onMount(async () => {
     // Ctrl/Cmd+wheel (and macOS trackpad pinch) zoom. The listener must be
@@ -788,9 +804,9 @@ import { buildPageCommands } from "$lib/commands/page-commands";
       },
     });
 
-    // Register the built-in exporters (HTML, PDF) so the toolbar dropdown
-    // and command palette can list them. Idempotent.
-    void registerBuiltinExporters();
+    // The built-in exporters (HTML, PDF, …) register lazily on the first
+    // export interaction — see ensureExporters() — so the export pipeline
+    // stays out of the startup bundle.
 
     // Check whether the in-app updater is available (disabled in Flatpak, Windows Store).
     void initUpdaterEnabled();

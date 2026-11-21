@@ -1,12 +1,17 @@
 import type { MarkdownExtension } from "../types";
 import { VEGA_LITE_PATTERNS } from "../pre-scan";
 import { mergeOptions } from "../directive-merge";
-import { preRenderVegaLiteBlocks, renderVegaLiteFence } from "./renderer";
-import { injectVegaLiteStyles } from "./styles";
 import { VEGA_LITE_OPTIONS_SCHEMA } from "./schema";
 
 // Side-effect: register feature detectors on import.
 import "./detectors";
+
+// The render core (and its math-labels → $lib/export/math-render → KaTeX
+// chain) loads with the first pre-render pass instead of at startup.
+// renderFence is a synchronous cache lookup that only runs after
+// preRenderBlocks has filled the cache and this handle — see
+// extensions/registry.ts.
+let renderer: typeof import("./renderer") | null = null;
 
 function resolveOptions(
   opts: Record<string, unknown>,
@@ -33,11 +38,13 @@ export const vegaLiteExtension: MarkdownExtension = {
   },
 
   async loadStyles() {
+    const { injectVegaLiteStyles } = await import("./styles");
     injectVegaLiteStyles();
   },
 
   async preRenderBlocks(_content, context) {
-    await preRenderVegaLiteBlocks(
+    renderer ??= await import("./renderer");
+    await renderer.preRenderVegaLiteBlocks(
       context.tokens,
       context.env,
       VEGA_LITE_OPTIONS_SCHEMA,
@@ -50,9 +57,10 @@ export const vegaLiteExtension: MarkdownExtension = {
     options: Record<string, unknown>,
     env?: Record<string, unknown>,
   ): string | null {
+    if (!renderer) return null;
     // Use the pre-render pass's theme snapshot (if any) so the cache lookup
     // matches the keys the pass filled — the mermaid THEME_SNAPSHOT contract.
-    return renderVegaLiteFence(content, resolveOptions(options), env);
+    return renderer.renderVegaLiteFence(content, resolveOptions(options), env);
   },
 
   featureDetectors() {

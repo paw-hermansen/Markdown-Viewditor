@@ -19,7 +19,7 @@ import {
   htmlBundleExporter,
   stripKatexFontFaces,
 } from "../exporters/html-bundle";
-import { registerBuiltinExporters, getExporter } from "../registry.svelte";
+import { ensureExporters, getExporter } from "../registry.svelte";
 
 describe("extractFonts", () => {
   it("extracts same-origin font url() references and rewrites CSS", async () => {
@@ -350,8 +350,8 @@ describe("htmlBundleExporter", () => {
     vi.clearAllMocks();
   });
 
-  it("is registered by registerBuiltinExporters", async () => {
-    await registerBuiltinExporters();
+  it("is registered by ensureExporters", async () => {
+    await ensureExporters();
     const exporter = getExporter("html-bundle");
     expect(exporter).toBeDefined();
     expect(exporter!.label).toBe("Export as HTML Bundle");

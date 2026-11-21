@@ -9,12 +9,10 @@ import type {
 import { buildStandaloneHtml } from "../document";
 import { fileState, getFileName } from "$lib/stores/file.svelte";
 import { getThemeType } from "$lib/stores/viewer.svelte";
-import {
-  generateFrontmatterCardHtml,
-  OPTION_INCLUDE_FRONTMATTER,
-} from "../frontmatter-card";
+import { generateFrontmatterCardHtml } from "../frontmatter-card";
+import { HTML_OPTION_ID as OPTION_ID } from "../option-ids";
 
-export const OPTION_ID = `html.${OPTION_INCLUDE_FRONTMATTER}`;
+export { OPTION_ID };
 
 function asBool(v: unknown, fallback: boolean): boolean {
   return typeof v === "boolean" ? v : fallback;

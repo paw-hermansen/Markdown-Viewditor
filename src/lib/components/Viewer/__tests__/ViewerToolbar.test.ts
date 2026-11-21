@@ -12,6 +12,17 @@ vi.mock("../ThemeSelector.svelte", () => ({
   default: () => "ThemeSelector",
 }));
 
+vi.mock("$lib/export/registry.svelte", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("$lib/export/registry.svelte")>();
+  return {
+    ...original,
+    // The toolbar triggers the lazy exporter load on first use; loading
+    // the real built-ins here would pollute the fake-exporter fixtures.
+    ensureExporters: vi.fn(async () => {}),
+  };
+});
+
 const FAKE_EXPORTER = {
   id: "test-html",
   label: "Export as HTML",
@@ -89,7 +100,8 @@ describe("ViewerToolbar", () => {
       render(ViewerToolbar, { props: { onExport: vi.fn() } });
       const button = screen.getByTitle("Export document");
       await fireEvent.click(button);
-      const dropdown = screen.getByRole("menu");
+      // The menu opens after the exporter load is ensured.
+      const dropdown = await screen.findByRole("menu");
       expect(within(dropdown).getByText("Export as HTML")).toBeInTheDocument();
       expect(within(dropdown).getByText("Export as PDF")).toBeInTheDocument();
     });
@@ -97,7 +109,7 @@ describe("ViewerToolbar", () => {
     it("shows descriptions in dropdown items", async () => {
       render(ViewerToolbar, { props: { onExport: vi.fn() } });
       await fireEvent.click(screen.getByTitle("Export document"));
-      expect(screen.getByText("Standalone webpage")).toBeInTheDocument();
+      expect(await screen.findByText("Standalone webpage")).toBeInTheDocument();
       expect(screen.getByText("Vector document")).toBeInTheDocument();
     });
 
@@ -105,7 +117,7 @@ describe("ViewerToolbar", () => {
       render(ViewerToolbar, { props: { onExport: vi.fn() } });
       await fireEvent.click(screen.getByTitle("Export document"));
       expect(
-        screen.getByText("Show export and print confirmation"),
+        await screen.findByText("Show export and print confirmation"),
       ).toBeInTheDocument();
     });
 
@@ -113,7 +125,7 @@ describe("ViewerToolbar", () => {
       const onExport = vi.fn();
       render(ViewerToolbar, { props: { onExport } });
       await fireEvent.click(screen.getByTitle("Export document"));
-      const dropdown = screen.getByRole("menu");
+      const dropdown = await screen.findByRole("menu");
       await fireEvent.click(within(dropdown).getByText("Export as HTML"));
       expect(onExport).toHaveBeenCalledWith("test-html");
     });

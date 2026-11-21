@@ -1,5 +1,6 @@
 <script lang="ts">
   import { listCommands, formatShortcut, runCommand } from "$lib/commands/registry.svelte";
+  import { ensureExporters } from "$lib/export/registry.svelte";
   import { focusTrap } from "$lib/utils/focus-trap";
   import { popup } from "$lib/utils/popup";
 
@@ -38,6 +39,10 @@
     if (open) {
       searchQuery = "";
       selectedIndex = 0;
+      // The exporters load lazily on first use; warm them on open so the
+      // export commands can register while the palette is up (the command
+      // list picks them up reactively).
+      void ensureExporters();
       setTimeout(() => searchInput?.focus({ preventScroll: true }), 0);
     }
   });

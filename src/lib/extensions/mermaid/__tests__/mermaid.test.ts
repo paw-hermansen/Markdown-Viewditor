@@ -153,7 +153,15 @@ describe("mermaid extension", () => {
   });
 
   describe("renderFence", () => {
-    it("returns error HTML when SVG not cached", () => {
+    // The pipeline always runs preRenderBlocks before renderFence
+    // (extensions/registry.ts); that hook loads the renderer module and
+    // fills the cache. Keep the same order here.
+    async function primeRenderer() {
+      await mermaidExtension.preRenderBlocks?.("", { tokens: [], env: {} });
+    }
+
+    it("returns error HTML when SVG not cached", async () => {
+      await primeRenderer();
       const result = mermaidExtension.renderFence?.(
         "graph LR\n    A-->B",
         "mermaid",
@@ -166,7 +174,8 @@ describe("mermaid extension", () => {
       expect(result).toContain("--mermaid-max-width: 800px");
     });
 
-    it("keeps layout attributes on an error wrapper", () => {
+    it("keeps layout attributes on an error wrapper", async () => {
+      await primeRenderer();
       const result = mermaidExtension.renderFence?.("graph LR", "mermaid", {
         fitToWidth: false,
         align: "right",

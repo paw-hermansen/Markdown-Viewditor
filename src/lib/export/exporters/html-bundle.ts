@@ -30,15 +30,12 @@ import { escapeHtml } from "$lib/utils/escape";
 import { base64ToBytes } from "$lib/utils/base64";
 import { addImageTitles } from "../image-title";
 import { extractLocalImgPath, mimeFromHref } from "../image-src";
-import {
-  generateFrontmatterCardHtml,
-  deriveTitle,
-  OPTION_INCLUDE_FRONTMATTER,
-} from "../frontmatter-card";
+import { generateFrontmatterCardHtml, deriveTitle } from "../frontmatter-card";
+import { HTML_BUNDLE_OPTION_ID as OPTION_ID } from "../option-ids";
 
 /* ─────────────────────── option ids / helpers ─────────────────────────── */
 
-export const OPTION_ID = `html-bundle.${OPTION_INCLUDE_FRONTMATTER}`;
+export { OPTION_ID };
 
 function asBool(v: unknown, fallback: boolean): boolean {
   return typeof v === "boolean" ? v : fallback;

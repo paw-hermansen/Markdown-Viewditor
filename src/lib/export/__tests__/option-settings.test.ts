@@ -31,7 +31,7 @@ vi.mock("../math-render", async (importOriginal) => ({
 
 import type { ExportContext } from "../types";
 import { OPTION_SETTING } from "../option-settings";
-import { listExporters, registerBuiltinExporters } from "../registry.svelte";
+import { listExporters, ensureExporters } from "../registry.svelte";
 import { settingsState } from "$lib/stores/settings.svelte";
 
 const CTX: ExportContext = {
@@ -43,7 +43,7 @@ const CTX: ExportContext = {
 };
 
 async function declaredOptionIds(): Promise<string[]> {
-  await registerBuiltinExporters();
+  await ensureExporters();
   return listExporters().flatMap((e) =>
     (e.optionGroups?.(CTX) ?? []).flatMap((g) => g.options.map((o) => o.id)),
   );

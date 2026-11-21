@@ -16,6 +16,11 @@
     fixedLabel?: string;
     onAction?: (value: T) => void;
     onSelect?: (value: T) => void;
+    /**
+     * Awaited before the menu opens in menu mode (e.g. to lazy-load the
+     * choices). Failures don't eat the click: the menu opens regardless.
+     */
+    onBeforeOpen?: () => void | Promise<void>;
     leadingIcon?: Snippet;
     footer?: Snippet;
     formatLabel?: (choice: Choice<T>) => string;
@@ -31,6 +36,7 @@
     fixedLabel,
     onAction,
     onSelect,
+    onBeforeOpen,
     leadingIcon,
     footer,
     formatLabel,
@@ -70,11 +76,29 @@
     trigger?.focus({ preventScroll: true });
   }
 
-  function fire() {
+  let preOpenPending = false;
+
+  async function fire() {
     if (disabled) return;
     if (isMenuMode) {
-      toggle();
-    } else if (onAction) {
+      if (isOpen) {
+        toggle();
+        return;
+      }
+      if (onBeforeOpen && !preOpenPending) {
+        preOpenPending = true;
+        try {
+          await onBeforeOpen();
+        } catch (e) {
+          console.error("dropdown onBeforeOpen failed:", e);
+        } finally {
+          preOpenPending = false;
+        }
+      }
+      if (!isOpen) toggle();
+      return;
+    }
+    if (onAction) {
       onAction(value!);
     } else {
       toggle();

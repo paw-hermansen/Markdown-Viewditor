@@ -27,16 +27,8 @@ import {
   OPTION_DOCX_RASTERIZE_SVG,
   OPTION_DOCX_RASTER_RESOLUTION,
   OPTION_DOCX_INCLUDE_FRONTMATTER,
-  type ExportOptions,
   readOptions,
 } from "../docx/options";
-export {
-  OPTION_DOCX_RASTERIZE_MATH,
-  OPTION_DOCX_RASTERIZE_SVG,
-  OPTION_DOCX_RASTER_RESOLUTION,
-  OPTION_DOCX_INCLUDE_FRONTMATTER,
-};
-export type { ExportOptions };
 
 import { buildDocument } from "../docx/render";
 import {

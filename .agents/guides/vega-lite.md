@@ -59,8 +59,8 @@ round-trip in the webview. Therefore:
 - `sanitize` must stay a **pass-through** for URLs vega should keep: the
   default sanitizer empties `localimg://`/`asset://` and rewrites
   `file:///x` to `/x`.
-- ODT/DOCX pass `ctx.filePath` (the open document, threaded through the
-  build contexts) as `baseFile` — without it relative image paths cannot
+- ODT/DOCX pass `ctx.filePath` (the active document's file, threaded through
+  the build contexts) as `baseFile` — without it relative image paths cannot
   resolve in exports.
 - `export/svg-images.ts` remains as a belt-and-braces inlining pass for
   embeds; `IMG_SRC_RE` covers `<image href>` in HTML exports.

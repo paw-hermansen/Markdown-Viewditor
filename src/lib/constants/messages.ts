@@ -23,6 +23,8 @@ export const MSG = {
   saveFailed: "Failed to save the file.",
   openFailed: "Failed to open the file.",
   readFailed: "Failed to read the file.",
+  fileNotFound: "This file could not be found.",
+  filesNotFound: "These files could not be found:",
 } as const;
 
 export type ConfirmResult<T extends string = string> = T;

@@ -5,18 +5,35 @@ use std::path::Path;
 use tauri::State;
 
 use crate::error::AppError;
-use crate::state::{FileInfo, FileInfoMeta, OpenedUrls};
+use crate::state::{FileInfo, FileInfoMeta, MissingFiles, OpenedUrls};
+
+/// What the app was asked to open at startup: the existing files (canonical
+/// paths, deduped) and the arguments that could not be resolved (original
+/// spelling, deduped) so the frontend can report those instead of the app
+/// silently ignoring them.
+#[derive(serde::Serialize)]
+pub struct OpenedUrlsReport {
+    pub opened: Vec<String>,
+    pub missing: Vec<String>,
+}
 
 #[tauri::command]
-pub fn opened_urls(state: State<OpenedUrls>) -> Vec<String> {
+pub fn opened_urls(
+    opened: State<OpenedUrls>,
+    missing: State<MissingFiles>,
+) -> OpenedUrlsReport {
     // Poison-tolerant: a panic on another thread must not make this command
     // panic too and take the app down with it.
-    state
-        .0
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .drain(..)
-        .collect()
+    let drain = |m: &std::sync::Mutex<Vec<String>>| -> Vec<String> {
+        m.lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .drain(..)
+            .collect()
+    };
+    OpenedUrlsReport {
+        opened: drain(&opened.0),
+        missing: drain(&missing.0),
+    }
 }
 
 /// Canonicalize each path, keeping the original spelling when it cannot be

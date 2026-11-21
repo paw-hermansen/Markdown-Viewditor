@@ -112,6 +112,8 @@
     font-size: 12px;
     color: var(--text-muted);
     word-break: break-word;
+    /* Multi-line details (e.g. a list of missing files) keep their breaks. */
+    white-space: pre-line;
   }
 
   .close {

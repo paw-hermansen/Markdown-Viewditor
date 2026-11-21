@@ -23,6 +23,7 @@
   } from "$lib/stores/editor.svelte";
   import {
     fileState,
+    closeFile,
     showOpenDialog,
     saveFile,
     saveFileAs,
@@ -831,27 +832,62 @@ import { buildPageCommands } from "$lib/commands/page-commands";
       for (const path of event.payload) await openFile(path);
     });
 
-    const initialUrls = await invoke<string[]>("opened_urls");
+    const { opened: initialUrls, missing } = await invoke<{
+      opened: string[];
+      missing: string[];
+    }>("opened_urls");
     if (savedTabs.length > 0) {
-      // Restore lazily: only the active tab's file is read now.
+      // Restore lazily: only the active tab's file is read now. Paths are
+      // canonicalized and deduped first so a file persisted twice — or also
+      // given on the command line — reuses its tab instead of opening again.
+      const resolved =
+        (await invoke<string[] | null>("canonicalize_paths", {
+          paths: savedTabs.map((t) => t.path),
+        })) ?? savedTabs.map((t) => t.path);
+      const seen = new Set<string>();
+      const restored: PersistedTab[] = [];
+      savedTabs.forEach((t, i) => {
+        const path = resolved[i] ?? t.path;
+        if (seen.has(path)) return;
+        seen.add(path);
+        restored.push({ path, viewMode: t.viewMode, splitRatio: t.splitRatio });
+      });
       const first = tabsState.tabs[0];
       tabsState.tabs.push(
-        ...savedTabs.map((t) => createTab(t.viewMode, t.splitRatio, t.path, true)),
+        ...restored.map((t) => createTab(t.viewMode, t.splitRatio, t.path, true)),
       );
       await activateTab(
-        tabsState.tabs[1 + Math.min(savedActiveTab, savedTabs.length - 1)],
+        tabsState.tabs[1 + Math.min(savedActiveTab, restored.length - 1)],
       );
       // Unless a failed read fell back to it.
       if (first.id !== tabsState.activeId) removeTab(first.id);
-    } else if (settingsState.lastOpenedFile && initialUrls.length === 0) {
+    } else if (initialUrls.length === 0 && settingsState.lastOpenedFile) {
       await loadContentIntoEditor(settingsState.lastOpenedFile);
     } else if (initialUrls.length === 0) {
       editorState.content = DEFAULT_CONTENT;
       updateWordCount(DEFAULT_CONTENT);
       editorComponent?.setContent(DEFAULT_CONTENT);
       markSaved();
+    } else {
+      // Files are coming in from the command line: drop the stale
+      // lastOpenedFile handle so the empty first tab takes the first file
+      // instead of leaving an extra phantom tab behind.
+      closeFile();
     }
     for (const path of initialUrls) await openFile(path);
+    // The first command-line file is the primary document: show its tab once
+    // everything (restored tabs included) has opened.
+    const primary = initialUrls[0] ? findTabByPath(initialUrls[0]) : undefined;
+    if (primary) await activateTab(primary);
+    if (missing.length > 0) {
+      // Files the app was asked to open but could not find. Reported as one
+      // list; the rest of the startup went through regardless.
+      toast.error(
+        missing.length === 1 ? MSG.fileNotFound : MSG.filesNotFound,
+        missing.join("\n"),
+        10_000,
+      );
+    }
 
     if (updaterState.enabled && settingsState.autoCheckUpdates) {
       setTimeout(() => {

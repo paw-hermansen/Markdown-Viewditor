@@ -2,7 +2,8 @@
 
 ## Project Overview
 
-**Markdown Viewditor** - A markdown viewer and editor with **live preview** built with:
+**Markdown Viewditor** - A multi-document markdown viewer and editor with
+**live preview** (every open file is a tab) built with:
 
 - **Backend**: Rust (Tauri v2)
 - **Frontend**: Svelte 5 + SvelteKit
@@ -36,14 +37,14 @@ The full contracts and conventions live in linked guides. Read the relevant
 guide before touching that area — especially the rendering/export contracts,
 which pin engine-internal workarounds with dedicated regression tests.
 
-| Guide                                                        | Contents                                                                                                                                       |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Conventions & Core Patterns](.agents/guides/patterns.md)    | Svelte/Rust/CSS conventions, Tauri entry point, Svelte 5 patterns, IPC, live preview, markdown syntax levels, CodeMirror lint, common mistakes |
-| [Math & Mermaid Contracts](.agents/guides/math-mermaid.md)   | KaTeX + Mermaid engine contracts: zoom fixes, label measurement/conversion, edge widths, gantt width, upgrade checklist                        |
-| [Vega-Lite Contracts](.agents/guides/vega-lite.md)           | Vega-Lite fence contracts: interpreter/CSP, theme token split, image inlining, label math, export SVG rules, upgrade tripwires                 |
-| [Zoom, Theme & UI Behavior](.agents/guides/zoom-theme-ui.md) | App zoom (webview page zoom), theme background, theme/Mermaid cache keys, render busy overlay                                                  |
-| [Export & Print](.agents/guides/export-print.md)             | Exporter registry, standalone HTML, PDF/print fidelity contract                                                                                |
-| [Versioning & Releases](.agents/guides/release.md)           | Release pipeline (GitHub Actions), Microsoft Store / MSIX distribution                                                                         |
+| Guide                                                        | Contents                                                                                                                                                           |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Conventions & Core Patterns](.agents/guides/patterns.md)    | Svelte/Rust/CSS conventions, Tauri entry point, Svelte 5 patterns, IPC, live preview, document/tab model, markdown syntax levels, CodeMirror lint, common mistakes |
+| [Math & Mermaid Contracts](.agents/guides/math-mermaid.md)   | KaTeX + Mermaid engine contracts: zoom fixes, label measurement/conversion, edge widths, gantt width, upgrade checklist                                            |
+| [Vega-Lite Contracts](.agents/guides/vega-lite.md)           | Vega-Lite fence contracts: interpreter/CSP, theme token split, image inlining, label math, export SVG rules, upgrade tripwires                                     |
+| [Zoom, Theme & UI Behavior](.agents/guides/zoom-theme-ui.md) | App zoom (webview page zoom), theme background, theme/Mermaid cache keys, render busy overlay                                                                      |
+| [Export & Print](.agents/guides/export-print.md)             | Exporter registry, standalone HTML, PDF/print fidelity contract                                                                                                    |
+| [Versioning & Releases](.agents/guides/release.md)           | Release pipeline (GitHub Actions), Microsoft Store / MSIX distribution                                                                                             |
 
 ## Resources
 

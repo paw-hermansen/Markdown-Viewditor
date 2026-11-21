@@ -30,6 +30,28 @@ Coding conventions and the core architectural patterns used throughout the app.
 
 ## Critical Patterns
 
+### Document Model (Tabs)
+
+Several documents are open at once, one per tab. The mechanics live in
+`src/lib/stores/tabs.svelte.ts` (its header comment is the contract): the
+active tab's state lives in the existing global stores (`fileState`,
+`editorState`, split ratio, view mode), inactive tabs are parked snapshots,
+and a tab switch is `parkActive()` + `loadTab()`.
+
+- Most code is single-document **by design**: anything reading the global
+  stores (Save, Reload, Export, Print, status bar) acts on the active tab
+  and needs no tab awareness.
+- New per-document state must join the tab snapshot (`DocTab` / `FILE_KEYS`)
+  instead of a second global — a tab switch would drop it.
+- A tab's own fields are only meaningful while it is inactive; read the
+  active document's path/dirty state via `tabPath()` / `tabDirty()`.
+- Each tab carries its own view mode, split ratio, undo history and
+  selection. Tabs (with their paths) persist across restarts and each file
+  is read on first activation. Open and the command line accept several
+  files; an already-open file switches to its tab. Closing a tab or quitting
+  prompts Save/Discard/Cancel per unsaved tab. `Ctrl+Tab` / `Ctrl+Shift+Tab`
+  switch tabs.
+
 ### Tauri v2 Entry Point
 
 ```rust
@@ -141,11 +163,12 @@ list it as an explicit dependency for stability.
 
 ## Common Mistakes to Avoid
 
-| Mistake                  | Solution                           |
-| ------------------------ | ---------------------------------- |
-| `let` without `$state()` | Use `$state()` for reactive vars   |
-| `on:click` syntax        | Use `onclick` (Svelte 5)           |
-| `<slot>`                 | Use `{@render children()}`         |
-| `&str` in async commands | Use `String` (owned type)          |
-| Missing capabilities     | Add to `capabilities/default.json` |
-| Commands not registered  | Add to `generate_handler![]`       |
+| Mistake                            | Solution                                              |
+| ---------------------------------- | ----------------------------------------------------- |
+| `let` without `$state()`           | Use `$state()` for reactive vars                      |
+| `on:click` syntax                  | Use `onclick` (Svelte 5)                              |
+| `<slot>`                           | Use `{@render children()}`                            |
+| `&str` in async commands           | Use `String` (owned type)                             |
+| Missing capabilities               | Add to `capabilities/default.json`                    |
+| Commands not registered            | Add to `generate_handler![]`                          |
+| Per-document state in a new global | Park it in the tab snapshot (`stores/tabs.svelte.ts`) |

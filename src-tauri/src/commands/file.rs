@@ -19,6 +19,21 @@ pub fn opened_urls(state: State<OpenedUrls>) -> Vec<String> {
         .collect()
 }
 
+/// Canonicalize each path, keeping the original spelling when it cannot be
+/// resolved (e.g. the file no longer exists). Tab identity is canonical so a
+/// file reached through different spellings only ever opens once.
+#[tauri::command]
+pub fn canonicalize_paths(paths: Vec<String>) -> Vec<String> {
+    paths
+        .into_iter()
+        .map(|p| {
+            fs::canonicalize(&p)
+                .map(|c| c.to_string_lossy().into_owned())
+                .unwrap_or(p)
+        })
+        .collect()
+}
+
 /// Decode raw bytes to a String, handling a UTF-8 BOM and falling back to a
 /// lossless Latin-1 (ISO-8859-1) decode when the file is not valid UTF-8 so
 /// content is never silently corrupted.
@@ -316,6 +331,54 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result, "hi\u{00E9}");
+    }
+
+    // --- canonicalize_paths ---
+
+    #[test]
+    fn canonicalize_paths_resolves_existing_and_keeps_missing_spelling() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("a.md");
+        std::fs::write(&file_path, "a").unwrap();
+        let dotted = dir
+            .path()
+            .join(".")
+            .join("a.md")
+            .to_string_lossy()
+            .into_owned();
+        let canonical = fs::canonicalize(&file_path)
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+
+        let result = canonicalize_paths(vec![dotted.clone(), "/nonexistent/nope.md".to_string()]);
+
+        assert_eq!(result, vec![canonical, "/nonexistent/nope.md".to_string()]);
+        // The resolved spelling differs from the one handed in.
+        assert_ne!(result[0], dotted);
+    }
+
+    #[test]
+    fn canonicalize_paths_keeps_order_and_handles_empty_input() {
+        let dir = tempdir().unwrap();
+        let first = dir.path().join("first.md");
+        let second = dir.path().join("second.md");
+        std::fs::write(&first, "1").unwrap();
+        std::fs::write(&second, "2").unwrap();
+
+        let result = canonicalize_paths(vec![
+            first.to_string_lossy().into_owned(),
+            second.to_string_lossy().into_owned(),
+        ]);
+
+        assert_eq!(
+            result,
+            vec![
+                fs::canonicalize(&first).unwrap().to_string_lossy().into_owned(),
+                fs::canonicalize(&second).unwrap().to_string_lossy().into_owned(),
+            ]
+        );
+        assert!(canonicalize_paths(vec![]).is_empty());
     }
 
     // --- write_file ---

@@ -30,6 +30,11 @@ pub struct FileInfoMeta {
 
 pub struct OpenedUrls(pub Mutex<Vec<String>>);
 
+/// Command-line arguments that could not be resolved to an existing file,
+/// kept apart from `OpenedUrls` so the frontend can report them at startup
+/// instead of the app silently ignoring them.
+pub struct MissingFiles(pub Mutex<Vec<String>>);
+
 #[cfg(test)]
 mod tests {
     use super::*;

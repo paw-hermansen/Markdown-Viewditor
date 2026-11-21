@@ -12,6 +12,7 @@ An advanced extended markdown viewer and editor with live preview and scroll syn
 - **Live Preview** — See your markdown rendered in real-time as you type
 - **Three View Modes** — Editor only, Split, View only
 - **Scroll Sync** — Editor and view stay synchronized
+- **Tabs** — Open several documents at once (multi-select in the Open dialog, several files on the command line); each tab keeps its own view mode, split ratio and undo history, and the tabs come back after a restart
 - **Zoom** — Scale the app (70%–300%) with `Ctrl +` / `Ctrl -` / `Ctrl 0`, `Ctrl`+mouse wheel, or the status bar control
 - **Math and Chemical Formulas** — Advanced formulas using [KaTeX](https://katex.org) and [mhchem](https://mhchem.github.io/MathJax-mhchem/)
 - **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts and more, rendered with [Mermaid](https://mermaid.ai)

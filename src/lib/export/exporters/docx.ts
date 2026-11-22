@@ -74,7 +74,7 @@ export function docxOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_DOCX_RASTERIZE_MATH,
           label: "Rasterize as PNG images",
-          hint: "On: PNG images, not editable. Off: native Word equations, editable and scalable.",
+          hint: "On: PNG images, not editable. Off (default): native Word equations, editable and scalable.",
           kind: "toggle",
           value: false,
         },
@@ -87,7 +87,7 @@ export function docxOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_DOCX_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "On: PNG only. Off: SVG with a PNG fallback — sharper zoom in Word 2016+, older viewers show the PNG.",
+          hint: "On (default): PNG only. Off: SVG with a PNG fallback — sharper zoom in Word 2016+, older viewers show the PNG.",
           kind: "toggle",
           value: true,
         },
@@ -96,16 +96,20 @@ export function docxOptionGroups(ctx: ExportContext): OptionGroup[] {
     {
       id: "resolution",
       label: "Image resolution",
+      // Unlike ODT, this option is never disabled: the SVG dual embed
+      // rasterizes its PNG compatibility fallback at rasterScale even when
+      // both rasterization toggles are off (see docx/media.ts
+      // dualEmbedDrawing), so the resolution always shapes the output.
       options: [
         {
           id: OPTION_DOCX_RASTER_RESOLUTION,
           label: "Resolution",
-          hint: "Applies to rasterized math, diagrams, and SVG fallbacks. Higher = sharper print, larger file.",
+          hint: "Sets PNG sharpness for rasterized math, diagrams, and the SVG compatibility fallback (always rasterized, even when both toggles are off). Higher = sharper print, larger file.",
           kind: "select",
           value: 2,
           choices: [
             { value: 1, label: "1× (96 DPI)" },
-            { value: 2, label: "2× (192 DPI)" },
+            { value: 2, label: "2× (192 DPI) (default)" },
             { value: 3, label: "3× (288 DPI)" },
             { value: 4, label: "4× (384 DPI)" },
           ],

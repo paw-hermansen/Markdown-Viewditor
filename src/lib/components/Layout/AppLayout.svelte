@@ -246,7 +246,7 @@ import { updateStatus } from '$lib/stores/update.svelte';
     ></button>
   </main>
 
-  <StatusBar />
+  <StatusBar {viewMode} />
 </div>
 
 <style>

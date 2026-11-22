@@ -15,8 +15,22 @@
     type MarkdownLevel,
     type UsedFeature
   } from '$lib/utils/markdown-levels';
+  import type { ViewMode } from '$lib/types';
 
-  let showEditorInfo = $derived(settingsState.viewMode === 'split' || settingsState.viewMode === 'editor');
+  interface Props {
+    /**
+     * The ACTIVE tab's view mode (the same source of truth the page uses to
+     * decide whether the editor pane is mounted). Deliberately a prop, not
+     * `settingsState.viewMode`: the persisted setting is only updated on a
+     * manual mode change, so on a tab switch it drifts from the real mode and
+     * would hide/show the cursor readout regardless of the visible editor.
+     */
+    viewMode: ViewMode;
+  }
+
+  let { viewMode }: Props = $props();
+
+  let showEditorInfo = $derived(viewMode === 'split' || viewMode === 'editor');
 
   const LEVELS: MarkdownLevel[] = ['basic', 'github', 'advanced', 'custom'];
   const LEVEL_LABELS: Record<MarkdownLevel, string> = {

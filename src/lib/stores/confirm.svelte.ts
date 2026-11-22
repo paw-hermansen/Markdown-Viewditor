@@ -47,6 +47,7 @@ function resolveRequest(value: string | null) {
 export function confirmSaveDiscardCancel(
   message: string,
   kind: ConfirmKind = "warning",
+  title: string = APP_TITLE,
 ): Promise<"save" | "discard" | "cancel" | null> {
   return open(
     message,
@@ -60,6 +61,7 @@ export function confirmSaveDiscardCancel(
       { label: "Save First", value: "save", variant: "primary" },
     ],
     kind,
+    title,
   ) as Promise<"save" | "discard" | "cancel" | null>;
 }
 

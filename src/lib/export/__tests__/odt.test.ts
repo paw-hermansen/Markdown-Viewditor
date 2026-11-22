@@ -135,6 +135,44 @@ describe("odtExporter", () => {
     ).toBe(false);
   });
 
+  it("marks the recommended defaults on the rasterization checkboxes", () => {
+    const groups =
+      odtExporter.optionGroups?.({
+        markdown: "",
+        html: "",
+        frontmatter: null,
+        fileName: "test",
+        tokens: [],
+      }) ?? [];
+    const mathOpt = groups.find((g) => g.label === "Math formulas")?.options[0];
+    const svgOpt = groups.find(
+      (g) => g.label === "SVG images & Mermaid diagrams",
+    )?.options[0];
+    // Both ODT rasterizations default to off (MathML / SVG vectors); the
+    // hints must advertise the same states.
+    expect(mathOpt?.value).toBe(false);
+    expect(mathOpt?.hint).toMatch(/Off \(default\)/);
+    expect(svgOpt?.value).toBe(false);
+    expect(svgOpt?.hint).toMatch(/Off \(default\)/);
+  });
+
+  it("marks the default resolution choice", () => {
+    const groups =
+      odtExporter.optionGroups?.({
+        markdown: "",
+        html: "",
+        frontmatter: null,
+        fileName: "test",
+        tokens: [],
+      }) ?? [];
+    const resolutionOpt = groups.find((g) => g.label === "Image resolution")
+      ?.options[0];
+    expect(resolutionOpt?.value).toBe(2);
+    expect(resolutionOpt?.choices?.find((c) => c.value === 2)?.label).toMatch(
+      /\(default\)/,
+    );
+  });
+
   it("returns empty warnings when user cancels save dialog", async () => {
     const result = await runOdtExport("# Hello", { savePath: null });
     expect(result.warnings).toEqual([]);

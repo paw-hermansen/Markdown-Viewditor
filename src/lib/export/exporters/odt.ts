@@ -66,7 +66,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_RASTERIZE_MATH,
           label: "Rasterize as PNG images",
-          hint: "Smaller file, renders everywhere. Native MathML is editable in LibreOffice but may not render in all viewers.",
+          hint: "Off (default): native MathML, editable in LibreOffice but may not render in all viewers. On: PNG images — smaller file, renders everywhere.",
           kind: "toggle",
           value: false,
         },
@@ -79,7 +79,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
         {
           id: OPTION_RASTERIZE_SVG,
           label: "Rasterize as PNG images",
-          hint: "Applies to inline <svg>, <img src=*.svg>, markdown ![…](.svg), Mermaid diagrams, and SMILES structures. PNG: wider compatibility. SVG: vector, may not render in all viewers.",
+          hint: "Off (default): SVG vectors, may not render in all viewers. On: PNG images, wider compatibility. Applies to inline <svg>, <img src=*.svg>, markdown ![…](.svg), Mermaid diagrams, and SMILES structures.",
           kind: "toggle",
           value: false,
         },
@@ -97,7 +97,7 @@ export function odtOptionGroups(ctx: ExportContext): OptionGroup[] {
           value: 2,
           choices: [
             { value: 1, label: "1× (96 DPI)" },
-            { value: 2, label: "2× (192 DPI)" },
+            { value: 2, label: "2× (192 DPI) (default)" },
             { value: 3, label: "3× (288 DPI)" },
             { value: 4, label: "4× (384 DPI)" },
           ],

@@ -52,6 +52,7 @@ vi.mock("../math-render", async (importOriginal) => ({
 
 import hljs from "highlight.js";
 import { runPrXml } from "../docx/runs";
+import { docxExporter } from "../exporters/docx";
 import {
   exportToZip,
   getDocumentXml,
@@ -190,6 +191,68 @@ describe("docxExporter package integrity", () => {
     for (const call of vi.mocked(invoke).mock.calls) {
       expect(call[0]).toBe("write_file_binary");
     }
+  });
+});
+
+describe("docxExporter option groups", () => {
+  const groups =
+    docxExporter.optionGroups?.({
+      markdown: "",
+      html: "",
+      frontmatter: null,
+      fileName: "test",
+      tokens: [],
+    }) ?? [];
+
+  it("declares the four option groups", () => {
+    const labels = groups.map((g) => g.label);
+    expect(labels).toContain("Frontmatter");
+    expect(labels).toContain("Math formulas");
+    expect(labels).toContain("SVG images, Mermaid diagrams, SMILES");
+    expect(labels).toContain("Image resolution");
+  });
+
+  it("marks the recommended defaults on the rasterization checkboxes", () => {
+    const mathOpt = groups.find((g) => g.label === "Math formulas")?.options[0];
+    const svgOpt = groups.find(
+      (g) => g.label === "SVG images, Mermaid diagrams, SMILES",
+    )?.options[0];
+    // Math defaults to native OMML (off); SVG defaults to PNG-only (on) —
+    // the hints must advertise the same states.
+    expect(mathOpt?.value).toBe(false);
+    expect(mathOpt?.hint).toMatch(/Off \(default\)/);
+    expect(svgOpt?.value).toBe(true);
+    expect(svgOpt?.hint).toMatch(/On \(default\)/);
+  });
+
+  it("marks the default resolution choice", () => {
+    const resolutionOpt = groups.find((g) => g.label === "Image resolution")
+      ?.options[0];
+    expect(resolutionOpt?.value).toBe(2);
+    expect(resolutionOpt?.choices?.find((c) => c.value === 2)?.label).toMatch(
+      /\(default\)/,
+    );
+  });
+
+  it("keeps resolution enabled when neither rasterization is on", () => {
+    const resolutionOpt = groups.find((g) => g.label === "Image resolution")
+      ?.options[0];
+    // Unlike ODT, DOCX always rasterizes the SVG dual-embed PNG fallback at
+    // rasterScale (docx/media.ts dualEmbedDrawing), so the resolution is
+    // never inert and must stay adjustable.
+    expect(
+      resolutionOpt?.disabledWhen?.({
+        "docx.rasterizeMath": false,
+        "docx.rasterizeSvg": false,
+      }) ?? false,
+    ).toBe(false);
+  });
+
+  it("explains that the SVG PNG fallback is always rasterized", () => {
+    const resolutionOpt = groups.find((g) => g.label === "Image resolution")
+      ?.options[0];
+    expect(resolutionOpt?.hint).toMatch(/fallback/);
+    expect(resolutionOpt?.hint).toMatch(/always rasterized/);
   });
 });
 

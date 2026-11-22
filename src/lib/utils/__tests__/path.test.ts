@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveLink } from "../path";
+import { resolveLink, simplifyLocalPath, samePath } from "../path";
 
 describe("resolveLink", () => {
   describe("anchors", () => {
@@ -297,5 +297,130 @@ describe("resolveLink", () => {
         expect(r.href).toBe("https://example.com/%ZZ");
       }
     });
+  });
+
+  describe("Windows verbatim (\\\\?\\) base files and hrefs", () => {
+    // Regression: `fs::canonicalize` returns `\\?\C:\...` on Windows. When
+    // such a base file leaked into a resolved relative link, `openPath` was
+    // handed `//?/C:/...` and ShellExecute showed "Windows cannot find
+    // '//?/C:/...'". Results must never carry the verbatim prefix.
+    it("strips the verbatim prefix from a resolved relative link", () => {
+      const r = resolveLink(
+        "\\\\?\\C:\\Users\\paw\\repos\\Markdown-Viewditor\\testing\\Rendering-All.md",
+        "README.md",
+      );
+      expect(r).toEqual({
+        kind: "local-path",
+        path: "C:/Users/paw/repos/Markdown-Viewditor/testing/README.md",
+      });
+    });
+
+    it("strips the verbatim prefix from a forward-slash verbatim base", () => {
+      const r = resolveLink("//?/C:/Users/x/Example.md", "README.md");
+      expect(r).toEqual({
+        kind: "local-path",
+        path: "C:/Users/x/README.md",
+      });
+    });
+
+    it("'..' pops correctly against a verbatim drive base", () => {
+      const r = resolveLink("\\\\?\\C:\\a\\b\\c.md", "../d.md");
+      expect(r).toEqual({ kind: "local-path", path: "C:/a/d.md" });
+    });
+
+    it("treats the share (not '//?/UNC') as the root of a verbatim UNC base", () => {
+      const r = resolveLink(
+        "\\\\?\\UNC\\nas\\share\\dir\\Example.md",
+        "../home.md",
+      );
+      expect(r).toEqual({ kind: "local-path", path: "//nas/share/home.md" });
+    });
+
+    it("does not pop past the share root of a verbatim UNC base", () => {
+      const r = resolveLink(
+        "\\\\?\\UNC\\nas\\share\\dir\\sub\\Example.md",
+        "../../../../../x.md",
+      );
+      expect(r).toEqual({ kind: "local-path", path: "//nas/share/x.md" });
+    });
+
+    it("simplifies an explicit verbatim drive href", () => {
+      const r = resolveLink(null, "\\\\?\\C:\\x.md");
+      expect(r).toEqual({ kind: "local-path", path: "C:/x.md" });
+    });
+
+    it("simplifies an explicit verbatim UNC href", () => {
+      const r = resolveLink(null, "\\\\?\\UNC\\srv\\share\\a.md");
+      expect(r).toEqual({ kind: "local-path", path: "//srv/share/a.md" });
+    });
+
+    it("leaves non-drive verbatim shapes (device paths) unchanged", () => {
+      const r = resolveLink("/base.md", "//?/device/x");
+      expect(r).toEqual({ kind: "local-path", path: "//?/device/x" });
+    });
+
+    it("does not simplify a Unix path that merely contains backslashes", () => {
+      const r = resolveLink("/base.md", "/tmp/\\?/x.md");
+      expect(r).toEqual({ kind: "local-path", path: "/tmp/\\?/x.md" });
+    });
+  });
+});
+
+describe("simplifyLocalPath", () => {
+  it("strips a drive verbatim prefix", () => {
+    expect(simplifyLocalPath("\\\\?\\C:\\Users\\x.png")).toBe("C:/Users/x.png");
+    expect(simplifyLocalPath("//?/C:/Users/x.png")).toBe("C:/Users/x.png");
+  });
+
+  it("strips a UNC verbatim prefix", () => {
+    expect(simplifyLocalPath("\\\\?\\UNC\\server\\share\\a.png")).toBe(
+      "//server/share/a.png",
+    );
+    expect(simplifyLocalPath("\\\\?\\unc\\server\\share\\a.png")).toBe(
+      "//server/share/a.png",
+    );
+  });
+
+  it("leaves plain Windows and Unix paths unchanged", () => {
+    expect(simplifyLocalPath("C:\\Users\\x.png")).toBe("C:\\Users\\x.png");
+    expect(simplifyLocalPath("//server/share/a.png")).toBe(
+      "//server/share/a.png",
+    );
+    expect(simplifyLocalPath("/home/user/a.png")).toBe("/home/user/a.png");
+  });
+
+  it("leaves non-path verbatim shapes (device paths) unchanged", () => {
+    expect(simplifyLocalPath("\\\\.\\PhysicalDrive0")).toBe(
+      "\\\\.\\PhysicalDrive0",
+    );
+    expect(simplifyLocalPath("//?/device/x")).toBe("//?/device/x");
+  });
+});
+
+describe("samePath", () => {
+  it("ignores slash direction", () => {
+    expect(samePath("C:\\Users\\paw\\x.md", "C:/Users/paw/x.md")).toBe(true);
+  });
+
+  it("ignores case for Windows-shaped paths", () => {
+    expect(samePath("C:\\Users\\Paw\\x.md", "C:/users/paw/X.md")).toBe(true);
+    expect(samePath("\\\\nas\\Share\\a.md", "//NAS/share/a.md")).toBe(true);
+  });
+
+  it("respects case for Unix paths", () => {
+    expect(samePath("/home/paw/x.md", "/home/paw/x.md")).toBe(true);
+    expect(samePath("/home/Paw/x.md", "/home/paw/x.md")).toBe(false);
+  });
+
+  it("ignores verbatim prefixes", () => {
+    expect(samePath("\\\\?\\C:\\Users\\x.md", "C:/Users/x.md")).toBe(true);
+    expect(
+      samePath("\\\\?\\UNC\\nas\\share\\a.md", "\\\\nas\\share\\a.md"),
+    ).toBe(true);
+  });
+
+  it("returns false for different files", () => {
+    expect(samePath("/home/a.md", "/home/b.md")).toBe(false);
+    expect(samePath("C:/a.md", "C:/b.md")).toBe(false);
   });
 });

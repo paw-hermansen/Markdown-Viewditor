@@ -8,6 +8,7 @@ import {
   updateWordCount,
 } from "$lib/stores/editor.svelte";
 import { fileState } from "$lib/stores/file.svelte";
+import { samePath } from "$lib/utils/path";
 import {
   settingsState,
   updateLastOpenedFile,
@@ -102,7 +103,13 @@ export function tabDirty(tab: DocTab): boolean {
 }
 
 export function findTabByPath(path: string): DocTab | undefined {
-  return tabsState.tabs.find((t) => tabPath(t) === path);
+  // samePath, not ===: a link-clicked path arrives with forward slashes
+  // (`C:/Users/...`) while the tab may hold the dialog's backslash spelling
+  // (`C:\Users\...`) — same file, different string.
+  return tabsState.tabs.find((t) => {
+    const p = tabPath(t);
+    return p !== null && samePath(p, path);
+  });
 }
 
 /** The tab `step` positions from `id`, wrapping around. */

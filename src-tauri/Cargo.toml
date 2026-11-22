@@ -26,6 +26,10 @@ tauri-plugin-process = "2"
 mime_guess = "2"
 percent-encoding = "2"
 base64 = "0.22"
+# Canonical paths without the Windows `\\?\` verbatim prefix (which OS-shell
+# APIs like ShellExecute reject). Same behavior as std::fs::canonicalize on
+# Unix; on Windows it simplifies the result when possible.
+dunce = "1.0.5"
 
 # SVG rasterization for ODT export. WebKitGTK on Linux refuses to decode
 # SVG data URIs through the image element, so we fall back to a pure-Rust

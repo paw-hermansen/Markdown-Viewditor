@@ -80,11 +80,15 @@ fn url_to_path(url: &tauri::Url) -> String {
 /// deduped, order preserved) and unresolvable names (original spelling,
 /// deduped). Deduping here guarantees a file given twice — or once via
 /// different spellings of the same path — is only ever opened once.
+///
+/// `dunce::canonicalize` (not `fs::canonicalize`) so paths never carry the
+/// Windows `\\?\` verbatim prefix — it would leak into resolved relative
+/// links and is rejected by OS-shell APIs (`openPath` / `ShellExecute`).
 fn resolve_cli_files(args: impl Iterator<Item = String>) -> (Vec<String>, Vec<String>) {
     let mut opened: Vec<String> = Vec::new();
     let mut missing: Vec<String> = Vec::new();
     for arg in args {
-        match std::fs::canonicalize(&arg) {
+        match dunce::canonicalize(&arg) {
             Ok(p) => {
                 let p = p.to_string_lossy().into_owned();
                 if !opened.contains(&p) {
@@ -227,11 +231,11 @@ mod tests {
         let b = dir.path().join("b.md");
         std::fs::write(&a, "a").unwrap();
         std::fs::write(&b, "b").unwrap();
-        let canonical_a = std::fs::canonicalize(&a)
+        let canonical_a = dunce::canonicalize(&a)
             .unwrap()
             .to_string_lossy()
             .into_owned();
-        let canonical_b = std::fs::canonicalize(&b)
+        let canonical_b = dunce::canonicalize(&b)
             .unwrap()
             .to_string_lossy()
             .into_owned();
@@ -273,7 +277,7 @@ mod tests {
 
         assert_eq!(
             opened,
-            vec![std::fs::canonicalize(&b)
+            vec![dunce::canonicalize(&b)
                 .unwrap()
                 .to_string_lossy()
                 .into_owned()]

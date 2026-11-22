@@ -13,7 +13,6 @@ const { mockEditorState, mockSettingsState, mockLevelState } = vi.hoisted(
       wordCount: 42,
     },
     mockSettingsState: {
-      viewMode: "split" as const,
       markdownLevel: "advanced" as const,
       enabledFeatures: [
         "tables",
@@ -174,23 +173,37 @@ describe("StatusBar", () => {
   });
 
   it("displays cursor position", () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     expect(screen.getByText("Line 5, Col 12")).toBeInTheDocument();
   });
 
   it("displays word count", () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
+    expect(screen.getByText("42 words")).toBeInTheDocument();
+  });
+
+  it("shows cursor position in editor mode", () => {
+    render(StatusBar, { props: { viewMode: "editor" } });
+    expect(screen.getByText("Line 5, Col 12")).toBeInTheDocument();
+  });
+
+  // Regression: the gate follows the `viewMode` prop (the active tab's mode),
+  // not `settingsState.viewMode`, which drifts from the real mode on tab
+  // switches and used to hide the cursor readout while the editor was visible.
+  it("hides cursor position but keeps word count in viewer mode", () => {
+    render(StatusBar, { props: { viewMode: "viewer" } });
+    expect(screen.queryByText("Line 5, Col 12")).not.toBeInTheDocument();
     expect(screen.getByText("42 words")).toBeInTheDocument();
   });
 
   it("displays Markdown and UTF-8 indicators", () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     expect(screen.getByText("Markdown")).toBeInTheDocument();
     expect(screen.getByText("UTF-8")).toBeInTheDocument();
   });
 
   it("renders a level dropdown button showing the current level label", () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const btn = screen.getByLabelText(
       "Markdown compatibility level",
     ) as HTMLButtonElement;
@@ -201,7 +214,7 @@ describe("StatusBar", () => {
 
   it("opens the level popover and selecting a preset calls updateSetting", async () => {
     const { updateSetting } = await import("$lib/stores/settings.svelte");
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const levelBtn = screen.getByLabelText("Markdown compatibility level");
     await fireEvent.click(levelBtn);
     const basicBtn = screen.getByRole("button", { name: "Basic" });
@@ -212,7 +225,7 @@ describe("StatusBar", () => {
 
   it("shows the feature checklist in the popover and toggling flips to custom", async () => {
     const { updateSetting } = await import("$lib/stores/settings.svelte");
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const levelBtn = screen.getByLabelText("Markdown compatibility level");
     await fireEvent.click(levelBtn);
     const checkboxes = screen.getAllByRole("checkbox");
@@ -232,7 +245,7 @@ describe("StatusBar", () => {
   });
 
   it("sorts the checklist by required preset group, then label", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     await fireEvent.click(
       screen.getByLabelText("Markdown compatibility level"),
     );
@@ -253,7 +266,7 @@ describe("StatusBar", () => {
   });
 
   it("marks the level popover scrollable and fades while more list lies below", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     await fireEvent.click(
       screen.getByLabelText("Markdown compatibility level"),
     );
@@ -287,7 +300,7 @@ describe("StatusBar", () => {
   });
 
   it("adds no scroll cue when the list fits", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     await fireEvent.click(
       screen.getByLabelText("Markdown compatibility level"),
     );
@@ -299,7 +312,7 @@ describe("StatusBar", () => {
   });
 
   it("hides the violation badge when there are no violations", () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const badge = screen.queryByLabelText(/markdown feature violations/);
     expect(badge).not.toBeNull();
     expect(badge!.className).toContain("hidden");
@@ -314,7 +327,7 @@ describe("StatusBar", () => {
         lines: [3],
       },
     ];
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const badge = screen.getByLabelText(
       "1 markdown feature violations",
     ) as HTMLButtonElement;
@@ -351,7 +364,7 @@ describe("StatusBar", () => {
         lines: [2],
       },
     ];
-    const { container } = render(StatusBar);
+    const { container } = render(StatusBar, { props: { viewMode: "split" } });
     await fireEvent.click(
       screen.getByLabelText("4 markdown feature violations"),
     );
@@ -369,12 +382,12 @@ describe("StatusBar", () => {
   });
 
   it("has no accessibility violations", async () => {
-    const { container } = render(StatusBar);
+    const { container } = render(StatusBar, { props: { viewMode: "split" } });
     await checkA11y(container);
   });
 
   it("closes the level popover on outside click", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const levelBtn = screen.getByLabelText("Markdown compatibility level");
     await fireEvent.click(levelBtn);
     expect(document.querySelector(".level-popover")).toBeInTheDocument();
@@ -383,7 +396,7 @@ describe("StatusBar", () => {
   });
 
   it("closes the level popover on Escape", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const levelBtn = screen.getByLabelText("Markdown compatibility level");
     await fireEvent.click(levelBtn);
     const pop = document.querySelector(".level-popover") as HTMLElement;
@@ -392,7 +405,7 @@ describe("StatusBar", () => {
   });
 
   it("opening one popover closes the others (mutual exclusion)", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     await fireEvent.click(
       screen.getByLabelText("Markdown compatibility level"),
     );
@@ -403,7 +416,7 @@ describe("StatusBar", () => {
   });
 
   it("glues the open popover to the trigger's right edge (no slide on relabel)", async () => {
-    render(StatusBar);
+    render(StatusBar, { props: { viewMode: "split" } });
     const levelBtn = screen.getByLabelText("Markdown compatibility level");
     // jsdom has no layout: stand in for the right-packed status bar row.
     // The trigger's right edge sits at x=400; the popover is 220 wide.

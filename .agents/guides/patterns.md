@@ -163,12 +163,13 @@ list it as an explicit dependency for stability.
 
 ## Common Mistakes to Avoid
 
-| Mistake                            | Solution                                              |
-| ---------------------------------- | ----------------------------------------------------- |
-| `let` without `$state()`           | Use `$state()` for reactive vars                      |
-| `on:click` syntax                  | Use `onclick` (Svelte 5)                              |
-| `<slot>`                           | Use `{@render children()}`                            |
-| `&str` in async commands           | Use `String` (owned type)                             |
-| Missing capabilities               | Add to `capabilities/default.json`                    |
-| Commands not registered            | Add to `generate_handler![]`                          |
-| Per-document state in a new global | Park it in the tab snapshot (`stores/tabs.svelte.ts`) |
+| Mistake                                                               | Solution                                                                                                                      |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `let` without `$state()`                                              | Use `$state()` for reactive vars                                                                                              |
+| `on:click` syntax                                                     | Use `onclick` (Svelte 5)                                                                                                      |
+| `<slot>`                                                              | Use `{@render children()}`                                                                                                    |
+| `&str` in async commands                                              | Use `String` (owned type)                                                                                                     |
+| Missing capabilities                                                  | Add to `capabilities/default.json`                                                                                            |
+| Commands not registered                                               | Add to `generate_handler![]`                                                                                                  |
+| Per-document state in a new global                                    | Park it in the tab snapshot (`stores/tabs.svelte.ts`)                                                                         |
+| `fs::canonicalize` output crossing to the frontend or an OS-shell API | Use `dunce::canonicalize` — the Windows `\\?\` verbatim prefix breaks `openPath` (ShellExecute) and leaks into resolved links |

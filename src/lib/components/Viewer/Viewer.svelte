@@ -15,8 +15,6 @@
   import type { Frontmatter } from '$lib/types';
   import '$lib/styles/markdown.css';
 
-  const isMacOS = typeof navigator !== 'undefined' && navigator.userAgent.includes('Macintosh');
-
   function isMarkdownFile(path: string): boolean {
     const lower = path.toLowerCase();
     return lower.endsWith('.md') || lower.endsWith('.markdown');
@@ -223,7 +221,9 @@
       }
       case 'local-path': {
         try {
-          if (isMacOS && isMarkdownFile(resolved.path) && onLocalMarkdownOpen) {
+          // Markdown links open in-app on every platform; anything else
+          // (images, PDFs, …) goes to the OS default handler.
+          if (isMarkdownFile(resolved.path) && onLocalMarkdownOpen) {
             onLocalMarkdownOpen(resolved.path);
           } else {
             await openPath(resolved.path);

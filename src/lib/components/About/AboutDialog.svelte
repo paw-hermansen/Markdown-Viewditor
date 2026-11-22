@@ -127,6 +127,7 @@
     { name: 'mime_guess', license: 'MIT', copyright: 'Austin Bonander', url: 'https://github.com/abonander/mime_guess' },
     { name: 'percent-encoding', license: 'MIT / Apache-2.0', copyright: 'The rust-url developers', url: 'https://github.com/servo/rust-url' },
     { name: 'base64', license: 'MIT / Apache-2.0', copyright: 'Alice Maz', url: 'https://github.com/marshallpierce/rust-base64' },
+    { name: 'dunce', license: 'CC0-1.0 / MIT-0 / Apache-2.0', copyright: 'Kornel', url: 'https://gitlab.com/kornelski/dunce' },
     { name: 'resvg', license: 'Apache-2.0 / MIT', copyright: 'the Resvg Authors', url: 'https://github.com/linebender/resvg' },
     { name: 'usvg', license: 'Apache-2.0 / MIT', copyright: 'the Resvg Authors', url: 'https://github.com/linebender/resvg' },
     { name: 'tiny-skia', license: 'BSD 3-Clause', copyright: 'Google Inc., Yevhenii Reizner', url: 'https://github.com/linebender/tiny-skia' },

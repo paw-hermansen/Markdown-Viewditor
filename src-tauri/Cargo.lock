@@ -2278,6 +2278,7 @@ version = "1.6.1"
 dependencies = [
  "base64 0.22.1",
  "block2",
+ "dunce",
  "mime_guess",
  "objc2",
  "objc2-app-kit",

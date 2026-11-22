@@ -20,7 +20,7 @@ export type ResolvedLink =
   /**
    * Absolute local path (Windows drive, UNC, or Unix) or a relative path
    * resolved against the base file's directory. Always normalized to forward
-   * slashes.
+   * slashes and never carries a Windows verbatim (`\\?\`) prefix.
    */
   | { kind: "local-path"; path: string };
 
@@ -75,26 +75,73 @@ export function resolveLink(
 
   // 3. UNC path: `\\server\share\...` or `//server/share/...`.
   if (/^[\\/]{2}/.test(decoded)) {
-    return { kind: "local-path", path: normalizeSlashes(decoded) };
+    return localPath(normalizeSlashes(decoded));
   }
 
   // 4. Windows drive-absolute: `C:\...` or `C:/...`.
   if (WIN_DRIVE_PREFIX_RE.test(decoded)) {
-    return { kind: "local-path", path: decoded.replace(/\\/g, "/") };
+    return localPath(decoded.replace(/\\/g, "/"));
   }
 
   // 5. Unix-absolute: `/...`.
   if (decoded.startsWith("/")) {
-    return { kind: "local-path", path: decoded };
+    return localPath(decoded);
   }
 
   // 6. Relative path — resolve against the base file's directory.
   if (baseFile) {
-    return { kind: "local-path", path: resolveRelative(baseFile, decoded) };
+    return localPath(resolveRelative(baseFile, decoded));
   }
 
   // Degenerate fallback: no base file, relative href. Let `openUrl` try.
   return { kind: "url", href };
+}
+
+/** Build a `local-path` result with any verbatim prefix simplified away. */
+function localPath(path: string): ResolvedLink {
+  return { kind: "local-path", path: simplifyLocalPath(path) };
+}
+
+/**
+ * Strip a Windows extended-length ("verbatim") prefix from a local path:
+ * `\\?\C:\...` → `C:\...`, `\\?\UNC\server\share\...` → `\\server\share\...`
+ * (also in the forward-slash `//?/...` form produced when backslashes are
+ * normalized). Such prefixes come from `fs::canonicalize` on Windows and are
+ * rejected by OS-shell APIs (`openPath` → `ShellExecute`), so paths must be
+ * simplified before leaving the app.
+ *
+ * Only the unambiguous verbatim shapes are matched, so Unix paths — where
+ * `\` is a legal filename character — are never touched.
+ */
+export function simplifyLocalPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const verbatim = /^\/\/\?\/(UNC\/)?/i.exec(normalized);
+  if (!verbatim) return path;
+  const rest = normalized.slice(verbatim[0].length);
+  if (verbatim[1]) {
+    // `\\?\UNC\server\share\...` → `//server/share/...`.
+    return `//${rest}`;
+  }
+  // `\\?\C:\...` → `C:/...`. Anything else after `\\?\` (e.g. device paths
+  // like `\\.\`) is left untouched — it cannot be simplified safely.
+  return WIN_DRIVE_PREFIX_RE.test(rest) ? rest : path;
+}
+
+/**
+ * Whether two local paths likely denote the same file. Forward/back slash
+ * differences and verbatim prefixes are always ignored; case is ignored only
+ * when both paths are Windows-shaped (drive-letter or UNC) — those
+ * filesystems are case-insensitive, while Unix paths stay case-sensitive.
+ */
+export function samePath(a: string, b: string): boolean {
+  const normA = simplifyLocalPath(a).replace(/\\/g, "/");
+  const normB = simplifyLocalPath(b).replace(/\\/g, "/");
+  const windowsShaped = (p: string) =>
+    WIN_DRIVE_PREFIX_RE.test(p) || p.startsWith("//");
+  if (windowsShaped(normA) && windowsShaped(normB)) {
+    return normA.toLowerCase() === normB.toLowerCase();
+  }
+  return normA === normB;
 }
 
 /** Percent-decode a string, returning the input unchanged on malformed input. */
@@ -118,7 +165,10 @@ function normalizeSlashes(p: string): string {
  * forward slashes only.
  */
 function resolveRelative(baseFile: string, href: string): string {
-  const normalizedBase = baseFile.replace(/\\/g, "/");
+  // Simplify first: with a verbatim base (`\\?\UNC\server\share\...`), the
+  // prefix parse would treat `//?/UNC` as the unpoppable root and let `..`
+  // pop into the server and share.
+  const normalizedBase = simplifyLocalPath(baseFile).replace(/\\/g, "/");
   const normalizedHref = href.replace(/\\/g, "/");
 
   // Drop the file name — keep only the directory portion.

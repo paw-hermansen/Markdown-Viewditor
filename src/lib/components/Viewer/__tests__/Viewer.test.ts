@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from "@testing-library/svelte";
+import { render, screen, waitFor, fireEvent } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Viewer from "../Viewer.svelte";
 import { viewerState } from "$lib/stores/viewer.svelte";
@@ -41,13 +41,8 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
   openPath: mockOpenPath,
 }));
 
-vi.mock("$lib/utils/path", () => ({
-  resolveLink: vi.fn((href: string) => {
-    if (href.startsWith("http")) return { kind: "url", url: href };
-    if (href.startsWith("#")) return { kind: "anchor", id: href.slice(1) };
-    return { kind: "local-path", path: href };
-  }),
-}));
+// $lib/utils/path is deliberately NOT mocked: the link-click tests exercise
+// the real resolveLink chain (verbatim `\\?\` prefix stripping included).
 
 describe("Viewer", () => {
   const originalGetBoundingClientRect =
@@ -57,6 +52,7 @@ describe("Viewer", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     viewerState.theme = "github-dark";
+    mockFileState.currentFile = "/home/user/test.md";
   });
 
   afterEach(() => {
@@ -537,5 +533,101 @@ describe("Viewer", () => {
     });
     await vi.advanceTimersByTimeAsync(200);
     await checkA11y(container);
+  });
+
+  describe("link clicks", () => {
+    async function renderLink(
+      href: string,
+      props: Record<string, unknown> = {},
+    ) {
+      mockRenderMarkdown.mockResolvedValueOnce({
+        html: `<p><a href="${href}">Local file</a></p>`,
+        frontmatter: null,
+      });
+      render(Viewer, { props: { content: "link", ...props } });
+      await vi.advanceTimersByTimeAsync(0);
+      return await waitFor(() => screen.getByText("Local file"));
+    }
+
+    it("opens local markdown links in-app on every platform", async () => {
+      // Regression: this used to be macOS-only (isMacOS UA gate).
+      mockFileState.currentFile = "/home/user/doc.md";
+      const onLocalMarkdownOpen = vi.fn();
+      const link = await renderLink("README.md", { onLocalMarkdownOpen });
+
+      await fireEvent.click(link);
+
+      await waitFor(() => {
+        expect(onLocalMarkdownOpen).toHaveBeenCalledWith(
+          "/home/user/README.md",
+        );
+      });
+      expect(mockOpenPath).not.toHaveBeenCalled();
+    });
+
+    it("resolves against a verbatim base file without leaking '//?/' to openPath", async () => {
+      // Regression: `fs::canonicalize` hands `\\?\C:\...` base files on
+      // Windows; resolved links used to reach openPath as `//?/C:/...` and
+      // ShellExecute showed "Windows cannot find '//?/C:/...'".
+      mockFileState.currentFile =
+        "\\\\?\\C:\\Users\\paw\\testing\\Rendering-All.md";
+      const onLocalMarkdownOpen = vi.fn();
+      const link = await renderLink("README.md", { onLocalMarkdownOpen });
+
+      await fireEvent.click(link);
+
+      await waitFor(() => {
+        expect(onLocalMarkdownOpen).toHaveBeenCalledWith(
+          "C:/Users/paw/testing/README.md",
+        );
+      });
+    });
+
+    it("sends local non-markdown files to the OS handler with a clean path", async () => {
+      mockFileState.currentFile =
+        "\\\\?\\C:\\Users\\paw\\testing\\Rendering-All.md";
+      const onLocalMarkdownOpen = vi.fn();
+      const link = await renderLink("ai_flower.png", { onLocalMarkdownOpen });
+
+      await fireEvent.click(link);
+
+      await waitFor(() => {
+        expect(mockOpenPath).toHaveBeenCalledWith(
+          "C:/Users/paw/testing/ai_flower.png",
+        );
+      });
+      expect(onLocalMarkdownOpen).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the OS handler for markdown links without a handler", async () => {
+      mockFileState.currentFile = "/home/user/doc.md";
+      const link = await renderLink("README.md");
+
+      await fireEvent.click(link);
+
+      await waitFor(() => {
+        expect(mockOpenPath).toHaveBeenCalledWith("/home/user/README.md");
+      });
+    });
+
+    it("opens external URLs with openUrl", async () => {
+      const link = await renderLink("https://example.com");
+
+      await fireEvent.click(link);
+
+      await waitFor(() => {
+        expect(mockOpenUrl).toHaveBeenCalledWith("https://example.com");
+      });
+      expect(mockOpenPath).not.toHaveBeenCalled();
+    });
+
+    it("handles anchor links in-page without opening anything", async () => {
+      const link = await renderLink("#tables");
+
+      await fireEvent.click(link);
+
+      expect(mockOpenUrl).not.toHaveBeenCalled();
+      expect(mockOpenPath).not.toHaveBeenCalled();
+    });
   });
 });

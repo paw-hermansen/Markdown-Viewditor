@@ -417,7 +417,8 @@ frontmatter — rendered as a "Skill" card with badge and metadata.
 
 - [Anchor to "Tables"](#tables) — scrolls to Tables section
 - [External link](https://example.com) — opens in browser
-- [Local file](README.md) — opens with OS default handler
+- [Local file](README.md) — opens in the app (as a tab)
+- [Local non-markdown file](./ai_flower.png) — opens with OS default handler
 - Autolink: https://example.com
 - [Anchor to custom heading](#custom-test-id) — scrolls to custom heading
 

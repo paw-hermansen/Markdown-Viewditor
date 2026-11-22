@@ -39,12 +39,18 @@ pub fn opened_urls(
 /// Canonicalize each path, keeping the original spelling when it cannot be
 /// resolved (e.g. the file no longer exists). Tab identity is canonical so a
 /// file reached through different spellings only ever opens once.
+///
+/// `dunce::canonicalize` (not `fs::canonicalize`) so the result never carries
+/// the Windows `\\?\` verbatim prefix: verbatim paths leak into resolved
+/// relative links and are rejected by OS-shell APIs (`openPath` /
+/// `ShellExecute`). Rust file I/O re-applies the prefix internally, so long
+/// paths keep working.
 #[tauri::command]
 pub fn canonicalize_paths(paths: Vec<String>) -> Vec<String> {
     paths
         .into_iter()
         .map(|p| {
-            fs::canonicalize(&p)
+            dunce::canonicalize(&p)
                 .map(|c| c.to_string_lossy().into_owned())
                 .unwrap_or(p)
         })
@@ -363,7 +369,7 @@ mod tests {
             .join("a.md")
             .to_string_lossy()
             .into_owned();
-        let canonical = fs::canonicalize(&file_path)
+        let canonical = dunce::canonicalize(&file_path)
             .unwrap()
             .to_string_lossy()
             .into_owned();
@@ -391,11 +397,33 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                fs::canonicalize(&first).unwrap().to_string_lossy().into_owned(),
-                fs::canonicalize(&second).unwrap().to_string_lossy().into_owned(),
+                dunce::canonicalize(&first)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
+                dunce::canonicalize(&second)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
             ]
         );
         assert!(canonicalize_paths(vec![]).is_empty());
+    }
+
+    /// Regression: `fs::canonicalize` returns `\\?\C:\...` verbatim paths on
+    /// Windows, which leak into resolved relative links and are rejected by
+    /// OS-shell APIs (`openPath` → `ShellExecute`). Results must never carry
+    /// the prefix.
+    #[cfg(windows)]
+    #[test]
+    fn canonicalize_paths_never_returns_verbatim_prefix() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("a.md");
+        std::fs::write(&file_path, "a").unwrap();
+
+        let result = canonicalize_paths(vec![file_path.to_string_lossy().into_owned()]);
+
+        assert!(!result[0].starts_with(r"\\?\"), "got {}", result[0]);
     }
 
     // --- write_file ---

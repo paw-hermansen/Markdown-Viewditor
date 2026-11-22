@@ -228,8 +228,8 @@ vi.mock("$lib/components/Editor/EditorToolbar.svelte", () => ({
 vi.mock("$lib/components/Viewer/ViewerToolbar.svelte", () => ({
   default: () => "ViewerToolbar",
 }));
-vi.mock("$lib/components/Layout/AppLayout.svelte", () => ({
-  default: () => "AppLayout",
+vi.mock("$lib/components/Layout/AppLayout.svelte", async () => ({
+  default: (await import("./AppLayoutStub.svelte")).default,
 }));
 vi.mock("$lib/components/CommandPalette/CommandPalette.svelte", () => ({
   default: () => "CommandPalette",
@@ -400,10 +400,14 @@ describe("+page.svelte", () => {
 
     await waitFor(() => expect(mockReadFile).toHaveBeenCalledWith("/b/two.md"));
     expect(mockReadFile).toHaveBeenCalledTimes(1);
-    expect(tabsState.tabs.map((t) => t.file.currentFile)).toEqual([
-      "/a/one.md",
-      "/b/two.md",
-    ]);
+    // waitFor: the phantom first tab is dropped only after the active tab's
+    // file read resolves.
+    await waitFor(() =>
+      expect(tabsState.tabs.map((t) => t.file.currentFile)).toEqual([
+        "/a/one.md",
+        "/b/two.md",
+      ]),
+    );
     mockReadFile.mockResolvedValue(null);
   });
 
@@ -416,6 +420,10 @@ describe("+page.svelte", () => {
     // Parked tabs compare content "" against the saved baseline "x" → dirty.
     tabsState.tabs[0].saved = "x";
     vi.mocked(getSavedContent).mockReturnValue("x");
+    // Give both tabs file paths so each prompt names its document.
+    tabsState.tabs[0].file.currentFile = "/a/one.md";
+    tabsState.tabs[1].file.currentFile = "/b/two.md";
+    mockFileState.currentFile = "/b/two.md";
 
     await fireEvent.keyDown(window, { code: "KeyQ", ctrlKey: true });
 
@@ -423,7 +431,39 @@ describe("+page.svelte", () => {
       expect(mockInvoke).toHaveBeenCalledWith("save_window_state"),
     );
     expect(mockConfirmSaveDiscardCancel).toHaveBeenCalledTimes(2);
+    // Each dialog is titled with the document it concerns.
+    expect(mockConfirmSaveDiscardCancel.mock.calls.map((c) => c[2])).toEqual([
+      "one.md",
+      "two.md",
+    ]);
+    expect(mockConfirmSaveDiscardCancel.mock.calls.map((c) => c[0])).toEqual([
+      MSG.exitUnsaved,
+      MSG.exitUnsaved,
+    ]);
     vi.mocked(getSavedContent).mockReturnValue("");
+  });
+
+  it("names the document in the unsaved-changes prompt when closing a tab", async () => {
+    vi.mocked(hasUnsavedChanges).mockReturnValue(true);
+    const { getByLabelText } = render(Page);
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("opened_urls"));
+    await fireEvent.keyDown(window, { code: "KeyN", ctrlKey: true });
+    await waitFor(() => expect(tabsState.tabs).toHaveLength(2));
+    // The first tab is parked now, so its label tracks its own reactive path.
+    tabsState.tabs[0].file.currentFile = "/a/one.md";
+    // Parked tabs compare content "" against the saved baseline "x" → dirty.
+    tabsState.tabs[0].saved = "x";
+
+    const close = await waitFor(() => getByLabelText("Close one.md"));
+    await fireEvent.click(close);
+
+    await waitFor(() =>
+      expect(mockConfirmSaveDiscardCancel).toHaveBeenCalledWith(
+        MSG.closeTabUnsaved,
+        "warning",
+        "one.md",
+      ),
+    );
   });
 
   it("zooms in on Ctrl+= and Ctrl++ (character-based, layout-safe)", async () => {

@@ -38,6 +38,20 @@ describe("confirm store", () => {
     await expect(promise).resolves.toBeNull();
   });
 
+  it("confirmSaveDiscardCancel titles the dialog with the given document name", async () => {
+    const promise = confirmSaveDiscardCancel("discard?", "warning", "notes.md");
+    expect(confirmState.current!.title).toBe("notes.md");
+    resolveConfirm("cancel");
+    await promise;
+  });
+
+  it("confirmSaveDiscardCancel defaults the title to the app name", async () => {
+    const promise = confirmSaveDiscardCancel("discard?");
+    expect(confirmState.current!.title).toBe("Markdown Viewditor");
+    resolveConfirm("cancel");
+    await promise;
+  });
+
   it("confirmOverwrite resolves boolean true for yes", async () => {
     const promise = confirmOverwrite("overwrite?");
     expect(confirmState.current!.buttons.map((b) => b.value)).toEqual([

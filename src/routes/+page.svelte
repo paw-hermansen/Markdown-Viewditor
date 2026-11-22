@@ -72,6 +72,7 @@
     confirmReload,
     confirmOk,
   } from "$lib/stores/confirm.svelte";
+  import { tabLabels, UNTITLED } from "$lib/utils/tab-labels";
   import { showWarningDialog } from "$lib/stores/warning-dialog.svelte";
   import { toast } from "$lib/stores/toast.svelte";
   import {
@@ -150,13 +151,27 @@ import { buildPageCommands } from "$lib/commands/page-commands";
   }
 
   /**
+   * The display name for `tab`, identical to its tab-bar label: the file
+   * name extended with enough path segments to tell same-named files apart
+   * ("a/readme.md" vs "b/readme.md"); "Untitled" for unsaved documents.
+   */
+  function docName(tab: DocTab): string {
+    const tabs = tabsState.tabs;
+    return tabLabels(tabs.map(tabPath))[tabs.indexOf(tab)] ?? UNTITLED;
+  }
+
+  /**
    * The unsaved-changes gate shared by New, Open and Exit: confirm, and on
    * "save" run the save and honour its outcome. Returns false when the user
-   * cancelled or the save failed — the caller must not proceed.
+   * cancelled or the save failed — the caller must not proceed. `name`
+   * titles the dialog with the document it concerns.
    */
-  async function confirmUnsavedChanges(message: string): Promise<boolean> {
+  async function confirmUnsavedChanges(
+    message: string,
+    name?: string,
+  ): Promise<boolean> {
     if (!hasUnsavedChanges()) return true;
-    const choice = await confirmSaveDiscardCancel(message);
+    const choice = await confirmSaveDiscardCancel(message, "warning", name);
     if (choice !== "save" && choice !== "discard") return false;
     return choice !== "save" || (await handleSave());
   }
@@ -228,7 +243,8 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     if (!tab) return;
     if (tabDirty(tab)) {
       await activateTab(tab);
-      if (!(await confirmUnsavedChanges(MSG.closeTabUnsaved))) return;
+      if (!(await confirmUnsavedChanges(MSG.closeTabUnsaved, docName(tab))))
+        return;
     }
     if (tabsState.tabs.length === 1) {
       await newTab();
@@ -402,7 +418,8 @@ import { buildPageCommands } from "$lib/commands/page-commands";
     for (const tab of [...tabsState.tabs]) {
       if (!tabDirty(tab)) continue;
       await activateTab(tab);
-      if (!(await confirmUnsavedChanges(MSG.exitUnsaved))) return false;
+      if (!(await confirmUnsavedChanges(MSG.exitUnsaved, docName(tab))))
+        return false;
     }
     try {
       await invoke("save_window_state");

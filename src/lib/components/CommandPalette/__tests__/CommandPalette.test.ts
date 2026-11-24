@@ -117,6 +117,48 @@ describe("CommandPalette", () => {
     // first command runs
   });
 
+  it("closes immediately on Enter even when the command's run() is async", async () => {
+    let resolveRun!: () => void;
+    const run = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRun = resolve;
+        }),
+    );
+    registerCommands([
+      { id: "export-x", title: "Export as X", category: "Export", run },
+    ]);
+    const onClose = vi.fn();
+    render(CommandPalette, { props: { open: true, onClose } });
+    const input = screen.getByPlaceholderText("Type a command...");
+    await fireEvent.input(input, { target: { value: "Export as X" } });
+    await fireEvent.keyDown(input, { key: "Enter" });
+    // The export flow's promise only settles when its dialog closes; the
+    // palette must not wait for it (it would stay mounted above the dialog).
+    expect(run).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+    resolveRun();
+  });
+
+  it("closes immediately on click even when the command's run() is async", async () => {
+    let resolveRun!: () => void;
+    const run = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRun = resolve;
+        }),
+    );
+    registerCommands([
+      { id: "export-x", title: "Export as X", category: "Export", run },
+    ]);
+    const onClose = vi.fn();
+    render(CommandPalette, { props: { open: true, onClose } });
+    await fireEvent.click(await screen.findByText("Export as X"));
+    expect(run).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+    resolveRun();
+  });
+
   it("closes on Escape", async () => {
     const onClose = vi.fn();
     render(CommandPalette, { props: { open: true, onClose } });

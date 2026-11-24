@@ -276,11 +276,11 @@
   }
 
   .commands-list::-webkit-scrollbar-thumb {
-    background: var(--border);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
   .commands-list::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+    background: var(--scrollbar-thumb-hover);
   }
 </style>

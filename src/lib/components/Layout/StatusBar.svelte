@@ -436,7 +436,7 @@
      scrollbar-width/color fallbacks. */
   :global(.popover) {
     scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
   :global(.popover::-webkit-scrollbar) {
     width: 8px;
@@ -445,7 +445,7 @@
     background: transparent;
   }
   :global(.popover::-webkit-scrollbar-thumb) {
-    background: var(--border);
+    background: var(--scrollbar-thumb);
     border-radius: 4px;
   }
   :global(.popover::-webkit-scrollbar-thumb:hover) {

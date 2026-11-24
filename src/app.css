@@ -24,6 +24,13 @@
   --font-mono: monospace;
   --viewer-bg: var(--bg-primary);
   --toolbar-highlight: #b8860b;
+
+  /* Scrollbar thumbs derive from the active theme's text colors. The old
+     thumb used --bg-tertiary, which is nearly invisible against --bg-primary
+     in light themes (~1.1:1). --text-secondary/--text-primary are part of
+     every theme's token set, so each theme keeps a visible thumb. */
+  --scrollbar-thumb: var(--text-secondary);
+  --scrollbar-thumb-hover: var(--text-primary);
 }
 
 [data-theme="light"] {
@@ -77,7 +84,7 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--bg-tertiary) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -90,12 +97,21 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* The viewer re-skins its tokens per theme (#viewer-content blocks in
+   src/lib/styles/highlight/*.css) and can differ from the app chrome —
+   re-derive the thumb from the *viewer's* text colors so it tracks the
+   selected viewer theme. */
+#viewer-content {
+  --scrollbar-thumb: var(--text-secondary);
+  --scrollbar-thumb-hover: var(--text-primary);
 }
 
 ::selection {

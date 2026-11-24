@@ -161,4 +161,30 @@ describe("themes", () => {
       expect(css).not.toContain("#61afef");
     });
   });
+
+  describe("scrollbar thumb tokens (app.css)", () => {
+    // Regression: the thumb used to be --bg-tertiary — ~1.1:1 against the
+    // light --bg-primary, i.e. invisible even with macOS "Show scroll bars:
+    // Always". Thumbs must derive from theme text colors instead.
+    const appCss = readFileSync(
+      fileURLToPath(new URL("../../../app.css", import.meta.url)),
+      "utf8",
+    );
+
+    it("derives thumbs from theme text colors, not background tokens", () => {
+      expect(appCss).toContain("--scrollbar-thumb: var(--text-secondary)");
+      expect(appCss).toContain("--scrollbar-thumb-hover: var(--text-primary)");
+    });
+
+    it("re-derives the thumb in the viewer theme scope", () => {
+      expect(appCss).toMatch(/#viewer-content\s*\{[^}]*--scrollbar-thumb:/);
+    });
+
+    it("uses the tokens in the global scrollbar rules", () => {
+      expect(appCss).toContain(
+        "scrollbar-color: var(--scrollbar-thumb) transparent",
+      );
+      expect(appCss).toContain("background: var(--scrollbar-thumb)");
+    });
+  });
 });

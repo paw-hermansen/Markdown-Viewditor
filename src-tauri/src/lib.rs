@@ -197,9 +197,14 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|_app, _event| {
+    // Single match on the by-value RunEvent: with separate `if let`s the Opened
+    // arm partially moves `_event` (it owns `urls: Vec<Url>`) and the later Exit
+    // check fails with E0382. That arm is cfg'd out on Linux/Windows, so the bug
+    // only surfaces when compiling for macOS/iOS/Android — keep both checks in
+    // one match so every target shares the dispatch.
+    app.run(|_app, _event| match _event {
         #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
-        if let tauri::RunEvent::Opened { urls } = _event {
+        tauri::RunEvent::Opened { urls } => {
             use tauri::Emitter;
             // Canonicalized so a file already open under a different spelling
             // is recognized and not opened a second time.
@@ -211,11 +216,12 @@ pub fn run() {
                 .extend(paths.clone());
             let _ = _app.emit("open-file", paths);
         }
-        if let tauri::RunEvent::Exit = _event {
+        tauri::RunEvent::Exit => {
             // Settle any debounced window-state write on the way out; the
             // trailing timer would otherwise lose the final geometry.
             flush_window_state(_app);
         }
+        _ => {}
     });
 }
 

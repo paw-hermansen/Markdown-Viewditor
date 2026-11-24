@@ -97,6 +97,20 @@ probe miss deterministically at zoom != 100%. The symptom is the whole app on
 the generic dark/light palette while only the viewer's text box shows the
 theme.
 
+## Scrollbar thumbs (`--scrollbar-thumb`)
+
+Scrollbar thumbs are theme tokens: `--scrollbar-thumb` = `--text-secondary`
+(hover: `--scrollbar-thumb-hover` = `--text-primary`), declared in `app.css`
+at `:root` and re-derived under `#viewer-content` so the thumb tracks the
+selected viewer theme, not just the app chrome. Never color a thumb from
+background tokens: the old `--bg-tertiary` thumb sat at ~1.1:1 against the
+light `--bg-primary` — invisible even with macOS "Show scroll bars: Always"
+(pinned in `themes.test.ts`). Widgets that force a persistent scrollbar
+(popovers in `StatusBar.svelte`, the command palette) style
+`::-webkit-scrollbar` but must use the same thumb tokens; the
+`scrollbar-width`/`scrollbar-color` declarations are the Gecko/standard
+fallback and must mirror them.
+
 ## Theme changes and Mermaid cache keys
 
 Mermaid SVGs are cached per `[appTheme.type, appTheme.themeId, variant,

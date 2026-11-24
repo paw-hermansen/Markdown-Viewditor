@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { listCommands, formatShortcut, runCommand } from "$lib/commands/registry.svelte";
+  import {
+    listCommands,
+    formatShortcut,
+    runCommand,
+    type Command,
+  } from "$lib/commands/registry.svelte";
   import { ensureExporters } from "$lib/export/registry.svelte";
   import { focusTrap } from "$lib/utils/focus-trap";
   import { popup } from "$lib/utils/popup";
@@ -86,11 +91,22 @@
     }
   }
 
-  async function executeSelected() {
+  /**
+   * Shared command activation for Enter and click. Fire-and-forget: a
+   * command's promise may only settle when a dialog it opens is dismissed
+   * (e.g. the export confirm dialog), and awaiting it would keep the palette
+   * mounted above that dialog. Run first, close second: the "Command Palette"
+   * toggle command flips its own state and must win over the close.
+   */
+  function activate(cmd: Command) {
+    void runCommand(cmd.id);
+    onClose();
+  }
+
+  function executeSelected() {
     const cmd = filteredCommands[selectedIndex];
     if (cmd) {
-      await runCommand(cmd.id);
-      onClose();
+      activate(cmd);
     }
   }
 
@@ -123,7 +139,7 @@
             class:selected={i === selectedIndex}
             role="option"
             aria-selected={i === selectedIndex}
-            onclick={() => { runCommand(command.id); onClose(); }}
+            onclick={() => activate(command)}
             onmouseenter={() => selectedIndex = i}
           >
             <span class="command-label">{command.title}</span>

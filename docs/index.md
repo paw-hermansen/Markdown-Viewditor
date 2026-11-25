@@ -17,7 +17,7 @@
 | Guide                                                 | Description                                          |
 | ----------------------------------------------------- | ---------------------------------------------------- |
 | [ChemLab-Example](Examples/ChemLab-Example.html)      | A small chemical experiment report                   |
-| [demo-screendump](Examples/demo-screendump.html)      | A small summary about water                          |
+| [demo-screendump](Examples/demo-screendump.html)      | Compact aspirin summary showcasing major features    |
 | [Diners-in-the-usa](Examples/Diners-in-the-usa.html)  | A small essay about Diners, use a custom theme       |
 | [Examples](Examples/Examples.html)                    | Syntax reference for all supported markdown features |
 | [Aspirin-Lab-Report](Examples/Aspirin-Lab-Report.html) | A school lab report with SMILES, \ce, math and charts |

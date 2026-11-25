@@ -97,7 +97,7 @@ hue-6-2: #e6c07b
   --bg-tertiary: #2c313a;
   --accent: #61aeee;
   --accent-tint: rgba(97, 174, 238, 0.2);
-  --text-secondary: #5c6370;
+  --text-secondary: #7d8491;
   --text-primary: #abb2bf;
   --bg-primary: #282c34;
   --bg-secondary: #2c313a;
@@ -119,7 +119,7 @@ hue-6-2: #e6c07b
 }
 #viewer-content blockquote {
   border-left-color: #c678dd;
-  color: #5c6370;
+  color: #7d8491;
 }
 #viewer-content code {
   background: #2c313a;
@@ -132,7 +132,7 @@ hue-6-2: #e6c07b
 }
 #viewer-content th {
   background: #2c313a;
-  color: #5c6370;
+  color: #7d8491;
 }
 #viewer-content th,
 #viewer-content td {

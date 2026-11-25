@@ -133,10 +133,10 @@ Aurora
   text-decoration: underline
 }
 .hljs-quote {
-  color: #4C566A
+  color: #616E88
 }
 .hljs-comment {
-  color: #4C566A
+  color: #616E88
 }
 .hljs-doctag {
   color: #8FBCBB
@@ -282,7 +282,7 @@ Aurora
   --bg-tertiary: #3B4252;
   --accent: #88C0D0;
   --accent-tint: rgba(136, 192, 208, 0.2);
-  --text-secondary: #4C566A;
+  --text-secondary: #8896AB;
   --text-primary: #D8DEE9;
   --bg-primary: #2E3440;
   --bg-secondary: #3B4252;
@@ -304,7 +304,7 @@ Aurora
 }
 #viewer-content blockquote {
   border-left-color: #81A1C1;
-  color: #4C566A;
+  color: #8896AB;
 }
 #viewer-content code {
   background: #3B4252;
@@ -317,7 +317,7 @@ Aurora
 }
 #viewer-content th {
   background: #3B4252;
-  color: #4C566A;
+  color: #8896AB;
 }
 #viewer-content th,
 #viewer-content td {

@@ -167,11 +167,21 @@ looking too small for its box — and since the SVG is cached per content+theme
 to 100%**, never heals it. Renders made at 100% zoom are correct on every
 engine, which is what makes this look like a "macOS renders differently" bug.
 
-`fo-measure.ts` fixes this at the source — and must do so _exactly_, because
+A second engine quirk lands in the same trap: WebKitGTK's rects are
+zoom-_invariant_ (the probe classifies it healthy) but quantized to
+**float32**, so at zoom steps with a non-binary factor (the 70/80/90/110%
+steps of `ZOOM_STEPS`) a clamped `max-width: 120px` label box measures
+`119.999992` — one float32 ulp below `120`. Mermaid's wrap equality
+(below) then fails and long flowchart labels render as unwrapped single
+lines clipped at the node box edge, with only lines narrower than the wrap
+width surviving. Verified against WebKitGTK 4.1 with the app's exact render
+config.
+
+`fo-measure.ts` fixes both at the source — and must do so _exactly_, because
 Mermaid's label-wrap heuristic is a fragile **exact** equality (`bbox.width
 === width` in `addHtmlSpan`, upstream mermaid-js/mermaid#7794): any hair-off
 perturbation of the measured width silently disables wrapping, and long
-labels get clipped at the box edge instead of wrapping over lines. Two rules
+labels get clipped at the box edge instead of wrapping over lines. Three rules
 are load-bearing:
 
 1. **At 100% zoom the API is never touched.** No engine scales foreignObject
@@ -181,18 +191,26 @@ are load-bearing:
    happened once; do not reintroduce it.
 2. **Corrections divide by the app's exact zoom factor** (`currentZoom()` —
    the bug scales by exactly the page zoom; the probe only _classifies_ the
-   engine) and round the result to 1e-6 px to kill IEEE round-trip noise
-   (`200 * 1.1 / 1.1 = 200.00000000000003`), so integral widths come out
-   bit-exact and wrapping keeps working.
+   engine).
+3. **Every normalized rect is snapped** (the `snap()` in `fo-measure.ts`).
+   Zoomed renders are where engines lose bit-exactness — scaled-rect engines
+   _and_ float32-quantized ones — so values within 1e-3 px of an integer
+   snap bit-exact (a clamped 120px box must compare `=== 120`) and everything
+   else rounds to 1e-4 px (kills IEEE round-trip noise like
+   `200 * 1.1 / 1.1 = 200.00000000000003`, keeps genuine fractions).
+   Dividing alone is not enough: `119.999992` is already wrong before any
+   division.
 
 `withZoomNormalizedLabelMeasurement()` wraps **every** `mermaid.render()` call
 in `renderer.ts` (viewer pre-render queue and the export/print variants),
 patching `Element.prototype.getBoundingClientRect` for the render's duration
 so rects of foreignObject content inside Mermaid's temp containers
-(`div[id^="dmmd-"]`) are normalized. Everything outside the temp containers is
-a plain pass-through, so a zoomed render produces geometry identical to a 100%
-render. Keep any new Mermaid render entry point inside the wrapper, and never
-measure `<foreignObject>` content with raw `getBoundingClientRect` elsewhere
+(`div[id^="dmmd-"]`) are normalized. Unzoomed renders and everything outside
+the temp containers are a plain pass-through; **every zoomed render is
+normalized** (divided back on scaled-rect engines, snapped everywhere), so a
+zoomed render produces geometry identical to a 100% render. Keep any new
+Mermaid render entry point inside the wrapper, and never measure
+`<foreignObject>` content with raw `getBoundingClientRect` elsewhere
 in app code without dividing out the same factor (or using rect _ratios_, like
 `fo-labels.ts`/`math-fit.ts` do). Guarded by `__tests__/fo-measure.test.ts`
 and the upgrade-contract suite, which pins that Mermaid still measures labels

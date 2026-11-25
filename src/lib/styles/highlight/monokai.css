@@ -107,7 +107,7 @@ support/type #66D9EF, parameter #FD971F, comment #75715E
   --bg-tertiary: #2d2e27;
   --accent: #a6e22e;
   --accent-tint: rgba(166, 226, 46, 0.2);
-  --text-secondary: #75715e;
+  --text-secondary: #848170;
   --text-primary: #f8f8f2;
   --bg-primary: #272822;
   --bg-secondary: #2d2e27;
@@ -129,7 +129,7 @@ support/type #66D9EF, parameter #FD971F, comment #75715E
 }
 #viewer-content blockquote {
   border-left-color: #f92672;
-  color: #75715e;
+  color: #848170;
 }
 #viewer-content code {
   background: #2d2e27;
@@ -142,7 +142,7 @@ support/type #66D9EF, parameter #FD971F, comment #75715E
 }
 #viewer-content th {
   background: #2d2e27;
-  color: #75715e;
+  color: #848170;
 }
 #viewer-content th,
 #viewer-content td {

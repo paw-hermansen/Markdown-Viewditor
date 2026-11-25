@@ -160,6 +160,50 @@ describe("themes", () => {
       expect(css).not.toContain("#e5c07b");
       expect(css).not.toContain("#61afef");
     });
+
+    // Regression: Nord picked Polar Night 3 (#4C566A) for --text-secondary —
+    // a border/surface tone that measured ~1.35:1 on its --bg-tertiary card
+    // surface (frontmatter labels, table headers, footnotes all invisible).
+    // Muted text must clear 3:1 on both surfaces it sits on: cards/table
+    // headers (--bg-tertiary) and the page (--bg-primary).
+    it("muted text clears 3:1 contrast on card and page backgrounds", () => {
+      const relLuminance = (hex: string): number => {
+        let h = hex.trim().replace("#", "");
+        if (h.length === 3) {
+          h = h
+            .split("")
+            .map((c) => c + c)
+            .join("");
+        }
+        const chan = (i: number): number => {
+          const c = parseInt(h.slice(i, i + 2), 16) / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * chan(0) + 0.7152 * chan(2) + 0.0722 * chan(4);
+      };
+      const contrast = (fg: string, bg: string): number => {
+        const [hi, lo] = [relLuminance(fg), relLuminance(bg)].sort(
+          (a, b) => b - a,
+        );
+        return (hi + 0.055) / (lo + 0.055);
+      };
+      for (const theme of BUILTIN_THEMES) {
+        const css = themeCss[theme.id];
+        const block = css.match(/#viewer-content\s*\{[^}]*\}/)?.[0] ?? "";
+        const hexVar = (name: string): string =>
+          block.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{3,8})`))?.[1] ?? "";
+        const text = hexVar("--text-secondary");
+        expect(text, `${theme.id} --text-secondary`).toMatch(/^#/);
+        for (const bgVar of ["--bg-tertiary", "--bg-primary"]) {
+          const bg = hexVar(bgVar);
+          expect(bg, `${theme.id} ${bgVar}`).toMatch(/^#/);
+          expect(
+            contrast(text, bg),
+            `${theme.id} --text-secondary on ${bgVar}`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      }
+    });
   });
 
   describe("scrollbar thumb tokens (app.css)", () => {

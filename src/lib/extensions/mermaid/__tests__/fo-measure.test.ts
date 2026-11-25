@@ -2,12 +2,20 @@
 /**
  * Zoom-normalized foreignObject label measurement (fo-measure.ts).
  *
- * jsdom has no layout and no page zoom, so the "buggy old WebKit" engine is
- * simulated with a `getBoundingClientRect` stub that scales rects of
- * foreignObject content by a fixed factor — exactly what WKWebView on older
- * macOS does under page zoom (webkit.org/show_bug.cgi?id=261109). The tests
- * pin that the wrapper divides those rects back out (and only those), and
- * that it never leaks the patched API past the render window.
+ * jsdom has no layout and no page zoom, so engines are simulated with
+ * `getBoundingClientRect` stubs:
+ *
+ * - the "buggy old WebKit" engine scales rects of foreignObject content by a
+ *   fixed factor — exactly what WKWebView on older macOS does under page zoom
+ *   (webkit.org/show_bug.cgi?id=261109); the wrapper must divide those rects
+ *   back out (and only those), and
+ * - the "float32 noise" engine returns zoom-invariant rects carrying one
+ *   float32 ulp of error (120px → 119.999992), like WebKitGTK at non-binary
+ *   zoom factors; the wrapper must snap them back to exact values so
+ *   Mermaid's `bbox.width === width` wrap equality keeps working.
+ *
+ * The tests also pin that the wrapper never leaks the patched API past the
+ * render window and never touches it at 100% zoom.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -49,6 +57,31 @@ function installScaledEngine(scale: number): RectFn {
     const styleWidth = (this as HTMLElement).style?.width ?? "";
     const baseWidth = /px$/.test(styleWidth) ? parseFloat(styleWidth) : 100;
     return new DOMRect(10 * s, 20 * s, baseWidth * s, 30 * s);
+  };
+  proto().getBoundingClientRect = stub;
+  restores.push(() => {
+    proto().getBoundingClientRect = original;
+  });
+  return stub;
+}
+
+/**
+ * Simulate WebKitGTK's float32-quantized rects: zoom-invariant (spec-
+ * conformant, so the probe classifies it healthy) but every foreignObject
+ * rect coordinate carries one float32 ulp of error — a 120px clamped label
+ * box measures `119.999992`, which is exactly what broke Mermaid's exact
+ * `bbox.width === width` wrap equality at non-binary zoom factors
+ * (0.9 / 1.1 on the app's zoom ladder). Honors inline `width: Npx` like
+ * {@link installScaledEngine}.
+ */
+function installFloat32NoiseEngine(): RectFn {
+  const original = proto().getBoundingClientRect;
+  const stub: RectFn = function (this: Element): DOMRect {
+    const styleWidth = (this as HTMLElement).style?.width ?? "";
+    const baseWidth = /px$/.test(styleWidth) ? parseFloat(styleWidth) : 100;
+    // One float32 ulp of downward error per coordinate, as observed.
+    const drift = (v: number) => (v === 0 ? 0 : v - 2 ** -17 * (v / 120));
+    return new DOMRect(drift(10), drift(20), drift(baseWidth), drift(30));
   };
   proto().getBoundingClientRect = stub;
   restores.push(() => {
@@ -179,12 +212,44 @@ describe("withZoomNormalizedLabelMeasurement", () => {
     }, 2);
   });
 
-  it("does not patch anything on a healthy engine", async () => {
-    const stub = installScaledEngine(1);
-    buildTree();
+  it("normalizes without scaling on a healthy engine", async () => {
+    installScaledEngine(1);
+    const { label, plain } = buildTree();
     await withZoomNormalizedLabelMeasurement(async () => {
-      expect(proto().getBoundingClientRect).toBe(stub);
+      // Zoom-invariant rects are never scaled — only snapped (the API is
+      // still wrapped so float32 noise cannot reach Mermaid's wrap equality).
+      expect(label.getBoundingClientRect().width).toBe(100);
+      expect(plain.getBoundingClientRect().width).toBe(100);
     }, 2);
+  });
+
+  it("snaps float32 clamp noise so Mermaid's wrap equality survives", async () => {
+    // Regression: WebKitGTK reports a clamped 120px label box as 119.999992
+    // (one float32 ulp) at non-binary zoom factors (0.9 / 1.1 on the app's
+    // zoom ladder). `bbox.width === 120` then fails, Mermaid silently
+    // disables wrapping, and long flowchart labels render as unwrapped
+    // lines clipped at the node box edge.
+    installFloat32NoiseEngine();
+    const { label } = buildTree();
+    label.setAttribute("style", "width:120px");
+    await withZoomNormalizedLabelMeasurement(async () => {
+      expect(label.getBoundingClientRect().width).toBe(120);
+    }, 1.1);
+  });
+
+  it("snaps float32 noise in height and position too", async () => {
+    installFloat32NoiseEngine();
+    buildTree();
+    const foLabel = document.querySelector("#label")!;
+    foLabel.setAttribute("style", "width:80px");
+    // The stub drifts every coordinate; each must snap back exactly.
+    await withZoomNormalizedLabelMeasurement(async () => {
+      const rect = foLabel.getBoundingClientRect();
+      expect(rect.x).toBe(10);
+      expect(rect.y).toBe(20);
+      expect(rect.width).toBe(80);
+      expect(rect.height).toBe(30);
+    }, 0.9);
   });
 
   it("never touches the API at 100% zoom — probe noise must not perturb widths", async () => {

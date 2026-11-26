@@ -21,8 +21,11 @@
 
   const themeLabel = $derived(getThemeLabel(viewerState.theme));
 
+  // Sorted alphabetically by label (fresh array — never mutates the registry).
   const exportChoices = $derived(
-    listExporters().map((e) => ({ value: e.id, label: e.label, description: e.description })),
+    listExporters()
+      .map((e) => ({ value: e.id, label: e.label, description: e.description }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
   );
 
   function handleExportAction(id: string) {

@@ -49,6 +49,7 @@ describe("ViewerToolbar", () => {
   afterEach(() => {
     unregisterExporter("test-html");
     unregisterExporter("test-pdf");
+    unregisterExporter("test-docx");
   });
 
   it("renders the Export button when an exporter is registered", () => {
@@ -119,6 +120,29 @@ describe("ViewerToolbar", () => {
       expect(
         await screen.findByText("Show export and print confirmation"),
       ).toBeInTheDocument();
+    });
+
+    it("lists exporters alphabetically by label", async () => {
+      // Registered last, but sorts first.
+      registerExporter({
+        id: "test-docx",
+        label: "Export as DOCX",
+        description: "Word document",
+        extension: "docx",
+        themeCapable: true,
+        export: vi.fn(async () => ({ warnings: [] })),
+      });
+      render(ViewerToolbar, { props: { onExport: vi.fn() } });
+      await fireEvent.click(screen.getByTitle("Export document"));
+      const dropdown = await screen.findByRole("menu");
+      const labels = within(dropdown)
+        .getAllByRole("menuitemradio")
+        .map((el) => el.querySelector(".item-label")?.textContent);
+      expect(labels).toEqual([
+        "Export as DOCX",
+        "Export as HTML",
+        "Export as PDF",
+      ]);
     });
 
     it("calls onExport when a dropdown item is clicked", async () => {

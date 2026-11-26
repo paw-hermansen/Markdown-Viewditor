@@ -3,9 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](<>)
 
-An advanced extended markdown viewer and editor with live preview and scroll sync for Linux, macOS, and Windows
+Markdown Viewditor is an advanced and fast, cross-platform Markdown viewer and editor for technical minds - turning plain-text notations across science, engineering, data, and AI into publication-ready documents.
 
-![Screendump](images/screendump.png)
+![Screendump](screendumps/Screendump.png)
 
 ## Features
 
@@ -131,7 +131,7 @@ level doesn't enable, the editor shows a lint warning on the relevant line and
 the status bar shows an amber `⚠ N` badge. Rendering is never restricted —
 this is a portability indicator, not a hard limit.
 
-![Compatibility Levels](images/CompatibilityLevels.png)
+![Compatibility Levels](screendumps/CompatibilityLevels.png)
 
 | Level    | Enabled features                                                                                                                                  |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -258,10 +258,10 @@ HTML, PDF, ODT and DOCX as vector SVG.
 
 ### Examples of Built-in themes
 
-![Github Dark](images/ThemeGithubDark.png)
-![Atom One Dark](images/ThemeAtomOneDark.png)
-![Nord Light](images/ThemeNordLight.png)
-![Github Light](images/ThemeGithubLight.png)
+![Github Dark](screendumps/ThemeGithubDark196.png)
+![Atom One Dark](screendumps/ThemeAtomOneDark196.png)
+![Nord Light](screendumps/ThemeNordLight196.png)
+![Github Light](screendumps/ThemeGithubLight196.png)
 
 ### Custom Themes
 
@@ -278,7 +278,7 @@ Theme type (dark/light) is auto-detected from the CSS content.
 
 The example custom theme [Custom Theme Bubblegum](testing/custom_themes/theme-bubblegum.css):
 
-![Custom Theme Bubblegum](images/ThemeCustomBubblegum.png)
+![Custom Theme Bubblegum](screendumps/ThemeCustomBubblegum196.png)
 
 ## AI-Augmented Development
 

@@ -72,6 +72,173 @@ jobs:
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
-          for snap in snaps/*.snap; do
-            snapcraft upload --release=stable "$snap"
+          set -uo pipefail
+
+          # Publishes every built snap to the stable channel without one
+          # architecture blocking the other:
+          #   1. upload all snaps first (retrying transient store/network errors);
+          #      a file the store already knows ("already been uploaded", e.g. when
+          #      this job is re-run) is resolved to its existing store revision
+          #      instead of failing;
+          #   2. then release every revision to stable back-to-back, keeping the
+          #      amd64/arm64 version skew window as small as possible;
+          #   3. finally verify the store serves the expected version on stable
+          #      for every architecture, so a partial release fails loudly here
+          #      instead of being noticed later on snapcraft.io.
+          #
+          # Snap file names follow the snapcraft convention
+          # <name>_<version>_<arch>.snap; neither snap names nor snap versions
+          # may contain underscores, so parsing on "_" is unambiguous.
+
+          SNAP_NAME=""
+          FAILED=0
+          MAX_ATTEMPTS=3
+          RETRY_DELAY_SECONDS="${RETRY_DELAY_SECONDS:-15}"
+          DUPLICATE_PATTERN='already been uploaded'
+
+          declare -A REVISIONS
+          declare -A VERSIONS
+
+          parse_snap_file() {
+            local base
+            base="$(basename "$1" .snap)"
+            NAME="${base%%_*}"
+            VERSION="${base#*_}"
+            VERSION="${VERSION%_*}"
+            ARCH="${base##*_}"
+          }
+
+          find_revision() {
+            # find_revision <version> <arch>: newest store revision matching both.
+            # Rows look like: Rev Uploaded Architectures Version Channels
+            snapcraft list-revisions "$SNAP_NAME" 2>/dev/null \
+              | awk -v ver="$1" -v arch="$2" '
+                  $1 ~ /^[0-9]+$/ {
+                    a = 0; v = 0
+                    for (i = 2; i <= NF; i++) {
+                      if ($i == arch) a = 1
+                      if ($i == ver) v = 1
+                    }
+                    if (a && v && $1 + 0 > best + 0) best = $1
+                  }
+                  END { if (best != "") print best }
+                '
+          }
+
+          upload_snap() {
+            # upload_snap <file>: sets UPLOAD_REV; returns 0 ok, 2 duplicate, 1 failed.
+            local file="$1" attempt out
+            for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+              if out="$(snapcraft upload "$file" 2>&1)"; then
+                echo "$out"
+                UPLOAD_REV="$(echo "$out" | sed -n 's/.*[Rr]evision \([0-9][0-9]*\) created.*/\1/p' | tail -n 1)"
+                return 0
+              fi
+              echo "$out"
+              if echo "$out" | grep -q "$DUPLICATE_PATTERN"; then
+                return 2
+              fi
+              if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+                echo "Upload attempt $attempt/$MAX_ATTEMPTS failed, retrying in $((attempt * RETRY_DELAY_SECONDS))s..."
+                sleep $((attempt * RETRY_DELAY_SECONDS))
+              fi
+            done
+            return 1
+          }
+
+          release_revision() {
+            # release_revision <revision>: release to stable, retrying on failure.
+            local rev="$1" attempt out
+            for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+              if out="$(snapcraft release "$SNAP_NAME" "$rev" stable 2>&1)"; then
+                echo "$out"
+                return 0
+              fi
+              echo "$out"
+              if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+                echo "Release attempt $attempt/$MAX_ATTEMPTS failed, retrying in $((attempt * RETRY_DELAY_SECONDS))s..."
+                sleep $((attempt * RETRY_DELAY_SECONDS))
+              fi
+            done
+            return 1
+          }
+
+          shopt -s nullglob
+          snaps=(snaps/*.snap)
+          if [ "${#snaps[@]}" -eq 0 ]; then
+            echo "::error::No .snap files found under snaps/"
+            exit 1
+          fi
+
+          # Phase 1: upload every snap; keep going if one architecture fails.
+          for snap in "${snaps[@]}"; do
+            parse_snap_file "$snap"
+            SNAP_NAME="$NAME"
+            VERSIONS["$ARCH"]="$VERSION"
+            UPLOAD_REV=""
+            echo "::group::Upload $NAME $VERSION ($ARCH)"
+            upload_snap "$snap"
+            case $? in
+              0) echo "Uploaded as revision ${UPLOAD_REV:-unknown}" ;;
+              2) echo "The store already has this exact file (probably from an earlier run)." ;;
+              *) echo "::warning::Upload of $(basename "$snap") failed after $MAX_ATTEMPTS attempts." ;;
+            esac
+            if [ -z "$UPLOAD_REV" ]; then
+              echo "Looking up the store revision for $VERSION ($ARCH)..."
+              UPLOAD_REV="$(find_revision "$VERSION" "$ARCH")"
+            fi
+            if [ -n "$UPLOAD_REV" ]; then
+              REVISIONS["$ARCH"]="$UPLOAD_REV"
+              echo "Using revision $UPLOAD_REV for $ARCH."
+            else
+              echo "::error::No store revision for $NAME $VERSION ($ARCH); cannot release it."
+              FAILED=1
+            fi
+            echo "::endgroup::"
           done
+
+          # Phase 2: release every revision to stable, back-to-back.
+          for arch in "${!REVISIONS[@]}"; do
+            echo "::group::Release revision ${REVISIONS[$arch]} ($arch) to stable"
+            if ! release_revision "${REVISIONS[$arch]}"; then
+              echo "::error::Could not release revision ${REVISIONS[$arch]} ($arch) to stable."
+              FAILED=1
+            fi
+            echo "::endgroup::"
+          done
+
+          # Phase 3: verify the store now serves the expected version per architecture.
+          # snapcraft status prints one table row per channel, e.g.
+          #   latest  amd64  stable  1.7.1  101
+          # so the arch, "stable" and the version must share one row.
+          echo "::group::Verify stable channel"
+          if status="$(snapcraft status "$SNAP_NAME" 2>&1)"; then
+            echo "$status"
+            for arch in "${!VERSIONS[@]}"; do
+              ver="${VERSIONS[$arch]}"
+              if echo "$status" | awk -v arch="$arch" -v ver="$ver" '
+                  {
+                    c = 0; a = 0; v = 0
+                    for (i = 1; i <= NF; i++) {
+                      if ($i == "stable") c = 1
+                      if ($i == arch) a = 1
+                      if ($i == ver) v = 1
+                    }
+                    if (c && a && v) found = 1
+                  }
+                  END { exit !found }
+                '; then
+                echo "OK: $arch serves version $ver on stable."
+              else
+                echo "::error::$arch is not serving version $ver on stable."
+                FAILED=1
+              fi
+            done
+          else
+            echo "$status"
+            echo "::error::Could not query the store status for $SNAP_NAME."
+            FAILED=1
+          fi
+          echo "::endgroup::"
+
+          exit "$FAILED"

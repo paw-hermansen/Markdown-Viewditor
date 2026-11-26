@@ -28,9 +28,12 @@ Mermaid/KaTeX/tables uniformly. The `zoomLevel` setting persists in
   the editor's `scaleX`) is page-zoom-invariant: page zoom shrinks the CSS-px
   viewport but computed styles and rects in CSS px do not change. Keep it that
   way — prefer ratios of `getBoundingClientRect` over raw px assumptions. The
-  one exception is Mermaid's own label measurement inside `<foreignObject>`,
-  which older WebKit scales by the page zoom; `fo-measure.ts` normalizes it
-  (see "Mermaid Label Measurement" in
+  exception is Mermaid's own label measurement inside `<foreignObject>`: older
+  WebKit scales it by the page zoom, and WebKitGTK keeps it zoom-invariant but
+  float32-quantized (`120` clamped label boxes measure `119.999992` at 0.9/1.1
+  — enough to break Mermaid's exact wrap equality and clip long labels);
+  `fo-measure.ts` normalizes both at zoomed renders (see
+  "Mermaid Label Measurement" in
   [Math & Mermaid Contracts](math-mermaid.md)).
 - UI chrome must stay zoom-proof: no fixed `height` on bars/buttons (use
   `min-height` — a hard px box plus device-pixel baseline rounding clips text

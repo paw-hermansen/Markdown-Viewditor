@@ -23,29 +23,37 @@
  * must do so *exactly*, because Mermaid's label-wrap heuristic is a fragile
  * exact equality (`bbox.width === width` in `addHtmlSpan`, upstream
  * mermaid-js/mermaid#7794): any hair-off perturbation of the measured width
- * silently disables wrapping and long labels get clipped instead. Hence two
- * rules, both load-bearing:
+ * silently disables wrapping, and long labels get clipped at the box edge
+ * instead of wrapping over lines. Hence three rules, all load-bearing:
  *
  * 1. **At 100% zoom the API is never touched.** No engine scales foreignObject
  *    rects at zoom 1 (the verified-good baseline on every platform), and a
  *    probe factor that drifts from 1 by sub-pixel measurement noise would
  *    perturb widths enough to break the wrap equality.
- * 2. **When correcting, divide by the app's exact zoom factor** (the bug
- *    scales by exactly the page zoom) — the probe only *classifies* the
- *    engine — and round the result to 1e-6 px so IEEE round-trip noise
- *    (`200 * 1.1 / 1.1 = 200.00000000000003`) cannot break the equality
- *    either. Values that were integral in the label's own coordinate space
- *    come out bit-exact again.
+ * 2. **When correcting a scaled-rect engine, divide by the app's exact zoom
+ *    factor** (the bug scales by exactly the page zoom) — the probe only
+ *    *classifies* the engine.
+ * 3. **Every normalized rect is snapped** ({@link snap}). Zoomed renders are
+ *    where engines lose bit-exactness — not only the scaled-rect engines:
+ *    WebKitGTK's rects are zoom-*invariant* (the probe classifies it healthy)
+ *    but quantized to float32, so at zoom steps with a non-binary factor (the
+ *    70/80/90/110% ladder) a clamped `max-width: 120px` label box measures
+ *    `119.999992` — one float32 ulp below `120` — and the wrap equality fails
+ *    anyway. Snapping lands integral widths bit-exact and kills IEEE
+ *    round-trip noise (`200 * 1.1 / 1.1 = 200.00000000000003`); values that
+ *    were integral in the label's own coordinate space come out exact again.
  *
  * The wrapper only matches foreignObject content inside Mermaid's temp
  * containers (`div[id^="dmmd-"]`, see removeMermaidTempElements in
- * renderer.ts); healthy engines, unzoomed renders, and everything outside
- * that sandbox are a plain pass-through. Keep every Mermaid render entry
- * point inside the wrapper, and never measure `<foreignObject>` content with
- * raw `getBoundingClientRect` elsewhere in app code without dividing out the
- * same factor (or using ratios of rects, like `fo-labels.ts` / `math-fit.ts`
- * do). The upgrade-contract suite pins that Mermaid still measures labels
- * this way. Regression: TEST-PLAN S5.5 (start the app zoomed).
+ * renderer.ts). Unzoomed renders and everything outside that sandbox are a
+ * plain pass-through; every zoomed render is normalized — divided back on
+ * scaled-rect engines (rule 2), snapped everywhere (rule 3). Keep every
+ * Mermaid render entry point inside the wrapper, and never measure
+ * `<foreignObject>` content with raw `getBoundingClientRect` elsewhere in
+ * app code without dividing out the same factor (or using ratios of rects,
+ * like `fo-labels.ts` / `math-fit.ts` do). The upgrade-contract suite pins
+ * that Mermaid still measures labels this way. Regression: TEST-PLAN S5.5
+ * (start the app zoomed).
  */
 
 type RectFn = (this: Element) => DOMRect;
@@ -60,6 +68,14 @@ const PROBE_WIDTH_PX = 120;
  * 0.9 / 1.1 (see ZOOM_STEPS in stores/zoom.svelte.ts).
  */
 const MEASURE_EPSILON = 0.01;
+
+/**
+ * How far a measured value may sit from an integer and still snap to it
+ * (rule 3, see {@link snap}). Orders of magnitude above the float32 drift
+ * of realistic label boxes (the float32 ulp is ~5e-4 px at 4000 px) and far
+ * below any layout difference an engine can paint.
+ */
+const SNAP_INTEGER_EPSILON = 1e-3;
 
 /**
  * Mermaid's temp render containers are `div#d<renderId>` with render ids
@@ -90,14 +106,17 @@ export async function withZoomNormalizedLabelMeasurement<T>(
     return run();
   }
   const probed = measureForeignObjectScale();
-  // Healthy engines report the probe's local width regardless of zoom.
-  if (Math.abs(probed - 1) < MEASURE_EPSILON) return run();
-  // Rule 2: the bug scales by exactly the page zoom — prefer the exact value
-  // over the noisy probe; fall back to the probe for unknown behaviors.
+  // Rule 2: the scaled-rect bug scales by exactly the page zoom — prefer the
+  // exact value over the noisy probe; fall back to the probe for unknown
+  // behaviors. Healthy engines need no division (factor 1) but their zoomed
+  // rects are still float32-noisy, so the wrapper installs regardless —
+  // rule 3 snapping is why.
   const factor =
     Math.abs(probed - zoomFactor) < MEASURE_EPSILON * zoomFactor
       ? zoomFactor
-      : probed;
+      : Math.abs(probed - 1) < MEASURE_EPSILON
+        ? 1
+        : probed;
   const restore = installScale(factor);
   try {
     return await run();
@@ -156,8 +175,9 @@ export function measureForeignObjectScale(): number {
 
 /**
  * Wrap `Element.prototype.getBoundingClientRect` so foreignObject content in
- * Mermaid's temp containers reports local rects. Nested installs chain and
- * unwind in order, so overlapping windows are safe.
+ * Mermaid's temp containers reports normalized local rects — divided by
+ * `factor` (1 = no scaling) and snapped (see {@link snap}). Nested installs
+ * chain and unwind in order, so overlapping windows are safe.
  */
 function installScale(factor: number): () => void {
   const proto = Element.prototype as unknown as {
@@ -226,11 +246,23 @@ function scaleRect(rect: DOMRect, factor: number): DOMRect {
 }
 
 /**
- * Round away IEEE round-trip noise (`200 * 1.1 / 1.1` is 200.00000000000003)
- * while keeping genuine fractional layout values. Mermaid's wrap heuristic
- * compares the normalized width to an integer with `===`, so this rounding is
- * what keeps wrapping working on corrected renders.
+ * Round away engine/measurement noise while keeping genuine fractional
+ * layout values. Mermaid's wrap heuristic compares the measured width to an
+ * integer with `===`, so this rounding is what keeps wrapping working on
+ * normalized renders. Two tiers:
+ *
+ * - Values within {@link SNAP_INTEGER_EPSILON} px of an integer are integral
+ *   layout values corrupted by float noise — e.g. WebKitGTK's float32 rects
+ *   report a clamped 120px label box as `119.999992` (one float32 ulp).
+ *   Snap them bit-exact.
+ * - Everything else rounds to 1e-4 px: coarse enough to kill IEEE
+ *   round-trip noise (`200 * 1.1 / 1.1 = 200.00000000000003`), fine enough
+ *   to preserve real fractions (`150.5`).
  */
 function snap(value: number): number {
-  return Math.round(value * 1e6) / 1e6;
+  const nearestInteger = Math.round(value);
+  if (Math.abs(value - nearestInteger) < SNAP_INTEGER_EPSILON) {
+    return nearestInteger;
+  }
+  return Math.round(value * 1e4) / 1e4;
 }

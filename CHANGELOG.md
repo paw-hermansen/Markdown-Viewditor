@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.7.1] - 2026-11-26
+
+- fix(ci): make Snap publish retry-safe and idempotent (#203) (8c6e6f9)
+
 ## [1.7.0] - 2026-11-26
 
 - Updated html exports of all docs (d0d0b86)

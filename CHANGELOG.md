@@ -23,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed docs and updated tests about multiple tabs (#190) (d8f42f8)
 - Open multiple files from command-line (#189) (cbe89c8)
 - Lazy loading: fix dynamic-import warnings + slim startup bundle (#188) (8b607ed)
-- feat(tabs): open several documents at once in tabs (#187) (2e62b0f)
+- feat(tabs): open several documents at once in tabs (#187) (2e62b0f) - thanks @vmedvedev-appsec
 - Add possibility to format current paragraph (#186) (509f079)
 - fix(levels): keep preset feature sets in sync with the detector registry (#185) (2936b9e)
 - fix(layout): stop the divider jumping to the previous drag position (#184) (d64cd7c)
